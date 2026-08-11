@@ -88,6 +88,7 @@ asciiam.presets.subtleCurrent // gentle flowing texture, low opacity
 asciiam.presets.matrixRain    // classic falling-column rain
 asciiam.presets.softRipple    // concentric rings from center
 asciiam.presets.vortexFlow    // three-arm spiral around the selected origin
+asciiam.presets.plasmaField   // layered low-frequency organic field
 asciiam.presets.introReveal   // one-shot staggered fade-in, no loop
 asciiam.presets.auroraCurrent // multicolor flowing current
 asciiam.presets.terminalMatrix // green Japanese matrix rain
@@ -112,6 +113,7 @@ new asciiam('#hero', { ...asciiam.presets.heroWave, color: '#C04FFF' });
 | `current` | Layered sine waves for a flowing, water-like texture (no single hard edge). |
 | `ripple` | Concentric rings expanding from the center. |
 | `vortex` | Three rotating spiral arms around the selected spatial origin. |
+| `plasma` | Three layered low-frequency fields producing organic color and glyph motion. |
 | `fadeIn` | Staggered reveal from the left, right, or center; loops by default, or set `loop: false` for a one-shot intro. |
 | `fadeOut` | The matching directional exit animation for dismissals and scene transitions. |
 | `matrix` | Classic falling-character rain, per-column speed/length/flicker. |
@@ -123,7 +125,7 @@ Switch modes live: `anim.setMode('ripple')`.
 
 ```js
 new asciiam(target, {
-  mode: 'wave',                 // wave | current | ripple | vortex | fadeIn | fadeOut | matrix | image
+  mode: 'wave',                 // wave | current | ripple | vortex | plasma | fadeIn | fadeOut | matrix | image
   quality: 'balanced',          // ultra | high | balanced | performance — sets maxDPR/density/targetFPS
   charSet: ' .:-=+*#%@',        // light -> heavy character ramp; see CHARACTER_SETS
   fontFamily: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
@@ -202,7 +204,7 @@ Built once per frame (not per character), so it's effectively free performance-w
 `ultra` is the performance-first tier: it uses a lower device-pixel-ratio cap and a
 looser character grid without imposing a frame-rate ceiling. `high` maximizes detail,
 `balanced` is the default quality tier, and `performance` trades detail for a 30 FPS
-cap. Dense modes (`wave`, `current`, `ripple`, `vortex`, `fadeIn`, and `image`) draw every grid
+cap. Dense modes (`wave`, `current`, `ripple`, `vortex`, `plasma`, `fadeIn`, and `image`) draw every grid
 cell each frame; reducing DPR and increasing density has the largest impact on FPS.
 Gradients are cached per frame, and edge-fade factors are precomputed on resize.
 

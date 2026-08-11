@@ -1979,6 +1979,7 @@
                         <option value="matrixRain">matrixRain</option>
                         <option value="softRipple">softRipple</option>
                         <option value="vortexFlow">vortexFlow</option>
+                        <option value="plasmaField">plasmaField</option>
                         <option value="introReveal">introReveal</option>
                         <option value="outroFade">outroFade</option>
                         <option value="scanline">scanline</option>
@@ -2336,6 +2337,7 @@
                                 <span class="feature-tag">current</span>
                                 <span class="feature-tag">ripple</span>
                                 <span class="feature-tag">vortex</span>
+                                <span class="feature-tag">plasma</span>
                                 <span class="feature-tag">fadeIn</span>
                                 <span class="feature-tag">fadeOut</span>
                                 <span class="feature-tag">matrix</span>
@@ -2736,7 +2738,7 @@
                 button.onclick = () => setAlignment(button.dataset.align);
             });
 
-            const modes = ["wave", "current", "ripple", "vortex", "fadeIn", "fadeOut", "matrix", "snow", "sparkle", "image"];
+            const modes = ["wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut", "matrix", "snow", "sparkle", "image"];
             const modeButtonsEl = document.getElementById("modeButtons");
             function setActiveModeButton(mode) {
                 [...modeButtonsEl.children].forEach((button) => {

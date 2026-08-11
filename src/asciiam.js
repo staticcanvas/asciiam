@@ -51,6 +51,14 @@
                 edgeFade: 0.2,
                 gradient: { type: "radial", center: [0.5, 0.5], radius: 0.9, stops: ["#4FA8FF", "#C04FFF"], steps: 2 },
             },
+            plasmaField: {
+                mode: "plasma",
+                color: "#72F1B8",
+                speed: 0.55,
+                minOpacity: 0.04,
+                maxOpacity: 0.68,
+                gradient: { type: "linear", angle: 25, stops: ["#72F1B8", "#4FA8FF", "#C04FFF"], steps: 3 },
+            },
             introReveal: { mode: "fadeIn", color: "#4FA8FF", speed: 1, loop: false, revealDirection: "left-to-right" },
             outroFade: { mode: "fadeOut", color: "#4FA8FF", speed: 1, loop: false, revealDirection: "right-to-left" },
             scanline: { mode: "wave", color: "#4FA8FF", speed: 1.4, ambient: 0, bandWidth: 0.04, edgeFade: 0.2 },
@@ -651,6 +659,12 @@
             this._rippleFalloff = new Float32Array(count);
             this._vortexSin = new Float32Array(count);
             this._vortexCos = new Float32Array(count);
+            this._plasmaSinA = new Float32Array(count);
+            this._plasmaCosA = new Float32Array(count);
+            this._plasmaSinB = new Float32Array(count);
+            this._plasmaCosB = new Float32Array(count);
+            this._plasmaSinC = new Float32Array(count);
+            this._plasmaCosC = new Float32Array(count);
             for (let row = 0; row < this.rows; row++) {
                 const y = row * this.charH;
                 const offset = row * this.cols;
@@ -661,6 +675,9 @@
                     const dy = y - this._originY;
                     const distance = Math.hypot(dx, dy);
                     const vortexPhase = Math.atan2(dy, dx) * 3 + distance * 0.045;
+                    const plasmaPhaseA = x * 0.018 + y * 0.011;
+                    const plasmaPhaseB = distance * 0.028;
+                    const plasmaPhaseC = x * 0.009 - y * 0.021;
                     this._rippleSin[index] = Math.sin(distance * 0.06);
                     this._rippleCos[index] = Math.cos(distance * 0.06);
                     this._imageRippleSin[index] = Math.sin(distance * 0.05);
@@ -668,6 +685,12 @@
                     this._rippleFalloff[index] = Math.max(0, 1 - distance / (Math.max(this.w, this.h) * 0.85));
                     this._vortexSin[index] = Math.sin(vortexPhase);
                     this._vortexCos[index] = Math.cos(vortexPhase);
+                    this._plasmaSinA[index] = Math.sin(plasmaPhaseA);
+                    this._plasmaCosA[index] = Math.cos(plasmaPhaseA);
+                    this._plasmaSinB[index] = Math.sin(plasmaPhaseB);
+                    this._plasmaCosB[index] = Math.cos(plasmaPhaseB);
+                    this._plasmaSinC[index] = Math.sin(plasmaPhaseC);
+                    this._plasmaCosC[index] = Math.cos(plasmaPhaseC);
                 }
             }
         }
@@ -885,19 +908,31 @@
         _draw(dt) {
             const ctx = this.ctx;
 
-            this._currentTimeSinX = Math.sin(this._time * 1.1);
-            this._currentTimeCosX = Math.cos(this._time * 1.1);
-            this._currentTimeSinY = Math.sin(-this._time * 0.8);
-            this._currentTimeCosY = Math.cos(-this._time * 0.8);
-            this._currentTimeSinXY = Math.sin(this._time * 1.6);
-            this._currentTimeCosXY = Math.cos(this._time * 1.6);
-            this._rippleTimeSin = Math.sin(-this._time * 2.4);
-            this._rippleTimeCos = Math.cos(-this._time * 2.4);
-            this._vortexTimeSin = Math.sin(-this._time * 2);
-            this._vortexTimeCos = Math.cos(-this._time * 2);
-            const imageRippleTime = -this._time * (this.opts.speed || 1) * 2.2;
-            this._imageRippleTimeSin = Math.sin(imageRippleTime);
-            this._imageRippleTimeCos = Math.cos(imageRippleTime);
+            if (this.opts.mode === "current") {
+                this._currentTimeSinX = Math.sin(this._time * 1.1);
+                this._currentTimeCosX = Math.cos(this._time * 1.1);
+                this._currentTimeSinY = Math.sin(-this._time * 0.8);
+                this._currentTimeCosY = Math.cos(-this._time * 0.8);
+                this._currentTimeSinXY = Math.sin(this._time * 1.6);
+                this._currentTimeCosXY = Math.cos(this._time * 1.6);
+            } else if (this.opts.mode === "ripple") {
+                this._rippleTimeSin = Math.sin(-this._time * 2.4);
+                this._rippleTimeCos = Math.cos(-this._time * 2.4);
+            } else if (this.opts.mode === "vortex") {
+                this._vortexTimeSin = Math.sin(-this._time * 2);
+                this._vortexTimeCos = Math.cos(-this._time * 2);
+            } else if (this.opts.mode === "plasma") {
+                this._plasmaTimeSinA = Math.sin(this._time * 0.9);
+                this._plasmaTimeCosA = Math.cos(this._time * 0.9);
+                this._plasmaTimeSinB = Math.sin(-this._time * 1.3);
+                this._plasmaTimeCosB = Math.cos(-this._time * 1.3);
+                this._plasmaTimeSinC = Math.sin(this._time * 0.55);
+                this._plasmaTimeCosC = Math.cos(this._time * 0.55);
+            } else if (this.opts.mode === "image") {
+                const imageRippleTime = -this._time * (this.opts.speed || 1) * 2.2;
+                this._imageRippleTimeSin = Math.sin(imageRippleTime);
+                this._imageRippleTimeCos = Math.cos(imageRippleTime);
+            }
 
             if (this.opts.trail > 0) {
                 ctx.save();
@@ -1099,6 +1134,8 @@
                     return this._rippleCell(col, row, x, y);
                 case "vortex":
                     return this._vortexCell(col, row, x, y);
+                case "plasma":
+                    return this._plasmaCell(col, row, x, y);
                 case "fadeIn":
                     return this._fadeInCell(col, row, x, y);
                 case "fadeOut":
@@ -1207,6 +1244,22 @@
                 minOpacity + (maxOpacity - minOpacity) * combined,
                 combined,
                 boldOnPeak && combined > 0.7,
+            );
+        }
+
+        _plasmaCell(col, row, _x, _y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
+            const index = row * this.cols + col;
+            const layerA = this._plasmaSinA[index] * this._plasmaTimeCosA + this._plasmaCosA[index] * this._plasmaTimeSinA;
+            const layerB = this._plasmaSinB[index] * this._plasmaTimeCosB + this._plasmaCosB[index] * this._plasmaTimeSinB;
+            const layerC = this._plasmaSinC[index] * this._plasmaTimeCosC + this._plasmaCosC[index] * this._plasmaTimeSinC;
+            const combined = Math.max(0, Math.min(1, (layerA + layerB + layerC + 3) / 6));
+            const charIdx = Math.floor(combined * (charSet.length - 1));
+            return this._setCell(
+                charSet[charIdx] || " ",
+                minOpacity + (maxOpacity - minOpacity) * combined,
+                combined,
+                boldOnPeak && combined > 0.72,
             );
         }
 

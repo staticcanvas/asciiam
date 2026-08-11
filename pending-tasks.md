@@ -53,11 +53,12 @@ strangers with confidence."
       arrow, and mathematical presets alongside the existing specialist sets.
 - [x] **Animation mode inventory.** The current engine and practical next modes are
       recorded here for implementation planning.
-  - [x] Supported — `wave`, `current`, `ripple`, `vortex`, `fadeIn`, `fadeOut`, `matrix`,
+  - [x] Supported — `wave`, `current`, `ripple`, `vortex`, `plasma`, `fadeIn`, `fadeOut`, `matrix`,
         `snow`, `sparkle`, `image`, and registered/custom cell modes.
   - [x] Vortex/swirl — a cached three-arm radial flow rotates around the selected
         spatial origin without trigonometry in the dense per-cell loop.
-  - [ ] Plasma/noise field — layered low-frequency fields for organic motion.
+  - [x] Plasma/noise field — three cached low-frequency fields blend into organic
+        motion with only six trigonometric calculations per frame.
   - [ ] Fire/embers — bottom-origin heat ramp plus sparse rising particles.
   - [ ] Starfield/tunnel — depth-scaled sparse particles around the selected origin.
   - [ ] Glitch/scramble — timed character displacement and scan-band corruption.

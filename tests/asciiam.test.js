@@ -270,4 +270,26 @@ describe("asciiam lifecycle", () => {
         expect(atanSpy).toHaveBeenCalled();
         animation.destroy();
     });
+
+    it("renders plasma from cached fields with constant per-frame trigonometry", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const animation = new asciiam(host, { mode: "plasma", respectReducedMotion: false });
+        const sinSpy = jest.spyOn(Math, "sin");
+        const cosSpy = jest.spyOn(Math, "cos");
+        animation._draw(16.7);
+        animation._draw(16.7);
+
+        expect(animation._plasmaSinA).toHaveLength(animation.cols * animation.rows);
+        expect(animation._plasmaCosC).toHaveLength(animation.cols * animation.rows);
+        expect(sinSpy).toHaveBeenCalledTimes(6);
+        expect(cosSpy).toHaveBeenCalledTimes(6);
+        expect(animation._lastDrawnCount).toBeGreaterThan(0);
+        expect(asciiam.presets.plasmaField.mode).toBe("plasma");
+        animation.destroy();
+    });
 });

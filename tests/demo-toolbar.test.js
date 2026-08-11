@@ -125,6 +125,19 @@ describe("demo toolbar quality-of-life controls", () => {
         expect(document.getElementById("usageCodePopover").textContent).toContain('"mode": "vortex"');
     });
 
+    it("offers the plasma mode and preset through the live controls", () => {
+        activeDom = createDemo();
+        const { document } = activeDom.window;
+        const plasmaButton = document.querySelector('[data-mode="plasma"]');
+
+        expect(plasmaButton).not.toBeNull();
+        expect(document.querySelector('#preset option[value="plasmaField"]')).not.toBeNull();
+        plasmaButton.click();
+        expect(plasmaButton.getAttribute("aria-pressed")).toBe("true");
+        expect(document.getElementById("modeToolbarStatus").textContent).toBe("plasma");
+        expect(document.getElementById("usageCodePopover").textContent).toContain('"mode": "plasma"');
+    });
+
     it("renders safe, classified syntax tokens with the JetBrains Mono code font", () => {
         activeDom = createDemo();
         const { document } = activeDom.window;

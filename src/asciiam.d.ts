@@ -3,6 +3,7 @@ export type asciiamMode =
   | 'current'
   | 'ripple'
   | 'vortex'
+  | 'plasma'
   | 'fadeIn'
   | 'fadeOut'
   | 'matrix'
