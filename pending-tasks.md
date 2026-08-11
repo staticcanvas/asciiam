@@ -6,6 +6,9 @@ strangers with confidence."
 
 ## CRITICAL TASKS
 
+- [x] **About access and export guidance.** Moved About into the stage information
+      area before the FPS switch, added Ctrl/Cmd+A access outside editable fields,
+      and documented every package/browser export in the overlay and README.
 - [x] **Code control placement and live output.** Code is the final toolbar control,
       uses logical auto-margin to stay on the right edge, and reflects live control changes.
 - [x] **FPS switch.** A compact native checkbox switch is positioned at the top-right

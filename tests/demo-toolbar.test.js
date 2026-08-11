@@ -103,9 +103,10 @@ describe("demo toolbar quality-of-life controls", () => {
         expect(primaryLabels.join(" ")).toContain("Image");
         expect(primaryLabels.join(" ")).toContain("Code");
         expect(advanced.querySelectorAll(":scope > .ctrl-pill")).toHaveLength(4);
-        expect(workspace.querySelectorAll(":scope > .ctrl-pill")).toHaveLength(5);
+        expect(workspace.querySelectorAll(":scope > .ctrl-pill")).toHaveLength(4);
         expect(document.getElementById("pop-more").contains(document.getElementById("pop-quality"))).toBe(true);
-        expect(document.getElementById("pop-more").contains(document.getElementById("pop-about"))).toBe(true);
+        expect(document.querySelector(".stage-top-actions").firstElementChild.id).toBe("aboutTriggerBtn");
+        expect(document.getElementById("pop-more").contains(document.getElementById("pop-about"))).toBe(false);
     });
 
     it("surfaces live values, contextual reveal direction, and clear action groups", () => {
@@ -214,12 +215,31 @@ describe("demo toolbar quality-of-life controls", () => {
         const headings = [...document.querySelectorAll("#pop-about h2")].map((heading) => heading.textContent.trim());
 
         expect(headings).toEqual(expect.arrayContaining([
+            "Usage and export formats",
             "Architectural Highlights & Features",
             "Working with the demo",
             "Control reference",
             "Operational notes",
         ]));
+        expect(document.querySelectorAll(".about-export-table tbody tr")).toHaveLength(5);
         expect(document.querySelectorAll(".about-control-table tbody tr")).toHaveLength(9);
         expect(document.getElementById("pop-about").textContent).toContain("Cross-origin sources must permit anonymous Canvas access");
+    });
+
+    it("opens About with Ctrl or Command+A without overriding editable fields", () => {
+        activeDom = createDemo();
+        const { document, KeyboardEvent } = activeDom.window;
+        const about = document.getElementById("pop-about");
+        const input = document.getElementById("savedPresetName");
+        let openCount = 0;
+        about.showPopover = () => { openCount += 1; };
+
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "a", ctrlKey: true, bubbles: true }));
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "A", metaKey: true, bubbles: true }));
+        expect(openCount).toBe(2);
+
+        input.dispatchEvent(new KeyboardEvent("keydown", { key: "a", ctrlKey: true, bubbles: true }));
+        expect(openCount).toBe(2);
+        expect(document.getElementById("aboutTriggerBtn").getAttribute("aria-keyshortcuts")).toBe("Control+A Meta+A");
     });
 });

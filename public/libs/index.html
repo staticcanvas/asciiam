@@ -270,11 +270,17 @@
                 border: 1px solid oklch(from var(--clr-primary) l c h / 0.18);
             }
 
-            .stage-fps-toggle {
+            .stage-top-actions {
                 position: absolute;
                 inset-block-start: var(--space-sm);
                 inset-inline-end: var(--space-md);
                 z-index: var(--z-overlay);
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
+            }
+            .stage-about-trigger,
+            .stage-fps-toggle {
                 padding: 4px var(--space-sm);
                 border: 1px solid oklch(from var(--clr-primary) l c h / 0.18);
                 border-radius: var(--radius-pill);
@@ -282,6 +288,32 @@
                 backdrop-filter: blur(12px) saturate(160%);
                 -webkit-backdrop-filter: blur(12px) saturate(160%);
                 font-size: var(--font-xs);
+            }
+            .stage-about-trigger {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                min-block-size: 2rem;
+                color: var(--clr-text-muted);
+                font-family: inherit;
+                cursor: pointer;
+                transition:
+                    color var(--time-fast) var(--ease-fluid),
+                    border-color var(--time-fast) var(--ease-fluid),
+                    background var(--time-fast) var(--ease-fluid);
+            }
+            .stage-about-trigger:hover,
+            .stage-about-trigger[aria-expanded="true"] {
+                color: var(--clr-primary);
+                border-color: oklch(from var(--clr-primary) l c h / 0.5);
+                background: oklch(from var(--clr-bg-base) l c h / 0.88);
+            }
+            .stage-about-trigger svg {
+                inline-size: 1rem;
+                block-size: 1rem;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
             }
             .stage-fps-toggle .ui-switch__track {
                 inline-size: 2.2rem;
@@ -1236,6 +1268,7 @@
                 .ctrl-more__actions { grid-template-columns: 1fr; }
             }
             @media (max-width: 460px) {
+                .stage-about-trigger span { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
                 .stage-fps-toggle .ui-switch__label { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
                 .preview-hero-card--vertical { inline-size: 100%; }
                 .preview-hero-card[data-hero-variant="split"] .hero-card-content { display: flex; }
@@ -1634,6 +1667,42 @@
             .about-reference-card ol,
             .about-reference-card ul { padding-inline-start: var(--space-md); }
             .about-reference-card li + li { margin-block-start: var(--space-xs); }
+            .about-section-intro {
+                max-inline-size: 820px;
+                margin-block: calc(var(--space-md) * -0.5) var(--space-md);
+                color: var(--clr-text-muted);
+                font-size: var(--font-sm);
+                line-height: 1.6;
+            }
+            .about-usage-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: var(--space-md);
+                margin-block-end: var(--space-md);
+            }
+            .about-usage-card {
+                min-inline-size: 0;
+                padding: var(--space-md);
+                border: 1px solid oklch(from var(--clr-border) l c h / 0.55);
+                border-radius: var(--radius-md);
+                background: oklch(from var(--clr-surface-2) l c h / 0.58);
+            }
+            .about-usage-card h3 {
+                margin-block-end: var(--space-xs);
+                color: var(--clr-text-main);
+                font-size: var(--font-sm);
+            }
+            .about-code-block {
+                overflow-x: auto;
+                margin: 0;
+                padding: var(--space-sm);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                background: oklch(from var(--clr-bg-base) l c h / 0.72);
+                color: var(--clr-text-main);
+                font: 400 var(--font-xs)/1.65 "JetBrains Mono", ui-monospace, monospace;
+                tab-size: 2;
+            }
             .about-table-wrap {
                 overflow-x: auto;
                 border: 1px solid var(--clr-border);
@@ -1657,6 +1726,24 @@
             }
             .about-control-table th { color: var(--clr-text-main); font-weight: 600; }
             .about-control-table tbody tr:last-child td { border-block-end: 0; }
+            .about-export-table {
+                inline-size: 100%;
+                min-inline-size: 720px;
+                border-collapse: collapse;
+                color: var(--clr-text-muted);
+                font-size: var(--font-xs);
+                text-align: start;
+            }
+            .about-export-table th,
+            .about-export-table td {
+                padding: var(--space-sm) var(--space-md);
+                border-block-end: 1px solid var(--clr-border);
+                vertical-align: top;
+                text-align: start;
+            }
+            .about-export-table th { color: var(--clr-text-main); font-weight: 600; }
+            .about-export-table tbody tr:last-child td { border-block-end: 0; }
+            .about-export-table code { color: var(--clr-primary); }
 
             /* Detailed 6-column Feature Grid */
             .feature-grid-detailed {
@@ -2037,11 +2124,20 @@
                     <div class="preview-splash-meta"><span>asciiam / 01</span><span>scroll to configure</span></div>
                 </div>
             </div>
-            <label class="ui-switch stage-fps-toggle" for="statsToggle">
-                <input class="ui-switch__control" type="checkbox" id="statsToggle" role="switch" aria-checked="false" />
-                <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
-                <span class="ui-switch__label">FPS</span>
-            </label>
+            <div class="stage-top-actions" role="group" aria-label="Stage information controls">
+                <button class="stage-about-trigger" id="aboutTriggerBtn" type="button"
+                        title="Open About and usage (Ctrl/Cmd+A)" aria-label="Open About and usage"
+                        aria-keyshortcuts="Control+A Meta+A" popovertarget="pop-about"
+                        aria-expanded="false" aria-controls="pop-about">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>About</span>
+                </button>
+                <label class="ui-switch stage-fps-toggle" for="statsToggle">
+                    <input class="ui-switch__control" type="checkbox" id="statsToggle" role="switch" aria-checked="false" />
+                    <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                    <span class="ui-switch__label">FPS</span>
+                </label>
+            </div>
             <div class="stats" id="stats"></div>
         <div class="ctrl-bar" role="toolbar" aria-label="Animation controls">
 
@@ -2380,11 +2476,6 @@
             </button>
 
             <!-- About / Welcome Splash Modal -->
-            <button class="ctrl-pill ctrl-pill--utility" id="aboutTriggerBtn" type="button" title="Open documentation and usage notes"
-                    popovertarget="pop-about" aria-expanded="false" aria-controls="pop-about">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                <span>About</span>
-            </button>
             <div class="ctrl-popover ctrl-popover--fullscreen" id="pop-about" popover="auto">
                 <div class="about-sticky-bar">
                     <div class="about-brand">
@@ -2422,6 +2513,46 @@
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0H0zm19.2 19.2H12v-9.6H9.6v9.6H4.8V4.8h14.4v14.4z"/></svg>
                             </a>
                         </div>
+                    </div>
+
+                    <h2 class="about-section-heading" id="aboutUsageTitle">Usage and export formats</h2>
+                    <p class="about-section-intro">
+                        Choose the package entry for a bundler, native ESM for module scripts, or UMD for a classic script tag. Readable and minified browser bundles expose the same API.
+                    </p>
+                    <div class="about-usage-grid" aria-labelledby="aboutUsageTitle">
+                        <section class="about-usage-card" aria-labelledby="aboutPackageUsageTitle">
+                            <h3 id="aboutPackageUsageTitle">Package ESM</h3>
+                            <pre class="about-code-block"><code>import asciiam from '@staticcanvas/asciiam';
+
+const anim = new asciiam('#hero', asciiam.presets.heroWave);
+anim.start();</code></pre>
+                        </section>
+                        <section class="about-usage-card" aria-labelledby="aboutBrowserEsmTitle">
+                            <h3 id="aboutBrowserEsmTitle">Browser ESM</h3>
+                            <pre class="about-code-block"><code>&lt;script type="module"&gt;
+  import asciiam from './libs/asciiam.esm.min.js';
+  new asciiam('#hero', asciiam.presets.heroWave).start();
+&lt;/script&gt;</code></pre>
+                        </section>
+                        <section class="about-usage-card" aria-labelledby="aboutUmdUsageTitle">
+                            <h3 id="aboutUmdUsageTitle">Classic script / UMD</h3>
+                            <pre class="about-code-block"><code>&lt;script src="./libs/asciiam.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  new asciiam('#hero', asciiam.presets.heroWave).start();
+&lt;/script&gt;</code></pre>
+                        </section>
+                    </div>
+                    <div class="about-table-wrap" tabindex="0" role="region" aria-label="Available package and browser exports">
+                        <table class="about-export-table">
+                            <thead><tr><th scope="col">Export</th><th scope="col">File or specifier</th><th scope="col">Use</th></tr></thead>
+                            <tbody>
+                                <tr><td>Package ESM</td><td><code>@staticcanvas/asciiam</code></td><td>Bundlers and ESM-aware runtimes; resolves to the readable ESM build.</td></tr>
+                                <tr><td>Browser ESM</td><td><code>asciiam.esm.js</code></td><td>Native module script with readable source.</td></tr>
+                                <tr><td>Browser ESM, minified</td><td><code>asciiam.esm.min.js</code></td><td>Native module script for deployment.</td></tr>
+                                <tr><td>UMD</td><td><code>asciiam.js</code></td><td>Classic script that provides the global <code>asciiam</code> constructor.</td></tr>
+                                <tr><td>UMD, minified</td><td><code>asciiam.min.js</code></td><td>Classic script for deployment and the default jsDelivr/unpkg entry.</td></tr>
+                            </tbody>
+                        </table>
                     </div>
 
                     <h2 class="about-section-heading">Architectural Highlights &amp; Features</h2>
@@ -2892,7 +3023,7 @@
 
                 ["qualityTriggerBtn", "charsetTriggerBtn", "alignTriggerBtn", "backdropTriggerBtn"]
                     .forEach((id) => moveControl(id, advancedActions));
-                ["themeToggleBtn", "undoSettingsBtn", "redoSettingsBtn", "resetSettingsBtn", "aboutTriggerBtn"]
+                ["themeToggleBtn", "undoSettingsBtn", "redoSettingsBtn", "resetSettingsBtn"]
                     .forEach((id) => moveControl(id, workspaceActions));
             }
             organizeToolbarOverflow();
@@ -2934,7 +3065,7 @@
             });
 
             /* ── Popover positioning & aria-expanded sync ── */
-            document.querySelectorAll('.ctrl-pill[popovertarget]').forEach((pill) => {
+            document.querySelectorAll('.ctrl-pill[popovertarget], .stage-about-trigger[popovertarget]').forEach((pill) => {
                 const targetId = pill.getAttribute('popovertarget');
                 const popover = document.getElementById(targetId);
                 if (!popover) return;
@@ -3809,7 +3940,16 @@
             document.addEventListener("keydown", (event) => {
                 const target = event.target;
                 if (!(event.ctrlKey || event.metaKey) || event.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable) return;
-                if (event.key.toLocaleLowerCase("en") !== "z") return;
+                const key = event.key.toLocaleLowerCase("en");
+                if (key === "a") {
+                    event.preventDefault();
+                    const about = document.getElementById("pop-about");
+                    const aboutTrigger = document.getElementById("aboutTriggerBtn");
+                    if (aboutTrigger.getAttribute("aria-expanded") === "true") about.hidePopover();
+                    else about.showPopover();
+                    return;
+                }
+                if (key !== "z") return;
                 event.preventDefault();
                 applyHistory(event.shiftKey ? 1 : -1);
             });

@@ -53,6 +53,56 @@ Every search card links to both the photographer and the photo on Unsplash with
 Photo by [Markus Winkler](https://unsplash.com/@markuswinkler?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
 on [Unsplash](https://unsplash.com/photos/a-box-with-a-key-chain-and-a-key-chain-on-it-Z8yWSsx8OWE?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText).
 
+## Usage and export formats
+
+The package provides ESM and UMD builds in readable and minified forms. Import the
+package root when using a bundler or an ESM-aware runtime:
+
+```js
+// app.js
+import asciiam from '@staticcanvas/asciiam';
+
+const anim = new asciiam('#hero', asciiam.presets.heroWave);
+anim.start();
+```
+
+Use a native browser module when the ESM bundle is served with the site:
+
+```html
+<!-- index.html -->
+<div id="hero" style="height: 480px;"></div>
+<script type="module">
+  import asciiam from './libs/asciiam.esm.min.js';
+
+  new asciiam('#hero', asciiam.presets.heroWave).start();
+</script>
+```
+
+Use the UMD bundle for a classic script tag. It provides the global `asciiam`
+constructor:
+
+```html
+<!-- index.html -->
+<div id="hero" style="height: 480px;"></div>
+<script src="./libs/asciiam.min.js"></script>
+<script>
+  new asciiam('#hero', asciiam.presets.heroWave).start();
+</script>
+```
+
+| Export | File or specifier | Intended use |
+|---|---|---|
+| Package ESM | `@staticcanvas/asciiam` | Bundlers and ESM-aware runtimes; resolves to `dist/asciiam.esm.js`. |
+| Browser ESM | `dist/asciiam.esm.js` | Native module script with readable source. |
+| Browser ESM, minified | `dist/asciiam.esm.min.js` | Native module script for deployment. |
+| UMD | `dist/asciiam.js` | Classic script with readable source and the global `asciiam` constructor. |
+| UMD, minified | `dist/asciiam.min.js` | Classic script for deployment and the default jsDelivr/unpkg entry. |
+
+Source maps are emitted beside all four browser bundles for debugging.
+For CDN delivery, replace the local browser path with a versioned jsDelivr URL such
+as `https://cdn.jsdelivr.net/npm/@staticcanvas/asciiam@1.0.0/dist/asciiam.min.js` or
+the matching `asciiam.esm.min.js` path for a module script.
+
 ## Quick start
 
 ```html
