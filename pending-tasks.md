@@ -81,6 +81,9 @@ strangers with confidence."
   - [x] Live value chips expose each control's current state without opening it.
   - [x] Visual grouping distinguishes configuration, utilities, media, and the
         primary Code action while preserving keyboard order and mobile scrolling.
+  - [x] Reworked the overflowing dock into seven primary actions. Quality, Charset,
+        Align, Backdrop, Theme, history, Reset, and About now live in a grouped More
+        popover; narrow screens use a two-row four-column dock instead of off-screen items.
   - [x] Mobile horizontal scrolling with full-size touch targets.
   - [x] Code remains the final control and uses logical auto-margin on wide screens.
   - [x] One-click reset plus local save/load/delete preset workflows.

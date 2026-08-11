@@ -1182,6 +1182,7 @@
                     scroll-snap-align: start;
                 }
                 .ctrl-pill--code { margin-inline-start: 0; }
+                .ctrl-bar > .ctrl-pill .ctrl-pill__status { display: none; }
                 .ctrl-popover,
                 .ctrl-popover--wide {
                     inline-size: calc(100vw - (var(--space-sm) * 2));
@@ -1193,6 +1194,24 @@
                     max-block-size: calc(100dvh - 17rem) !important;
                 }
                 .custom-charset-input { inline-size: 100%; }
+            }
+            @media (max-width: 640px) {
+                .preview-scene { padding-block-end: 8rem; }
+                .ctrl-bar {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    overflow-x: visible;
+                    gap: var(--space-xs);
+                }
+                .ctrl-bar__separator { display: none; }
+                .ctrl-bar > .ctrl-pill {
+                    inline-size: 100%;
+                    min-inline-size: 0;
+                    justify-content: center;
+                    padding-inline: var(--space-xs);
+                }
+                .ctrl-pill--code { order: initial; }
+                .ctrl-more__actions { grid-template-columns: 1fr; }
             }
             @media (max-width: 460px) {
                 .stage-fps-toggle .ui-switch__label { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -1307,6 +1326,18 @@
                 margin-inline: var(--space-xs);
                 background: var(--clr-border);
             }
+            .ctrl-more__actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: var(--space-xs);
+            }
+            .ctrl-more__actions .ctrl-pill {
+                inline-size: 100%;
+                min-inline-size: 0;
+                justify-content: flex-start;
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+            }
+            .ctrl-more__popovers { display: contents; }
             .ctrl-pill:disabled {
                 color: var(--clr-text-dim);
                 border-color: var(--clr-border);
@@ -1419,6 +1450,7 @@
             /* Position each popover panel right over its button */
             #pop-preset { left: var(--space-md); }
             #pop-code   { left: auto; right: var(--space-md); }
+            #pop-more   { left: auto; right: var(--space-md); }
 
             /* Wide variant for image browser */
             .ctrl-popover--wide {
@@ -1898,6 +1930,35 @@
             }
             .chk input { width: auto; }
             .chk label { margin: 0 !important; color: inherit; text-transform: none; letter-spacing: normal; }
+            /* Toolbar responsive rules live after the component SOT so they win the cascade. */
+            @media (max-width: 720px) {
+                .ctrl-bar > .ctrl-pill .ctrl-pill__status { display: none; }
+                .ctrl-pill--code { margin-inline-start: 0; }
+                .ctrl-popover,
+                .ctrl-popover--wide {
+                    inline-size: calc(100vw - (var(--space-sm) * 2));
+                    min-inline-size: 0;
+                    max-inline-size: none;
+                }
+            }
+            @media (max-width: 640px) {
+                .preview-scene { padding-block-end: 8rem; }
+                .ctrl-bar {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    overflow-x: visible;
+                    gap: var(--space-xs);
+                }
+                .ctrl-bar__separator { display: none; }
+                .ctrl-bar > .ctrl-pill {
+                    inline-size: 100%;
+                    min-inline-size: 0;
+                    justify-content: center;
+                    padding-inline: var(--space-xs);
+                }
+                .ctrl-pill--code { order: initial; }
+                .ctrl-more__actions { grid-template-columns: 1fr; }
+            }
         </style>
 
     </head>
@@ -2252,6 +2313,24 @@
 
             <span class="ctrl-bar__separator" aria-hidden="true"></span>
 
+            <!-- More / secondary controls -->
+            <button class="ctrl-pill" id="moreTriggerBtn" type="button" title="Open advanced and workspace controls"
+                    popovertarget="pop-more" aria-expanded="false" aria-controls="pop-more">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>
+                <span>More</span>
+            </button>
+            <div class="ctrl-popover" id="pop-more" popover>
+                <section class="cpop-group" aria-labelledby="moreAdvancedLabel">
+                    <span class="cpop-label" id="moreAdvancedLabel">Advanced controls</span>
+                    <div class="ctrl-more__actions" id="moreAdvancedActions"></div>
+                </section>
+                <section class="cpop-group" aria-labelledby="moreWorkspaceLabel">
+                    <span class="cpop-label" id="moreWorkspaceLabel">Workspace</span>
+                    <div class="ctrl-more__actions" id="moreWorkspaceActions"></div>
+                </section>
+                <div class="ctrl-more__popovers" id="moreNestedPopovers"></div>
+            </div>
+
             <!-- Theme -->
             <button class="ctrl-pill ctrl-pill--utility" id="themeToggleBtn" type="button" aria-label="Toggle dark or light theme" title="Toggle dark or light theme">
                 <svg id="themeIconSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -2276,7 +2355,7 @@
             </button>
 
             <!-- About / Welcome Splash Modal -->
-            <button class="ctrl-pill ctrl-pill--utility" type="button" title="Open documentation and usage notes"
+            <button class="ctrl-pill ctrl-pill--utility" id="aboutTriggerBtn" type="button" title="Open documentation and usage notes"
                     popovertarget="pop-about" aria-expanded="false" aria-controls="pop-about">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 <span>About</span>
@@ -2771,6 +2850,27 @@
                 };
                 modeButtonsEl.appendChild(b);
             });
+
+            /* ── Compact toolbar information architecture ── */
+            function organizeToolbarOverflow() {
+                const advancedActions = document.getElementById("moreAdvancedActions");
+                const workspaceActions = document.getElementById("moreWorkspaceActions");
+                const nestedPopovers = document.getElementById("moreNestedPopovers");
+                const moveControl = (triggerId, destination) => {
+                    const trigger = document.getElementById(triggerId);
+                    if (!trigger) return;
+                    destination.appendChild(trigger);
+                    const popoverId = trigger.getAttribute("aria-controls");
+                    const popover = popoverId ? document.getElementById(popoverId) : null;
+                    if (popover) nestedPopovers.appendChild(popover);
+                };
+
+                ["qualityTriggerBtn", "charsetTriggerBtn", "alignTriggerBtn", "backdropTriggerBtn"]
+                    .forEach((id) => moveControl(id, advancedActions));
+                ["themeToggleBtn", "undoSettingsBtn", "redoSettingsBtn", "resetSettingsBtn", "aboutTriggerBtn"]
+                    .forEach((id) => moveControl(id, workspaceActions));
+            }
+            organizeToolbarOverflow();
 
             /* ── WAI-ARIA toolbar roving focus ── */
             const toolbar = document.querySelector(".ctrl-bar");

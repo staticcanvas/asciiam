@@ -82,8 +82,30 @@ describe("demo toolbar quality-of-life controls", () => {
         preset.focus();
         preset.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
 
-        expect(document.activeElement.textContent).toContain("Quality");
+        expect(document.activeElement.textContent).toContain("Mode");
         expect(controls.filter((control) => control.tabIndex === 0)).toEqual([document.activeElement]);
+    });
+
+    it("keeps the primary dock on-screen and moves secondary controls into More", () => {
+        activeDom = createDemo();
+        const { document } = activeDom.window;
+        const primaryLabels = [...document.querySelectorAll(".ctrl-bar > .ctrl-pill")]
+            .map((control) => control.textContent.trim().replace(/\s+/g, " "));
+        const advanced = document.getElementById("moreAdvancedActions");
+        const workspace = document.getElementById("moreWorkspaceActions");
+
+        expect(primaryLabels).toHaveLength(7);
+        expect(primaryLabels.join(" ")).toContain("Preset");
+        expect(primaryLabels.join(" ")).toContain("Mode");
+        expect(primaryLabels.join(" ")).toContain("Motion");
+        expect(primaryLabels.join(" ")).toContain("Color");
+        expect(primaryLabels.join(" ")).toContain("More");
+        expect(primaryLabels.join(" ")).toContain("Image");
+        expect(primaryLabels.join(" ")).toContain("Code");
+        expect(advanced.querySelectorAll(":scope > .ctrl-pill")).toHaveLength(4);
+        expect(workspace.querySelectorAll(":scope > .ctrl-pill")).toHaveLength(5);
+        expect(document.getElementById("pop-more").contains(document.getElementById("pop-quality"))).toBe(true);
+        expect(document.getElementById("pop-more").contains(document.getElementById("pop-about"))).toBe(true);
     });
 
     it("surfaces live values, contextual reveal direction, and clear action groups", () => {
