@@ -34,8 +34,8 @@
     "name": "Garvey K. Snow",
     "email": "sgkens@gmail.com",
     "url": "https://gitlab.com/staticcanvas/asciiam",
-      "github": "https://github.com/staticcanvas/asciiam",
-      "gitlab": "https://gitlab.com/staticcanvas/asciiam"
+    "github": "https://github.com/staticcanvas/asciiam",
+    "gitlab": "https://gitlab.com/staticcanvas/asciiam"
   },
   "keywords": [
     "ascii",
@@ -49,6 +49,9 @@
     "visualization"
   ],
   "scripts": {
+    "prepare:bg": "node scripts/generate-bg-manifest.js",
+    "predev": "npm run prepare:bg",
+    "prebuild": "npm run prepare:bg",
     "dev": "vite build --watch",
     "build": "vite build",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
@@ -56,7 +59,7 @@
     "lint": "eslint src/**/*.js tests/**/*.js",
     "lint:fix": "eslint src/**/*.js tests/**/*.js --fix",
     "update:npm": "npm install -g npm@latest",
-    "serve:example": "npm run build && http-server webutil -p 8080",
+    "serve:example": "npm run build && http-server public -p 8085",
     "publish:npm": "npm run lint:fix && npm run build && cd dist/asciiam && echo //registry.npmjs.org/:_authToken=${NPM_API_KEY} > .npmrc && npm publish --access public",
     "publish:jsr": "npm run lint:fix && npm run build && cd dist/asciiam && npx jsr publish --allow-dirty"
   },
@@ -95,15 +98,3 @@
     ]
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

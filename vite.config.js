@@ -11,11 +11,11 @@ const bundleDist = `${packageDist}/dist`;
 
 const banner = `/*! ${packageName} v${pkg.version} | ${pkg.homepage} | ${pkg.license} */`;
 
-function copyWebutilLibraries() {
+function copyPublicLibraries() {
   return {
-    name: 'copy-webutil-libraries',
+    name: 'copy-public-libraries',
     closeBundle() {
-      const destination = resolve('webutil/libs');
+      const destination = resolve('public/libs');
       mkdirSync(destination, { recursive: true });
       cpSync(resolve(bundleDist), destination, { recursive: true });
     },
@@ -87,6 +87,6 @@ export default defineConfig({
       ],
       hook: 'writeBundle',
     }),
-    copyWebutilLibraries(),
+    copyPublicLibraries(),
   ],
 });

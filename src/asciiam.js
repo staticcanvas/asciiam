@@ -175,6 +175,7 @@
                     background: "transparent",
                     speed: 1,
                     direction: "horizontal",
+                    align: "center",
                     minOpacity: 0.05,
                     maxOpacity: 0.85,
                     boldOnPeak: true,
@@ -380,7 +381,10 @@
             if (key === "edgeFade") {
                 this._buildEdgeFadeCache();
             }
-            if (key === "imageScale" || key === "imageFov" || key === "fit" || key === "imageChars") {
+            if (key === "charSet") {
+                this.opts.imageChars = value;
+            }
+            if (key === "imageScale" || key === "imageFov" || key === "fit" || key === "imageChars" || key === "charSet") {
                 if (this._sourceImage) this._resampleImage();
             }
             if (key === "snowDensity") {
@@ -857,7 +861,13 @@
 
             if (opacity <= 0.01) return false;
 
-            const fillStyle = cell.color || globalGradient || this._animatedColor || this.opts.color;
+            let fillStyle = cell.color;
+            if (!fillStyle && this.opts.colorFromImage && this._imageGrid) {
+                const imgColor = this._imageGrid.colors[row * this.cols + col];
+                if (imgColor) fillStyle = imgColor;
+            }
+            if (!fillStyle) fillStyle = globalGradient || this._animatedColor || this.opts.color;
+
             if (fillStyle !== this._lastFillStyle) {
                 ctx.fillStyle = fillStyle;
                 this._lastFillStyle = fillStyle;
@@ -995,13 +1005,16 @@
         }
 
         _rippleCell(col, row, x, y) {
-            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
-            const cx = this.w / 2,
-                cy = this.h / 2;
+            const { charSet, minOpacity, maxOpacity, boldOnPeak, align } = this.opts;
+            let cx = this.w / 2, cy = this.h / 2;
+            if (align === "top-left") { cx = 0; cy = 0; }
+            else if (align === "top-right") { cx = this.w; cy = 0; }
+            else if (align === "bottom-left") { cx = 0; cy = this.h; }
+            else if (align === "bottom-right") { cx = this.w; cy = this.h; }
             const d = Math.hypot(x - cx, y - cy);
             const wave = Math.sin(d * 0.06 - this._time * 2.4);
             const n = (wave + 1) / 2;
-            const falloff = Math.max(0, 1 - d / (Math.max(this.w, this.h) * 0.75));
+            const falloff = Math.max(0, 1 - d / (Math.max(this.w, this.h) * 0.85));
             const combined = n * falloff;
             const charIdx = Math.floor(combined * (charSet.length - 1));
             return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * combined, combined, boldOnPeak && combined > 0.6);
@@ -1029,12 +1042,50 @@
             let opacity = this.opts.maxOpacity,
                 bold = false,
                 intensity = 0.5;
+
             if (this.opts.animateImageMask) {
-                const wave = this._waveCell(col, row, x, y);
-                opacity = Math.max(0.15, wave.opacity);
-                bold = wave.bold;
-                intensity = wave.level / (this.opts.fontLevels - 1);
+                const maskMode = this.opts.imageMaskMode || "waveSweep";
+                const t = this._time * (this.opts.speed || 1);
+
+                if (maskMode === "fullStatic" || maskMode === "static") {
+                    opacity = this.opts.maxOpacity;
+                    bold = false;
+                    intensity = 0.5;
+                } else if (maskMode === "scanlinePass" || maskMode === "scanline") {
+                    const scanY = ((t * 180) % (this.h + 200)) - 100;
+                    const dist = Math.abs(y - scanY);
+                    const line = Math.max(0, 1 - dist / (this.h * 0.12));
+                    const shimmer = 0.35 + 0.65 * (line * line);
+                    opacity = this.opts.minOpacity + (this.opts.maxOpacity - this.opts.minOpacity) * shimmer;
+                    bold = line > 0.6;
+                    intensity = line;
+                } else if (maskMode === "radialRipple" || maskMode === "ripple") {
+                    const cx = this.w / 2, cy = this.h / 2;
+                    const d = Math.hypot(x - cx, y - cy);
+                    const wave = Math.sin(d * 0.05 - t * 2.2);
+                    const n = (wave + 1) / 2;
+                    opacity = Math.max(this.opts.minOpacity, n * this.opts.maxOpacity);
+                    intensity = n;
+                    bold = n > 0.7;
+                } else if (maskMode === "thermalNoise" || maskMode === "noise") {
+                    const seed = this._seed(col, row + Math.floor(t * 8));
+                    const noise = 0.55 + seed * 0.45;
+                    opacity = this.opts.maxOpacity * noise;
+                    intensity = seed;
+                } else if (maskMode === "halftonePulse" || maskMode === "halftone") {
+                    const pulse = 0.65 + 0.35 * Math.sin(t * 1.6 + (x + y) * 0.02);
+                    opacity = this.opts.maxOpacity * pulse;
+                    intensity = pulse;
+                    bold = pulse > 0.85;
+                } else {
+                    // Default "waveSweep"
+                    const wave = this._waveCell(col, row, x, y);
+                    opacity = Math.max(0.18, wave.opacity);
+                    bold = wave.bold;
+                    intensity = wave.level / (this.opts.fontLevels - 1);
+                }
             }
+
             const cell = this._setCell(char, opacity, intensity, bold);
             cell.color = this.opts.colorFromImage ? g.colors[i] : null;
             return cell;

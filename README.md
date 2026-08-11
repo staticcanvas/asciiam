@@ -6,10 +6,27 @@ backdrops, image-to-ASCII reveals. Renders on `<canvas>` for performance, not DO
 ## Files
 
 - `src/asciiam.js` — the source module.
-- `webutil/index.html` — interactive static demo with live controls for every mode/option.
+- `public/index.html` — interactive static demo with live controls for every mode/option.
 
 The build produces UMD and ESM bundles in `dist/asciiam/dist` and copies the browser
-bundles to `webutil/libs`, so `webutil` can be deployed as a standalone static app.
+bundles to `public/libs`, so `public` can be deployed as a standalone Cloudflare Pages app.
+
+## Cloudflare Pages demo
+
+Configure the Pages project with `npm run build` as the build command and `public` as
+the output directory. Add `UNSPLASH_ACCESS_KEY` as an encrypted secret under
+**Settings > Variables and Secrets**. The Pages Function in `functions/api/unsplash.js`
+keeps this credential out of the browser.
+
+Place the included demo images in `public/assets/bg`, then run `npm run prepare:bg`
+(also run automatically before `dev` and `build`) to regenerate
+`public/assets/backgrounds.json`. Exact Unsplash searches are cached in the browser
+for one hour and at the Cloudflare edge for one day. Photos continue to use the
+hotlinked Unsplash URLs required by the API; normal CDN and browser HTTP caching still
+applies.
+
+For local Pages Function development, copy `.dev.vars.example` to `.dev.vars`, set the
+access key, build once, and run `npx wrangler pages dev public`.
 
 ## Quick start
 

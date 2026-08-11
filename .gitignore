@@ -1,9 +1,12 @@
 /node_modules
 /dist
 .npmrc
+public/libs/
 
 # Ignore environment variable files
 *.env
+.dev.vars*
+!.dev.vars.example
 build.env
 
 
