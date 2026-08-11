@@ -97,6 +97,7 @@ new asciiam(target, {
   targetFPS: null,              // null = uncapped (vsync); e.g. 30 to throttle
   showStats: false,             // pair with anim.attachStats(el) for a live fps/cell readout
   respectReducedMotion: true,   // honor prefers-reduced-motion: reduce
+  onReady: null,                // (animation) => {}
   image: null,                  // URL, for image mode
   imageChars: ' .:-=+*#%@',
   fit: 'cover',                 // cover | contain
@@ -136,6 +137,18 @@ WebP, AVIF, and SVG. Cross-origin images must provide suitable CORS headers. The
 `imageScale` option zooms the source around its center, while `imageFov` controls the
 fraction of the source visible in the ASCII frame.
 
+When loading a user-selected file, revoke its temporary object URL after `setImage()`
+finishes decoding it:
+
+```js
+const objectUrl = URL.createObjectURL(file);
+try {
+  await anim.setImage(objectUrl);
+} finally {
+  URL.revokeObjectURL(objectUrl);
+}
+```
+
 Built once per frame (not per character), so it's effectively free performance-wise.
 
 ### Performance
@@ -153,6 +166,9 @@ Gradients are cached per frame, and edge-fade factors are precomputed on resize.
 anim.start()
 anim.stop()
 anim.destroy()                  // removes canvas, disconnects all observers/listeners
+const unsubscribe = anim.on('resize', ({ width, height, cols, rows }) => {})
+anim.on('frame', ({ time, delta, drawn }) => {})
+anim.off('resize', listener)    // or call the returned unsubscribe function
 anim.setMode(mode)
 anim.setOption(key, value)
 anim.setImage(url)              // returns a Promise, resolves with the loaded Image
@@ -161,6 +177,10 @@ asciiam.isSupported()     // static: feature-detect before constructing
 asciiam.presets           // static: named preset configs
 asciiam.QUALITY           // static: quality tier definitions
 ```
+
+Lifecycle events are `ready` (emitted on the microtask after construction), `resize`,
+and `frame`. `frame` payloads are only allocated when that event has subscribers.
+The `onReady` option is available when a constructor callback is more convenient.
 
 ## Behavior you should know about
 

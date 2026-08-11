@@ -6,10 +6,12 @@ strangers with confidence."
 
 ## Should do before wider distribution
 
-- [ ] **No automated tests.** Everything so far has been verified by static syntax
-      checking and code review, not by running in real browsers. At minimum needs:
-      a headless-browser smoke test (construct, start, resize, destroy without
-      throwing) and a manual pass in Chrome/Firefox/Safari.
+- [x] **Automated lifecycle smoke coverage.** Jest/JSDOM now exercises construction,
+      animation start, observer-driven resize, and teardown with a mocked Canvas 2D
+      context. The suite runs through `npm test` and in the GitLab CI test stage.
+- [ ] **Real-browser verification.** Run a manual visual pass in current
+      Chrome/Firefox/Safari; DOM emulation verifies lifecycle behavior but cannot
+      validate browser canvas rasterization or font metrics.
 - [x] **TypeScript definitions.** `src/asciiam.d.ts` documents the options object and
       method signatures discoverable in editors and catch misconfiguration at
       compile time for TS consumers.
@@ -25,13 +27,12 @@ strangers with confidence."
 - [x] **npm packaging.** Package metadata, exports, semver, type declarations, and
       build/publish scripts now identify `@staticcanvas/asciiam` rather than the
       copied library.
-- [ ] **Object URLs from user-uploaded images aren't revoked automatically** (see the
-      demo's file input handler). Not a leak in the library itself, but worth adding
-      an example of proper `URL.revokeObjectURL()` cleanup in the docs, or exposing a
-      hook so consumers can clean up after `setImage()` resolves.
-- [ ] **No `onReady` / lifecycle events beyond `setImage()`'s promise.** Might be
-      worth a small event system (`anim.on('resize', ...)`, `anim.on('frame', ...)`)
-      for consumers who want to react to internal state without subclassing.
+- [x] **Object URL cleanup is documented and demonstrated.** The demo revokes each
+      upload URL when `setImage()` settles, and the README shows the same `finally`
+      pattern for consumers.
+- [x] **Lifecycle events.** `onReady` and the `ready`, `resize`, and `frame` events
+      let consumers react to internal state without subclassing. `on()` returns an
+      unsubscribe function, and all subscriptions are cleared by `destroy()`.
 - [ ] **`fadeIn` and `image` modes don't expose fine-grained timing controls** (sweep
       duration, per-character delay curve) — currently hardcoded constants
       (`totalDuration = 2.2`, etc.). Fine for the presets, limiting if someone wants a

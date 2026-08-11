@@ -35,26 +35,17 @@ lint:
 # ------------------------------------------------------
 # Test stage
 # ------------------------------------------------------
-# test:
-#   stage: test
-#   script:
-#     - echo "🔵 Running tests..."
-#     - npm ci
-#     - npm test
-#   coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
-#   artifacts:
-#     reports:
-#       coverage_report:
-#         coverage_format: cobertura
-#         path: coverage/cobertura-coverage.xml
-#     paths:
-#       - coverage/
-#     expire_in: 1 week
-#   only:
-#     - merge_requests
-#     - main
-#     - tags
-#   allow_failure: false
+test:
+  stage: test
+  script:
+    - echo "🔵 Running tests..."
+    - npm ci
+    - npm test
+  only:
+    - merge_requests
+    - main
+    - tags
+  allow_failure: false
 
 # ------------------------------------------------------
 # Build stage

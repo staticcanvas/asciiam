@@ -125,6 +125,8 @@
                 console.warn("asciiam: canvas 2D not supported in this browser — instance is a no-op.");
                 this._disabled = true;
                 this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setCursor = () => {};
+                this.on = () => () => {};
+                this.off = () => {};
                 this.setImage = () => Promise.resolve(null);
                 return;
             }
@@ -153,6 +155,8 @@
                 console.warn("asciiam: failed to acquire 2D context — instance is a no-op.");
                 this._disabled = true;
                 this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setCursor = () => {};
+                this.on = () => () => {};
+                this.off = () => {};
                 this.setImage = () => Promise.resolve(null);
                 return;
             }
@@ -188,6 +192,7 @@
                     showStats: false,
                     fontLevels: quality.fontLevels || 6,
                     respectReducedMotion: true,
+                    onReady: null,
                     onImageError: null,
 
                     // --- wave tuning (previously hardcoded) ---
@@ -219,6 +224,7 @@
             this._lastT = null;
             this._acc = 0;
             this._resizePending = false;
+            this._resizeRaf = null;
             this._lastFillStyle = null;
             this._lastFont = null;
             this._gradientKey = null;
@@ -234,6 +240,8 @@
             this._animatedColor = null;
             this._cursor = null;
             this._canvasRect = null;
+            this._events = new Map();
+            this._destroyed = false;
             this._api = {
                 col: 0,
                 row: 0,
@@ -275,6 +283,12 @@
             }
 
             if (this.opts.image) this.setImage(this.opts.image);
+            Promise.resolve().then(() => {
+                if (this._destroyed) return;
+                const detail = { width: this.w, height: this.h, cols: this.cols, rows: this.rows };
+                this._emit("ready", detail);
+                if (typeof this.opts.onReady === "function") this.opts.onReady(this);
+            });
         }
 
         // ---- public API ----
@@ -305,6 +319,9 @@
 
                 this._time += dt * 0.001 * this.opts.speed;
                 this._draw(dt);
+                if (this._events.get("frame")?.size) {
+                    this._emit("frame", { time: this._time, delta: dt, drawn: this._lastDrawnCount });
+                }
                 if (this.opts.showStats) this._updateStats(dt);
                 this._raf = requestAnimationFrame(loop);
             };
@@ -315,14 +332,35 @@
             this._raf = null;
         }
         destroy() {
+            this._destroyed = true;
             this.stop();
             if (this._io) this._io.disconnect();
             if (this._ro) this._ro.disconnect();
+            if (this._resizeRaf) cancelAnimationFrame(this._resizeRaf);
             document.removeEventListener("visibilitychange", this._onVisChange);
+            if (this._onResize) window.removeEventListener("resize", this._onResize);
             if (this._mq)
                 this._mq.removeEventListener ? this._mq.removeEventListener("change", this._onMqChange) : this._mq.removeListener(this._onMqChange);
             this._unbindCursor();
             if (this.canvas.parentElement) this.canvas.parentElement.removeChild(this.canvas);
+            this._events.clear();
+        }
+        /** Subscribe to a lifecycle event. Returns an unsubscribe function. */
+        on(event, listener) {
+            if (typeof listener !== "function") throw new TypeError("asciiam: event listener must be a function");
+            let listeners = this._events.get(event);
+            if (!listeners) {
+                listeners = new Set();
+                this._events.set(event, listeners);
+            }
+            listeners.add(listener);
+            return () => this.off(event, listener);
+        }
+        off(event, listener) {
+            const listeners = this._events.get(event);
+            if (!listeners) return;
+            listeners.delete(listener);
+            if (!listeners.size) this._events.delete(event);
         }
         setMode(mode) {
             this.opts.mode = mode;
@@ -375,6 +413,12 @@
             this._cursor = x === null || x === undefined ? null : { x, y };
         }
 
+        _emit(event, detail) {
+            const listeners = this._events.get(event);
+            if (!listeners) return;
+            [...listeners].forEach((listener) => listener(detail, this));
+        }
+
         // ---- lifecycle ----
         _bindLifecycle() {
             if ("IntersectionObserver" in window) {
@@ -404,8 +448,9 @@
         _scheduleResize() {
             if (this._resizePending) return;
             this._resizePending = true;
-            requestAnimationFrame(() => {
-            this._resizePending = false;
+            this._resizeRaf = requestAnimationFrame(() => {
+                this._resizeRaf = null;
+                this._resizePending = false;
                 this._resize();
             });
         }
@@ -481,6 +526,9 @@
             if (this.opts.mode === "snow") this._initSnow();
             if (this.opts.mode === "sparkle") this._initSparkle();
             if (this._reduced) this._draw(16.7);
+            if (this._events.get("resize")?.size) {
+                this._emit("resize", { width: this.w, height: this.h, cols: this.cols, rows: this.rows });
+            }
         }
 
         _buildEdgeFadeCache() {

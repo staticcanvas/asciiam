@@ -10,6 +10,18 @@ export type asciiamMode =
   | 'custom'
   | (string & {});
 
+export type asciiamEvent = 'ready' | 'resize' | 'frame' | (string & {});
+
+export interface asciiamEventDetail {
+  width?: number;
+  height?: number;
+  cols?: number;
+  rows?: number;
+  time?: number;
+  delta?: number;
+  drawn?: number;
+}
+
 export interface asciiamOptions {
   mode?: asciiamMode;
   quality?: 'high' | 'balanced' | 'performance' | 'ultra';
@@ -39,6 +51,7 @@ export interface asciiamOptions {
   showStats?: boolean;
   fontLevels?: number;
   respectReducedMotion?: boolean;
+  onReady?: ((animation: asciiam) => void) | null;
   onImageError?: ((error: Event) => void) | null;
   ambient?: number;
   bandWidth?: number;
@@ -63,6 +76,8 @@ export default class asciiam {
   start(): void;
   stop(): void;
   destroy(): void;
+  on(event: asciiamEvent, listener: (detail: asciiamEventDetail, animation: asciiam) => void): () => void;
+  off(event: asciiamEvent, listener: (detail: asciiamEventDetail, animation: asciiam) => void): void;
   setMode(mode: asciiamMode): void;
   setOption(key: string, value: unknown): void;
   setImage(source: string): Promise<HTMLImageElement | null>;
