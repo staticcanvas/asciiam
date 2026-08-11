@@ -1,0 +1,92 @@
+import { defineConfig } from 'vite';
+import copy from 'rollup-plugin-copy';
+import { resolve } from 'node:path';
+import { cpSync, mkdirSync, readFileSync } from 'node:fs';
+import terser from '@rollup/plugin-terser';
+
+const pkg = JSON.parse(readFileSync(resolve('package.json'), 'utf8'));
+const packageName = pkg.name.split('/').pop();
+const packageDist = `dist/${packageName}`;
+const bundleDist = `${packageDist}/dist`;
+
+const banner = `/*! ${packageName} v${pkg.version} | ${pkg.homepage} | ${pkg.license} */`;
+
+function copyWebutilLibraries() {
+  return {
+    name: 'copy-webutil-libraries',
+    closeBundle() {
+      const destination = resolve('webutil/libs');
+      mkdirSync(destination, { recursive: true });
+      cpSync(resolve(bundleDist), destination, { recursive: true });
+    },
+  };
+}
+
+export default defineConfig({
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    sourcemap: true,
+    target: 'es2015',
+    lib: {
+      entry: resolve(`src/${packageName}.js`),
+      name: 'asciiam',
+      fileName: packageName,
+    },
+    minify: false,
+    rollupOptions: {
+      output: [
+        {
+          format: 'umd',
+          name: 'asciiam',
+          dir: bundleDist,
+          entryFileNames: `${packageName}.js`,
+          exports: 'default',
+          plugins: [terser({ format: { comments: true, preamble: banner } })],
+        },
+        {
+          format: 'umd',
+          name: 'asciiam',
+          dir: bundleDist,
+          entryFileNames: `${packageName}.min.js`,
+          exports: 'default',
+          plugins: [terser({ format: { comments: /^!/ }, compress: true, mangle: true })],
+        },
+        {
+          format: 'es',
+          dir: bundleDist,
+          entryFileNames: `${packageName}.esm.js`,
+          plugins: [terser({ format: { comments: true, preamble: banner } })],
+        },
+        {
+          format: 'es',
+          dir: bundleDist,
+          entryFileNames: `${packageName}.esm.min.js`,
+          plugins: [terser({ format: { comments: /^!/ }, compress: true, mangle: true })],
+        },
+      ],
+    },
+  },
+  plugins: [
+    copy({
+      targets: [
+        { src: 'README.md', dest: packageDist },
+        {
+          src: 'package.json',
+          dest: packageDist,
+          transform: (contents) => {
+            const packageJson = JSON.parse(contents.toString());
+            delete packageJson.scripts;
+            delete packageJson.devDependencies;
+            delete packageJson.files;
+            return JSON.stringify(packageJson, null, 2);
+          },
+        },
+        { src: 'src', dest: packageDist },
+        { src: 'jsr.jsonc', dest: packageDist },
+      ],
+      hook: 'writeBundle',
+    }),
+    copyWebutilLibraries(),
+  ],
+});

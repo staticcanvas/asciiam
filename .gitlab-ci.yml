@@ -1,0 +1,515 @@
+image: node:${NODE_VERSION}
+
+variables:
+  NODE_VERSION: '25.2.1'
+  NPM_CONFIG_CACHE: '$CI_PROJECT_DIR/.npm'
+  NPM_CONFIG_PRODUCTION: 'false'
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .npm/
+
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+  - release
+# ------------------------------------------------------
+# Lint stage
+# ------------------------------------------------------
+lint:
+  stage: lint
+  script:
+    - echo "🔍 Linting code..."
+    - npm ci
+    - npm run lint
+  only:
+    - merge_requests
+    - main
+    - tags
+  allow_failure: false
+
+# ------------------------------------------------------
+# Test stage
+# ------------------------------------------------------
+# test:
+#   stage: test
+#   script:
+#     - echo "🔵 Running tests..."
+#     - npm ci
+#     - npm test
+#   coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+#   artifacts:
+#     reports:
+#       coverage_report:
+#         coverage_format: cobertura
+#         path: coverage/cobertura-coverage.xml
+#     paths:
+#       - coverage/
+#     expire_in: 1 week
+#   only:
+#     - merge_requests
+#     - main
+#     - tags
+#   allow_failure: false
+
+# ------------------------------------------------------
+# Build stage
+# ------------------------------------------------------
+build:
+  stage: build
+  before_script:
+    - echo "🔵 Preparing build..."
+    - apt-get update && apt-get install -y jq
+  script:
+    - echo "🟢 Building package..."
+    - VERSION=$(jq -r .version package.json)
+    - PROJECT_NAME=$(jq -r .name package.json)
+    - echo "PROJECT_VERSION=$VERSION" >> build.env
+    - echo "PROJECT_NAME=$PROJECT_NAME" >> build.env
+    - npm ci
+    - npm run build
+    - echo "✅ Build complete!"
+    - ls -lah dist/
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+    reports:
+      dotenv: build.env
+  only:
+    - merge_requests
+    - main
+    - tags
+  allow_failure: false
+
+# ------------------------------------------------------
+# Deploy to Generic Package Registry
+# ------------------------------------------------------
+deploy:generic:
+  stage: deploy
+  needs:
+    - job: build
+      artifacts: true
+  before_script:
+    - echo "🔵 Preparing Generic Registry upload..."
+    - cd dist/${CI_PROJECT_NAME}/dist
+  script:
+    - echo "🟢 Uploading artifacts for version ${PROJECT_VERSION}..."
+    # Define the list of files to upload
+    - FILES=$(ls ./*.js ./*.js.map)
+    - |
+      for FILE in $FILES; do
+        FILENAME=$(basename "$FILE")
+        echo "🔵 Uploading '$FILENAME' to Generic Gilab package registry...\n"
+        curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file "$FILE" \
+             "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${CI_PROJECT_NAME}/${PROJECT_VERSION}/${FILENAME}"
+        echo "\n ✅ Uploaded '$FILENAME'\n"
+        if [ $? -ne 0 ]; then
+          echo "❌ Failed to upload '$FILENAME'. Exiting."
+          exit 1
+        fi
+      done
+    - echo "✅ All artifacts uploaded to Generic Registry \n"
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+.*$/
+      when: always
+  environment:
+    name: Generic
+    url: https://gitlab.com/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/-/packages/generic/${CI_PROJECT_NAME}/${PROJECT_VERSION}
+
+# ------------------------------------------------------
+# Deploy to npm (triggers jsDelivr automatically)
+# > to bypass npm 2FA for automated releases
+# > use https://docs.npmjs.com/trusted-publishers
+# ------------------------------------------------------
+deploy:npm:manual:
+  stage: deploy
+  needs:
+    - job: build
+      artifacts: true
+  id_tokens:
+    NPM_ID_TOKEN:
+      aud: "npm:registry.npmjs.org"
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  before_script:
+    - echo "🔵 Preparing npm publish..."
+    - |
+      cd dist/${CI_PROJECT_NAME}
+      if npm view . >/dev/null 2>&1; then
+        echo "ℹ️ npm package already exists. Skipping publish."
+        exit 0
+      else
+        echo "ℹ️ npm package does not exist. Proceeding with publish."
+      fi
+  script:
+    - echo "🟢 Publishing to npm..."
+    - |
+    - npm install -g npm@latest
+    - npm ci
+    - npm whoami
+    - npm publish --access public
+    - echo "✅ Published to npm!"
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+.*$/
+      when: always
+  when: manual
+  environment:
+    name: npm
+    url: https://www.npmjs.com/package/${CI_PROJECT_NAME}
+
+# ------------------------------------------------------
+# Auto-deploy on version tags (v1.0.0, 1.0.0, etc.)
+# > to bypass npm 2FA for automated releases
+# > use https://docs.npmjs.com/trusted-publishers
+# ------------------------------------------------------
+deploy:npm:auto:
+  stage: deploy
+  needs:
+    - job: build
+      artifacts: true
+  id_tokens:
+    NPM_ID_TOKEN:
+      aud: "npm:registry.npmjs.org"
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  before_script:
+    - cd dist/${CI_PROJECT_NAME}
+      
+    - PACKAGE_NAME=$(node -p "require('./package.json').name")
+    - PACKAGE_VERSION=$(node -p "require('./package.json').version")
+      
+    - |
+      echo "🔎 Checking registry for ${PACKAGE_NAME}@${PACKAGE_VERSION}..."
+      
+      if [[ $(npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version 2>/dev/null) ]]; then
+        echo "🛑 Version ${PACKAGE_VERSION} is already published to npm. Skipping."
+        exit 0
+      else
+        echo "🟢 Version ${PACKAGE_VERSION} is new. Publishing..."
+      fi
+  script:
+    - echo "🟢 Auto-publishing to npm..."
+    - npm install -g npm@latest
+    - npm ci
+    - npm publish --access public
+    - echo "✅ Published to npm!"
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+.*$/
+      when: always
+  when: on_success
+  environment:
+    name: npm
+    url: https://www.npmjs.com/package/${CI_PROJECT_NAME}
+      
+# ------------------------------------------------------
+# Publish to JSR (JavaScript Registry) for supply chain security
+# As Per: https://jsr.dev/docs/publishing/
+# ------------------------------------------------------
+publish:jsr:auto:
+  stage: deploy
+  needs:
+    - job: build
+      artifacts: true
+  before_script:
+    - cd dist/${CI_PROJECT_NAME}
+
+    - echo "🔎 Checking registry for ${PACKAGE_NAME}@${PACKAGE_VERSION}..."
+
+    - PACKAGE_NAME=$(node -p "require('./package.json').name")
+    - PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+    - |
+      if npx jsr view @${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PACKAGE_VERSION} >/dev/null 2>&1; then
+        echo "🛑 JSR package already exists. Skipping publish."
+        exit 0
+      else
+        echo "🟢 JSR package does not exist. Proceeding with publish."
+      fi
+  script:
+    # npx jsr publish automatically detects the token above
+    - echo "🟢 Auto-publishing to JSR..."
+    - npx jsr publish --token ${JSR_API_KEY} --allow-dirty
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+.*$/
+      when: always
+  environment:
+    name: JSR
+    url: https://www.jsr.io/npm/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/v/${PACKAGE_VERSION}
+
+# # ------------------------------------------------------
+# # Generate release notes
+# # ------------------------------------------------------
+# release:generate:commit:notes:
+#   stage: release
+#   image: sgkens/phellams-automator:2.5.1
+#   needs:
+#     - job: deploy:generic
+#       artifacts: false
+#     - job: build
+#       artifacts: true
+#     - job: deploy:npm:auto
+#       artifacts: false
+#   rules:
+#     - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+.*$/
+#       when: always
+#   artifacts:
+#     paths:
+#       - dist/${CI_PROJECT_NAME}/release-notes.md
+#     expire_in: 1 week
+#     reports:
+#       # This allows the 'release' section below to access $PROJECT_VERSION
+#       dotenv: build.env
+#   script:
+#     - pwsh
+#     - write-host "🟢 Generating release notes for version ${PROJECT_VERSION}..."
+#     - $Release_notes = Get-ReleaseNotes -AheadOnly -FeatureNotes -BreakingChanges -FeatureAdditions -Notes -FeatureUpdates -CommitLink -CommitLinkPrefix gitlab -NameSpace ${CI_PROJECT_NAME} -Version ${PROJECT_VERSION} -GitlabApiUrl $env:CI_API_V4_URL -ProjectId $env:CI_PROJECT_ID
+#     - $Release_notes | Out-File -FilePath dist/${CI_PROJECT_NAME}/release-notes.md -Encoding utf8
+#     - write-host "✅ Release notes generated at dist/${CI_PROJECT_NAME}/release-notes.md"
+
+generate:generic:release:metadata:
+  stage: release
+  image: sgkens/phellams-automator:2.5.1
+  needs:
+    - job: deploy:generic
+      artifacts: false
+    - job: build
+      artifacts: true
+    - job: deploy:npm:auto
+      artifacts: false
+  
+  before_script:
+    - echo "🔵 Preparing release notes generation..."
+    # pull in automator scripts
+    - git clone https://gitlab.com/phellams/automator-devops.git
+    # fetch full git history for accurate release notes
+    - git fetch --unshallow
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+.*$/
+      when: always
+
+  script:
+    # ---------------------------------------------------------
+    # STEP 1: Create the PowerShell Script
+    # We write the content to 'generate_meta.ps1' first.
+    # We use 'EOF' (quoted) to prevent Bash from trying to expand variables.
+    # This allows PowerShell to handle the variables instead.
+    # ---------------------------------------------------------
+    - |
+      cat <<'EOF' > generate_meta.ps1
+
+      # Import Modules
+      using module ./automator-devops/scripts/core/Request-GenericPackage.psm1
+      using module ./automator-devops/scripts/core/Get-RemoteFileHash.psm1
+      using module ./automator-devops/scripts/core/Get-ReleaseNotes.psm1
+
+      Write-Host "🟢 Generating Generic Package Registry download links for version $env:PROJECT_VERSION..."
+
+      # 1. Fetch Links (Use Splatting for readability)
+      $params = @{
+          ProjectId      = $env:CI_PROJECT_ID
+          PackageName    = $env:CI_PROJECT_NAME
+          ProjectName    = $env:CI_PROJECT_NAME
+          Namespace      = $env:CI_PROJECT_NAMESPACE
+          PackageVersion = $env:PROJECT_VERSION
+          ApiKey         = $env:CI_JOB_TOKEN
+          ApiUrl         = $env:CI_API_V4_URL
+          ci             = $true
+      }
+      $links = Request-GenericPackage @params
+
+      # 🔍 DEBUG: Print the count to the logs so we know if it worked
+      Write-Host "🔹 Found $($links.Count) matching files."
+
+      # 2. Define the extensions you want to capture
+      $suffixes = @(
+          '.esm.js', '.esm.js.map', 
+          '.esm.min.js', '.esm.min.js.map', 
+          '.js', '.min.js', 
+          '.js.map', '.min.js.map'
+      )
+
+      # 3. Filter and Select (Loop logic)
+      $all_links = $suffixes | ForEach-Object {
+          $targetFile = "$env:CI_PROJECT_NAME$_"
+          
+          # Find the file, sort by newest, take the first one
+          $links | Where-Object { $_.file_name -eq $targetFile } | 
+                  Sort-Object created_at -Descending | 
+                  Select-Object -First 1
+      }
+
+      # 🔍 DEBUG: Print the count to the logs so we know if it worked
+      Write-Host "🔹 Found $($all_links.Count) matching files."
+
+      # 4. Export JSON
+      $OutputDir = "dist/$env:CI_PROJECT_NAME"
+      New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
+      
+      if ($all_links.Count -gt 0) {
+        $all_links | ConvertTo-Json -Depth 5 | Out-File -FilePath "$OutputDir/generic-package-links.json"
+        
+        # Create Checksums
+        $all_links | Select-Object file_name, checksum | ConvertTo-Json -Depth 2 | Out-File -FilePath "$OutputDir/generic-package-checksums.json"
+        
+        Write-Host "✅ JSON files generated successfully."
+      } else {
+        Write-Error "❌ No matching files found! The JSON will be empty."
+        exit 1
+      }
+      
+      Write-Host "✅ Generic Package Registry download links generated at $OutputDir/generic-package-links.json"
+      
+      # Create Checksums
+      Write-Host "🟢 Generic Package Checksums"
+      $all_links | Select-Object file_name, checksum | ConvertTo-Json -Depth 2 | Out-File -FilePath "dist/$ENV:CI_PROJECT_NAME/generic-package-checksums.json" -Encoding utf8
+      Write-Host "✅ Generic Package Registry checksums generated at $OutputDir/generic-package-checksums.json"
+
+      # Generate Release Notes
+      Write-Host "🟢 Generating release notes..."
+      $Release_notes = Get-ReleaseNotes -AheadOnly -FeatureNotes -BreakingChanges -FeatureAdditions -Notes -FeatureUpdates -CommitLink -CommitLinkPrefix gitlab -NameSpace $env:CI_PROJECT_NAMESPACE
+      $Release_notes | Out-File -FilePath "$OutputDir/release-notes.md" -Encoding utf8
+      Write-Host "✅ Release notes generated at $OutputDir/release-notes.md"
+
+      EOF
+
+    # ---------------------------------------------------------
+    # STEP 2: Execute the Script
+    # ---------------------------------------------------------
+    - pwsh ./generate_meta.ps1
+
+    # ---------------------------------------------------------
+    # STEP 3: Upload (Bash)
+    # ---------------------------------------------------------
+    - |
+      echo "🟢 Uploading metadata to Generic Registry..."
+      
+      # Safety check: Ensure directory exists
+      cd "dist/${CI_PROJECT_NAME}" || { echo "❌ Directory not found"; exit 1; }
+
+      # Define the files you want to upload
+      FILES="generic-package-checksums.json generic-package-links.json"
+
+      for FILE in $FILES; do
+        if [ -f "$FILE" ]; then
+          echo "🔹 Uploading $FILE..."
+          
+          curl --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+            --upload-file "$FILE" \
+            "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${CI_PROJECT_NAME}/${PROJECT_VERSION}/${FILE}"
+        else
+          echo "⚠️ Warning: '$FILE' not found in $(pwd), skipping."
+        fi
+      done
+
+      echo "✅ Upload complete."
+
+  artifacts:
+    paths:
+      # Use wildcard if you aren't 100% sure of the project name casing, 
+      # otherwise ensure this matches the $OutputDir created above.
+      - dist/*/generic-package-links.json
+      - dist/*/generic-package-checksums.json
+      - dist/*/release-notes.md
+
+# ------------------------------------------------------
+# Create GitLab release
+# As Per: https://docs.gitlab.com/user/project/releases/release_cli/
+#   - Release-cli has been deprecated, use gitlab-cli instead
+# ------------------------------------------------------
+release:gitlab:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+    - job: deploy:generic
+      artifacts: false
+    - job: build
+      artifacts: true
+    - job: deploy:npm:auto
+      artifacts: false
+    - job: generate:generic:release:metadata
+      artifacts: true
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+.*$/
+      when: always  
+  before_script:
+    - apk add --no-cache bash jq
+  script:
+    - |
+      #!/bin/bash
+      echo "🟢 Preparing Release Data..."
+      
+      # 0. Read the existing release notes file (Ensure this file exists from the build job!)
+      # We default to "No notes" if the file is missing to prevent crash
+      RELEASE_NOTES=$(cat dist/${CI_PROJECT_NAME}/release-notes.md 2>/dev/null || echo "No release notes found.")
+
+      # 1. Initialize an empty string for our asset flags
+      ASSET_FLAGS=""
+
+      # 2. Iterate over the JSON file and build the CLI flags dynamically
+      while IFS= read -r item; do
+        NAME=$(echo "$item" | jq -r '.file_name')
+        URL=$(echo "$item" | jq -r '.download_url')
+        echo "🔹 Found asset: $NAME"
+        ASSET_FLAGS="$ASSET_FLAGS --assets-link {\"name\":\"$NAME\",\"url\":\"$URL\"}"
+      done < <(jq -c '.[]' ./dist/${CI_PROJECT_NAME}/generic-package-links.json)
+
+      echo "🟢 Creating GitLab release for version ${PROJECT_VERSION}..."
+
+      # 3. Create the description string
+      # IMPORTANT: EOF must NOT be quoted so that variables like ${PROJECT_VERSION} expand.
+      DESCRIPTION=$(cat <<EOF
+      # <img src="https://raw.githubusercontent.com/staticcanvas/general-resources/main/logos/logcad/dist/png/logcad-128x128.png" width="64" > ${PROJECT_NAME} ${PROJECT_VERSION} Release
+
+      ${RELEASE_NOTES}
+
+      ## **Package Links**
+
+      ### ▪️ NPM Registry
+      * https://www.npmjs.com/package/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/v/${PROJECT_VERSION}
+
+      ### ▪️ JSR (JavaScript Registry)
+      * https://www.jsr.io/npm/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/v/${PROJECT_VERSION}
+
+      ### ▪️ Unpkg CDN
+      * ***ESM***: \`https://unpkg.com/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.esm.js\`
+      * ***UMD***: \`https://unpkg.com/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.js\`
+      - ***ESM Minified***: \`https://unpkg.com/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.esm.min.js\`
+      - ***UMD Minified***: \`https://unpkg.com/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.min.js\`
+
+      ### ▪️ jsDelivr CDN
+      - ***ESM***: \`https://cdn.jsdelivr.net/npm/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.esm.js\`
+      - ***UMD***: \`https://cdn.jsdelivr.net/npm/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.js\`
+      - ***ESM Minified***: \`https://cdn.jsdelivr.net/npm/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.esm.min.js\`
+      - ***UMD Minified***: \`https://cdn.jsdelivr.net/npm/@${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.min.js\`
+
+      ## Usage
+
+      ### UMD (Browser)
+      UMD will auto-load \`${CI_PROJECT_NAME}\` into the global scope \`window.*\`
+
+      \`\`\`html
+      <script src="https://cdn.jsdelivr.net/npm/package/@${CI_PROJECT_NAMESPACE}/logcad/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad.js"></script>
+      \`\`\`
+
+      ### ESM (Module)
+      ESM can be imported into your JavaScript/TypeScript projects as follows:
+
+      \`\`\`javascript
+      import * as logcad from 'https://cdn.jsdelivr.net/npm/package/@${CI_PROJECT_NAMESPACE}/logcad/${CI_PROJECT_NAME}@${PROJECT_VERSION}/dist/logcad+esm';
+      \`\`\`
+      EOF
+      )
+
+      # 4. Execute the release-cli command
+      # We pass "$DESCRIPTION" (wrapped in quotes) to handle the multi-line string safely.
+      release-cli create \
+        --name "Release ${PROJECT_NAME} v${PROJECT_VERSION}" \
+        --tag-name "${PROJECT_VERSION}" \
+        --ref "$CI_COMMIT_SHA" \
+        --description "$DESCRIPTION" \
+        $ASSET_FLAGS

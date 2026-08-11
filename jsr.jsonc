@@ -1,0 +1,67 @@
+{
+    // URL to the schema. This gives you autocompletion and validation in VS Code.
+    "$schema": "https://jsr.io/schema/config-file.v1.json",
+    // ---------------------------------------------------------
+    // PACKAGE IDENTITY
+    // ---------------------------------------------------------
+    // The name must be scoped with an '@' (e.g. @username/pkgname)
+    "name": "@staticcanvas/asciiam",
+    // Must be a valid SemVer version (e.g. 0.1.0, 1.0.0-rc.1)
+    "version": "1.0.0",
+    // ---------------------------------------------------------
+    // EXPORTS
+    // ---------------------------------------------------------
+    // Defines what files users can import.
+    // "." is the default import (e.g. import { foo } from "@scope/pkg")
+    "exports": {
+        ".": "./src/asciiam.js", // The main entry point
+        // "./utils": "./src/utils.ts", // A sub-path import
+        // "./cli": "./src/cli.ts" // Example for a CLI tool
+    },
+    // ---------------------------------------------------------
+    // PUBLISHING CONTROLS
+    // ---------------------------------------------------------
+    // Controls which files are uploaded to JSR.
+    // Note: JSR automatically ignores .git, node_modules, etc.
+    "publish": {
+        "include": [
+            "src/**",
+            "dist/**",
+            "package.json",
+            "README.md",
+            "LICENSE"
+        ],
+        "exclude": [
+            // "src/**/*.test.ts", // Don't publish tests
+            // "docs/", // Don't publish raw docs source
+            // "scripts/" // Don't publish build scripts
+        ]
+    },
+    // ---------------------------------------------------------
+    // DEPENDENCIES & ALIASES (Optional)
+    // ---------------------------------------------------------
+    // Acts like an import map.
+    // Useful if you want to use short imports in your source code.
+    "imports": {
+        "@std/assert": "jsr:@std/assert@^0.210.0"
+    },
+    // ---------------------------------------------------------
+    // TASKS (Optional)
+    // ---------------------------------------------------------
+    // Scripts you can run via `deno task build` or similar
+    "tasks": {
+        "test": "deno test -A",
+        "dev": "deno run --watch mod.ts"
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
