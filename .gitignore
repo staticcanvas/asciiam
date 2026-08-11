@@ -21,3 +21,6 @@ Thumbs.db
 
 # ignore automator-devops
 automation-devops
+
+# Local task-list backup
+pending-tasks copy.md
