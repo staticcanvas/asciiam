@@ -44,6 +44,13 @@
             subtleCurrent: { mode: "current", color: "#4FA8FF", speed: 0.6, minOpacity: 0.03, maxOpacity: 0.45 },
             matrixRain: { mode: "matrix", color: "#3CF07A", speed: 1, charSet: " 01アイウエオ" },
             softRipple: { mode: "ripple", color: "#4FA8FF", speed: 0.8, edgeFade: 0.4 },
+            vortexFlow: {
+                mode: "vortex",
+                color: "#C04FFF",
+                speed: 0.65,
+                edgeFade: 0.2,
+                gradient: { type: "radial", center: [0.5, 0.5], radius: 0.9, stops: ["#4FA8FF", "#C04FFF"], steps: 2 },
+            },
             introReveal: { mode: "fadeIn", color: "#4FA8FF", speed: 1, loop: false, revealDirection: "left-to-right" },
             outroFade: { mode: "fadeOut", color: "#4FA8FF", speed: 1, loop: false, revealDirection: "right-to-left" },
             scanline: { mode: "wave", color: "#4FA8FF", speed: 1.4, ambient: 0, bandWidth: 0.04, edgeFade: 0.2 },
@@ -642,18 +649,25 @@
             this._imageRippleSin = new Float32Array(count);
             this._imageRippleCos = new Float32Array(count);
             this._rippleFalloff = new Float32Array(count);
+            this._vortexSin = new Float32Array(count);
+            this._vortexCos = new Float32Array(count);
             for (let row = 0; row < this.rows; row++) {
                 const y = row * this.charH;
                 const offset = row * this.cols;
                 for (let col = 0; col < this.cols; col++) {
                     const index = offset + col;
                     const x = col * this.charW;
-                    const distance = Math.hypot(x - this._originX, y - this._originY);
+                    const dx = x - this._originX;
+                    const dy = y - this._originY;
+                    const distance = Math.hypot(dx, dy);
+                    const vortexPhase = Math.atan2(dy, dx) * 3 + distance * 0.045;
                     this._rippleSin[index] = Math.sin(distance * 0.06);
                     this._rippleCos[index] = Math.cos(distance * 0.06);
                     this._imageRippleSin[index] = Math.sin(distance * 0.05);
                     this._imageRippleCos[index] = Math.cos(distance * 0.05);
                     this._rippleFalloff[index] = Math.max(0, 1 - distance / (Math.max(this.w, this.h) * 0.85));
+                    this._vortexSin[index] = Math.sin(vortexPhase);
+                    this._vortexCos[index] = Math.cos(vortexPhase);
                 }
             }
         }
@@ -879,6 +893,8 @@
             this._currentTimeCosXY = Math.cos(this._time * 1.6);
             this._rippleTimeSin = Math.sin(-this._time * 2.4);
             this._rippleTimeCos = Math.cos(-this._time * 2.4);
+            this._vortexTimeSin = Math.sin(-this._time * 2);
+            this._vortexTimeCos = Math.cos(-this._time * 2);
             const imageRippleTime = -this._time * (this.opts.speed || 1) * 2.2;
             this._imageRippleTimeSin = Math.sin(imageRippleTime);
             this._imageRippleTimeCos = Math.cos(imageRippleTime);
@@ -1081,6 +1097,8 @@
                     return this._currentCell(col, row, x, y);
                 case "ripple":
                     return this._rippleCell(col, row, x, y);
+                case "vortex":
+                    return this._vortexCell(col, row, x, y);
                 case "fadeIn":
                     return this._fadeInCell(col, row, x, y);
                 case "fadeOut":
@@ -1174,6 +1192,22 @@
             const combined = n * this._rippleFalloff[index];
             const charIdx = Math.floor(combined * (charSet.length - 1));
             return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * combined, combined, boldOnPeak && combined > 0.6);
+        }
+
+        _vortexCell(col, row, _x, _y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
+            const index = row * this.cols + col;
+            const wave = this._vortexSin[index] * this._vortexTimeCos + this._vortexCos[index] * this._vortexTimeSin;
+            const arm = (wave + 1) * 0.5;
+            const falloff = 0.25 + this._rippleFalloff[index] * 0.75;
+            const combined = Math.min(1, arm * falloff + this._seedCache[index] * 0.08);
+            const charIdx = Math.floor(combined * (charSet.length - 1));
+            return this._setCell(
+                charSet[charIdx] || " ",
+                minOpacity + (maxOpacity - minOpacity) * combined,
+                combined,
+                boldOnPeak && combined > 0.7,
+            );
         }
 
         _fadeInCell(col, row, _x, _y) {

@@ -245,4 +245,29 @@ describe("asciiam lifecycle", () => {
         expect(sinSpy.mock.calls.length).toBeLessThanOrEqual(16);
         animation.destroy();
     });
+
+    it("renders a cached vortex around the selected spatial origin", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const animation = new asciiam(host, { mode: "vortex", respectReducedMotion: false });
+        const atanSpy = jest.spyOn(Math, "atan2");
+        animation._draw(16.7);
+        animation._draw(16.7);
+
+        expect(animation._vortexSin).toHaveLength(animation.cols * animation.rows);
+        expect(animation._vortexCos).toHaveLength(animation.cols * animation.rows);
+        expect(atanSpy).not.toHaveBeenCalled();
+        expect(animation._lastDrawnCount).toBeGreaterThan(0);
+        expect(asciiam.presets.vortexFlow.mode).toBe("vortex");
+
+        animation.setOption("align", "top-right");
+        expect(animation._originX).toBe(320);
+        expect(animation._originY).toBe(0);
+        expect(atanSpy).toHaveBeenCalled();
+        animation.destroy();
+    });
 });
