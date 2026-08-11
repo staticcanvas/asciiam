@@ -173,6 +173,7 @@
                     color: "#4FA8FF",
                     gradient: null,
                     background: "transparent",
+                    backdrop: null,
                     speed: 1,
                     direction: "horizontal",
                     align: "center",
@@ -588,6 +589,26 @@
             return grad;
         }
 
+        _getBackdropGradient(g) {
+            if (!g || !g.stops) return null;
+            const stops = this._expandGradientStops(g);
+            let grad;
+            if (g.type === "radial") {
+                const cx = this.w * (g.center ? g.center[0] : 0.5);
+                const cy = this.h * (g.center ? g.center[1] : 0.5);
+                const r = Math.max(this.w, this.h) * (g.radius || 0.75);
+                grad = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            } else {
+                const angle = (((g.angle || 0) + (g.animate ? this._time * 20 : 0)) * Math.PI) / 180;
+                const dx = Math.cos(angle), dy = Math.sin(angle);
+                const cx = this.w / 2, cy = this.h / 2;
+                const len = (Math.abs(dx) * this.w + Math.abs(dy) * this.h) / 2;
+                grad = this.ctx.createLinearGradient(cx - dx * len, cy - dy * len, cx + dx * len, cy + dy * len);
+            }
+            stops.forEach((s) => grad.addColorStop(Math.min(1, Math.max(0, s.offset)), s.color));
+            return grad;
+        }
+
         _expandGradientStops(gradient) {
             const raw = gradient.stops || ["#4FA8FF", "#C04FFF"];
             const colors = raw.map((stop) => (typeof stop === "string" ? stop : stop.color));
@@ -748,10 +769,25 @@
                 ctx.restore();
             } else {
                 ctx.clearRect(0, 0, this.w, this.h);
-                if (this.opts.background !== "transparent") {
+                if (this.opts.background && this.opts.background !== "transparent") {
                     ctx.fillStyle = this.opts.background;
                     ctx.fillRect(0, 0, this.w, this.h);
                 }
+            }
+
+            if (this.opts.backdrop && this.opts.backdrop.enabled) {
+                const bd = this.opts.backdrop;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, Math.min(1, bd.opacity !== undefined ? bd.opacity : 0.5));
+                if (bd.gradient && bd.gradient.stops && bd.gradient.stops.length > 0) {
+                    const grad = this._getBackdropGradient(bd.gradient);
+                    if (grad) ctx.fillStyle = grad;
+                    else ctx.fillStyle = bd.color || "#0a0c10";
+                } else {
+                    ctx.fillStyle = bd.color || "#0a0c10";
+                }
+                ctx.fillRect(0, 0, this.w, this.h);
+                ctx.restore();
             }
             ctx.textBaseline = "alphabetic";
             this._lastFillStyle = null;

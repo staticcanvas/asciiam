@@ -1215,9 +1215,9 @@
                 margin: 0 !important;
                 border: none !important;
                 border-radius: 0 !important;
-                background: oklch(0.09 0.02 250 / 0.72) !important;
-                backdrop-filter: blur(12px) saturate(160%) !important;
-                -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
+                background: oklch(0.08 0.02 250 / 0.52) !important;
+                backdrop-filter: blur(8px) saturate(150%) !important;
+                -webkit-backdrop-filter: blur(8px) saturate(150%) !important;
                 box-shadow: none !important;
                 overflow-y: auto !important;
                 opacity: 0;
@@ -1229,7 +1229,7 @@
                 z-index: var(--z-modal) !important;
             }
             [data-theme="light"] .ctrl-popover--fullscreen {
-                background: oklch(0.96 0.015 250 / 0.78) !important;
+                background: oklch(0.96 0.015 250 / 0.58) !important;
             }
             .ctrl-popover--fullscreen:popover-open {
                 opacity: 1;
@@ -1242,9 +1242,9 @@
                 }
             }
             .ctrl-popover--fullscreen::backdrop {
-                background: rgb(0 0 0 / 0.75);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
+                background: rgb(0 0 0 / 0.45);
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
             }
 
             .about-sticky-bar {
@@ -1255,9 +1255,9 @@
                 align-items: center;
                 justify-content: space-between;
                 padding: var(--space-sm) var(--space-md);
-                background: oklch(0.12 0.025 255 / 0.92);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
+                background: oklch(0.10 0.02 255 / 0.55);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
                 border-block-end: 1px solid oklch(from var(--clr-border) l c h / 0.40);
             }
 
@@ -1315,14 +1315,16 @@
                 gap: var(--space-md);
             }
             .feature-card-lg {
-                background: oklch(from var(--clr-surface-2) l c h / 0.60);
+                background: oklch(from var(--clr-surface-2) l c h / 0.42);
                 border: 1px solid oklch(from var(--clr-border) l c h / 0.45);
                 border-radius: var(--radius-md);
-                padding: var(--space-md);
+                padding: var(--space-lg);
                 display: flex;
                 flex-direction: column;
-                gap: var(--space-xs);
-                transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+                gap: var(--space-sm);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
             }
             .feature-card-lg:hover {
                 border-color: var(--clr-primary);

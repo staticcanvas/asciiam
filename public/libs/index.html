@@ -1821,6 +1821,42 @@
                         <span class="ui-switch__label">Show FPS stats</span>
                     </label>
                 </div>
+                <div class="cpop-group" style="margin-top: var(--space-xs); border-top: 1px solid oklch(from var(--clr-border) l c h / 0.35); padding-top: var(--space-xs)">
+                    <label class="ui-switch" for="backdropEnable">
+                        <input class="ui-switch__control" type="checkbox" id="backdropEnable" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Backdrop layer</span>
+                    </label>
+                </div>
+                <div id="backdropControlsGroup" style="display:none">
+                    <div class="cpop-group">
+                        <label class="cpop-label row" for="backdropOpacity">Backdrop opacity <span class="val" id="backdropOpacityVal">0.50</span></label>
+                        <input type="range" id="backdropOpacity" min="0" max="1" step="0.05" value="0.5" />
+                    </div>
+                    <div class="cpop-group">
+                        <div class="two-col" style="align-items:center">
+                            <div>
+                                <label class="cpop-label" for="backdropColor">Color</label>
+                                <input type="color" id="backdropColor" value="#0a0c10" aria-label="Backdrop color" />
+                            </div>
+                            <div>
+                                <label class="cpop-label" for="backdropGradType">Gradient</label>
+                                <select id="backdropGradType">
+                                    <option value="none">Solid</option>
+                                    <option value="linear">Linear</option>
+                                    <option value="radial">Radial</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cpop-group" id="backdropGradColorsRow" style="display:none">
+                        <label class="cpop-label">Backdrop gradient stops</label>
+                        <div class="grad-stops-grid">
+                            <input type="color" class="grad-stop-input" id="backdropStop_0" value="#0a0c10" aria-label="Backdrop stop 1" />
+                            <input type="color" class="grad-stop-input" id="backdropStop_1" value="#1a233a" aria-label="Backdrop stop 2" />
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Theme -->
@@ -2383,6 +2419,58 @@
                 renderGradStops(count);
                 syncColor();
             };
+
+            /* ── Backdrop Layer Controls ── */
+            function syncBackdrop() {
+                const enabled = document.getElementById("backdropEnable").checked;
+                const group = document.getElementById("backdropControlsGroup");
+                if (group) group.style.display = enabled ? "block" : "none";
+
+                if (!enabled) {
+                    anim.setOption("backdrop", null);
+                    renderUsage();
+                    return;
+                }
+
+                const opacity = parseFloat(document.getElementById("backdropOpacity").value) || 0.5;
+                const color = document.getElementById("backdropColor").value || "#0a0c10";
+                const gradType = document.getElementById("backdropGradType").value;
+                const colorsRow = document.getElementById("backdropGradColorsRow");
+                if (colorsRow) colorsRow.style.display = gradType !== "none" ? "flex" : "none";
+
+                let gradient = null;
+                if (gradType !== "none") {
+                    const stop1 = document.getElementById("backdropStop_0").value || "#0a0c10";
+                    const stop2 = document.getElementById("backdropStop_1").value || "#1a233a";
+                    gradient = {
+                        type: gradType,
+                        angle: 45,
+                        stops: [stop1, stop2]
+                    };
+                }
+
+                anim.setOption("backdrop", {
+                    enabled: true,
+                    opacity: opacity,
+                    color: color,
+                    gradient: gradient
+                });
+                renderUsage();
+            }
+
+            document.getElementById("backdropEnable").onchange = (e) => {
+                e.target.setAttribute("aria-checked", String(e.target.checked));
+                syncBackdrop();
+            };
+            document.getElementById("backdropOpacity").oninput = (e) => {
+                document.getElementById("backdropOpacityVal").textContent = parseFloat(e.target.value).toFixed(2);
+                setRangeFill(e.target);
+                syncBackdrop();
+            };
+            document.getElementById("backdropColor").oninput = syncBackdrop;
+            document.getElementById("backdropGradType").onchange = syncBackdrop;
+            document.getElementById("backdropStop_0").oninput = syncBackdrop;
+            document.getElementById("backdropStop_1").oninput = syncBackdrop;
             document.getElementById("gradAnimate").onchange = syncColor;
             document.getElementById("color").oninput = (e) => {
                 anim.opts.color = e.target.value;
@@ -2731,6 +2819,7 @@
                 }
                 if (colorMode === "gradient" && anim.opts.gradient) options.gradient = anim.opts.gradient;
                 if (colorMode === "hueRotate" || colorMode === "breathe") options.colorAnimation = anim.opts.colorAnimation;
+                if (anim.opts.backdrop && anim.opts.backdrop.enabled) options.backdrop = anim.opts.backdrop;
                 let source = `const anim = new asciiam("#hero", ${JSON.stringify(options, null, 2)});`;
                 if (anim.opts.mode === "image") source += `\n// Replace ./your-image.png with your image URL or path.`;
                 source += "\nanim.start();";
