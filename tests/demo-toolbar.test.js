@@ -134,6 +134,38 @@ describe("demo toolbar quality-of-life controls", () => {
         expect(document.querySelector(".ctrl-pill--code").classList).toContain("ctrl-pill--primary");
     });
 
+    it("controls backdrop opacity from zero to one with exact input", () => {
+        activeDom = createDemo();
+        const { document, Event } = activeDom.window;
+        const enabled = document.getElementById("backdropEnable");
+        const range = document.getElementById("backdropOpacity");
+        const number = document.getElementById("backdropOpacityNumber");
+        const value = document.getElementById("backdropOpacityVal");
+
+        expect(range.min).toBe("0");
+        expect(range.max).toBe("1");
+        expect(range.step).toBe("0.01");
+        enabled.checked = true;
+        enabled.dispatchEvent(new Event("change", { bubbles: true }));
+
+        number.value = "0";
+        number.dispatchEvent(new Event("input", { bubbles: true }));
+        expect(range.value).toBe("0");
+        expect(value.textContent).toBe("0.00");
+        expect(document.getElementById("usageCodePopover").textContent).toContain('"opacity": 0');
+
+        range.value = "1";
+        range.dispatchEvent(new Event("input", { bubbles: true }));
+        expect(number.value).toBe("1.00");
+        expect(value.textContent).toBe("1.00");
+        expect(document.getElementById("usageCodePopover").textContent).toContain('"opacity": 1');
+
+        number.value = "1.5";
+        number.dispatchEvent(new Event("change", { bubbles: true }));
+        expect(number.value).toBe("1.00");
+        expect(range.value).toBe("1");
+    });
+
     it("offers the vortex mode and preset through the live controls", () => {
         activeDom = createDemo();
         const { document } = activeDom.window;

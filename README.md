@@ -134,6 +134,7 @@ new asciiam(target, {
   color: '#4FA8FF',
   gradient: null,                // see Gradients below
   background: 'transparent',
+  backdrop: { enabled: true, opacity: 0.5, color: '#0A0C10' }, // opacity: 0..1
   speed: 1,
   direction: 'horizontal',      // wave mode: horizontal | vertical | diagonal
   revealDirection: 'center',    // fadeIn/fadeOut: left-to-right | right-to-left | center

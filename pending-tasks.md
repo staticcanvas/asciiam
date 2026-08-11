@@ -242,7 +242,7 @@ strangers with confidence."
 - [x] **Vertical Hero Card with Live Mask Reveal.** Redesigned `data-preview-scene="hero-card"` to a high-contrast vertical Midnight glass card with a glowing radial ASCII mask reveal on hover and official **GitHub** & **GitLab** repository buttons.
 - [x] **Spatial Alignment & Focal Points Stage.** Added `align` (`center`, `top-left`, `top-right`, `bottom-left`, `bottom-right`) spatial origin support in `src/asciiam.js` and added an interactive **Spatial Alignment** scene switcher to preview origin shifts live.
 
-- [x] **Backdrop Layer with Color, Opacity & Gradient Control.** Added `backdrop` option in `src/asciiam.js` with full opacity slider (0–1.0), solid color picker, and linear/radial gradient controls integrated into the Color popover panel (`#pop-color`).
+- [x] **Backdrop Layer with Color, Opacity & Gradient Control.** Added `backdrop` option in `src/asciiam.js` with synchronized range and exact numeric opacity controls (0.00–1.00 at 0.01 precision), solid color picker, and linear/radial gradient controls integrated into the Backdrop popover.
 
 If you hit a real bug in production use (as opposed to the theoretical gaps above),
 that's higher priority than anything on this list — flag it and it jumps the queue.
