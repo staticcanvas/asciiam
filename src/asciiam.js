@@ -20,7 +20,17 @@
 
         static CHARACTER_SETS = {
             density: " .:-=+*#%@",
+            ascii: Array.from({ length: 95 }, (_, index) => String.fromCharCode(index + 32)).join(""),
+            asciiExtended: Array.from({ length: 95 }, (_, index) => String.fromCharCode(index + 32)).join("")
+                + Array.from({ length: 95 }, (_, index) => String.fromCharCode(index + 161)).join(""),
             extended: "  .'`,^:\";~+_(){}[]<>!?ilI|/\\\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
+            alphanumeric: " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+            uppercase: " ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            lowercase: " abcdefghijklmnopqrstuvwxyz",
+            symbols: " !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",
+            boxDrawing: " ─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬░▒▓█",
+            arrows: " ←↑→↓↖↗↘↙↔↕⇐⇑⇒⇓⇔",
+            math: " ±×÷=≠≈∞√∑∏∫∆∇∂∈∉⊂⊃≤≥",
             blocks: " ░▒▓█",
             binary: " 01",
             binaryWide: " 001101",
@@ -34,7 +44,8 @@
             subtleCurrent: { mode: "current", color: "#4FA8FF", speed: 0.6, minOpacity: 0.03, maxOpacity: 0.45 },
             matrixRain: { mode: "matrix", color: "#3CF07A", speed: 1, charSet: " 01アイウエオ" },
             softRipple: { mode: "ripple", color: "#4FA8FF", speed: 0.8, edgeFade: 0.4 },
-            introReveal: { mode: "fadeIn", color: "#4FA8FF", speed: 1, loop: false },
+            introReveal: { mode: "fadeIn", color: "#4FA8FF", speed: 1, loop: false, revealDirection: "left-to-right" },
+            outroFade: { mode: "fadeOut", color: "#4FA8FF", speed: 1, loop: false, revealDirection: "right-to-left" },
             scanline: { mode: "wave", color: "#4FA8FF", speed: 1.4, ambient: 0, bandWidth: 0.04, edgeFade: 0.2 },
             snowfall: { mode: "snow", color: "#E8EEF7", speed: 0.5, snowDensity: 0.025 },
             sparkleField: { mode: "sparkle", color: "#4FA8FF", speed: 0.8, sparkleDensity: 0.04 },
@@ -166,7 +177,7 @@
             this.opts = Object.assign(
                 {
                     mode: "wave",
-                    charSet: asciiam.CHARACTER_SETS.density,
+                    charSet: asciiam.CHARACTER_SETS.asciiExtended,
                     fontFamily: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
                     fontSize: 14,
                     density: quality.density,
@@ -176,13 +187,14 @@
                     backdrop: null,
                     speed: 1,
                     direction: "horizontal",
+                    revealDirection: "center",
                     align: "center",
                     minOpacity: 0.05,
                     maxOpacity: 0.85,
                     boldOnPeak: true,
                     loop: true,
                     image: null,
-                    imageChars: asciiam.CHARACTER_SETS.density,
+                    imageChars: asciiam.CHARACTER_SETS.asciiExtended,
                     imageScale: 1,
                     imageFov: 1,
                     fit: "cover",
@@ -231,6 +243,9 @@
             this._lastFont = null;
             this._gradientKey = null;
             this._gradientObj = null;
+            this._gradientSource = null;
+            this._backdropGradientKey = null;
+            this._backdropGradientObj = null;
             this._edgeFadeCache = null;
             this._cell = { char: " ", opacity: 0, level: 0, bold: false, color: null };
             this._frames = 0;
@@ -378,9 +393,18 @@
             }
             if (key === "gradient") {
                 this._gradientKey = null;
+                this._gradientSource = null;
+            }
+            if (key === "backdrop") {
+                this._backdropGradientKey = null;
+                this._backdropGradientObj = null;
             }
             if (key === "edgeFade") {
                 this._buildEdgeFadeCache();
+            }
+            if (key === "align") {
+                this._buildSpatialCache();
+                this._buildCurrentCache();
             }
             if (key === "charSet") {
                 this.opts.imageChars = value;
@@ -523,8 +547,14 @@
             this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             this.cols = Math.max(1, Math.ceil(w / this.charW));
             this.rows = Math.max(1, Math.ceil(h / this.charH));
+            this._buildSeedCache();
+            this._buildSpatialCache();
+            this._buildCurrentCache();
             this._buildEdgeFadeCache();
             this._gradientKey = null;
+            this._gradientSource = null;
+            this._backdropGradientKey = null;
+            this._backdropGradientObj = null;
             this._canvasRect = this.canvas.getBoundingClientRect();
             if (this._sourceImage) this._resampleImage();
             if (this.opts.mode === "matrix") this._initMatrix();
@@ -554,6 +584,80 @@
             }
         }
 
+        _buildSeedCache() {
+            const count = this.cols * this.rows;
+            this._seedCache = new Float32Array(count);
+            this._seedNextRowCache = new Float32Array(count);
+            for (let row = 0; row < this.rows; row++) {
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    this._seedCache[offset + col] = this._seed(col, row);
+                    this._seedNextRowCache[offset + col] = this._seed(col, row + 1);
+                }
+            }
+        }
+
+        _buildCurrentCache() {
+            const count = this.cols * this.rows;
+            this._currentSinX = new Float32Array(count);
+            this._currentCosX = new Float32Array(count);
+            this._currentSinY = new Float32Array(count);
+            this._currentCosY = new Float32Array(count);
+            this._currentSinXY = new Float32Array(count);
+            this._currentCosXY = new Float32Array(count);
+            for (let row = 0; row < this.rows; row++) {
+                const y = row * this.charH;
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    const index = offset + col;
+                    const x = col * this.charW;
+                    const rx = x - this._originX;
+                    const ry = y - this._originY;
+                    const phaseX = rx * 0.02;
+                    const phaseY = ry * 0.035;
+                    const phaseXY = (rx + ry) * 0.015;
+                    this._currentSinX[index] = Math.sin(phaseX);
+                    this._currentCosX[index] = Math.cos(phaseX);
+                    this._currentSinY[index] = Math.sin(phaseY);
+                    this._currentCosY[index] = Math.cos(phaseY);
+                    this._currentSinXY[index] = Math.sin(phaseXY);
+                    this._currentCosXY[index] = Math.cos(phaseXY);
+                }
+            }
+        }
+
+        _buildSpatialCache() {
+            if (!this.cols || !this.rows) return;
+            switch (this.opts.align) {
+                case "top-left": this._originX = 0; this._originY = 0; break;
+                case "top-right": this._originX = this.w; this._originY = 0; break;
+                case "bottom-left": this._originX = 0; this._originY = this.h; break;
+                case "bottom-right": this._originX = this.w; this._originY = this.h; break;
+                default: this._originX = this.w * 0.5; this._originY = this.h * 0.5;
+            }
+
+            const count = this.cols * this.rows;
+            this._rippleSin = new Float32Array(count);
+            this._rippleCos = new Float32Array(count);
+            this._imageRippleSin = new Float32Array(count);
+            this._imageRippleCos = new Float32Array(count);
+            this._rippleFalloff = new Float32Array(count);
+            for (let row = 0; row < this.rows; row++) {
+                const y = row * this.charH;
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    const index = offset + col;
+                    const x = col * this.charW;
+                    const distance = Math.hypot(x - this._originX, y - this._originY);
+                    this._rippleSin[index] = Math.sin(distance * 0.06);
+                    this._rippleCos[index] = Math.cos(distance * 0.06);
+                    this._imageRippleSin[index] = Math.sin(distance * 0.05);
+                    this._imageRippleCos[index] = Math.cos(distance * 0.05);
+                    this._rippleFalloff[index] = Math.max(0, 1 - distance / (Math.max(this.w, this.h) * 0.85));
+                }
+            }
+        }
+
         _seed(col, row) {
             const n = Math.sin(col * 12.9898 + row * 78.233) * 43758.5453;
             return n - Math.floor(n);
@@ -563,6 +667,7 @@
         _getGradient() {
             const g = this.opts.gradient;
             if (!g) return null;
+            if (!g.animate && g === this._gradientSource && this._gradientObj) return this._gradientObj;
             const key = JSON.stringify(g) + (g.animate ? Math.floor(this._time * 20) : "");
             if (!g.animate && key === this._gradientKey) return this._gradientObj;
 
@@ -586,11 +691,14 @@
             stops.forEach((s) => grad.addColorStop(Math.min(1, Math.max(0, s.offset)), s.color));
             this._gradientKey = key;
             this._gradientObj = grad;
+            this._gradientSource = g;
             return grad;
         }
 
         _getBackdropGradient(g) {
             if (!g || !g.stops) return null;
+            const key = JSON.stringify(g) + `:${this.w}x${this.h}` + (g.animate ? `:${Math.floor(this._time * 20)}` : "");
+            if (key === this._backdropGradientKey) return this._backdropGradientObj;
             const stops = this._expandGradientStops(g);
             let grad;
             if (g.type === "radial") {
@@ -606,6 +714,8 @@
                 grad = this.ctx.createLinearGradient(cx - dx * len, cy - dy * len, cx + dx * len, cy + dy * len);
             }
             stops.forEach((s) => grad.addColorStop(Math.min(1, Math.max(0, s.offset)), s.color));
+            this._backdropGradientKey = key;
+            this._backdropGradientObj = grad;
             return grad;
         }
 
@@ -760,6 +870,18 @@
         // ---- main draw loop ----
         _draw(dt) {
             const ctx = this.ctx;
+
+            this._currentTimeSinX = Math.sin(this._time * 1.1);
+            this._currentTimeCosX = Math.cos(this._time * 1.1);
+            this._currentTimeSinY = Math.sin(-this._time * 0.8);
+            this._currentTimeCosY = Math.cos(-this._time * 0.8);
+            this._currentTimeSinXY = Math.sin(this._time * 1.6);
+            this._currentTimeCosXY = Math.cos(this._time * 1.6);
+            this._rippleTimeSin = Math.sin(-this._time * 2.4);
+            this._rippleTimeCos = Math.cos(-this._time * 2.4);
+            const imageRippleTime = -this._time * (this.opts.speed || 1) * 2.2;
+            this._imageRippleTimeSin = Math.sin(imageRippleTime);
+            this._imageRippleTimeCos = Math.cos(imageRippleTime);
 
             if (this.opts.trail > 0) {
                 ctx.save();
@@ -961,6 +1083,8 @@
                     return this._rippleCell(col, row, x, y);
                 case "fadeIn":
                     return this._fadeInCell(col, row, x, y);
+                case "fadeOut":
+                    return this._fadeOutCell(col, row, x, y);
                 case "image":
                     return this._imageCell(col, row, x, y);
                 default:
@@ -1020,7 +1144,7 @@
             let intensity = Math.max(0, 1 - dist / band);
             intensity = intensity * intensity * (3 - 2 * intensity);
 
-            const base = this._seed(col, row) * ambient;
+            const base = this._seedCache[row * this.cols + col] * ambient;
             const combined = Math.min(1, base + intensity);
             const charIdx = Math.floor(combined * (charSet.length - 1));
             return this._setCell(
@@ -1031,27 +1155,23 @@
             );
         }
 
-        _currentCell(col, row, x, y) {
+        _currentCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
-            const t = this._time;
-            const v = Math.sin(x * 0.02 + t * 1.1) * 0.5 + Math.sin(y * 0.035 - t * 0.8) * 0.3 + Math.sin((x + y) * 0.015 + t * 1.6) * 0.2;
+            const index = row * this.cols + col;
+            const v = (this._currentSinX[index] * this._currentTimeCosX + this._currentCosX[index] * this._currentTimeSinX) * 0.5
+                + (this._currentSinY[index] * this._currentTimeCosY + this._currentCosY[index] * this._currentTimeSinY) * 0.3
+                + (this._currentSinXY[index] * this._currentTimeCosXY + this._currentCosXY[index] * this._currentTimeSinXY) * 0.2;
             const n = (v + 1) / 2;
             const charIdx = Math.floor(n * (charSet.length - 1));
             return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * n, n, boldOnPeak && n > 0.72);
         }
 
-        _rippleCell(col, row, x, y) {
-            const { charSet, minOpacity, maxOpacity, boldOnPeak, align } = this.opts;
-            let cx = this.w / 2, cy = this.h / 2;
-            if (align === "top-left") { cx = 0; cy = 0; }
-            else if (align === "top-right") { cx = this.w; cy = 0; }
-            else if (align === "bottom-left") { cx = 0; cy = this.h; }
-            else if (align === "bottom-right") { cx = this.w; cy = this.h; }
-            const d = Math.hypot(x - cx, y - cy);
-            const wave = Math.sin(d * 0.06 - this._time * 2.4);
+        _rippleCell(col, row, _x, _y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
+            const index = row * this.cols + col;
+            const wave = this._rippleSin[index] * this._rippleTimeCos + this._rippleCos[index] * this._rippleTimeSin;
             const n = (wave + 1) / 2;
-            const falloff = Math.max(0, 1 - d / (Math.max(this.w, this.h) * 0.85));
-            const combined = n * falloff;
+            const combined = n * this._rippleFalloff[index];
             const charIdx = Math.floor(combined * (charSet.length - 1));
             return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * combined, combined, boldOnPeak && combined > 0.6);
         }
@@ -1059,13 +1179,36 @@
         _fadeInCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
             const totalDuration = 2.2;
-            const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration);
-            const delay = (col / this.cols) * totalDuration * 0.8 + this._seed(col, row) * 0.4;
+            const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
+            const index = row * this.cols + col;
+            const delay = this._revealProgress(col) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
             const local = Math.max(0, Math.min(1, (cycle - delay) / 0.6));
             const eased = local * local * (3 - 2 * local);
-            const shimmer = 0.85 + this._seed(col, row + 1) * 0.15;
+            const shimmer = 0.85 + this._seedNextRowCache[index] * 0.15;
             const charIdx = Math.floor(eased * (charSet.length - 1));
             return this._setCell(charSet[charIdx] || " ", eased * maxOpacity * shimmer, 0, false);
+        }
+
+        _fadeOutCell(col, row, _x, _y) {
+            const { charSet, maxOpacity } = this.opts;
+            const totalDuration = 2.2;
+            const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
+            const index = row * this.cols + col;
+            const delay = this._revealProgress(col) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
+            const local = Math.max(0, Math.min(1, (cycle - delay) / 0.6));
+            const eased = local * local * (3 - 2 * local);
+            const remaining = 1 - eased;
+            const shimmer = 0.85 + this._seedNextRowCache[index] * 0.15;
+            const charIdx = Math.floor(remaining * (charSet.length - 1));
+            return this._setCell(charSet[charIdx] || " ", remaining * maxOpacity * shimmer, 0, false);
+        }
+
+        _revealProgress(col) {
+            const extent = Math.max(1, this.cols - 1);
+            const position = col / extent;
+            if (this.opts.revealDirection === "left-to-right") return position;
+            if (this.opts.revealDirection === "right-to-left") return 1 - position;
+            return Math.min(1, Math.abs(position - 0.5) * 2);
         }
 
         _imageCell(col, row, x, y) {
@@ -1096,9 +1239,7 @@
                     bold = line > 0.6;
                     intensity = line;
                 } else if (maskMode === "radialRipple" || maskMode === "ripple") {
-                    const cx = this.w / 2, cy = this.h / 2;
-                    const d = Math.hypot(x - cx, y - cy);
-                    const wave = Math.sin(d * 0.05 - t * 2.2);
+                    const wave = this._imageRippleSin[i] * this._imageRippleTimeCos + this._imageRippleCos[i] * this._imageRippleTimeSin;
                     const n = (wave + 1) / 2;
                     opacity = Math.max(this.opts.minOpacity, n * this.opts.maxOpacity);
                     intensity = n;

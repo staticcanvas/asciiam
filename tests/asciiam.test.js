@@ -142,4 +142,107 @@ describe("asciiam lifecycle", () => {
         expect(host.querySelector("canvas")).toBeNull();
         expect(animationFrames.size).toBe(0);
     });
+
+    it("exposes complete ASCII presets and rebuilds spatial caches when alignment changes", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const animation = new asciiam(host, { respectReducedMotion: false });
+
+        expect(asciiam.CHARACTER_SETS.ascii).toHaveLength(95);
+        expect(asciiam.CHARACTER_SETS.asciiExtended).toHaveLength(190);
+        expect(animation.opts.charSet).toBe(asciiam.CHARACTER_SETS.asciiExtended);
+        expect(asciiam.CHARACTER_SETS.boxDrawing).toContain("┼");
+        expect(asciiam.CHARACTER_SETS.arrows).toContain("→");
+        expect(asciiam.CHARACTER_SETS.math).toContain("∞");
+        expect(animation._originX).toBe(160);
+        expect(animation._originY).toBe(90);
+
+        animation.setOption("align", "top-left");
+
+        expect(animation._originX).toBe(0);
+        expect(animation._originY).toBe(0);
+        expect(animation._rippleFalloff).toHaveLength(animation.cols * animation.rows);
+        animation.destroy();
+    });
+
+    it("supports a fade-out mode that reverses the fade-in reveal", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const animation = new asciiam(host, { mode: "fadeOut", loop: false, respectReducedMotion: false });
+        const col = 0;
+        const row = 0;
+        animation._time = 0;
+        const initialOpacity = animation._fadeOutCell(col, row, 0, 0).opacity;
+        animation._time = 2.8;
+        const finalOpacity = animation._fadeOutCell(col, row, 0, 0).opacity;
+
+        expect(initialOpacity).toBeGreaterThan(0);
+        expect(finalOpacity).toBe(0);
+        expect(asciiam.presets.outroFade.mode).toBe("fadeOut");
+        animation.destroy();
+    });
+
+    it("reveals from left, right, or the center", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const animation = new asciiam(host, { mode: "fadeIn", loop: false, respectReducedMotion: false });
+        const row = Math.floor(animation.rows / 2);
+        const left = 0;
+        const center = Math.floor((animation.cols - 1) / 2);
+        const right = animation.cols - 1;
+        animation._time = 1.2;
+
+        animation.setOption("revealDirection", "left-to-right");
+        const leftToRightStart = animation._fadeInCell(left, row, 0, 0).opacity;
+        const leftToRightEnd = animation._fadeInCell(right, row, 0, 0).opacity;
+        expect(leftToRightStart).toBeGreaterThan(leftToRightEnd);
+
+        animation.setOption("revealDirection", "right-to-left");
+        const rightToLeftStart = animation._fadeInCell(left, row, 0, 0).opacity;
+        const rightToLeftEnd = animation._fadeInCell(right, row, 0, 0).opacity;
+        expect(rightToLeftEnd).toBeGreaterThan(rightToLeftStart);
+
+        animation.setOption("revealDirection", "center");
+        const centerOpacity = animation._fadeInCell(center, row, 0, 0).opacity;
+        const edgeOpacity = animation._fadeInCell(left, row, 0, 0).opacity;
+        expect(centerOpacity).toBeGreaterThan(edgeOpacity);
+        expect(asciiam.presets.introReveal.revealDirection).toBe("left-to-right");
+        expect(asciiam.presets.outroFade.revealDirection).toBe("right-to-left");
+        animation.destroy();
+    });
+
+    it("reuses static backdrop gradients and keeps trigonometry out of the dense current cell loop", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const animation = new asciiam(host, { mode: "current", respectReducedMotion: false });
+        animation.setOption("backdrop", {
+            enabled: true,
+            opacity: 0.5,
+            gradient: { type: "linear", angle: 45, stops: ["#000000", "#ffffff"] },
+        });
+        const sinSpy = jest.spyOn(Math, "sin");
+
+        animation._draw(16.7);
+        animation._draw(16.7);
+
+        expect(animation.ctx.createLinearGradient).toHaveBeenCalledTimes(1);
+        expect(sinSpy.mock.calls.length).toBeLessThanOrEqual(16);
+        animation.destroy();
+    });
 });

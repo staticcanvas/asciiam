@@ -4,6 +4,117 @@ Honest gap list. Nothing here is required for the tool to work — it runs and d
 safely — but these are the things standing between "solid prototype" and "ship to
 strangers with confidence."
 
+## CRITICAL TASKS
+
+- [x] **Code control placement and live output.** Code is the final toolbar control,
+      uses logical auto-margin to stay on the right edge, and reflects live control changes.
+- [x] **FPS switch.** A compact native checkbox switch is positioned at the top-right
+      of the stage and controls the FPS overlay.
+- [x] **Separate Preset, Quality, and Mode controls.** Each toolbar trigger now owns
+      an independent popover.
+- [x] **Complete character presets.** Added all 95 printable ASCII characters and a
+      190-character ASCII plus extended Latin-1 set.
+- [x] **Custom character sets.** The Charset popover accepts up to 512 characters,
+      validates at least two distinct characters, and applies valid input live.
+- [x] **Independent Backdrop control.** Backdrop enablement, opacity, solid color,
+      gradient type, and gradient stops now use a dedicated toolbar popover.
+- [x] **Toolbar spatial alignment.** Alignment is available in the toolbar and now
+      changes current, ripple, fade-in, and radial image calculations.
+- [x] **Content-sized popovers.** Popovers use intrinsic width with viewport bounds;
+      vertical scrolling appears only when content exceeds the available stage height.
+- [x] **Renderer performance recovery.** Static noise, spatial distance, trigonometric
+      fields, and backdrop gradients are cached. A 19,224-cell mocked Canvas benchmark
+      reduced current-mode JavaScript frame time from 1.94 ms to 0.92 ms (52.4%).
+- [x] **Persist demo settings.** Versioned local storage restores supported animation,
+      appearance, performance, and toolbar settings across sessions. Uploaded image
+      object URLs are intentionally excluded because they do not survive a page load.
+- [x] **Hero cards.** Added three switchable, responsive variants with shared content
+      and repository actions. Variant state is exposed through native buttons and
+      `aria-pressed`, while hover/focus interactions retain the live mask treatment.
+  - [x] Vertical — focused single-column product card.
+  - [x] Split — copy and repository actions in separate columns, collapsing on mobile.
+  - [x] Terminal — compact green-screen treatment for developer-focused contexts.
+- [x] **Header preview scope.** Removed Spatial Alignment from the top preview switcher;
+      alignment remains available in the toolbar where it belongs.
+- [x] **Hero and splash previews.** The top switcher now cleanly previews Background,
+      Hero card, and Splash page surfaces.
+- [x] **Fade-out mode.** Added the inverse `fadeOut` engine mode, an `outroFade`
+      preset, demo control, TypeScript mode, and regression coverage.
+- [x] **Directional reveal animation.** `fadeIn` and `fadeOut` now reveal left to
+      right, right to left, or outward from the center. The Motion popover exposes
+      this control only for reveal modes, and presets retain their intended direction.
+- [x] **Code popover sizing.** Increased its usable vertical size and internal code
+      padding while bounding it below the FPS region and viewport edges.
+- [x] **Mobile UI.** Added narrow-screen scene spacing, horizontally scrollable toolbar
+      controls, 44px touch targets, viewport-bounded popovers, stacked hero actions,
+      and mobile code sizing.
+- [x] **Robust character presets.** ASCII + extended Latin-1 is now the default for
+      text and image rendering. Added alphanumeric, case-specific, symbol, box-drawing,
+      arrow, and mathematical presets alongside the existing specialist sets.
+- [x] **Animation mode inventory.** The current engine and practical next modes are
+      recorded here for implementation planning.
+  - [x] Supported — `wave`, `current`, `ripple`, `fadeIn`, `fadeOut`, `matrix`,
+        `snow`, `sparkle`, `image`, and registered/custom cell modes.
+  - [ ] Vortex/swirl — radial angular flow with the existing spatial-origin cache.
+  - [ ] Plasma/noise field — layered low-frequency fields for organic motion.
+  - [ ] Fire/embers — bottom-origin heat ramp plus sparse rising particles.
+  - [ ] Starfield/tunnel — depth-scaled sparse particles around the selected origin.
+  - [ ] Glitch/scramble — timed character displacement and scan-band corruption.
+  - [ ] Typewriter/reveal — deterministic line or word sequencing.
+  - [ ] Orbit/particle flow — sparse glyph paths around one or more focal points.
+  - [ ] Audio spectrum/waveform — opt-in `AnalyserNode` input; requires an explicit
+        media source or microphone permission and should remain outside core defaults.
+  - [ ] Worker renderer — evaluate `OffscreenCanvas` only if future dense modes show
+        main-thread pressure; current cached Canvas 2D modes do not require it.
+- [x] **Reset settings.** Added a first-class Reset toolbar action that restores the
+      documented demo defaults without deleting the user's saved preset library.
+- [x] **Local saved presets.** Users can name, save, overwrite, load, and delete
+      browser-local presets from the Preset popover, with live status feedback.
+- [x] **Expanded backdrop editor.** Supports solid, linear, radial, and cubic gradients,
+      1–6 color stops, angle, base color, and independent opacity.
+- [x] **Toolbar quality-of-life audit.** Implemented the immediate improvements and
+      retained the larger workflow enhancements below as candidates.
+  - [x] Native buttons/selects, visible focus behavior, and ARIA-synchronised state.
+  - [x] Independent, content-sized, viewport-bounded popovers per control group.
+  - [x] Live value chips expose each control's current state without opening it.
+  - [x] Visual grouping distinguishes configuration, utilities, media, and the
+        primary Code action while preserving keyboard order and mobile scrolling.
+  - [x] Mobile horizontal scrolling with full-size touch targets.
+  - [x] Code remains the final control and uses logical auto-margin on wide screens.
+  - [x] One-click reset plus local save/load/delete preset workflows.
+  - [x] Added a 50-state undo/redo history that coalesces rapid input changes, exposes
+        toolbar actions, and supports Ctrl/Cmd-Z plus Ctrl/Cmd-Shift-Z.
+  - [x] Added a compact Preset status that reports the active named preset, Modified,
+        or Custom state and mirrors that status in the trigger's accessible name.
+  - [x] Added WAI-ARIA toolbar roving focus with one tab stop, disabled-control
+        skipping, wrapping Left/Right arrows, and Home/End navigation.
+  - [ ] Evaluate user-defined toolbar ordering only after real usage data exists.
+- [x] **Cloudflare Workers / Unsplash integration.** A Cloudflare Pages Function keeps
+      the access key server-side while the Image popover supports search, view,
+      download, and apply workflows.
+
+  - [x] Search results expose only required public metadata and retain the returned
+        regular/full image URLs and exact `download_location` value.
+  - [x] View and image rendering hotlink `photo.urls` directly; no image bytes are
+        proxied, downloaded, cached, or re-hosted by the Function.
+  - [x] Download and Apply asynchronously track the exact Unsplash
+        `photo.links.download_location`, including its query parameters.
+  - [x] The tracking proxy uses POST and accepts only validated HTTPS
+        `api.unsplash.com/photos/:id/download` locations.
+  - [x] Every result visibly attributes and links to the photographer and Unsplash.
+  - [x] Expanded About with a three-step workflow, complete control/persistence
+        reference, and operational notes covering sizing, lifecycle, accessibility,
+        images, CORS, Unsplash, local storage, and cleanup.
+  - [x] Refined the About background with layered translucent gradients that retain
+        live ASCII canvas visibility in dark and light themes.
+  - [x] Replaced the syntax highlighter with an escape-safe tokenizer for comments,
+        properties, strings, keywords, and numbers; all code surfaces now use a
+        tokenized JetBrains Mono font stack and theme-specific syntax colors.
+
+- [x] **README Unsplash documentation.** Added deployment configuration, operation
+      behavior, hotlinking/download-tracking requirements, endpoint validation, and
+      the requested Markus Winkler photo attribution.
+
 ## Should do before wider distribution
 
 - [x] **Automated lifecycle smoke coverage.** Jest/JSDOM now exercises construction,
@@ -58,6 +169,7 @@ strangers with confidence."
 ## UI / Demo page improvements (audit 2026-08-11)
 
 ### Visual polish
+
 - [x] **T1 — Font loading.** Import `IBM Plex Mono` from Google Fonts so the face loads
       on systems that don't have it locally; remove system-fallback dependency.
 - [x] **P1/P8 — Custom form controls.** Style `<select>` elements (chevron, focus ring)
@@ -74,6 +186,7 @@ strangers with confidence."
       (animated via CSS `transition`) on the preview-switcher active button.
 
 ### Layout / information hierarchy
+
 - [x] **L1 — Control panel grouping.** Wrap logically related fields (Motion, Color,
       Image) with a visible section header so the flat `flex-wrap` grid reads as
       organised groups rather than an undifferentiated list.
@@ -84,18 +197,21 @@ strangers with confidence."
       panel background) matching the rest of the design system.
 
 ### Controls UX
+
 - [x] **C3 — Custom toggle switches.** Replace bare `<input type="checkbox">` with a
       CSS-only pill toggle for the cursor-glow and FPS-stats toggles.
 - [x] **F3 — Copy button checkmark.** On clipboard success flash the copy-btn green
       with a `✓` character, then fade back to default.
 
 ### Accessibility
+
 - [x] **A1 — `aria-valuetext` on range inputs.** Add humanised value strings
       (e.g. "Speed 1.0") so screen readers announce meaningful units.
 - [x] **A2 — Visible colour-input labels.** Add short visible text labels ("Colour",
       "Gradient stops", etc.) next to the colour pickers.
 
 ### Popover Controls & Image Extensions (2026-08-11)
+
 - [x] **Floating Control Bar & Button-Anchored Popovers.** Replaced static bottom panel with a floating toolbar
       docked to the canvas stage using native HTML `popover` menus expanding directly upwards from their trigger button
       with a 200ms GPU-accelerated spring transition (`translateY(12px) scale(0.96)`) so controls pop up right from the button without scrolling away.

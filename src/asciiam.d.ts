@@ -3,6 +3,7 @@ export type asciiamMode =
   | 'current'
   | 'ripple'
   | 'fadeIn'
+  | 'fadeOut'
   | 'matrix'
   | 'snow'
   | 'sparkle'
@@ -32,8 +33,16 @@ export interface asciiamOptions {
   color?: string;
   gradient?: Record<string, unknown> | null;
   background?: string;
+  backdrop?: {
+    enabled?: boolean;
+    opacity?: number;
+    color?: string;
+    gradient?: Record<string, unknown> | null;
+  } | null;
   speed?: number;
   direction?: 'horizontal' | 'vertical' | 'diagonal';
+  revealDirection?: 'left-to-right' | 'right-to-left' | 'center';
+  align?: 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   minOpacity?: number;
   maxOpacity?: number;
   boldOnPeak?: boolean;

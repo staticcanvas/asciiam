@@ -28,6 +28,31 @@ applies.
 For local Pages Function development, copy `.dev.vars.example` to `.dev.vars`, set the
 access key, build once, and run `npx wrangler pages dev public`.
 
+### Unsplash request and media handling
+
+The Image popover supports searching, viewing, downloading, and applying Unsplash
+photos. The browser never receives `UNSPLASH_ACCESS_KEY`, and the Pages Function does
+not proxy, download, store, or re-host image bytes.
+
+| Operation | Application behavior | Unsplash API behavior |
+|---|---|---|
+| Search | `GET /api/unsplash?query=...` | The Function authenticates the search and returns selected public metadata. |
+| View | Opens the returned `photo.urls.regular` URL | The image remains hotlinked to the Unsplash CDN. |
+| Download | Opens the returned `photo.urls.full` URL | The browser first sends the exact `photo.links.download_location` to the Function for tracking. |
+| Apply | Passes `photo.urls.regular` directly to `anim.setImage()` | The Function asynchronously calls the exact tracked download endpoint, including its `ixid` query. |
+
+Download tracking uses `POST /api/unsplash` with a JSON body containing
+`downloadLocation`. The Function accepts only HTTPS URLs on `api.unsplash.com` whose
+path matches `/photos/:id/download`; this prevents the endpoint from acting as a
+general-purpose request proxy. Search responses are cached, but image URLs are used
+directly as required by the Unsplash API guidelines.
+
+Every search card links to both the photographer and the photo on Unsplash with
+`utm_source=asciiam&utm_medium=referral` parameters.
+
+Photo by [Markus Winkler](https://unsplash.com/@markuswinkler?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
+on [Unsplash](https://unsplash.com/photos/a-box-with-a-key-chain-and-a-key-chain-on-it-Z8yWSsx8OWE?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText).
+
 ## Quick start
 
 ```html
@@ -85,7 +110,8 @@ new asciiam('#hero', { ...asciiam.presets.heroWave, color: '#C04FFF' });
 | `wave` | A line sweeps across the field; nearby characters go bolder/larger/more opaque with a smooth falloff. |
 | `current` | Layered sine waves for a flowing, water-like texture (no single hard edge). |
 | `ripple` | Concentric rings expanding from the center. |
-| `fadeIn` | Staggered left-to-right reveal; loops by default, or set `loop: false` for a one-shot intro. |
+| `fadeIn` | Staggered reveal from the left, right, or center; loops by default, or set `loop: false` for a one-shot intro. |
+| `fadeOut` | The matching directional exit animation for dismissals and scene transitions. |
 | `matrix` | Classic falling-character rain, per-column speed/length/flicker. |
 | `image` | Converts a supplied image into an ASCII grid (brightness → character ramp), with the `wave` reveal optionally animated on top. |
 
@@ -95,7 +121,7 @@ Switch modes live: `anim.setMode('ripple')`.
 
 ```js
 new asciiam(target, {
-  mode: 'wave',                 // wave | current | ripple | fadeIn | matrix | image
+  mode: 'wave',                 // wave | current | ripple | fadeIn | fadeOut | matrix | image
   quality: 'balanced',          // ultra | high | balanced | performance — sets maxDPR/density/targetFPS
   charSet: ' .:-=+*#%@',        // light -> heavy character ramp; see CHARACTER_SETS
   fontFamily: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
@@ -106,6 +132,7 @@ new asciiam(target, {
   background: 'transparent',
   speed: 1,
   direction: 'horizontal',      // wave mode: horizontal | vertical | diagonal
+  revealDirection: 'center',    // fadeIn/fadeOut: left-to-right | right-to-left | center
   minOpacity: 0.05,
   maxOpacity: 0.85,
   boldOnPeak: true,

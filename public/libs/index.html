@@ -6,7 +6,7 @@
         <title>asciiam — background utility</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
         <style>
             /* ============================================================
                SOURCE OF TRUTH — asciiam demo page
@@ -55,6 +55,14 @@
                 --clr-success:       oklch(0.68 0.18 155);
                 --clr-warning:       oklch(0.75 0.16 85);
 
+                --font-ui: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+                --font-code: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+                --syntax-keyword: oklch(0.76 0.17 310);
+                --syntax-string: oklch(0.80 0.15 145);
+                --syntax-comment: oklch(0.58 0.04 250);
+                --syntax-number: oklch(0.78 0.16 65);
+                --syntax-property: oklch(0.76 0.16 250);
+
                 /* Midnight material token layer (morphism §6.6) */
                 --m-surface-r: 10;
                 --m-surface-g: 14;
@@ -87,6 +95,12 @@
 
                 --clr-border:        oklch(0.82 0.03 255);
                 --clr-border-hi:     oklch(0.70 0.04 255);
+
+                --syntax-keyword: oklch(0.42 0.19 310);
+                --syntax-string: oklch(0.40 0.14 145);
+                --syntax-comment: oklch(0.46 0.03 250);
+                --syntax-number: oklch(0.46 0.16 55);
+                --syntax-property: oklch(0.42 0.18 250);
 
                 --m-surface-r: 245;
                 --m-surface-g: 247;
@@ -145,7 +159,7 @@
                 min-height: 100dvh;
                 background: var(--clr-bg-base);
                 color: var(--clr-text-main);
-                font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+                font-family: var(--font-ui);
                 font-size: var(--font-base);
                 line-height: 1.6;
                 -webkit-font-smoothing: antialiased;
@@ -241,7 +255,7 @@
 
             .stats {
                 position: absolute;
-                inset-block-start: var(--space-sm);
+                inset-block-start: calc(var(--space-sm) + 2.75rem);
                 inset-inline-end: var(--space-md);
                 font-size: var(--font-xs);
                 color: var(--clr-primary);
@@ -254,6 +268,31 @@
                 backdrop-filter: blur(12px) saturate(160%);
                 -webkit-backdrop-filter: blur(12px) saturate(160%);
                 border: 1px solid oklch(from var(--clr-primary) l c h / 0.18);
+            }
+
+            .stage-fps-toggle {
+                position: absolute;
+                inset-block-start: var(--space-sm);
+                inset-inline-end: var(--space-md);
+                z-index: var(--z-overlay);
+                padding: 4px var(--space-sm);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.18);
+                border-radius: var(--radius-pill);
+                background: oklch(from var(--clr-bg-base) l c h / 0.72);
+                backdrop-filter: blur(12px) saturate(160%);
+                -webkit-backdrop-filter: blur(12px) saturate(160%);
+                font-size: var(--font-xs);
+            }
+            .stage-fps-toggle .ui-switch__track {
+                inline-size: 2.2rem;
+                block-size: 1.2rem;
+            }
+            .stage-fps-toggle .ui-switch__thumb {
+                inline-size: 0.9rem;
+                block-size: 0.9rem;
+            }
+            .stage-fps-toggle .ui-switch__control:checked + .ui-switch__track .ui-switch__thumb {
+                transform: translateX(1rem);
             }
 
             /* ── §6 Preview tab switcher ── */
@@ -323,6 +362,36 @@
             .preview-scene-background { display: block; padding: 0; }
 
             /* Hero card preview */
+            .hero-card-preview-stack {
+                display: grid;
+                justify-items: center;
+                gap: var(--space-sm);
+                width: 100%;
+            }
+            .hero-card-variants {
+                display: flex;
+                gap: 3px;
+                padding: 3px;
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-pill);
+                background: oklch(from var(--clr-surface) l c h / 0.82);
+                backdrop-filter: blur(12px);
+            }
+            .hero-card-variants button {
+                min-block-size: 36px;
+                padding-inline: var(--space-sm);
+                border: 0;
+                border-radius: var(--radius-pill);
+                background: transparent;
+                color: var(--clr-text-muted);
+                font: inherit;
+                font-size: var(--font-xs);
+                cursor: pointer;
+            }
+            .hero-card-variants button[aria-pressed="true"] {
+                color: var(--clr-on-primary);
+                background: var(--clr-primary);
+            }
             .preview-hero-card {
                 width: min(620px, 100%);
                 padding: clamp(1.5rem, 5vw, 3.375rem);
@@ -371,7 +440,7 @@
                 overflow: hidden;
                 transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
             }
-            .preview-hero-card--vertical:hover {
+            .preview-hero-card:hover {
                 transform: translateY(-4px);
                 border-color: var(--clr-primary);
                 box-shadow:
@@ -386,9 +455,39 @@
                 pointer-events: none;
                 transition: opacity 300ms ease;
             }
-            .preview-hero-card--vertical:hover .hero-card-reveal-layer {
+            .preview-hero-card:hover .hero-card-reveal-layer {
                 opacity: 1;
             }
+            .preview-hero-card[data-hero-variant="split"] {
+                width: min(720px, 94vw);
+            }
+            .preview-hero-card[data-hero-variant="split"] .hero-card-content {
+                display: grid;
+                grid-template-columns: minmax(0, 1.35fr) minmax(12rem, 0.65fr);
+                column-gap: var(--space-lg);
+            }
+            .preview-hero-card[data-hero-variant="split"] .hero-card-actions {
+                grid-column: 2;
+                grid-row: 1 / 4;
+                align-content: center;
+                align-items: stretch;
+                flex-direction: column;
+                padding-inline-start: var(--space-md);
+                border-inline-start: 1px solid var(--clr-border);
+                margin: 0;
+            }
+            .preview-hero-card[data-hero-variant="terminal"] {
+                width: min(560px, 92vw);
+                border-radius: var(--radius-sm);
+                border-color: oklch(0.72 0.18 150 / 0.55);
+                background: oklch(0.08 0.015 150 / 0.93);
+                box-shadow: 8px 8px 0 oklch(0.72 0.18 150 / 0.09);
+            }
+            .preview-hero-card[data-hero-variant="terminal"] .kicker-dot {
+                background: oklch(0.78 0.20 150);
+                box-shadow: 0 0 8px oklch(0.78 0.20 150);
+            }
+            .preview-hero-card[data-hero-variant="terminal"] h2::before { content: "> "; color: oklch(0.78 0.20 150); }
             .hero-card-content {
                 position: relative;
                 z-index: 2;
@@ -445,19 +544,6 @@
                 transform: translateY(-1px);
             }
 
-            /* Spatial alignment card preview */
-            .preview-spatial-card {
-                width: min(520px, 90vw);
-                padding: clamp(1.5rem, 4vw, 2.5rem);
-                background: oklch(0.10 0.02 255 / 0.90);
-                backdrop-filter: blur(20px) saturate(160%);
-                -webkit-backdrop-filter: blur(20px) saturate(160%);
-                border: 1px solid oklch(from var(--clr-primary) l c h / 0.30);
-                border-radius: var(--radius-lg);
-                display: flex;
-                flex-direction: column;
-                gap: var(--space-xs);
-            }
             .spatial-origin-grid {
                 display: grid;
                 grid-template-columns: repeat(3, 1fr);
@@ -476,7 +562,7 @@
                 transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
             }
             .spatial-btn:hover,
-            .spatial-btn.active {
+            .spatial-btn[aria-pressed="true"] {
                 color: var(--clr-primary);
                 border-color: var(--clr-primary);
                 background: var(--clr-primary-tint);
@@ -847,7 +933,7 @@
             .image-status[data-error="true"] { color: var(--clr-danger); }
             .image-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
                 gap: var(--space-xs);
             }
             .image-grid:empty { display: none; }
@@ -885,15 +971,37 @@
             .image-card:hover img,
             .image-select[aria-pressed="true"] img { opacity: 1; }
             .image-card figcaption {
-                position: absolute;
-                inset: auto 0 0;
-                padding: 18px var(--space-xs) var(--space-xs);
-                background: linear-gradient(transparent, oklch(from var(--clr-bg-base) l c h / 0.94));
+                min-block-size: 3rem;
+                padding: var(--space-xs);
+                background: oklch(from var(--clr-bg-base) l c h / 0.86);
                 font-size: 10px;
                 line-height: 1.35;
-                pointer-events: none;
             }
-            .image-card a { color: inherit; pointer-events: auto; }
+            .image-card a { color: inherit; }
+            .image-card-actions {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                border-block-start: 1px solid var(--clr-border);
+            }
+            .image-card-action {
+                min-block-size: 2.75rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border: 0;
+                border-inline-end: 1px solid var(--clr-border);
+                background: var(--clr-surface-2);
+                color: var(--clr-text-muted);
+                font: inherit;
+                font-size: var(--font-xs);
+                text-decoration: none;
+                cursor: pointer;
+                transition: color var(--time-fast) var(--ease-fluid), background-color var(--time-fast) var(--ease-fluid);
+            }
+            .image-card-action:last-child { border-inline-end: 0; }
+            .image-card-action:hover,
+            .image-card-action:focus-visible { color: var(--clr-primary); background: var(--clr-primary-tint); }
+            .image-card-action:disabled { color: var(--clr-text-dim); cursor: wait; opacity: 0.7; }
             .image-section + .image-section { margin-block-start: var(--space-sm); }
             .image-section-title {
                 margin-block-end: var(--space-xs);
@@ -973,12 +1081,30 @@
                 border-color: var(--clr-success);
                 background: oklch(from var(--clr-success) l c h / 0.08);
             }
-            .code-window code { color: var(--clr-text-main); background: transparent; padding: 0; border: 0; }
-            .token-keyword  { color: oklch(0.72 0.18 310); }
-            .token-string   { color: oklch(0.78 0.16 145); }
-            .token-comment  { color: var(--clr-text-dim); }
-            .token-number   { color: oklch(0.72 0.18 50); }
-            .token-property { color: oklch(0.70 0.18 250); }
+            code, pre, .npm-install-cmd, .feature-tag { font-family: var(--font-code); }
+            .code-window code {
+                color: var(--clr-text-main);
+                background: transparent;
+                padding: 0;
+                border: 0;
+                font-variant-ligatures: contextual;
+                tab-size: 2;
+            }
+            #pop-code {
+                max-block-size: calc(100dvh - 7.5rem);
+            }
+            #pop-code .code-window pre {
+                min-block-size: clamp(22rem, 58dvh, 38rem);
+                max-block-size: calc(100dvh - 15rem) !important;
+                overflow: auto;
+                padding: var(--space-md);
+                white-space: pre;
+            }
+            .token-keyword  { color: var(--syntax-keyword); font-weight: 600; }
+            .token-string   { color: var(--syntax-string); }
+            .token-comment  { color: var(--syntax-comment); font-style: italic; }
+            .token-number   { color: var(--syntax-number); }
+            .token-property { color: var(--syntax-property); }
 
             /* ── §15 Footer ── */
             .site-footer {
@@ -1032,13 +1158,54 @@
             @media (max-width: 720px) {
                 .stage-title { font-size: var(--font-lg); }
                 .stage-label { inset-block-start: var(--space-sm); inset-inline-start: var(--space-sm); }
-                .preview-switcher { inset-block-start: 3rem; left: var(--space-sm); transform: none; }
-                .preview-switcher button { padding-inline: var(--space-xs); font-size: 9px; }
-                .preview-scene { padding: 4rem var(--space-md) var(--space-md); }
+                .stage-label small { display: none; }
+                .preview-switcher {
+                    inset-block-start: 3rem;
+                    inset-inline: var(--space-sm);
+                    left: auto;
+                    transform: none;
+                    overflow-x: auto;
+                }
+                .preview-switcher button { flex: 1 0 auto; padding-inline: var(--space-xs); font-size: 9px; }
+                .preview-scene { padding: 5.5rem var(--space-md) 4.5rem; }
                 .preview-splash-shell { min-block-size: 330px; }
                 .preview-splash-links { display: none; }
                 .image-browser-head { align-items: stretch; flex-direction: column; }
                 .image-search { inline-size: 100%; }
+                .ctrl-bar {
+                    padding-inline: var(--space-xs);
+                    scroll-snap-type: x proximity;
+                    overscroll-behavior-inline: contain;
+                }
+                .ctrl-pill {
+                    min-block-size: 2.75rem;
+                    scroll-snap-align: start;
+                }
+                .ctrl-pill--code { margin-inline-start: 0; }
+                .ctrl-popover,
+                .ctrl-popover--wide {
+                    inline-size: calc(100vw - (var(--space-sm) * 2));
+                    min-inline-size: 0;
+                    max-inline-size: none;
+                }
+                #pop-code .code-window pre {
+                    min-block-size: 18rem;
+                    max-block-size: calc(100dvh - 17rem) !important;
+                }
+                .custom-charset-input { inline-size: 100%; }
+            }
+            @media (max-width: 460px) {
+                .stage-fps-toggle .ui-switch__label { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+                .preview-hero-card--vertical { inline-size: 100%; }
+                .preview-hero-card[data-hero-variant="split"] .hero-card-content { display: flex; }
+                .preview-hero-card[data-hero-variant="split"] .hero-card-actions {
+                    padding-inline-start: 0;
+                    padding-block-start: var(--space-sm);
+                    border-inline-start: 0;
+                    border-block-start: 1px solid var(--clr-border);
+                }
+                .hero-card-actions { flex-direction: column; align-items: stretch; }
+                .hero-repo-btn { justify-content: center; }
             }
 
             /* ── §17 Accessibility — reduced motion ── */
@@ -1076,7 +1243,10 @@
                 box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
                 /* Ensure it sits inside the .stage */
                 pointer-events: auto;
+                overflow-x: auto;
+                scrollbar-width: none;
             }
+            .ctrl-bar::-webkit-scrollbar { display: none; }
 
             /* UIverse-inspired Glassmorphic Pill Buttons */
             .ctrl-pill {
@@ -1108,6 +1278,62 @@
                     background-color 180ms ease,
                     box-shadow 180ms ease,
                     transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+                flex: 0 0 auto;
+            }
+            .ctrl-pill--code {
+                order: 100;
+                margin-inline-start: auto;
+            }
+            .ctrl-pill--utility {
+                padding-inline: var(--space-sm);
+                border-color: var(--clr-border);
+                background: oklch(from var(--clr-surface-2) l c h / 0.78);
+            }
+            .ctrl-pill--media {
+                background: oklch(from var(--clr-primary) l c h / 0.10);
+            }
+            .ctrl-pill--primary {
+                color: var(--clr-on-primary);
+                border-color: var(--clr-primary);
+                background: var(--clr-primary);
+                box-shadow:
+                    0 6px 20px oklch(from var(--clr-primary) l c h / 0.28),
+                    inset 0 1px 0 rgb(255 255 255 / 0.24);
+            }
+            .ctrl-bar__separator {
+                flex: 0 0 1px;
+                inline-size: 1px;
+                block-size: 1.5rem;
+                margin-inline: var(--space-xs);
+                background: var(--clr-border);
+            }
+            .ctrl-pill:disabled {
+                color: var(--clr-text-dim);
+                border-color: var(--clr-border);
+                cursor: not-allowed;
+                opacity: 0.55;
+                transform: none;
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+            }
+            .ctrl-pill__status {
+                max-inline-size: 8ch;
+                overflow: hidden;
+                padding: 1px 5px;
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.15);
+                border-radius: var(--radius-pill);
+                background: oklch(from var(--clr-primary) l c h / 0.08);
+                color: var(--clr-text-muted);
+                font-size: 9px;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            #presetTriggerBtn[data-dirty="true"] .ctrl-pill__status {
+                color: var(--clr-warning);
+            }
+            #resetSettingsBtn:hover {
+                color: var(--clr-warning);
+                border-color: var(--clr-warning);
+                background: oklch(from var(--clr-warning) l c h / 0.12);
             }
             .ctrl-pill svg {
                 inline-size: 15px;
@@ -1163,9 +1389,12 @@
                     0 -12px 36px rgb(0 0 0 / 0.60),
                     0 0 0 1px oklch(from var(--clr-primary) l c h / 0.15),
                     inset 0 1px 0 rgb(255 255 255 / 0.12);
-                inline-size: clamp(240px, 32vw, 320px);
+                inline-size: max-content;
+                min-inline-size: min(240px, calc(100vw - (var(--space-md) * 2)));
+                max-inline-size: min(420px, calc(100vw - (var(--space-md) * 2)));
                 max-block-size: min(460px, calc(100dvh - 140px));
                 overflow-y: auto;
+                overflow-x: hidden;
                 scrollbar-width: thin;
                 scrollbar-color: var(--clr-border) transparent;
                 /* Smooth spring transition */
@@ -1189,15 +1418,27 @@
             }
             /* Position each popover panel right over its button */
             #pop-preset { left: var(--space-md); }
-            #pop-chars  { left: clamp(4rem, 11vw, 7.5rem); }
-            #pop-motion { left: clamp(7.5rem, 19vw, 13rem); }
-            #pop-color  { left: clamp(11rem, 27vw, 18.5rem); }
-            #pop-code   { left: auto; right: clamp(7rem, 16vw, 12.5rem); }
-            #pop-image  { left: auto; right: var(--space-md); }
+            #pop-code   { left: auto; right: var(--space-md); }
 
             /* Wide variant for image browser */
             .ctrl-popover--wide {
                 inline-size: clamp(320px, 52vw, 540px);
+            }
+
+            .custom-charset-input {
+                inline-size: min(34rem, calc(100vw - (var(--space-lg) * 2)));
+                min-block-size: 5.5rem;
+                resize: vertical;
+                padding: var(--space-sm);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                background: var(--clr-surface-2);
+                color: var(--clr-text-main);
+                font: inherit;
+            }
+            .custom-charset-input:focus-visible {
+                outline: 2px solid var(--clr-primary);
+                outline-offset: 2px;
             }
 
             /* ── Full-Screen About Overlay (fluent-ui-v1) ── */
@@ -1215,7 +1456,10 @@
                 margin: 0 !important;
                 border: none !important;
                 border-radius: 0 !important;
-                background: oklch(0.08 0.02 250 / 0.52) !important;
+                background:
+                    radial-gradient(circle at 12% 18%, oklch(from var(--clr-primary) l c h / 0.16), transparent 38%),
+                    radial-gradient(circle at 88% 76%, oklch(from var(--clr-accent2) l c h / 0.12), transparent 42%),
+                    linear-gradient(145deg, oklch(0.07 0.02 255 / 0.62), oklch(0.11 0.025 270 / 0.48)) !important;
                 backdrop-filter: blur(8px) saturate(150%) !important;
                 -webkit-backdrop-filter: blur(8px) saturate(150%) !important;
                 box-shadow: none !important;
@@ -1229,7 +1473,10 @@
                 z-index: var(--z-modal) !important;
             }
             [data-theme="light"] .ctrl-popover--fullscreen {
-                background: oklch(0.96 0.015 250 / 0.58) !important;
+                background:
+                    radial-gradient(circle at 12% 18%, oklch(from var(--clr-primary) l c h / 0.12), transparent 38%),
+                    radial-gradient(circle at 88% 76%, oklch(from var(--clr-accent2) l c h / 0.09), transparent 42%),
+                    linear-gradient(145deg, oklch(0.98 0.01 250 / 0.72), oklch(0.94 0.02 270 / 0.64)) !important;
             }
             .ctrl-popover--fullscreen:popover-open {
                 opacity: 1;
@@ -1307,6 +1554,55 @@
                 height: 1px;
                 background: oklch(from var(--clr-border) l c h / 0.35);
             }
+            .about-reference-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: var(--space-md);
+            }
+            .about-reference-card {
+                padding: var(--space-md);
+                border: 1px solid oklch(from var(--clr-border) l c h / 0.55);
+                border-radius: var(--radius-md);
+                background: oklch(from var(--clr-surface-2) l c h / 0.58);
+                backdrop-filter: blur(12px);
+            }
+            .about-reference-card h3 {
+                margin-block-end: var(--space-xs);
+                color: var(--clr-text-main);
+                font-size: var(--font-sm);
+            }
+            .about-reference-card p,
+            .about-reference-card li {
+                color: var(--clr-text-muted);
+                font-size: var(--font-xs);
+                line-height: 1.65;
+            }
+            .about-reference-card ol,
+            .about-reference-card ul { padding-inline-start: var(--space-md); }
+            .about-reference-card li + li { margin-block-start: var(--space-xs); }
+            .about-table-wrap {
+                overflow-x: auto;
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-md);
+                background: oklch(from var(--clr-surface-2) l c h / 0.58);
+            }
+            .about-control-table {
+                inline-size: 100%;
+                min-inline-size: 680px;
+                border-collapse: collapse;
+                color: var(--clr-text-muted);
+                font-size: var(--font-xs);
+                text-align: start;
+            }
+            .about-control-table th,
+            .about-control-table td {
+                padding: var(--space-sm) var(--space-md);
+                border-block-end: 1px solid var(--clr-border);
+                vertical-align: top;
+                text-align: start;
+            }
+            .about-control-table th { color: var(--clr-text-main); font-weight: 600; }
+            .about-control-table tbody tr:last-child td { border-block-end: 0; }
 
             /* Detailed 6-column Feature Grid */
             .feature-grid-detailed {
@@ -1613,12 +1909,17 @@
                 <button type="button" data-preview-type="background" aria-pressed="true">Background</button>
                 <button type="button" data-preview-type="hero-card" aria-pressed="false">Hero card</button>
                 <button type="button" data-preview-type="splash" aria-pressed="false">Splash page</button>
-                <button type="button" data-preview-type="spatial" aria-pressed="false">Spatial Alignment</button>
             </div>
             <div class="preview-scene preview-scene-background" data-preview-scene="background" data-active="true" aria-hidden="false">
             </div>
             <div class="preview-scene" data-preview-scene="hero-card" data-active="false" aria-hidden="true" inert>
-                <article class="preview-hero-card preview-hero-card--vertical">
+                <div class="hero-card-preview-stack">
+                <div class="hero-card-variants" role="group" aria-label="Hero card layout">
+                    <button type="button" data-hero-card-variant="vertical" aria-pressed="true">Vertical</button>
+                    <button type="button" data-hero-card-variant="split" aria-pressed="false">Split</button>
+                    <button type="button" data-hero-card-variant="terminal" aria-pressed="false">Terminal</button>
+                </div>
+                <article class="preview-hero-card preview-hero-card--vertical" data-hero-variant="vertical">
                     <div class="hero-card-reveal-layer" aria-hidden="true"></div>
                     <div class="hero-card-content">
                         <div class="preview-kicker">
@@ -1640,6 +1941,7 @@
                         </div>
                     </div>
                 </article>
+                </div>
             </div>
             <div class="preview-scene" data-preview-scene="splash" data-active="false" aria-hidden="true" inert>
                 <div class="preview-splash-shell">
@@ -1652,28 +1954,20 @@
                     <div class="preview-splash-meta"><span>asciiam / 01</span><span>scroll to configure</span></div>
                 </div>
             </div>
-            <div class="preview-scene" data-preview-scene="spatial" data-active="false" aria-hidden="true" inert>
-                <div class="preview-spatial-card">
-                    <div class="preview-kicker"><span class="kicker-dot"></span> Spatial X / Y Alignment</div>
-                    <h2>Origin Focal Point Stage</h2>
-                    <p class="preview-copy">Select an origin alignment below to shift the focal origin point across the ASCII canvas matrix in real-time.</p>
-                    <div class="spatial-origin-grid" id="spatialOriginGrid">
-                        <button type="button" class="spatial-btn" data-align="top-left">Top Left</button>
-                        <button type="button" class="spatial-btn active" data-align="center">Center</button>
-                        <button type="button" class="spatial-btn" data-align="top-right">Top Right</button>
-                        <button type="button" class="spatial-btn" data-align="bottom-left">Bottom Left</button>
-                        <button type="button" class="spatial-btn" data-align="bottom-right">Bottom Right</button>
-                    </div>
-                </div>
-            </div>
+            <label class="ui-switch stage-fps-toggle" for="statsToggle">
+                <input class="ui-switch__control" type="checkbox" id="statsToggle" role="switch" aria-checked="false" />
+                <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                <span class="ui-switch__label">FPS</span>
+            </label>
             <div class="stats" id="stats"></div>
         <div class="ctrl-bar" role="toolbar" aria-label="Animation controls">
 
-            <!-- Preset & Mode -->
-            <button class="ctrl-pill" type="button"
+            <!-- Preset -->
+            <button class="ctrl-pill" id="presetTriggerBtn" type="button" aria-label="Preset, heroWave" title="Choose or save an animation preset"
                     popovertarget="pop-preset" aria-expanded="false" aria-controls="pop-preset">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4H14"/><path d="M10 4H3"/><path d="M14 2V6"/><path d="M21 12H12"/><path d="M8 12H3"/><path d="M12 10V14"/><path d="M21 20H18"/><path d="M14 20H3"/><path d="M18 18V22"/></svg>
                 <span>Preset</span>
+                <span class="ctrl-pill__status" id="presetDirtyIndicator" role="status" aria-live="polite">heroWave</span>
             </button>
             <div class="ctrl-popover" id="pop-preset" popover>
                 <div class="cpop-group">
@@ -1685,6 +1979,7 @@
                         <option value="matrixRain">matrixRain</option>
                         <option value="softRipple">softRipple</option>
                         <option value="introReveal">introReveal</option>
+                        <option value="outroFade">outroFade</option>
                         <option value="scanline">scanline</option>
                         <option value="snowfall">snowfall</option>
                         <option value="sparkleField">sparkleField</option>
@@ -1700,7 +1995,29 @@
                     </select>
                 </div>
                 <div class="cpop-group">
-                    <label class="cpop-label" for="quality">Quality</label>
+                    <label class="cpop-label" for="savedPresetList">Saved presets</label>
+                    <select id="savedPresetList">
+                        <option value="">No saved presets</option>
+                    </select>
+                    <div class="btn-row">
+                        <input id="savedPresetName" type="text" maxlength="40" placeholder="Preset name" aria-label="Saved preset name" />
+                        <button class="mode-btn" id="savePresetBtn" type="button">Save</button>
+                        <button class="mode-btn" id="deletePresetBtn" type="button" disabled>Delete</button>
+                    </div>
+                    <small id="savedPresetStatus" role="status" aria-live="polite">Presets are stored in this browser.</small>
+                </div>
+            </div>
+
+            <!-- Quality -->
+            <button class="ctrl-pill" id="qualityTriggerBtn" type="button" title="Choose render quality"
+                    popovertarget="pop-quality" aria-expanded="false" aria-controls="pop-quality">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 4.5L19 8.2l-3.5 3.4.8 4.8L12 14.1 7.7 16.4l.8-4.8L5 8.2l4.8-.7L12 3z"/></svg>
+                <span>Quality</span>
+                <span class="ctrl-pill__status" id="qualityToolbarStatus">ultra</span>
+            </button>
+            <div class="ctrl-popover" id="pop-quality" popover>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="quality">Render quality</label>
                     <select id="quality">
                         <option value="high">High fidelity</option>
                         <option value="balanced">Balanced</option>
@@ -1708,45 +2025,78 @@
                         <option value="ultra" selected>Ultra performance</option>
                     </select>
                 </div>
+            </div>
+
+            <!-- Mode -->
+            <button class="ctrl-pill" id="modeTriggerBtn" type="button" title="Choose animation mode"
+                    popovertarget="pop-mode" aria-expanded="false" aria-controls="pop-mode">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <span>Mode</span>
+                <span class="ctrl-pill__status" id="modeToolbarStatus">wave</span>
+            </button>
+            <div class="ctrl-popover" id="pop-mode" popover>
                 <div class="cpop-group">
-                    <span class="cpop-label" id="modeLabel">Mode</span>
+                    <span class="cpop-label" id="modeLabel">Animation mode</span>
                     <div class="btn-row" id="modeButtons" role="group" aria-labelledby="modeLabel"></div>
                 </div>
             </div>
 
             <!-- Character set -->
-            <button class="ctrl-pill" type="button"
+            <button class="ctrl-pill" id="charsetTriggerBtn" type="button" title="Choose the glyph palette"
                     popovertarget="pop-chars" aria-expanded="false" aria-controls="pop-chars">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
                 <span>Charset</span>
+                <span class="ctrl-pill__status" id="charsetToolbarStatus">extended</span>
             </button>
             <div class="ctrl-popover" id="pop-chars" popover>
                 <div class="cpop-group">
                     <label class="cpop-label" for="charSet">Character set</label>
                     <select id="charSet">
-                        <option value=" .:-=+*#%@">density ramp</option>
-                        <option value="  .'`,^&quot;;~+_(){}[]&lt;&gt;!?ilI|/\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&amp;8%B@$">extended photographic</option>
-                        <option value=" ░▒▓█">blocks</option>
-                        <option value=" 01">binary</option>
-                        <option value="⠀⠂⠒⠲⠶⠷⠿⣿">braille</option>
-                        <option value=" .,:;irsXA253hMHGS#9B&amp;@">punctuation</option>
-                        <option value=" 01アイウエオカキクケコ">japanese</option>
-                        <option value=" .·•●">dot</option>
-                        <option value=" /\|-_">flow</option>
+                        <option value="density">Density ramp</option>
+                        <option value="ascii">ASCII printable (95)</option>
+                        <option value="asciiExtended" selected>ASCII + extended Latin-1 (190)</option>
+                        <option value="extended">Extended photographic</option>
+                        <option value="alphanumeric">Alphanumeric</option>
+                        <option value="uppercase">Uppercase</option>
+                        <option value="lowercase">Lowercase</option>
+                        <option value="symbols">ASCII symbols</option>
+                        <option value="boxDrawing">Box drawing</option>
+                        <option value="arrows">Arrows</option>
+                        <option value="math">Mathematical symbols</option>
+                        <option value="blocks">Blocks</option>
+                        <option value="binary">Binary</option>
+                        <option value="braille">Braille</option>
+                        <option value="punctuation">Punctuation</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="custom">Custom character set</option>
                     </select>
+                </div>
+                <div class="cpop-group" id="customCharSetGroup" hidden>
+                    <label class="cpop-label" for="customCharSet">Custom characters</label>
+                    <textarea class="custom-charset-input" id="customCharSet" maxlength="512" spellcheck="false" placeholder="Enter characters from darkest to brightest"></textarea>
+                    <small id="customCharSetStatus">At least two distinct characters are required.</small>
                 </div>
             </div>
 
             <!-- Motion -->
-            <button class="ctrl-pill" type="button"
+            <button class="ctrl-pill" id="motionTriggerBtn" type="button" title="Adjust motion and reveal behavior"
                     popovertarget="pop-motion" aria-expanded="false" aria-controls="pop-motion">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3"/><path d="M18.5 5.5l-2.12 2.12"/><path d="M21 12h-3"/><path d="M18.5 18.5l-2.12-2.12"/><path d="M12 21v-3"/><path d="M5.5 18.5l2.12-2.12"/><path d="M3 12h3"/><path d="M5.5 5.5l2.12 2.12"/></svg>
                 <span>Motion</span>
+                <span class="ctrl-pill__status" id="motionToolbarStatus">1.0×</span>
             </button>
             <div class="ctrl-popover" id="pop-motion" popover>
                 <div class="cpop-group">
                     <label class="cpop-label row" for="speed">Speed <span class="val" id="speedVal">1.0</span></label>
                     <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1" />
+                </div>
+                <div class="cpop-group" id="revealDirectionGroup" hidden>
+                    <label class="cpop-label" for="revealDirection">Reveal direction</label>
+                    <select id="revealDirection">
+                        <option value="left-to-right">Left to right</option>
+                        <option value="right-to-left">Right to left</option>
+                        <option value="center">Center out</option>
+                    </select>
                 </div>
                 <div class="cpop-group">
                     <label class="cpop-label row" for="edgeFade">Edge fade <span class="val" id="edgeFadeVal">0.0</span></label>
@@ -1762,11 +2112,32 @@
                 </div>
             </div>
 
+            <!-- Spatial alignment -->
+            <button class="ctrl-pill" id="alignTriggerBtn" type="button" title="Choose the spatial origin"
+                    popovertarget="pop-align" aria-expanded="false" aria-controls="pop-align">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/><circle cx="12" cy="12" r="2"/></svg>
+                <span>Align</span>
+                <span class="ctrl-pill__status" id="alignToolbarStatus">center</span>
+            </button>
+            <div class="ctrl-popover" id="pop-align" popover>
+                <div class="cpop-group">
+                    <span class="cpop-label" id="alignLabel">Spatial origin</span>
+                    <div class="spatial-origin-grid" id="toolbarAlignGrid" role="group" aria-labelledby="alignLabel">
+                        <button type="button" class="spatial-btn" data-align="top-left" aria-pressed="false">Top Left</button>
+                        <button type="button" class="spatial-btn" data-align="center" aria-pressed="true">Center</button>
+                        <button type="button" class="spatial-btn" data-align="top-right" aria-pressed="false">Top Right</button>
+                        <button type="button" class="spatial-btn" data-align="bottom-left" aria-pressed="false">Bottom Left</button>
+                        <button type="button" class="spatial-btn" data-align="bottom-right" aria-pressed="false">Bottom Right</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Color -->
-            <button class="ctrl-pill" type="button"
+            <button class="ctrl-pill" id="colorTriggerBtn" type="button" title="Adjust color treatment"
                     popovertarget="pop-color" aria-expanded="false" aria-controls="pop-color">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.46-1.16-.27-.32-.44-.72-.44-1.16 0-.92.75-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg>
                 <span>Color</span>
+                <span class="ctrl-pill__status" id="colorToolbarStatus">solid</span>
             </button>
             <div class="ctrl-popover" id="pop-color" popover>
                 <div class="cpop-group">
@@ -1815,13 +2186,18 @@
                         <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
                         <span class="ui-switch__label">Cursor glow</span>
                     </label>
-                    <label class="ui-switch" for="statsToggle">
-                        <input class="ui-switch__control" type="checkbox" id="statsToggle" role="switch" aria-checked="false" />
-                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
-                        <span class="ui-switch__label">Show FPS stats</span>
-                    </label>
                 </div>
-                <div class="cpop-group" style="margin-top: var(--space-xs); border-top: 1px solid oklch(from var(--clr-border) l c h / 0.35); padding-top: var(--space-xs)">
+            </div>
+
+            <!-- Backdrop -->
+            <button class="ctrl-pill" id="backdropTriggerBtn" type="button" title="Configure the background layer"
+                    popovertarget="pop-backdrop" aria-expanded="false" aria-controls="pop-backdrop">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>
+                <span>Backdrop</span>
+                <span class="ctrl-pill__status" id="backdropToolbarStatus">off</span>
+            </button>
+            <div class="ctrl-popover" id="pop-backdrop" popover>
+                <div class="cpop-group">
                     <label class="ui-switch" for="backdropEnable">
                         <input class="ui-switch__control" type="checkbox" id="backdropEnable" role="switch" aria-checked="false" />
                         <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
@@ -1845,29 +2221,60 @@
                                     <option value="none">Solid</option>
                                     <option value="linear">Linear</option>
                                     <option value="radial">Radial</option>
+                                    <option value="cubic">Cubic blend</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                     <div class="cpop-group" id="backdropGradColorsRow" style="display:none">
                         <label class="cpop-label">Backdrop gradient stops</label>
-                        <div class="grad-stops-grid">
-                            <input type="color" class="grad-stop-input" id="backdropStop_0" value="#0a0c10" aria-label="Backdrop stop 1" />
-                            <input type="color" class="grad-stop-input" id="backdropStop_1" value="#1a233a" aria-label="Backdrop stop 2" />
+                        <div class="two-col">
+                            <select id="backdropGradSteps" aria-label="Backdrop gradient stops">
+                                <option value="1">1 stop</option>
+                                <option value="2" selected>2 stops</option>
+                                <option value="3">3 stops</option>
+                                <option value="4">4 stops</option>
+                                <option value="5">5 stops</option>
+                                <option value="6">6 stops</option>
+                            </select>
+                            <label class="cpop-label row" for="backdropAngle">Angle <span class="val" id="backdropAngleVal">45°</span></label>
+                        </div>
+                        <input type="range" id="backdropAngle" min="0" max="360" step="5" value="45" />
+                        <div class="grad-stops-grid" id="backdropStopsContainer">
+                            <input type="color" class="backdrop-stop-input" id="backdropStop_0" value="#0a0c10" aria-label="Backdrop stop 1" />
+                            <input type="color" class="backdrop-stop-input" id="backdropStop_1" value="#1a233a" aria-label="Backdrop stop 2" />
                         </div>
                     </div>
                 </div>
             </div>
 
+            <span class="ctrl-bar__separator" aria-hidden="true"></span>
+
             <!-- Theme -->
-            <button class="ctrl-pill" id="themeToggleBtn" type="button" aria-label="Toggle dark or light theme">
+            <button class="ctrl-pill ctrl-pill--utility" id="themeToggleBtn" type="button" aria-label="Toggle dark or light theme" title="Toggle dark or light theme">
                 <svg id="themeIconSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                 <svg id="themeIconMoon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 <span id="themeText">Theme</span>
             </button>
 
+            <!-- Reset -->
+            <button class="ctrl-pill ctrl-pill--utility" id="resetSettingsBtn" type="button" title="Restore demo defaults">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg>
+                <span>Reset</span>
+            </button>
+
+            <!-- History -->
+            <button class="ctrl-pill ctrl-pill--utility" id="undoSettingsBtn" type="button" aria-label="Undo last settings change" title="Undo last settings change" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M20 17a7 7 0 0 0-7-7H4"/></svg>
+                <span>Undo</span>
+            </button>
+            <button class="ctrl-pill ctrl-pill--utility" id="redoSettingsBtn" type="button" aria-label="Redo settings change" title="Redo settings change" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5"/><path d="M4 17a7 7 0 0 1 7-7h9"/></svg>
+                <span>Redo</span>
+            </button>
+
             <!-- About / Welcome Splash Modal -->
-            <button class="ctrl-pill" type="button"
+            <button class="ctrl-pill ctrl-pill--utility" type="button" title="Open documentation and usage notes"
                     popovertarget="pop-about" aria-expanded="false" aria-controls="pop-about">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 <span>About</span>
@@ -1911,7 +2318,7 @@
                         </div>
                     </div>
 
-                    <div class="about-section-heading">Architectural Highlights &amp; Features</div>
+                    <h2 class="about-section-heading">Architectural Highlights &amp; Features</h2>
 
                     <div class="feature-grid-detailed">
                         <!-- 1. Render Modes -->
@@ -2030,6 +2437,80 @@
                         </div>
                     </div>
 
+                    <h2 class="about-section-heading">Working with the demo</h2>
+                    <div class="about-reference-grid">
+                        <section class="about-reference-card" aria-labelledby="aboutConfigureTitle">
+                            <h3 id="aboutConfigureTitle">1. Configure</h3>
+                            <ol>
+                                <li>Start with a named preset or select a rendering mode.</li>
+                                <li>Choose quality, character density, spatial origin, color, motion, and backdrop settings.</li>
+                                <li>Use Image to upload a local file, select an included asset, or search Unsplash when the API is configured.</li>
+                            </ol>
+                        </section>
+                        <section class="about-reference-card" aria-labelledby="aboutValidateTitle">
+                            <h3 id="aboutValidateTitle">2. Preview and validate</h3>
+                            <ul>
+                                <li>Switch between Background, Hero card, and Splash page to inspect contrast and content interference.</li>
+                                <li>Enable FPS to compare quality tiers and cell counts.</li>
+                                <li>Use Undo and Redo while testing combinations; Reset restores demo defaults without deleting saved presets.</li>
+                            </ul>
+                        </section>
+                        <section class="about-reference-card" aria-labelledby="aboutIntegrateTitle">
+                            <h3 id="aboutIntegrateTitle">3. Integrate</h3>
+                            <ul>
+                                <li>Open Code for a configuration generated from the current controls.</li>
+                                <li>Install the package or load the UMD bundle, construct an instance, then call <code>start()</code>.</li>
+                                <li>Call <code>destroy()</code> when removing a mounted instance so observers and event subscriptions are released.</li>
+                            </ul>
+                        </section>
+                    </div>
+
+                    <h2 class="about-section-heading">Control reference</h2>
+                    <div class="about-table-wrap" tabindex="0" role="region" aria-label="Animation control reference">
+                        <table class="about-control-table">
+                            <thead><tr><th scope="col">Control</th><th scope="col">Purpose</th><th scope="col">Persistence</th></tr></thead>
+                            <tbody>
+                                <tr><td>Preset</td><td>Loads built-in configurations and manages named browser-local presets.</td><td>Saved presets remain local to this browser.</td></tr>
+                                <tr><td>Quality</td><td>Changes density, DPR limit, font levels, and optional frame-rate throttling.</td><td>Restored on the next visit.</td></tr>
+                                <tr><td>Mode / Charset</td><td>Selects the cell algorithm and the light-to-heavy character ramp.</td><td>Restored on the next visit.</td></tr>
+                                <tr><td>Motion / Align</td><td>Controls speed, edge fade, trail, pulse, and the spatial origin used by radial modes.</td><td>Restored on the next visit.</td></tr>
+                                <tr><td>Color / Backdrop</td><td>Configures foreground color animation and an independent solid or multi-stop gradient layer.</td><td>Restored on the next visit.</td></tr>
+                                <tr><td>Image</td><td>Samples browser-supported images into the current character grid and applies a reveal mask.</td><td>Image URLs and uploaded object URLs are not restored.</td></tr>
+                                <tr><td>Theme / FPS</td><td>Changes demo contrast and exposes the current frame/cell measurements.</td><td>Theme uses its own key; FPS is restored with demo settings.</td></tr>
+                                <tr><td>Undo / Redo / Reset</td><td>Moves through recent configuration states or restores the documented defaults.</td><td>History lasts for the current page session.</td></tr>
+                                <tr><td>Code</td><td>Shows a copyable constructor configuration matching the current demo state.</td><td>Generated live; not stored separately.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h2 class="about-section-heading">Operational notes</h2>
+                    <div class="about-reference-grid">
+                        <section class="about-reference-card" aria-labelledby="aboutLifecycleTitle">
+                            <h3 id="aboutLifecycleTitle">Lifecycle and accessibility</h3>
+                            <ul>
+                                <li>The target must have measurable width and height before construction.</li>
+                                <li>Rendering pauses when off-screen or when the document is hidden and resumes without accumulating elapsed time.</li>
+                                <li>Reduced-motion preferences are honored by default; toolbar controls use native semantics and keyboard navigation.</li>
+                            </ul>
+                        </section>
+                        <section class="about-reference-card" aria-labelledby="aboutImageTitle">
+                            <h3 id="aboutImageTitle">Images and Unsplash</h3>
+                            <ul>
+                                <li>Cross-origin sources must permit anonymous Canvas access through suitable CORS headers.</li>
+                                <li>Unsplash images are hotlinked from returned URLs and retain photographer attribution.</li>
+                                <li>Apply and Download call the exact Unsplash tracking location asynchronously; the Cloudflare Function never stores image bytes.</li>
+                            </ul>
+                        </section>
+                        <section class="about-reference-card" aria-labelledby="aboutStorageTitle">
+                            <h3 id="aboutStorageTitle">Storage and cleanup</h3>
+                            <ul>
+                                <li>Demo options and named presets use versioned local storage and do not leave the browser.</li>
+                                <li>Uploaded files use temporary object URLs that are revoked after image decoding.</li>
+                                <li>Call the unsubscribe function returned by <code>on()</code>, or call <code>destroy()</code> to clear every subscription at once.</li>
+                            </ul>
+                        </section>
+                    </div>
+
                     <div style="margin-block-start:var(--space-2xl);padding-block-start:var(--space-md);border-block-start:1px solid oklch(from var(--clr-border) l c h / 0.30);display:flex;align-items:center;justify-content:space-between">
                         <button class="about-cta-btn" popovertarget="pop-about" popovertargetaction="hide">
                             Explore Live Canvas
@@ -2039,46 +2520,14 @@
                 </div>
             </div>
 
-            <!-- Code -->
-            <button class="ctrl-pill" type="button"
-                    popovertarget="pop-code" aria-expanded="false" aria-controls="pop-code">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                <span>Code</span>
-            </button>
-            <div class="ctrl-popover ctrl-popover--wide" id="pop-code" popover>
-                <div class="cpop-group">
-                    <div class="npm-install-bar">
-                        <div class="npm-install-cmd">
-                            <span class="npm-prompt">$</span>
-                            <code>npm install @staticcanvas/asciiam</code>
-                            <span class="npm-ver-badge">v1.0.0</span>
-                        </div>
-                        <button class="npm-copy-btn" id="copyNpmInstallCode" type="button" aria-label="Copy npm install command">
-                            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                            <span>copy</span>
-                        </button>
-                        <a href="https://www.npmjs.com/package/@staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View on npm">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0H0zm19.2 19.2H12v-9.6H9.6v9.6H4.8V4.8h14.4v14.4z"/></svg>
-                        </a>
-                    </div>
-                </div>
-                <div class="cpop-group">
-                    <div class="code-window" style="margin:0">
-                        <div class="code-head">
-                            <span class="code-dots"><i></i><i></i><i></i></span>
-                            <span class="code-lang">js</span>
-                            <button class="copy-btn" id="copyUsagePopover">copy</button>
-                        </div>
-                        <pre style="max-height:300px;overflow-y:auto"><code id="usageCodePopover"></code></pre>
-                    </div>
-                </div>
-            </div>
+            <span class="ctrl-bar__separator" aria-hidden="true"></span>
 
             <!-- Image -->
-            <button class="ctrl-pill" type="button"
+            <button class="ctrl-pill ctrl-pill--media" id="imageTriggerBtn" type="button" title="Load or search for an image"
                     popovertarget="pop-image" aria-expanded="false" aria-controls="pop-image">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 <span>Image</span>
+                <span class="ctrl-pill__status" id="imageToolbarStatus">none</span>
             </button>
             <div class="ctrl-popover ctrl-popover--wide" id="pop-image" popover>
                 <div class="cpop-group">
@@ -2129,6 +2578,41 @@
                 </div>
             </div>
 
+            <!-- Code -->
+            <button class="ctrl-pill ctrl-pill--code ctrl-pill--primary" type="button" title="Copy the current configuration as code"
+                    popovertarget="pop-code" aria-expanded="false" aria-controls="pop-code">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span>Code</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-code" popover>
+                <div class="cpop-group">
+                    <div class="npm-install-bar">
+                        <div class="npm-install-cmd">
+                            <span class="npm-prompt">$</span>
+                            <code>npm install @staticcanvas/asciiam</code>
+                            <span class="npm-ver-badge">v1.0.0</span>
+                        </div>
+                        <button class="npm-copy-btn" id="copyNpmInstallCode" type="button" aria-label="Copy npm install command">
+                            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>copy</span>
+                        </button>
+                        <a href="https://www.npmjs.com/package/@staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View on npm">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0H0zm19.2 19.2H12v-9.6H9.6v9.6H4.8V4.8h14.4v14.4z"/></svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="cpop-group">
+                    <div class="code-window" style="margin:0">
+                        <div class="code-head">
+                            <span class="code-dots"><i></i><i></i><i></i></span>
+                            <span class="code-lang">js</span>
+                            <button class="copy-btn" id="copyUsagePopover">copy</button>
+                        </div>
+                        <pre><code id="usageCodePopover"></code></pre>
+                    </div>
+                </div>
+            </div>
+
         </div><!-- /.ctrl-bar -->
 
         </main>
@@ -2165,7 +2649,52 @@
             /* ============================== demo wiring ============================== */
             const stage = document.getElementById("stage");
             const statsEl = document.getElementById("stats");
-            const anim = new asciiam(stage, Object.assign({}, asciiam.presets.heroWave, { quality: "ultra" }));
+            const settingsStorageKey = "asciiam:demo-settings:v1";
+            const savedPresetsStorageKey = "asciiam:saved-presets:v1";
+            const demoDefaults = Object.assign({}, asciiam.presets.heroWave, {
+                quality: "ultra",
+                charSet: asciiam.CHARACTER_SETS.asciiExtended,
+                imageChars: asciiam.CHARACTER_SETS.asciiExtended,
+                align: "center",
+                gradient: null,
+                backdrop: null,
+                trail: 0,
+                pulse: null,
+                cursor: null,
+                showStats: false,
+                colorAnimation: null,
+                image: null,
+                imageScale: 1,
+                imageFov: 1,
+                fit: "cover",
+                imageMaskMode: "waveSweep",
+                revealDirection: "center",
+                animateImageMask: true,
+                colorFromImage: false,
+                loop: true,
+                minOpacity: 0.05,
+                maxOpacity: 0.85,
+                ambient: 0.35,
+                bandWidth: 0.14,
+                snowDensity: 0.02,
+                sparkleDensity: 0.05,
+            });
+            let restoredSettings = null;
+            try {
+                restoredSettings = JSON.parse(localStorage.getItem(settingsStorageKey));
+            } catch {
+                restoredSettings = null;
+            }
+            const initialOptions = Object.assign({}, demoDefaults, restoredSettings?.options || {});
+            const anim = new asciiam(stage, initialOptions);
+            let settingsReady = false;
+            let activePresetSnapshot = null;
+            let activePresetLabel = restoredSettings?.options ? "Custom" : "heroWave";
+            let optionHistory = [];
+            let historyIndex = -1;
+            let historyTimer = null;
+            let historyReady = false;
+            let applyingHistory = false;
             anim.attachStats(statsEl);
             anim.start();
 
@@ -2182,34 +2711,41 @@
                 });
             }
             previewButtons.forEach((button) => button.addEventListener("click", () => setPreviewType(button.dataset.previewType)));
-
-            /* ── Spatial origin buttons wiring ── */
-            document.querySelectorAll("#spatialOriginGrid .spatial-btn").forEach((btn) => {
-                btn.onclick = () => {
-                    document.querySelectorAll("#spatialOriginGrid .spatial-btn").forEach((b) => b.classList.remove("active"));
-                    btn.classList.add("active");
-                    const alignVal = btn.dataset.align;
-                    anim.setOption("align", alignVal);
-                    if (anim.opts.mode !== "ripple") {
-                        anim.setMode("ripple");
-                        setActiveModeButton("ripple");
-                    }
-                    renderUsage();
-                };
+            const heroCard = document.querySelector(".preview-hero-card");
+            document.querySelectorAll("[data-hero-card-variant]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    heroCard.dataset.heroVariant = button.dataset.heroCardVariant;
+                    document.querySelectorAll("[data-hero-card-variant]").forEach((candidate) => {
+                        candidate.setAttribute("aria-pressed", String(candidate === button));
+                    });
+                });
             });
 
-            const modes = ["wave", "current", "ripple", "fadeIn", "matrix", "snow", "sparkle", "image"];
+            /* ── Spatial origin buttons wiring ── */
+            function setAlignment(value) {
+                anim.setOption("align", value);
+                document.querySelectorAll("[data-align]").forEach((button) => {
+                    button.setAttribute("aria-pressed", String(button.dataset.align === value));
+                });
+                renderUsage();
+            }
+            document.querySelectorAll("[data-align]").forEach((button) => {
+                button.onclick = () => setAlignment(button.dataset.align);
+            });
+
+            const modes = ["wave", "current", "ripple", "fadeIn", "fadeOut", "matrix", "snow", "sparkle", "image"];
             const modeButtonsEl = document.getElementById("modeButtons");
             function setActiveModeButton(mode) {
                 [...modeButtonsEl.children].forEach((button) => {
                     const isActive = button.dataset.mode === mode;
-                    button.classList.toggle("active", isActive);
                     button.setAttribute("aria-pressed", String(isActive));
                 });
+                const revealDirectionGroup = document.getElementById("revealDirectionGroup");
+                if (revealDirectionGroup) revealDirectionGroup.hidden = mode !== "fadeIn" && mode !== "fadeOut";
             }
             modes.forEach((m) => {
                 const b = document.createElement("button");
-                b.className = "mode-btn" + (m === "wave" ? " active" : "");
+                b.className = "mode-btn";
                 b.type = "button";
                 b.textContent = m;
                 b.dataset.mode = m;
@@ -2229,6 +2765,42 @@
                     renderUsage();
                 };
                 modeButtonsEl.appendChild(b);
+            });
+
+            /* ── WAI-ARIA toolbar roving focus ── */
+            const toolbar = document.querySelector(".ctrl-bar");
+            const toolbarControls = [...toolbar.querySelectorAll(":scope > .ctrl-pill")];
+            toolbar.setAttribute("aria-orientation", "horizontal");
+            function setToolbarTabStop(control) {
+                toolbarControls.forEach((candidate) => { candidate.tabIndex = candidate === control ? 0 : -1; });
+            }
+            function ensureToolbarTabStop() {
+                const current = toolbarControls.find((control) => control.tabIndex === 0 && !control.disabled);
+                if (!current) {
+                    const firstEnabled = toolbarControls.find((control) => !control.disabled);
+                    if (firstEnabled) setToolbarTabStop(firstEnabled);
+                }
+            }
+            toolbarControls.forEach((control, index) => {
+                control.tabIndex = index === 0 ? 0 : -1;
+                control.addEventListener("focus", () => setToolbarTabStop(control));
+            });
+            toolbar.addEventListener("keydown", (event) => {
+                if (!event.target.classList.contains("ctrl-pill")) return;
+                const enabled = toolbarControls.filter((control) => !control.disabled);
+                const currentIndex = enabled.indexOf(event.target);
+                if (currentIndex < 0) return;
+                const rtl = getComputedStyle(toolbar).direction === "rtl";
+                let nextIndex = null;
+                if (event.key === "Home") nextIndex = 0;
+                if (event.key === "End") nextIndex = enabled.length - 1;
+                if (event.key === "ArrowRight") nextIndex = currentIndex + (rtl ? -1 : 1);
+                if (event.key === "ArrowLeft") nextIndex = currentIndex + (rtl ? 1 : -1);
+                if (nextIndex === null) return;
+                event.preventDefault();
+                nextIndex = (nextIndex + enabled.length) % enabled.length;
+                setToolbarTabStop(enabled[nextIndex]);
+                enabled[nextIndex].focus();
             });
 
             /* ── Popover positioning & aria-expanded sync ── */
@@ -2267,22 +2839,29 @@
                 localStorage.setItem("asciiam:visited", "true");
             }
 
-            // Preset dropdown rebuilds the instance's options wholesale, then re-syncs
-            // every control in the panel to match (so sliders/toggles never drift out
-            // of sync with what's actually running).
+            function applyDemoOptions(options, presetName = "", referenceLabel = presetName || "Custom") {
+                const qualityName = options.quality || "ultra";
+                const quality = asciiam.QUALITY[qualityName] || asciiam.QUALITY.ultra;
+                Object.assign(anim.opts, demoDefaults, quality, options, { quality: qualityName });
+                if (anim.opts.mode === "image" && !anim._sourceImage) anim.opts.mode = "wave";
+                anim._buildFontCache();
+                anim._resize();
+                syncControlsFromOpts();
+                document.getElementById("preset").value = presetName;
+                if (!applyingHistory) {
+                    activePresetLabel = referenceLabel;
+                    activePresetSnapshot = getPersistableOptions();
+                }
+                renderUsage();
+            }
+
+            // Built-in presets share the same reset/apply path as local presets, so
+            // fields omitted by a preset cannot leak in from the previous selection.
             document.getElementById("preset").onchange = (e) => {
                 const name = e.target.value;
                 if (!name) return;
                 const cfg = asciiam.presets[name];
-                anim.opts.gradient = null;
-                anim.opts.colorAnimation = null;
-                anim.opts.image = null;
-                anim.opts.colorFromImage = false;
-                Object.assign(anim.opts, cfg);
-                anim._buildFontCache();
-                anim._resize();
-                syncControlsFromOpts();
-                renderUsage();
+                applyDemoOptions(cfg, name);
             };
 
             document.getElementById("quality").onchange = (e) => {
@@ -2290,15 +2869,36 @@
                 Object.assign(anim.opts, q);
                 anim._buildFontCache();
                 anim._resize();
+                document.getElementById("preset").value = "";
+                renderUsage();
             };
-            document.getElementById("charSet").onchange = (e) => {
-                const cs = e.target.value;
+            const customCharSet = document.getElementById("customCharSet");
+            const customCharSetGroup = document.getElementById("customCharSetGroup");
+            const customCharSetStatus = document.getElementById("customCharSetStatus");
+            function applyCharacterSet(cs) {
                 anim.setOption("charSet", cs);
-                // Also sync imageChars when an image is loaded, so charset
-                // changes affect image rendering immediately.
-                if (anim._sourceImage) {
-                    anim.setOption("imageChars", cs);
+                document.getElementById("preset").value = "";
+                renderUsage();
+            }
+            document.getElementById("charSet").onchange = (e) => {
+                const key = e.target.value;
+                customCharSetGroup.hidden = key !== "custom";
+                if (key === "custom") {
+                    customCharSet.focus();
+                    if ([...new Set(customCharSet.value)].length >= 2) applyCharacterSet(customCharSet.value);
+                    return;
                 }
+                applyCharacterSet(asciiam.CHARACTER_SETS[key]);
+            };
+            customCharSet.oninput = () => {
+                const value = customCharSet.value;
+                const distinct = [...new Set(value)].length;
+                const valid = distinct >= 2;
+                customCharSet.setAttribute("aria-invalid", String(!valid));
+                customCharSetStatus.textContent = valid
+                    ? `${value.length} characters · ${distinct} distinct · applied live`
+                    : "At least two distinct characters are required.";
+                if (valid) applyCharacterSet(value);
             };
 
             /* ── Range track fill helper ── */
@@ -2318,22 +2918,30 @@
                 anim.opts.speed = parseFloat(e.target.value);
                 document.getElementById("speedVal").textContent = e.target.value;
                 setRangeFill(e.target);
+                renderUsage();
+            };
+            document.getElementById("revealDirection").onchange = (e) => {
+                anim.setOption("revealDirection", e.target.value);
+                renderUsage();
             };
             document.getElementById("edgeFade").oninput = (e) => {
                 anim.opts.edgeFade = parseFloat(e.target.value);
                 document.getElementById("edgeFadeVal").textContent = e.target.value;
                 setRangeFill(e.target);
+                renderUsage();
             };
             document.getElementById("trail").oninput = (e) => {
                 anim.opts.trail = parseFloat(e.target.value);
                 document.getElementById("trailVal").textContent = e.target.value;
                 setRangeFill(e.target);
+                renderUsage();
             };
             document.getElementById("pulse").oninput = (e) => {
                 const amt = parseFloat(e.target.value);
                 document.getElementById("pulseVal").textContent = amt.toFixed(2);
                 anim.opts.pulse = amt > 0 ? { amplitude: amt, speed: 0.8 } : null;
                 setRangeFill(e.target);
+                renderUsage();
             };
 
             /* ── Theme toggle logic ── */
@@ -2346,7 +2954,8 @@
                 if (sunIcon) sunIcon.style.display = isLight ? "inline-block" : "none";
                 if (moonIcon) moonIcon.style.display = isLight ? "none" : "inline-block";
                 
-                if (isLight && anim.opts.color === "#4fa8ff") {
+                const currentColor = String(anim.opts.color).toLocaleLowerCase("en");
+                if (isLight && currentColor === "#4fa8ff") {
                     anim.opts.color = "#0066cc";
                     document.getElementById("color").value = "#0066cc";
                 } else if (!isLight && anim.opts.color === "#0066cc") {
@@ -2361,6 +2970,7 @@
                 themeBtn.onclick = () => {
                     const current = document.documentElement.dataset.theme || "dark";
                     setTheme(current === "dark" ? "light" : "dark");
+                    renderUsage();
                 };
             }
 
@@ -2397,7 +3007,7 @@
                 anim.opts.colorAnimation = null;
 
                 if (mode === "gradient") {
-                    const stopInputs = [...document.querySelectorAll(".grad-stop-input")];
+                    const stopInputs = [...document.querySelectorAll("#gradStopsContainer .grad-stop-input")];
                     const stops = stopInputs.length ? stopInputs.map(input => input.value) : ["#4fa8ff", "#c04fff"];
                     anim.setOption("gradient", {
                         type: document.getElementById("gradType").value,
@@ -2411,6 +3021,7 @@
                 } else if (mode === "breathe") {
                     anim.opts.colorAnimation = { type: "breathe", speed: 0.6, colorA: "#4FA8FF", colorB: "#C04FFF" };
                 }
+                renderUsage();
             }
             document.getElementById("colorMode").onchange = syncColor;
             document.getElementById("gradType").onchange = syncColor;
@@ -2421,6 +3032,23 @@
             };
 
             /* ── Backdrop Layer Controls ── */
+            const defaultBackdropStopColors = ["#0A0C10", "#1A233A", "#173A63", "#4F2A68", "#164E63", "#3B1D28"];
+            function renderBackdropStops(count) {
+                const container = document.getElementById("backdropStopsContainer");
+                const existingValues = [...container.querySelectorAll(".backdrop-stop-input")].map((input) => input.value);
+                container.replaceChildren();
+                for (let index = 0; index < count; index++) {
+                    const input = document.createElement("input");
+                    input.type = "color";
+                    input.className = "backdrop-stop-input";
+                    input.id = `backdropStop_${index}`;
+                    input.value = existingValues[index] || defaultBackdropStopColors[index];
+                    input.setAttribute("aria-label", `Backdrop gradient stop ${index + 1}`);
+                    input.oninput = syncBackdrop;
+                    container.appendChild(input);
+                }
+            }
+
             function syncBackdrop() {
                 const enabled = document.getElementById("backdropEnable").checked;
                 const group = document.getElementById("backdropControlsGroup");
@@ -2432,7 +3060,7 @@
                     return;
                 }
 
-                const opacity = parseFloat(document.getElementById("backdropOpacity").value) || 0.5;
+                const opacity = Number(document.getElementById("backdropOpacity").value);
                 const color = document.getElementById("backdropColor").value || "#0a0c10";
                 const gradType = document.getElementById("backdropGradType").value;
                 const colorsRow = document.getElementById("backdropGradColorsRow");
@@ -2440,12 +3068,13 @@
 
                 let gradient = null;
                 if (gradType !== "none") {
-                    const stop1 = document.getElementById("backdropStop_0").value || "#0a0c10";
-                    const stop2 = document.getElementById("backdropStop_1").value || "#1a233a";
+                    const stops = [...document.querySelectorAll("#backdropStopsContainer .backdrop-stop-input")]
+                        .map((input) => input.value);
                     gradient = {
                         type: gradType,
-                        angle: 45,
-                        stops: [stop1, stop2]
+                        angle: Number(document.getElementById("backdropAngle").value),
+                        steps: Number(document.getElementById("backdropGradSteps").value),
+                        stops,
                     };
                 }
 
@@ -2469,22 +3098,33 @@
             };
             document.getElementById("backdropColor").oninput = syncBackdrop;
             document.getElementById("backdropGradType").onchange = syncBackdrop;
-            document.getElementById("backdropStop_0").oninput = syncBackdrop;
-            document.getElementById("backdropStop_1").oninput = syncBackdrop;
+            document.getElementById("backdropGradSteps").onchange = (event) => {
+                renderBackdropStops(Number(event.target.value));
+                syncBackdrop();
+            };
+            document.getElementById("backdropAngle").oninput = (event) => {
+                document.getElementById("backdropAngleVal").textContent = `${event.target.value}°`;
+                setRangeFill(event.target);
+                syncBackdrop();
+            };
+            document.querySelectorAll(".backdrop-stop-input").forEach((input) => { input.oninput = syncBackdrop; });
             document.getElementById("gradAnimate").onchange = syncColor;
             document.getElementById("color").oninput = (e) => {
                 anim.opts.color = e.target.value;
+                renderUsage();
             };
 
             document.getElementById("cursorToggle").onchange = (e) => {
                 anim.opts.cursor = { enabled: e.target.checked, radius: 160, strength: 0.7 };
                 e.target.setAttribute('aria-checked', String(e.target.checked));
+                renderUsage();
             };
 
             document.getElementById("statsToggle").onchange = (e) => {
                 anim.opts.showStats = e.target.checked;
                 statsEl.style.display = e.target.checked ? "block" : "none";
                 e.target.setAttribute('aria-checked', String(e.target.checked));
+                renderUsage();
             };
 
             const colorFromImgEl = document.getElementById("colorFromImageToggle");
@@ -2523,8 +3163,20 @@
                 if (selectedButton) selectedButton.setAttribute("aria-pressed", "true");
             }
 
+            function trackUnsplashDownload(image) {
+                if (!image.downloadLocation) return Promise.resolve();
+                return fetch("/api/unsplash", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ downloadLocation: image.downloadLocation }),
+                    cache: "no-store",
+                    keepalive: true,
+                });
+            }
+
             async function useLibraryImage(image, button) {
-                button.disabled = true;
+                const cardButtons = [...button.closest(".image-card").querySelectorAll("button")];
+                cardButtons.forEach((control) => { control.disabled = true; });
                 setImageStatus(`Loading ${image.alt || image.name}…`);
                 try {
                     anim.opts.colorFromImage = true;
@@ -2540,16 +3192,11 @@
                     markSelectedImage(button);
                     renderUsage();
                     setImageStatus(`${image.alt || image.name} selected.`);
-                    if (image.id) {
-                        fetch(`/api/unsplash?download=${encodeURIComponent(image.id)}`, {
-                            cache: "no-store",
-                            keepalive: true,
-                        }).catch(() => {});
-                    }
+                    if (image.downloadLocation) trackUnsplashDownload(image).catch(() => {});
                 } catch {
                     setImageStatus("The image could not be loaded. Try another result.", true);
                 } finally {
-                    button.disabled = false;
+                    cardButtons.forEach((control) => { control.disabled = false; });
                 }
             }
 
@@ -2594,6 +3241,38 @@
                 }
 
                 card.append(button, caption);
+                if (source === "unsplash") {
+                    const actions = document.createElement("div");
+                    actions.className = "image-card-actions";
+
+                    const view = document.createElement("a");
+                    view.className = "image-card-action";
+                    view.href = image.image;
+                    view.target = "_blank";
+                    view.rel = "noopener noreferrer";
+                    view.textContent = "View";
+                    view.setAttribute("aria-label", `View ${image.alt} at image size`);
+
+                    const download = document.createElement("a");
+                    download.className = "image-card-action";
+                    download.href = image.full || image.image;
+                    download.target = "_blank";
+                    download.rel = "noopener noreferrer";
+                    download.download = "";
+                    download.textContent = "Download";
+                    download.setAttribute("aria-label", `Download the full-size ${image.alt}`);
+                    download.onclick = () => { trackUnsplashDownload(image).catch(() => {}); };
+
+                    const apply = document.createElement("button");
+                    apply.className = "image-card-action";
+                    apply.type = "button";
+                    apply.textContent = "Apply";
+                    apply.setAttribute("aria-label", `Apply ${image.alt} to the ASCII canvas`);
+                    apply.onclick = () => useLibraryImage(image, button);
+
+                    actions.append(view, download, apply);
+                    card.append(actions);
+                }
                 return card;
             }
 
@@ -2723,20 +3402,30 @@
                 anim.setOption("imageScale", value);
                 document.getElementById("imageScaleVal").textContent = value.toFixed(2) + "×";
                 setRangeFill(e.target);
+                renderUsage();
             };
             document.getElementById("imageFov").oninput = (e) => {
                 const value = parseFloat(e.target.value);
                 anim.setOption("imageFov", value);
                 document.getElementById("imageFovVal").textContent = Math.round(value * 100) + "%";
                 setRangeFill(e.target);
+                renderUsage();
             };
 
             // Reflect anim.opts back onto the panel controls after a preset swap, so the
             // UI never shows stale values for options the preset just changed.
             function syncControlsFromOpts() {
                 setActiveModeButton(anim.opts.mode);
+                setAlignment(anim.opts.align || "center");
+                document.getElementById("quality").value = anim.opts.quality || "ultra";
+                const charSetEntry = Object.entries(asciiam.CHARACTER_SETS).find(([, value]) => value === anim.opts.charSet);
+                const charSetSelect = document.getElementById("charSet");
+                charSetSelect.value = charSetEntry ? charSetEntry[0] : "custom";
+                customCharSetGroup.hidden = !!charSetEntry;
+                if (!charSetEntry) customCharSet.value = anim.opts.charSet;
                 document.getElementById("speed").value = anim.opts.speed;
                 document.getElementById("speedVal").textContent = anim.opts.speed.toFixed(1);
+                document.getElementById("revealDirection").value = anim.opts.revealDirection || "center";
                 document.getElementById("edgeFade").value = anim.opts.edgeFade;
                 document.getElementById("edgeFadeVal").textContent = anim.opts.edgeFade.toFixed(2);
                 document.getElementById("trail").value = anim.opts.trail;
@@ -2744,7 +3433,7 @@
                 document.getElementById("pulse").value = anim.opts.pulse ? anim.opts.pulse.amplitude : 0;
                 document.getElementById("pulseVal").textContent = (anim.opts.pulse ? anim.opts.pulse.amplitude : 0).toFixed(2);
                 // Sync range fills after value update
-                ['speed','edgeFade','trail','pulse','imageScale','imageFov'].forEach((id) => {
+                ['speed','edgeFade','trail','pulse','imageScale','imageFov','backdropOpacity','backdropAngle'].forEach((id) => {
                     const el = document.getElementById(id);
                     if (el) setRangeFill(el);
                 });
@@ -2752,6 +3441,33 @@
                 const cursorEl = document.getElementById("cursorToggle");
                 cursorEl.checked = !!(anim.opts.cursor && anim.opts.cursor.enabled);
                 cursorEl.setAttribute('aria-checked', String(cursorEl.checked));
+                const statsToggle = document.getElementById("statsToggle");
+                statsToggle.checked = !!anim.opts.showStats;
+                statsToggle.setAttribute("aria-checked", String(statsToggle.checked));
+                statsEl.style.display = statsToggle.checked ? "block" : "none";
+                const backdropToggle = document.getElementById("backdropEnable");
+                const backdrop = anim.opts.backdrop && anim.opts.backdrop.enabled ? anim.opts.backdrop : null;
+                backdropToggle.checked = !!backdrop;
+                backdropToggle.setAttribute("aria-checked", String(backdropToggle.checked));
+                document.getElementById("backdropControlsGroup").style.display = backdrop ? "block" : "none";
+                const backdropGradient = backdrop?.gradient || null;
+                const backdropStops = backdropGradient?.stops || defaultBackdropStopColors.slice(0, 2);
+                const backdropStepCount = Math.min(6, Math.max(1, backdropGradient?.steps || backdropStops.length || 2));
+                document.getElementById("backdropGradType").value = backdropGradient?.type || "none";
+                document.getElementById("backdropGradSteps").value = String(backdropStepCount);
+                document.getElementById("backdropAngle").value = String(backdropGradient?.angle ?? 45);
+                document.getElementById("backdropAngleVal").textContent = `${backdropGradient?.angle ?? 45}°`;
+                document.getElementById("backdropGradColorsRow").style.display = backdropGradient ? "flex" : "none";
+                renderBackdropStops(backdropStepCount);
+                backdropStops.slice(0, backdropStepCount).forEach((stop, index) => {
+                    const input = document.getElementById(`backdropStop_${index}`);
+                    if (input && typeof stop === "string") input.value = stop;
+                });
+                if (backdrop) {
+                    document.getElementById("backdropOpacity").value = backdrop.opacity ?? 0.5;
+                    document.getElementById("backdropOpacityVal").textContent = Number(backdrop.opacity ?? 0.5).toFixed(2);
+                    document.getElementById("backdropColor").value = backdrop.color || "#0a0c10";
+                }
                 if (colorFromImgEl) {
                     colorFromImgEl.checked = !!anim.opts.colorFromImage;
                     colorFromImgEl.setAttribute('aria-checked', String(colorFromImgEl.checked));
@@ -2787,13 +3503,17 @@
                 return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
             }
             function highlightJavaScript(value) {
-                const escaped = escapeHtml(value);
-                return escaped.replace(/(\/\/[^\n]*|&quot;[^&]*?&quot;|'[^']*'|`[^`]*`|\b(?:const|new|true|false|null|undefined)\b|\b\d+(?:\.\d+)?\b)/g, (token) => {
-                    if (token.startsWith("//")) return `<span class="token-comment">${token}</span>`;
-                    if (token.startsWith("&quot;") || token.startsWith("'") || token.startsWith("`")) return `<span class="token-string">${token}</span>`;
-                    if (/^\d/.test(token)) return `<span class="token-number">${token}</span>`;
-                    return `<span class="token-keyword">${token}</span>`;
-                });
+                const tokenPattern = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"(?=\s*:))|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\b(const|let|var|new|true|false|null|undefined|return|await|async|function|class|import|from|export|default|if|else|try|catch|finally|throw)\b|\b(\d+(?:\.\d+)?)\b/g;
+                let highlighted = "";
+                let cursor = 0;
+                for (const match of value.matchAll(tokenPattern)) {
+                    const [token, comment, property, string, keyword, number] = match;
+                    highlighted += escapeHtml(value.slice(cursor, match.index));
+                    const type = comment ? "comment" : property ? "property" : string ? "string" : keyword ? "keyword" : number ? "number" : "";
+                    highlighted += `<span class="token-${type}">${escapeHtml(token)}</span>`;
+                    cursor = match.index + token.length;
+                }
+                return highlighted + escapeHtml(value.slice(cursor));
             }
             function usageSource() {
                 const colorMode = document.getElementById("colorMode").value;
@@ -2801,6 +3521,7 @@
                     mode: anim.opts.mode,
                     quality: document.getElementById("quality").value,
                     charSet: anim.opts.charSet,
+                    align: anim.opts.align,
                     color: anim.opts.color,
                     speed: anim.opts.speed,
                     edgeFade: anim.opts.edgeFade,
@@ -2809,6 +3530,9 @@
                     pulse: anim.opts.pulse,
                     cursor: anim.opts.cursor,
                 };
+                if (anim.opts.mode === "fadeIn" || anim.opts.mode === "fadeOut") {
+                    options.revealDirection = anim.opts.revealDirection || "center";
+                }
                 if (anim.opts.mode === "image") {
                     options.image = "./your-image.png";
                     options.imageScale = anim.opts.imageScale;
@@ -2825,6 +3549,225 @@
                 source += "\nanim.start();";
                 return source;
             }
+            function getPersistableOptions() {
+                const keys = [
+                    "mode", "quality", "charSet", "align", "color", "gradient", "backdrop",
+                    "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "colorAnimation",
+                    "imageScale", "imageFov", "fit", "colorFromImage", "imageMaskMode", "revealDirection",
+                ];
+                const options = {};
+                keys.forEach((key) => {
+                    if (anim.opts[key] !== undefined) options[key] = anim.opts[key];
+                });
+                options.quality = document.getElementById("quality").value;
+                if (options.mode === "image") options.mode = "wave";
+                return JSON.parse(JSON.stringify(options));
+            }
+            function snapshotKey(options) {
+                return JSON.stringify(options);
+            }
+            function updatePresetDirtyState() {
+                const current = getPersistableOptions();
+                const dirty = !activePresetSnapshot || snapshotKey(current) !== snapshotKey(activePresetSnapshot);
+                const status = dirty ? (activePresetSnapshot ? "Modified" : "Custom") : activePresetLabel;
+                const trigger = document.getElementById("presetTriggerBtn");
+                document.getElementById("presetDirtyIndicator").textContent = status;
+                trigger.dataset.dirty = String(dirty);
+                trigger.setAttribute("aria-label", `Preset, ${status}`);
+            }
+            function setToolbarSummary(triggerId, statusId, label, value) {
+                const trigger = document.getElementById(triggerId);
+                const status = document.getElementById(statusId);
+                if (!trigger || !status) return;
+                status.textContent = value;
+                trigger.setAttribute("aria-label", `${label}, ${value}`);
+            }
+            function updateToolbarSummaries() {
+                const mode = anim.opts.mode;
+                const charset = document.getElementById("charSet").value;
+                const colorMode = document.getElementById("colorMode").value;
+                const backdrop = anim.opts.backdrop?.enabled ? anim.opts.backdrop : null;
+                const directionLabels = {
+                    "left-to-right": "L→R",
+                    "right-to-left": "R→L",
+                    center: "Center",
+                };
+                const motion = mode === "fadeIn" || mode === "fadeOut"
+                    ? directionLabels[anim.opts.revealDirection] || "Center"
+                    : `${Number(anim.opts.speed).toFixed(1)}×`;
+                const backdropLabel = backdrop
+                    ? backdrop.gradient?.type || "solid"
+                    : "off";
+
+                setToolbarSummary("qualityTriggerBtn", "qualityToolbarStatus", "Quality", document.getElementById("quality").value);
+                setToolbarSummary("modeTriggerBtn", "modeToolbarStatus", "Mode", mode);
+                setToolbarSummary("charsetTriggerBtn", "charsetToolbarStatus", "Character set", charset === "asciiExtended" ? "extended" : charset);
+                setToolbarSummary("motionTriggerBtn", "motionToolbarStatus", "Motion", motion);
+                setToolbarSummary("alignTriggerBtn", "alignToolbarStatus", "Alignment", anim.opts.align || "center");
+                setToolbarSummary("colorTriggerBtn", "colorToolbarStatus", "Color", colorMode);
+                setToolbarSummary("backdropTriggerBtn", "backdropToolbarStatus", "Backdrop", backdropLabel);
+                setToolbarSummary("imageTriggerBtn", "imageToolbarStatus", "Image", anim._sourceImage ? "active" : "none");
+            }
+            function syncHistoryButtons() {
+                document.getElementById("undoSettingsBtn").disabled = historyIndex <= 0 && historyTimer === null;
+                document.getElementById("redoSettingsBtn").disabled = historyTimer !== null || historyIndex >= optionHistory.length - 1;
+                ensureToolbarTabStop();
+            }
+            function flushHistory() {
+                if (!historyReady || applyingHistory) return;
+                if (historyTimer !== null) {
+                    clearTimeout(historyTimer);
+                    historyTimer = null;
+                }
+                const snapshot = getPersistableOptions();
+                if (historyIndex >= 0 && snapshotKey(optionHistory[historyIndex]) === snapshotKey(snapshot)) {
+                    syncHistoryButtons();
+                    return;
+                }
+                optionHistory = optionHistory.slice(0, historyIndex + 1);
+                optionHistory.push(snapshot);
+                if (optionHistory.length > 50) optionHistory.shift();
+                historyIndex = optionHistory.length - 1;
+                syncHistoryButtons();
+            }
+            function queueHistory() {
+                if (!historyReady || applyingHistory) return;
+                if (historyIndex >= 0 && snapshotKey(optionHistory[historyIndex]) === snapshotKey(getPersistableOptions())) {
+                    syncHistoryButtons();
+                    return;
+                }
+                if (historyTimer !== null) clearTimeout(historyTimer);
+                historyTimer = setTimeout(flushHistory, 180);
+                syncHistoryButtons();
+            }
+            function applyHistory(direction) {
+                flushHistory();
+                const nextIndex = historyIndex + direction;
+                if (nextIndex < 0 || nextIndex >= optionHistory.length) return;
+                historyIndex = nextIndex;
+                applyingHistory = true;
+                try {
+                    applyDemoOptions(optionHistory[historyIndex]);
+                } finally {
+                    applyingHistory = false;
+                }
+                activePresetLabel = "Custom";
+                activePresetSnapshot = null;
+                document.getElementById("preset").value = "";
+                updatePresetDirtyState();
+                syncHistoryButtons();
+            }
+            document.getElementById("undoSettingsBtn").onclick = () => applyHistory(-1);
+            document.getElementById("redoSettingsBtn").onclick = () => applyHistory(1);
+            document.addEventListener("keydown", (event) => {
+                const target = event.target;
+                if (!(event.ctrlKey || event.metaKey) || event.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable) return;
+                if (event.key.toLocaleLowerCase("en") !== "z") return;
+                event.preventDefault();
+                applyHistory(event.shiftKey ? 1 : -1);
+            });
+            function persistSettings() {
+                if (!settingsReady) return;
+                try {
+                    localStorage.setItem(settingsStorageKey, JSON.stringify({ options: getPersistableOptions() }));
+                } catch {
+                    // Persistence is optional when storage is unavailable or full.
+                }
+            }
+
+            function readSavedPresets() {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(savedPresetsStorageKey));
+                    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                        ? Object.assign(Object.create(null), parsed)
+                        : Object.create(null);
+                } catch {
+                    return Object.create(null);
+                }
+            }
+            function writeSavedPresets(presets) {
+                localStorage.setItem(savedPresetsStorageKey, JSON.stringify(presets));
+            }
+            function renderSavedPresetList(selectedName = "") {
+                const select = document.getElementById("savedPresetList");
+                const names = Object.keys(readSavedPresets()).sort((a, b) => a.localeCompare(b));
+                select.replaceChildren();
+                const placeholder = new Option(names.length ? "— select saved preset —" : "No saved presets", "");
+                select.appendChild(placeholder);
+                names.forEach((name) => select.appendChild(new Option(name, name)));
+                select.value = names.includes(selectedName) ? selectedName : "";
+                document.getElementById("deletePresetBtn").disabled = !select.value;
+            }
+            function setSavedPresetStatus(message, isError = false) {
+                const status = document.getElementById("savedPresetStatus");
+                status.textContent = message;
+                status.dataset.error = String(isError);
+            }
+
+            document.getElementById("savePresetBtn").onclick = () => {
+                const input = document.getElementById("savedPresetName");
+                const name = input.value.trim();
+                if (!name) {
+                    setSavedPresetStatus("Enter a name before saving.", true);
+                    input.focus();
+                    return;
+                }
+                try {
+                    const presets = readSavedPresets();
+                    const replaced = Object.hasOwn(presets, name);
+                    presets[name] = getPersistableOptions();
+                    writeSavedPresets(presets);
+                    renderSavedPresetList(name);
+                    activePresetLabel = name;
+                    activePresetSnapshot = getPersistableOptions();
+                    updatePresetDirtyState();
+                    setSavedPresetStatus(`${replaced ? "Updated" : "Saved"} “${name}” in this browser.`);
+                } catch {
+                    setSavedPresetStatus("This browser could not save the preset.", true);
+                }
+            };
+            document.getElementById("savedPresetName").addEventListener("keydown", (event) => {
+                if (event.key === "Enter") document.getElementById("savePresetBtn").click();
+            });
+            document.getElementById("savedPresetList").onchange = (event) => {
+                const name = event.target.value;
+                document.getElementById("deletePresetBtn").disabled = !name;
+                if (!name) return;
+                const options = readSavedPresets()[name];
+                if (!options) return;
+                document.getElementById("savedPresetName").value = name;
+                applyDemoOptions(options, "", name);
+                event.target.value = name;
+                document.getElementById("deletePresetBtn").disabled = false;
+                setSavedPresetStatus(`Loaded “${name}”.`);
+            };
+            document.getElementById("deletePresetBtn").onclick = () => {
+                const select = document.getElementById("savedPresetList");
+                const name = select.value;
+                if (!name) return;
+                try {
+                    const presets = readSavedPresets();
+                    delete presets[name];
+                    writeSavedPresets(presets);
+                    renderSavedPresetList();
+                    document.getElementById("savedPresetName").value = "";
+                    if (activePresetLabel === name) {
+                        activePresetLabel = "Custom";
+                        activePresetSnapshot = null;
+                        updatePresetDirtyState();
+                    }
+                    setSavedPresetStatus(`Deleted “${name}”.`);
+                } catch {
+                    setSavedPresetStatus("This browser could not delete the preset.", true);
+                }
+            };
+            document.getElementById("resetSettingsBtn").onclick = () => {
+                try { localStorage.removeItem(settingsStorageKey); } catch {}
+                applyDemoOptions(demoDefaults, "heroWave");
+                document.getElementById("savedPresetList").value = "";
+                document.getElementById("deletePresetBtn").disabled = true;
+                setSavedPresetStatus("Demo settings reset. Saved presets were kept.");
+            };
             function renderUsage() {
                 const code = usageSource();
                 const html = highlightJavaScript(code);
@@ -2832,6 +3775,10 @@
                 if (mainEl) mainEl.innerHTML = html;
                 const popEl = document.getElementById("usageCodePopover");
                 if (popEl) popEl.innerHTML = html;
+                persistSettings();
+                updatePresetDirtyState();
+                updateToolbarSummaries();
+                queueHistory();
             }
             async function handleCopy(button, targetId) {
                 const flash = () => {
@@ -2898,6 +3845,15 @@
                 control.addEventListener("change", renderUsage);
             });
             syncControlsFromOpts();
+            if (restoredSettings?.options) document.getElementById("preset").value = "";
+            renderSavedPresetList();
+            activePresetSnapshot = restoredSettings?.options ? null : getPersistableOptions();
+            updatePresetDirtyState();
+            settingsReady = true;
+            optionHistory = [getPersistableOptions()];
+            historyIndex = 0;
+            historyReady = true;
+            syncHistoryButtons();
             renderUsage();
         </script>
     </body>

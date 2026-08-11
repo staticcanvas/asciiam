@@ -18,6 +18,7 @@ function copyPublicLibraries() {
       const destination = resolve('public/libs');
       mkdirSync(destination, { recursive: true });
       cpSync(resolve(bundleDist), destination, { recursive: true });
+      cpSync(resolve('public/index.html'), resolve(destination, 'index.html'));
     },
   };
 }
@@ -26,6 +27,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    copyPublicDir: false,
     sourcemap: true,
     target: 'es2015',
     lib: {

@@ -3,11 +3,11 @@
  */
 
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
-import { onRequestGet } from "../functions/api/unsplash.js";
+import { onRequestGet, onRequestPost } from "../functions/api/unsplash.js";
 
-function context(url, accessKey = "test-key") {
+function context(url, accessKey = "test-key", init = undefined) {
     return {
-        request: new Request(url),
+        request: new Request(url, init),
         env: { UNSPLASH_ACCESS_KEY: accessKey },
         waitUntil: jest.fn(),
     };
@@ -32,8 +32,15 @@ describe("Unsplash Pages Function", () => {
                         color: "#123456",
                         width: 1200,
                         height: 800,
-                        urls: { small: "https://images.example/thumb", regular: "https://images.example/image" },
-                        links: { html: "https://unsplash.com/photos/photo-1" },
+                        urls: {
+                            small: "https://images.example/thumb",
+                            regular: "https://images.example/image",
+                            full: "https://images.example/full",
+                        },
+                        links: {
+                            html: "https://unsplash.com/photos/photo-1",
+                            download_location: "https://api.unsplash.com/photos/photo-1/download?ixid=tracking-token",
+                        },
                         user: { name: "Example User", links: { html: "https://unsplash.com/@example" } },
                     },
                 ],
@@ -46,7 +53,12 @@ describe("Unsplash Pages Function", () => {
 
         expect(response.status).toBe(200);
         expect(response.headers.get("Cache-Control")).toContain("s-maxage=86400");
-        expect(body.results[0]).toEqual(expect.objectContaining({ id: "photo-1", image: "https://images.example/image" }));
+        expect(body.results[0]).toEqual(expect.objectContaining({
+            id: "photo-1",
+            image: "https://images.example/image",
+            full: "https://images.example/full",
+            downloadLocation: "https://api.unsplash.com/photos/photo-1/download?ixid=tracking-token",
+        }));
         expect(JSON.stringify(body)).not.toContain("test-key");
         expect(globalThis.fetch).toHaveBeenCalledWith(
             expect.objectContaining({ hostname: "api.unsplash.com", pathname: "/search/photos" }),
@@ -72,5 +84,38 @@ describe("Unsplash Pages Function", () => {
 
         expect(response.status).toBe(503);
         expect(response.headers.get("Cache-Control")).toBe("no-store");
+    });
+
+    it("tracks the exact validated download location through a POST", async () => {
+        globalThis.fetch = jest.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+        const response = await onRequestPost(context("https://example.pages.dev/api/unsplash", "test-key", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                downloadLocation: "https://api.unsplash.com/photos/photo-1/download?ixid=tracking-token",
+            }),
+        }));
+
+        expect(response.status).toBe(204);
+        expect(globalThis.fetch).toHaveBeenCalledWith(
+            expect.objectContaining({
+                hostname: "api.unsplash.com",
+                pathname: "/photos/photo-1/download",
+                search: "?ixid=tracking-token",
+            }),
+            expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Client-ID test-key" }) }),
+        );
+    });
+
+    it("rejects untrusted download locations without making a request", async () => {
+        globalThis.fetch = jest.fn();
+        const response = await onRequestPost(context("https://example.pages.dev/api/unsplash", "test-key", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ downloadLocation: "https://example.com/photos/photo-1/download" }),
+        }));
+
+        expect(response.status).toBe(400);
+        expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 });
