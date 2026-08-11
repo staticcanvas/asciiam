@@ -1,7 +1,7 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
-const backgroundDirectory = resolve("public/assets/bg");
+const backgroundDirectory = resolve("public/assets/images");
 const manifestPath = resolve("public/assets/backgrounds.json");
 const publicPagePath = resolve("public/index.html");
 const supportedExtensions = new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"]);
@@ -14,7 +14,7 @@ const images = entries
             .replace(/\.[^.]+$/, "")
             .replace(/[-_]+/g, " ")
             .replace(/\b\w/g, (letter) => letter.toUpperCase()),
-        src: `/assets/bg/${encodeURIComponent(entry.name)}`,
+        src: `/assets/images/${encodeURIComponent(entry.name)}`,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 

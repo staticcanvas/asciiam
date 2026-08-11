@@ -14,44 +14,27 @@ bundles to `public/libs`, so `public` can be deployed as a standalone Cloudflare
 ## Cloudflare Pages demo
 
 Configure the Pages project with `npm run build` as the build command and `public` as
-the output directory. Add `UNSPLASH_ACCESS_KEY` as an encrypted secret under
-**Settings > Variables and Secrets**. The Pages Function in `functions/api/unsplash.js`
-keeps this credential out of the browser.
+the output directory. The demo does not require runtime API credentials or a server-side
+image service.
 
-Place the included demo images in `public/assets/bg`, then run `npm run prepare:bg`
-(also run automatically before `dev` and `build`) to regenerate
-`public/assets/backgrounds.json`. Exact Unsplash searches are cached in the browser
-for one hour and at the Cloudflare edge for one day. Photos continue to use the
-hotlinked Unsplash URLs required by the API; normal CDN and browser HTTP caching still
-applies.
+### Local image library
 
-For local Pages Function development, copy `.dev.vars.example` to `.dev.vars`, set the
-access key, build once, and run `npx wrangler pages dev public`.
+The Image popover provides two image sources:
 
-### Unsplash request and media handling
+| Source | Behavior |
+|---|---|
+| Included defaults | Selects an image listed in `public/assets/backgrounds.json`. |
+| Upload | Reads a file selected from the user's device through a temporary object URL; the file is not uploaded or persisted. |
 
-The Image popover supports searching, viewing, downloading, and applying Unsplash
-photos. The browser never receives `UNSPLASH_ACCESS_KEY`, and the Pages Function does
-not proxy, download, store, or re-host image bytes.
+To add images to a clone:
 
-| Operation | Application behavior | Unsplash API behavior |
-|---|---|---|
-| Search | `GET /api/unsplash?query=...` | The Function authenticates the search and returns selected public metadata. |
-| View | Opens the returned `photo.urls.regular` URL | The image remains hotlinked to the Unsplash CDN. |
-| Download | Opens the returned `photo.urls.full` URL | The browser first sends the exact `photo.links.download_location` to the Function for tracking. |
-| Apply | Passes `photo.urls.regular` directly to `anim.setImage()` | The Function asynchronously calls the exact tracked download endpoint, including its `ixid` query. |
+1. Copy PNG, JPEG, GIF, WebP, AVIF, or SVG files into `public/assets/images`.
+2. Run `npm run prepare:bg` to regenerate `public/assets/backgrounds.json`.
+3. Reload the demo and open Image to select the new entry.
 
-Download tracking uses `POST /api/unsplash` with a JSON body containing
-`downloadLocation`. The Function accepts only HTTPS URLs on `api.unsplash.com` whose
-path matches `/photos/:id/download`; this prevents the endpoint from acting as a
-general-purpose request proxy. Search responses are cached, but image URLs are used
-directly as required by the Unsplash API guidelines.
-
-Every search card links to both the photographer and the photo on Unsplash with
-`utm_source=asciiam&utm_medium=referral` parameters.
-
-Photo by [Markus Winkler](https://unsplash.com/@markuswinkler?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
-on [Unsplash](https://unsplash.com/photos/a-box-with-a-key-chain-and-a-key-chain-on-it-Z8yWSsx8OWE?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText).
+`npm run dev` and `npm run build` run the manifest generator automatically. The
+generated manifest contains display names and URL-encoded `/assets/images/...` paths;
+it does not embed image data.
 
 ## Usage and export formats
 

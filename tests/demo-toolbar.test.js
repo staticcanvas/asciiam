@@ -8,7 +8,7 @@ import { JSDOM, VirtualConsole } from "jsdom";
 
 const projectFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-function createDemo() {
+function createDemo(includedImages = []) {
     const dom = new JSDOM(projectFile("public/index.html"), {
         runScripts: "outside-only",
         url: "https://demo.test/",
@@ -34,7 +34,9 @@ function createDemo() {
         createRadialGradient: () => ({ addColorStop() {} }),
         getImageData: () => ({ data: new Uint8ClampedArray(4) }),
     });
-    window.fetch = async () => Response.json([]);
+    window.fetch = async (resource) => Response.json(
+        String(resource) === "/assets/backgrounds.json" ? includedImages : [],
+    );
     window.eval(projectFile("public/libs/asciiam.js"));
     const demoScript = [...window.document.querySelectorAll("script:not([src])")].at(-1);
     window.eval(demoScript.textContent);
@@ -48,6 +50,19 @@ afterEach(() => {
 });
 
 describe("demo toolbar quality-of-life controls", () => {
+    it("renders included image manifest entries as selectable defaults", async () => {
+        activeDom = createDemo([
+            { name: "Bird Silhouette", src: "/assets/images/bird-silhouette.svg" },
+            { name: "Hawk Silhouette", src: "/assets/images/hawk-silhouette.svg" },
+        ]);
+        await new Promise((resolve) => setImmediate(resolve));
+        const { document } = activeDom.window;
+
+        expect(document.querySelectorAll("#localImages .image-select")).toHaveLength(2);
+        expect(document.getElementById("localImageSection").hidden).toBe(false);
+        expect(document.getElementById("imageStatus").textContent).toBe("2 included images ready. Select one to apply it.");
+    });
+
     it("tracks dirty state and supports undo and redo", () => {
         activeDom = createDemo();
         const { document, Event } = activeDom.window;
@@ -223,7 +238,7 @@ describe("demo toolbar quality-of-life controls", () => {
         ]));
         expect(document.querySelectorAll(".about-export-table tbody tr")).toHaveLength(5);
         expect(document.querySelectorAll(".about-control-table tbody tr")).toHaveLength(9);
-        expect(document.getElementById("pop-about").textContent).toContain("Cross-origin sources must permit anonymous Canvas access");
+        expect(document.getElementById("pop-about").textContent).toContain("public/assets/images");
     });
 
     it("opens About with Ctrl or Command+A without overriding editable fields", () => {

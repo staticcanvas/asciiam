@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "name": "Bird Silhouette",
+    "src": "/assets/images/bird-silhouette.svg"
+  },
+  {
+    "name": "Hawk Silhouette",
+    "src": "/assets/images/hawk-silhouette.svg"
+  },
+  {
+    "name": "Turkey Silhouette",
+    "src": "/assets/images/turkey-silhouette.svg"
+  }
+]

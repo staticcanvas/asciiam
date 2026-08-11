@@ -6,6 +6,9 @@ strangers with confidence."
 
 ## CRITICAL TASKS
 
+- [x] **Local image library simplification.** Renamed the default asset source to
+      `public/assets/images`, added three selectable defaults and an explicit empty
+      state, and removed the remote search API, credentials, and tracking layer.
 - [x] **About access and export guidance.** Moved About into the stage information
       area before the FPS switch, added Ctrl/Cmd+A access outside editable fields,
       and documented every package/browser export in the overlay and README.
@@ -97,31 +100,19 @@ strangers with confidence."
   - [x] Added WAI-ARIA toolbar roving focus with one tab stop, disabled-control
         skipping, wrapping Left/Right arrows, and Home/End navigation.
   - [ ] Evaluate user-defined toolbar ordering only after real usage data exists.
-- [x] **Cloudflare Workers / Unsplash integration.** A Cloudflare Pages Function keeps
-      the access key server-side while the Image popover supports search, view,
-      download, and apply workflows.
-
-  - [x] Search results expose only required public metadata and retain the returned
-        regular/full image URLs and exact `download_location` value.
-  - [x] View and image rendering hotlink `photo.urls` directly; no image bytes are
-        proxied, downloaded, cached, or re-hosted by the Function.
-  - [x] Download and Apply asynchronously track the exact Unsplash
-        `photo.links.download_location`, including its query parameters.
-  - [x] The tracking proxy uses POST and accepts only validated HTTPS
-        `api.unsplash.com/photos/:id/download` locations.
-  - [x] Every result visibly attributes and links to the photographer and Unsplash.
+- [x] **Local image workflows.** The Image popover supports bundled defaults and
+      browser-local uploads without a remote image provider or server credential.
   - [x] Expanded About with a three-step workflow, complete control/persistence
         reference, and operational notes covering sizing, lifecycle, accessibility,
-        images, CORS, Unsplash, local storage, and cleanup.
+        local images, storage, and cleanup.
   - [x] Refined the About background with layered translucent gradients that retain
         live ASCII canvas visibility in dark and light themes.
   - [x] Replaced the syntax highlighter with an escape-safe tokenizer for comments,
         properties, strings, keywords, and numbers; all code surfaces now use a
         tokenized JetBrains Mono font stack and theme-specific syntax colors.
 
-- [x] **README Unsplash documentation.** Added deployment configuration, operation
-      behavior, hotlinking/download-tracking requirements, endpoint validation, and
-      the requested Markus Winkler photo attribution.
+- [x] **README image-library documentation.** Documented included defaults, local
+      uploads, supported formats, manifest generation, and the clone workflow.
 
 ## Should do before wider distribution
 
@@ -198,9 +189,8 @@ strangers with confidence."
 - [x] **L1 — Control panel grouping.** Wrap logically related fields (Motion, Color,
       Image) with a visible section header so the flat `flex-wrap` grid reads as
       organised groups rather than an undifferentiated list.
-- [x] **L2 — Image browser max-height.** Cap `.field-wide` (image browser) at
-      `max-height: 340px` with `overflow-y: auto` so Unsplash result sets don't create
-      an infinitely tall slab.
+- [x] **L2 — Image browser max-height.** Cap the image browser with vertical overflow
+      so a large local asset library does not create an infinitely tall slab.
 - [x] **L3 — Usage code card frame.** Give `.note` a card treatment (border + slight
       panel background) matching the rest of the design system.
 

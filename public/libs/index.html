@@ -957,27 +957,20 @@
             /* ── §13 Image browser ── */
             .image-browser-head {
                 display: flex;
-                align-items: flex-end;
+                align-items: flex-start;
                 justify-content: space-between;
                 gap: var(--space-md);
                 margin-block-end: var(--space-sm);
             }
             .image-browser-head label { margin: 0; }
-            .image-search { display: flex; gap: var(--space-xs); inline-size: min(100%, 460px); }
-            .image-search button {
-                padding: var(--space-xs) var(--space-md);
-                border: 1px solid var(--clr-border);
-                background: var(--clr-surface-2);
-                color: var(--clr-primary);
-                font: inherit;
-                font-size: var(--font-sm);
-                cursor: pointer;
-                transition:
-                    border-color var(--time-fast) var(--ease-fluid),
-                    opacity var(--time-fast) var(--ease-fluid);
+            .image-library-help {
+                max-inline-size: 38rem;
+                color: var(--clr-text-dim);
+                font-size: 10px;
+                line-height: 1.5;
+                text-align: end;
             }
-            .image-search button:hover { border-color: var(--clr-primary); }
-            .image-search button:disabled { color: var(--clr-text-dim); cursor: wait; opacity: 0.7; }
+            .image-library-help code { color: var(--clr-primary); }
             .image-status {
                 min-block-size: 18px;
                 margin-block-end: var(--space-xs);
@@ -1020,6 +1013,7 @@
                 block-size: 92px;
                 object-fit: cover;
                 opacity: 0.72;
+                background: oklch(0.92 0.01 255);
                 transition: opacity var(--time-fast) var(--ease-fluid);
             }
             .image-card:hover img,
@@ -1031,32 +1025,6 @@
                 font-size: 10px;
                 line-height: 1.35;
             }
-            .image-card a { color: inherit; }
-            .image-card-actions {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                border-block-start: 1px solid var(--clr-border);
-            }
-            .image-card-action {
-                min-block-size: 2.75rem;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                border: 0;
-                border-inline-end: 1px solid var(--clr-border);
-                background: var(--clr-surface-2);
-                color: var(--clr-text-muted);
-                font: inherit;
-                font-size: var(--font-xs);
-                text-decoration: none;
-                cursor: pointer;
-                transition: color var(--time-fast) var(--ease-fluid), background-color var(--time-fast) var(--ease-fluid);
-            }
-            .image-card-action:last-child { border-inline-end: 0; }
-            .image-card-action:hover,
-            .image-card-action:focus-visible { color: var(--clr-primary); background: var(--clr-primary-tint); }
-            .image-card-action:disabled { color: var(--clr-text-dim); cursor: wait; opacity: 0.7; }
-            .image-section + .image-section { margin-block-start: var(--space-sm); }
             .image-section-title {
                 margin-block-end: var(--space-xs);
                 color: var(--clr-text-dim);
@@ -1225,7 +1193,7 @@
                 .preview-splash-shell { min-block-size: 330px; }
                 .preview-splash-links { display: none; }
                 .image-browser-head { align-items: stretch; flex-direction: column; }
-                .image-search { inline-size: 100%; }
+                .image-library-help { text-align: start; }
                 .ctrl-bar {
                     padding-inline: var(--space-xs);
                     scroll-snap-type: x proximity;
@@ -2684,7 +2652,7 @@ anim.start();</code></pre>
                             <ol>
                                 <li>Start with a named preset or select a rendering mode.</li>
                                 <li>Choose quality, character density, spatial origin, color, motion, and backdrop settings.</li>
-                                <li>Use Image to upload a local file, select an included asset, or search Unsplash when the API is configured.</li>
+                                <li>Use Image to upload a browser-local file or select an included asset from <code>public/assets/images</code>.</li>
                             </ol>
                         </section>
                         <section class="about-reference-card" aria-labelledby="aboutValidateTitle">
@@ -2734,11 +2702,11 @@ anim.start();</code></pre>
                             </ul>
                         </section>
                         <section class="about-reference-card" aria-labelledby="aboutImageTitle">
-                            <h3 id="aboutImageTitle">Images and Unsplash</h3>
+                            <h3 id="aboutImageTitle">Images and local defaults</h3>
                             <ul>
-                                <li>Cross-origin sources must permit anonymous Canvas access through suitable CORS headers.</li>
-                                <li>Unsplash images are hotlinked from returned URLs and retain photographer attribution.</li>
-                                <li>Apply and Download call the exact Unsplash tracking location asynchronously; the Cloudflare Function never stores image bytes.</li>
+                                <li>The bundled library is generated from supported files in <code>public/assets/images</code>.</li>
+                                <li>After adding PNG, JPEG, GIF, WebP, AVIF, or SVG files, run <code>npm run prepare:bg</code>; development and production builds run it automatically.</li>
+                                <li>Uploaded files remain browser-local and use temporary object URLs that are revoked after decoding.</li>
                             </ul>
                         </section>
                         <section class="about-reference-card" aria-labelledby="aboutStorageTitle">
@@ -2763,7 +2731,7 @@ anim.start();</code></pre>
             <span class="ctrl-bar__separator" aria-hidden="true"></span>
 
             <!-- Image -->
-            <button class="ctrl-pill ctrl-pill--media" id="imageTriggerBtn" type="button" title="Load or search for an image"
+            <button class="ctrl-pill ctrl-pill--media" id="imageTriggerBtn" type="button" title="Upload or choose an included image"
                     popovertarget="pop-image" aria-expanded="false" aria-controls="pop-image">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 <span>Image</span>
@@ -2800,20 +2768,13 @@ anim.start();</code></pre>
                 </div>
                 <div class="cpop-group cpop-browser">
                     <div class="image-browser-head">
-                        <label class="cpop-label" for="unsplashQuery">Background library</label>
-                        <form class="image-search" id="unsplashSearch" role="search">
-                            <input id="unsplashQuery" type="search" minlength="2" maxlength="80" placeholder="Search Unsplash" autocomplete="off" />
-                            <button id="unsplashSubmit" type="submit">Search</button>
-                        </form>
+                        <span class="cpop-label">Included defaults</span>
+                        <span class="image-library-help">Clone users can add files to <code>public/assets/images</code>; <code>npm run dev</code> or <code>npm run build</code> refreshes this list.</span>
                     </div>
-                    <p class="image-status" id="imageStatus" role="status" aria-live="polite">Loading local backgrounds…</p>
+                    <p class="image-status" id="imageStatus" role="status" aria-live="polite">Loading included images…</p>
                     <section class="image-section" id="localImageSection" hidden>
-                        <h2 class="image-section-title">Included</h2>
+                        <h2 class="image-section-title">Available images</h2>
                         <div class="image-grid" id="localImages"></div>
-                    </section>
-                    <section class="image-section" id="unsplashImageSection" hidden>
-                        <h2 class="image-section-title">Unsplash results</h2>
-                        <div class="image-grid" id="unsplashImages"></div>
                     </section>
                 </div>
             </div>
@@ -2864,12 +2825,11 @@ anim.start();</code></pre>
                 <p class="performance-policy">Zero runtime dependencies · Canvas 2D · offscreen auto-pause · reduced-motion aware</p>
             </div>
             <div>
-                <p class="footer-copy">Built with browser-native JavaScript and Canvas 2D. Deployed on Cloudflare Pages, with optional background photography supplied through the Unsplash API.</p>
+                <p class="footer-copy">Built with browser-native JavaScript and Canvas 2D. The demo uses uploaded files or a build-generated local image library.</p>
                 <nav class="footer-resources" aria-label="Technology and resource links">
                     <a href="https://developer.mozilla.org/docs/Web/API/Canvas_API" target="_blank" rel="noopener noreferrer">Canvas 2D</a>
                     <a href="https://developer.mozilla.org/docs/Web/JavaScript" target="_blank" rel="noopener noreferrer">JavaScript</a>
                     <a href="https://developers.cloudflare.com/pages/" target="_blank" rel="noopener noreferrer">Cloudflare Pages</a>
-                    <a href="https://unsplash.com/developers" target="_blank" rel="noopener noreferrer">Unsplash API</a>
                 </nav>
             </div>
             <nav class="footer-socials" aria-label="Source repositories">
@@ -3413,40 +3373,15 @@ anim.start();</code></pre>
             const imageStatus = document.getElementById("imageStatus");
             const localImageSection = document.getElementById("localImageSection");
             const localImages = document.getElementById("localImages");
-            const unsplashImageSection = document.getElementById("unsplashImageSection");
-            const unsplashImages = document.getElementById("unsplashImages");
-            const unsplashSearch = document.getElementById("unsplashSearch");
-            const unsplashSubmit = document.getElementById("unsplashSubmit");
-            const searchCachePrefix = "asciiam:unsplash:v1:";
-            const searchCacheTtl = 60 * 60 * 1000;
-            const pendingSearches = new Map();
 
             function setImageStatus(message, isError = false) {
                 imageStatus.textContent = message;
                 imageStatus.dataset.error = String(isError);
             }
 
-            function withUnsplashAttribution(url) {
-                const link = new URL(url);
-                link.searchParams.set("utm_source", "asciiam");
-                link.searchParams.set("utm_medium", "referral");
-                return link.toString();
-            }
-
             function markSelectedImage(selectedButton) {
                 document.querySelectorAll(".image-select[aria-pressed='true']").forEach((button) => button.setAttribute("aria-pressed", "false"));
                 if (selectedButton) selectedButton.setAttribute("aria-pressed", "true");
-            }
-
-            function trackUnsplashDownload(image) {
-                if (!image.downloadLocation) return Promise.resolve();
-                return fetch("/api/unsplash", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ downloadLocation: image.downloadLocation }),
-                    cache: "no-store",
-                    keepalive: true,
-                });
             }
 
             async function useLibraryImage(image, button) {
@@ -3467,15 +3402,14 @@ anim.start();</code></pre>
                     markSelectedImage(button);
                     renderUsage();
                     setImageStatus(`${image.alt || image.name} selected.`);
-                    if (image.downloadLocation) trackUnsplashDownload(image).catch(() => {});
                 } catch {
-                    setImageStatus("The image could not be loaded. Try another result.", true);
+                    setImageStatus("The image could not be loaded. Try another included file or upload.", true);
                 } finally {
                     cardButtons.forEach((control) => { control.disabled = false; });
                 }
             }
 
-            function createImageCard(image, source) {
+            function createImageCard(image) {
                 const card = document.createElement("figure");
                 card.className = "image-card";
                 card.style.backgroundColor = image.color || "var(--panel)";
@@ -3495,65 +3429,15 @@ anim.start();</code></pre>
                 button.appendChild(thumbnail);
 
                 const caption = document.createElement("figcaption");
-                if (source === "unsplash") {
-                    caption.append("Photo by ");
-                    const photographer = document.createElement("a");
-                    photographer.href = withUnsplashAttribution(image.photographer.url);
-                    photographer.target = "_blank";
-                    photographer.rel = "noopener noreferrer";
-                    photographer.textContent = image.photographer.name;
-                    photographer.onclick = (event) => event.stopPropagation();
-                    caption.append(photographer, " on ");
-                    const unsplash = document.createElement("a");
-                    unsplash.href = withUnsplashAttribution(image.photoUrl);
-                    unsplash.target = "_blank";
-                    unsplash.rel = "noopener noreferrer";
-                    unsplash.textContent = "Unsplash";
-                    unsplash.onclick = (event) => event.stopPropagation();
-                    caption.append(unsplash);
-                } else {
-                    caption.textContent = image.name;
-                }
+                caption.textContent = image.name;
 
                 card.append(button, caption);
-                if (source === "unsplash") {
-                    const actions = document.createElement("div");
-                    actions.className = "image-card-actions";
-
-                    const view = document.createElement("a");
-                    view.className = "image-card-action";
-                    view.href = image.image;
-                    view.target = "_blank";
-                    view.rel = "noopener noreferrer";
-                    view.textContent = "View";
-                    view.setAttribute("aria-label", `View ${image.alt} at image size`);
-
-                    const download = document.createElement("a");
-                    download.className = "image-card-action";
-                    download.href = image.full || image.image;
-                    download.target = "_blank";
-                    download.rel = "noopener noreferrer";
-                    download.download = "";
-                    download.textContent = "Download";
-                    download.setAttribute("aria-label", `Download the full-size ${image.alt}`);
-                    download.onclick = () => { trackUnsplashDownload(image).catch(() => {}); };
-
-                    const apply = document.createElement("button");
-                    apply.className = "image-card-action";
-                    apply.type = "button";
-                    apply.textContent = "Apply";
-                    apply.setAttribute("aria-label", `Apply ${image.alt} to the ASCII canvas`);
-                    apply.onclick = () => useLibraryImage(image, button);
-
-                    actions.append(view, download, apply);
-                    card.append(actions);
-                }
                 return card;
             }
 
-            function renderImageGrid(container, images, source) {
+            function renderImageGrid(container, images) {
                 const fragment = document.createDocumentFragment();
-                images.forEach((image) => fragment.appendChild(createImageCard(image, source)));
+                images.forEach((image) => fragment.appendChild(createImageCard(image)));
                 container.replaceChildren(fragment);
             }
 
@@ -3562,84 +3446,17 @@ anim.start();</code></pre>
                     const response = await fetch("/assets/backgrounds.json");
                     if (!response.ok) throw new Error("manifest unavailable");
                     const images = await response.json();
-                    if (images.length) {
-                        renderImageGrid(localImages, images, "local");
+                    if (Array.isArray(images) && images.length) {
+                        renderImageGrid(localImages, images);
                         localImageSection.hidden = false;
-                        setImageStatus(`${images.length} included background${images.length === 1 ? "" : "s"} ready.`);
+                        setImageStatus(`${images.length} included image${images.length === 1 ? "" : "s"} ready. Select one to apply it.`);
                     } else {
-                        setImageStatus("Upload an image or search Unsplash. Add included images to assets/bg.");
+                        setImageStatus("No included images found. Upload a file, or add images to public/assets/images and rebuild.");
                     }
                 } catch {
-                    setImageStatus("Upload an image or search Unsplash.");
+                    setImageStatus("The included image list is unavailable. Upload a file, or run npm run prepare:bg and reload.", true);
                 }
             }
-
-            function readCachedSearch(key) {
-                try {
-                    const cached = JSON.parse(localStorage.getItem(key));
-                    if (cached && Date.now() - cached.savedAt < searchCacheTtl) return cached.data;
-                    localStorage.removeItem(key);
-                } catch {
-                    localStorage.removeItem(key);
-                }
-                return null;
-            }
-
-            function writeCachedSearch(key, data) {
-                try {
-                    localStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), data }));
-                    const keys = Object.keys(localStorage)
-                        .filter((item) => item.startsWith(searchCachePrefix))
-                        .sort((a, b) => JSON.parse(localStorage.getItem(b)).savedAt - JSON.parse(localStorage.getItem(a)).savedAt);
-                    keys.slice(12).forEach((item) => localStorage.removeItem(item));
-                } catch {
-                    // Storage can be disabled or full; HTTP caching still applies.
-                }
-            }
-
-            async function searchUnsplash(query) {
-                const normalized = query.trim().replace(/\s+/g, " ").toLocaleLowerCase("en");
-                const cacheKey = searchCachePrefix + normalized;
-                const cached = readCachedSearch(cacheKey);
-                if (cached) return { data: cached, cached: true };
-                if (!pendingSearches.has(normalized)) {
-                    pendingSearches.set(
-                        normalized,
-                        fetch(`/api/unsplash?query=${encodeURIComponent(normalized)}`)
-                            .then(async (response) => {
-                                const data = await response.json();
-                                if (!response.ok) throw new Error(data.error || "Search failed.");
-                                writeCachedSearch(cacheKey, data);
-                                return data;
-                            })
-                            .finally(() => pendingSearches.delete(normalized)),
-                    );
-                }
-                return { data: await pendingSearches.get(normalized), cached: false };
-            }
-
-            unsplashSearch.onsubmit = async (event) => {
-                event.preventDefault();
-                const query = document.getElementById("unsplashQuery").value.trim();
-                if (query.length < 2) {
-                    setImageStatus("Enter at least two characters to search.", true);
-                    return;
-                }
-                unsplashSubmit.disabled = true;
-                unsplashSubmit.textContent = "Searching";
-                setImageStatus(`Searching Unsplash for “${query}”…`);
-                try {
-                    const { data, cached } = await searchUnsplash(query);
-                    renderImageGrid(unsplashImages, data.results, "unsplash");
-                    unsplashImageSection.hidden = false;
-                    setImageStatus(`${data.results.length} result${data.results.length === 1 ? "" : "s"}${cached ? " from local cache" : ""}.`);
-                } catch (error) {
-                    setImageStatus(error.message || "Unsplash search is unavailable.", true);
-                } finally {
-                    unsplashSubmit.disabled = false;
-                    unsplashSubmit.textContent = "Search";
-                }
-            };
 
             loadLocalImages();
 
