@@ -680,6 +680,12 @@
             this._destroyed = false;
             this._animatedImage = false;
             this._imageFrameAccumulator = 0;
+            this._capturedImageFrames = null;
+            this._imageFrameIndex = 0;
+            this._imageLoadToken = 0;
+            this._imageCaptureToken = 0;
+            this._animatedImageData = null;
+            this._imageRecaptureTimer = null;
             this._imageSampleCanvas = null;
             this._imageSampleContext = null;
             this._api = {
@@ -774,6 +780,12 @@
             if (this._webgl) this._webgl.destroy();
             this._sourceImage = null;
             this._imageGrid = null;
+            this._capturedImageFrames = null;
+            this._animatedImageData = null;
+            this._imageLoadToken++;
+            this._imageCaptureToken++;
+            if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
+            this._imageRecaptureTimer = null;
             this._imageSampleCanvas = null;
             this._imageSampleContext = null;
             if (this.canvas.parentElement) this.canvas.parentElement.removeChild(this.canvas);
@@ -897,8 +909,9 @@
                 this._time = 0;
                 this._lastT = null;
             }
-            if (key === "imageScale" || key === "imageScaleX" || key === "imageScaleY" || key === "imageFov" || key === "fit" || key === "imageChars" || key === "imageLuminance" || key === "imageAnimationRange") {
+            if (key === "imageScale" || key === "imageScaleX" || key === "imageScaleY" || key === "imageFov" || key === "fit" || key === "imageChars" || key === "imageLuminance" || key === "colorFromImage" || key === "imageAnimationRange") {
                 if (this._sourceImage) this._resampleImage();
+                this._scheduleAnimatedFrameCapture();
             }
             if (key === "animateImageFrames") {
                 this._imageFrameAccumulator = 0;
@@ -1357,17 +1370,45 @@
         }
         /** Returns a Promise that resolves once the image is sampled into the ASCII grid. */
         setImage(src, options = {}) {
+            const token = ++this._imageLoadToken;
+            const captureToken = ++this._imageCaptureToken;
+            if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
+            this._imageRecaptureTimer = null;
+            this._capturedImageFrames = null;
+            this._animatedImageData = null;
+            this._imageFrameIndex = 0;
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-                img.onload = () => {
+                img.onload = async () => {
+                    if (token !== this._imageLoadToken || this._destroyed) {
+                        resolve(null);
+                        return;
+                    }
                     this._sourceImage = img;
                     this._animatedImage = options.animated ?? /^(?:data:image\/gif)|\.gif(?:$|[?#])/i.test(String(src));
                     this._imageFrameAccumulator = 0;
                     this._resampleImage();
+                    if (this._animatedImage) {
+                        try {
+                            await this._captureAnimatedImageFrames(src, token, captureToken);
+                        } catch (error) {
+                            // Browser-timed <img> sampling remains the compatibility
+                            // path when WebCodecs or a fetchable response is unavailable.
+                            console.warn("asciiam: exact GIF frame capture unavailable; using browser frame sampling.", error);
+                        }
+                    }
+                    if (token !== this._imageLoadToken || this._destroyed) {
+                        resolve(null);
+                        return;
+                    }
                     resolve(img);
                 };
                 img.onerror = (err) => {
+                    if (token !== this._imageLoadToken || this._destroyed) {
+                        resolve(null);
+                        return;
+                    }
                     console.warn("asciiam: failed to load image:", src);
                     if (this.opts.onImageError) this.opts.onImageError(err);
                     reject(err);
@@ -1376,8 +1417,93 @@
             });
         }
 
+        async _captureAnimatedImageFrames(src, token = this._imageLoadToken, captureToken = this._imageCaptureToken) {
+            const Decoder = globalThis.ImageDecoder;
+            if (typeof Decoder !== "function") return false;
+            if (typeof Decoder.isTypeSupported === "function" && !await Decoder.isTypeSupported("image/gif")) return false;
+            let data = this._animatedImageData;
+            if (!data) {
+                const response = await fetch(src);
+                if (!response.ok) throw new Error(`GIF fetch failed with ${response.status}`);
+                data = await response.arrayBuffer();
+                if (token !== this._imageLoadToken || captureToken !== this._imageCaptureToken || this._destroyed) return false;
+                this._animatedImageData = data;
+            }
+            const decoder = new Decoder({ data, type: "image/gif", preferAnimation: true });
+            try {
+                await decoder.tracks.ready;
+                const track = decoder.tracks.selectedTrack;
+                const frameCount = track?.frameCount || 0;
+                if (frameCount < 2) return false;
+                const originalSource = this._sourceImage;
+                const frames = new Array(frameCount);
+                let totalDuration = 0;
+                for (let index = 0; index < frameCount; index++) {
+                    if (token !== this._imageLoadToken || captureToken !== this._imageCaptureToken || this._destroyed) return false;
+                    const result = await decoder.decode({ frameIndex: index, completeFramesOnly: true });
+                    const image = result.image;
+                    try {
+                        this._sourceImage = image;
+                        this._resampleImage();
+                        const duration = Math.max(10, Number(image.duration) > 0 ? Number(image.duration) / 1000 : 100);
+                        totalDuration += duration;
+                        // _resampleImage creates a fresh grid, so retaining it avoids
+                        // a second full-grid allocation for every decoded frame.
+                        frames[index] = { grid: this._imageGrid, duration };
+                    } finally {
+                        if (this._sourceImage === image) this._sourceImage = originalSource;
+                        if (typeof image.close === "function") image.close();
+                    }
+                    // Long GIFs should not monopolize the main thread while their
+                    // frames are converted to the current ASCII grid.
+                    if (index % 8 === 7) await new Promise((resume) => setTimeout(resume, 0));
+                }
+                if (token !== this._imageLoadToken || captureToken !== this._imageCaptureToken || this._destroyed) return false;
+                this._capturedImageFrames = frames;
+                this._imageFrameIndex = 0;
+                this._imageFrameAccumulator = 0;
+                this._imageGrid = frames[0].grid;
+                this._emit("imageFramesReady", { frameCount, duration: totalDuration / 1000 });
+                return true;
+            } finally {
+                if (typeof decoder.close === "function") decoder.close();
+            }
+        }
+
+        _scheduleAnimatedFrameCapture() {
+            if (!this._animatedImage || !this._animatedImageData || this._destroyed) return;
+            this._capturedImageFrames = null;
+            this._imageFrameIndex = 0;
+            this._imageFrameAccumulator = 0;
+            const token = this._imageLoadToken;
+            const captureToken = ++this._imageCaptureToken;
+            if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
+            this._imageRecaptureTimer = setTimeout(() => {
+                this._imageRecaptureTimer = null;
+                this._captureAnimatedImageFrames(null, token, captureToken).catch((error) => {
+                    console.warn("asciiam: GIF frame recapture unavailable; using browser frame sampling.", error);
+                });
+            }, 180);
+        }
+
         _advanceImageFrames(dt) {
             if (!this._animatedImage || !this.opts.animateImageFrames || !this._sourceImage) return;
+            if (this._capturedImageFrames?.length) {
+                this._imageFrameAccumulator += Math.max(0, dt);
+                let frame = this._capturedImageFrames[this._imageFrameIndex];
+                let advanced = false;
+                while (this._imageFrameAccumulator >= frame.duration) {
+                    this._imageFrameAccumulator -= frame.duration;
+                    this._imageFrameIndex = (this._imageFrameIndex + 1) % this._capturedImageFrames.length;
+                    frame = this._capturedImageFrames[this._imageFrameIndex];
+                    advanced = true;
+                }
+                if (advanced) {
+                    this._imageGrid = frame.grid;
+                    this._activeGlyphAtlas = null;
+                }
+                return;
+            }
             const frameRate = Math.max(1, Math.min(60, Number(this.opts.imageFrameRate) || 12));
             const interval = 1000 / frameRate;
             this._imageFrameAccumulator += Math.max(0, dt);
@@ -1597,6 +1723,7 @@
             this._waveBaseLayer = null;
             this._canvasRect = this.canvas.getBoundingClientRect();
             if (this._sourceImage) this._resampleImage();
+            this._scheduleAnimatedFrameCapture();
             if (this.opts.mode === "matrix") this._initMatrix();
             if (this.opts.mode === "snow") this._initSnow();
             if (this.opts.mode === "sparkle") this._initSparkle();
@@ -1862,8 +1989,8 @@
             const octx = this._imageSampleContext;
             if (!octx) return;
             octx.clearRect(0, 0, cols, rows);
-            const sourceWidth = img.naturalWidth || img.videoWidth || img.width;
-            const sourceHeight = img.naturalHeight || img.videoHeight || img.height;
+            const sourceWidth = img.naturalWidth || img.videoWidth || img.displayWidth || img.codedWidth || img.width;
+            const sourceHeight = img.naturalHeight || img.videoHeight || img.displayHeight || img.codedHeight || img.height;
             if (!sourceWidth || !sourceHeight) return;
             const srcRatio = sourceWidth / sourceHeight;
             // A sampled pixel becomes a rectangular glyph cell. Use the final

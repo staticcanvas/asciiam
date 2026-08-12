@@ -18,7 +18,7 @@ type: changelog
 - Added `irisIn`, `irisOut`, `dissolveIn`, `dissolveOut`, `lumaFold`, `riftLace`, and `echoBloom`, with the global mode inventory available to image-backed output.
 - Image-to-ASCII sampling with mask modes, inclusive RGB animation ranges, and independent centered horizontal and vertical output scaling.
 - Image fitting now uses rendered glyph-cell dimensions instead of treating ASCII cells as square, preserving source proportions.
-- Animated GIF sources are resampled while browser-decoded frames advance. `animateImageFrames` controls playback sampling and `imageFrameRate` caps sampling independently of presentation refresh.
+- Animated GIF sources capture every composited frame into an ASCII grid through WebCodecs `ImageDecoder`, preserve per-frame timing, and release decoded bitmaps immediately. Browser-timed sampling remains the fallback; `imageFrameRate` controls only that compatibility path.
 - `imageLuminance` adds `auto`, `normal`, and `invert` mappings. Auto mode detects dark artwork on transparency so common black silhouette SVGs map to visible glyphs.
 - Image sampling reuses its readback canvas and retains glyph atlases while animated frames change.
 - Shared frame scheduling, visibility pausing, quality tiers, glyph atlases, and static-wave caching.
@@ -27,6 +27,7 @@ type: changelog
 
 - Interactive web utility with preset editing, undo and redo, generated code, renderer selection, local image upload, animated-image controls, independent image-axis controls, and luminance mapping.
 - Versioned runtime loading and revalidated local library caching prevent new controls from executing against an older renderer bundle.
+- Image-library cards use generated static 320×180 WebP previews, first-frame GIF thumbnails, low-priority lazy decoding, and off-screen content containment. Opening the Image popover no longer decodes every original media asset.
 
 ### Documentation
 

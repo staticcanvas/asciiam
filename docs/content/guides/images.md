@@ -4,7 +4,7 @@ description: Sample local or remote images into ASCII and restrict animation to 
 weight: 40
 ---
 
-Image loading establishes a sampled glyph source. Static images are resampled after grid or image-option changes; animated GIFs can also be resampled as their decoded frames advance. Brightness selects glyph density. Optional sampled RGB values color each glyph. The global `mode` then animates that source, so the same mode inventory applies to procedural and image-backed output.
+Image loading establishes a sampled glyph source. Static images are resampled after grid or image-option changes. Animated GIFs capture each composited frame as an ASCII grid when WebCodecs `ImageDecoder` is available. Brightness selects glyph density. Optional sampled RGB values color each glyph. The global `mode` then animates that source, so the same mode inventory applies to procedural and image-backed output.
 
 ## Load an image
 
@@ -18,7 +18,9 @@ animation.setOption('colorFromImage', true);
 
 Uploaded files can be passed through an object URL. Revoke the URL after `setImage()` resolves.
 
-GIF sources are resampled as their browser-decoded frames advance. URL paths ending in `.gif` are detected automatically. Object URLs do not retain a filename, so pass `{ animated: true }` when loading an uploaded GIF. `imageFrameRate` limits the sampling work independently of the renderer's display frame rate.
+URL paths ending in `.gif` are detected automatically. Object URLs do not retain a filename, so pass `{ animated: true }` when loading an uploaded GIF. `setImage()` waits while each decoded frame is converted to the current ASCII grid, preserves the GIF's individual frame delays, and emits `imageFramesReady` with `frameCount` and total `duration`. The decoded bitmap for each frame is closed immediately; playback retains ASCII data, not full-resolution frames.
+
+If `ImageDecoder` or fetch access is unavailable, asciiam falls back to sampling the browser-animated `<img>`. `imageFrameRate` limits only that compatibility path and does not cap renderer FPS. Changing image sampling options or target dimensions re-captures the ASCII frames after a short debounce.
 
 `app.js`
 
@@ -66,7 +68,7 @@ The engine creates a byte mask during image sampling. Per-frame image animation 
 
 | Property or method | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `setImage(source, options?)` | URL string and optional `{ animated }` | — | Decodes an image and identifies animated blob URLs. |
+| `setImage(source, options?)` | URL string and optional `{ animated }` | — | Decodes an image and captures all GIF frames where supported. |
 | `fit` | `cover \| contain` | `cover` | Crops or letterboxes the source. |
 | `imageScale` | number | `1` | Applies centered source zoom. |
 | `imageScaleX` | number | `1` | Scales sampled output width around the centre. |
@@ -77,5 +79,5 @@ The engine creates a byte mask during image sampling. Per-frame image animation 
 | `colorFromImage` | boolean | `false` | Uses sampled RGB values. |
 | `animateImageMask` | boolean | `true` | Enables legacy `mode: 'image'` mask animation; global modes animate image sources independently. |
 | `imageAnimationRange` | `{ min, max }` or `null` | `null` | Restricts animation to an inclusive RGB box. |
-| `animateImageFrames` | boolean | `true` | Enables animated GIF frame resampling. |
-| `imageFrameRate` | number | `12` | Caps GIF sampling from 1 through 60 fps. |
+| `animateImageFrames` | boolean | `true` | Plays captured or fallback-sampled GIF frames. |
+| `imageFrameRate` | number | `12` | Caps fallback GIF sampling from 1 through 60 fps. |

@@ -43,6 +43,7 @@ export type asciiamEvent =
   | 'sequenceMorphComplete'
   | 'rendererChange'
   | 'rendererFallback'
+  | 'imageFramesReady'
   | (string & {});
 
 export interface asciiamSequenceDetail {
@@ -116,6 +117,8 @@ export interface asciiamEventDetail {
   acceleration?: 'gpu-api-preferred' | 'browser-managed' | 'not-requested';
   desynchronized?: boolean;
   willReadFrequently?: boolean;
+  frameCount?: number;
+  duration?: number;
 }
 
 export interface asciiamOptions {
@@ -156,6 +159,7 @@ export interface asciiamOptions {
   imageMaskMode?: 'waveSweep' | 'radialRipple' | 'scanlinePass' | 'thermalNoise' | 'halftonePulse' | 'fullStatic';
   imageAnimationRange?: { min: string; max: string } | null;
   animateImageFrames?: boolean;
+  /** Fallback sampling rate when exact WebCodecs GIF frame capture is unavailable. */
   imageFrameRate?: number;
   edgeFade?: number;
   maxDPR?: number;
@@ -224,6 +228,7 @@ export default class asciiam {
     willReadFrequently: boolean;
   };
   setRenderer(renderer: 'auto' | 'webgl2' | 'canvas2d'): 'webgl2' | 'canvas2d';
+  /** Decodes and samples an image. Animated GIFs capture every frame when ImageDecoder is available. */
   setImage(source: string, options?: { animated?: boolean }): Promise<HTMLImageElement | null>;
   setCursor(x: number | null, y?: number): void;
   attachStats(element: HTMLElement): void;

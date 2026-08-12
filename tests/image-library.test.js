@@ -17,6 +17,8 @@ describe("local image library", () => {
             expect(image.name).toEqual(expect.any(String));
             expect(image.src).toMatch(/^\/assets\/images\//);
             expect(existsSync(projectUrl(`public${decodeURIComponent(image.src)}`))).toBe(true);
+            expect(image.thumbnail).toMatch(/^\/assets\/thumbnails\/.*\.webp$/);
+            expect(existsSync(projectUrl(`public${decodeURIComponent(image.thumbnail)}`))).toBe(true);
         });
     });
 
@@ -27,6 +29,7 @@ describe("local image library", () => {
         expect(page).toContain('fetch("/assets/backgrounds.json", { cache: "no-store" })');
         expect(page).not.toContain("image-search");
         expect(page).not.toContain("downloadLocation");
+        expect(page).not.toContain("image.thumbnail || image.src");
     });
 
     it("ships the site icon and references the repository banner", () => {

@@ -111,6 +111,13 @@ To add images to a clone:
 generated manifest contains display names and URL-encoded `/assets/images/...` paths;
 it does not embed image data.
 
+When ImageMagick is available, the generator also creates static 320×180 WebP previews
+in `public/assets/thumbnails`. Animated sources use their first frame and EXIF
+orientation is applied during generation. The Image menu loads only these bounded
+previews; original photographs and GIFs are decoded after selection. Without
+ImageMagick or an existing preview, a placeholder is shown instead of loading the
+original asset into the menu.
+
 ### Hugo documentation site
 
 Install Hugo Extended, or run Docker, then build the documentation into `public/docs`:
@@ -384,8 +391,8 @@ new asciiam(target, {
   imageLuminance: 'auto', // auto | normal | invert; auto detects dark transparent silhouettes
   colorFromImage: false, // sample per-cell color from the image instead of `color`
   animateImageMask: true, // apply the selected image animation effect
-  animateImageFrames: true, // resample browser-decoded animated GIF frames
-  imageFrameRate: 12, // animated-image sampling cap; display rendering remains uncapped
+  animateImageFrames: true, // play captured animated GIF frames
+  imageFrameRate: 12, // fallback rate when exact ImageDecoder capture is unavailable
   // Image sampling is a source layer. The global mode animates sampled glyphs.
   imageAnimationRange: null, // { min: '#800000', max: '#ff8080' }; unmatched cells remain static
   onImageError: null, // (err) => {}
@@ -437,9 +444,12 @@ the ramp's blank glyph. Auto-inverted artwork uses the configured glyph color wh
 `colorFromImage` is enabled, avoiding black-on-dark output. Use `normal` or `invert`
 to override detection. This changes density mapping only and does not rotate the SVG.
 
-GIF URLs play automatically by resampling their browser-decoded frames. Uploaded
-GIF object URLs should be identified explicitly, and the independent sampling cap
-keeps this work below the presentation frame rate:
+GIF URLs play automatically. Where the browser exposes WebCodecs `ImageDecoder`,
+asciiam decodes every composited GIF frame once, converts it to an ASCII grid, and
+plays those grids using the GIF's frame delays. Decoded bitmaps are released as soon
+as they are sampled. Uploaded GIF object URLs should be identified explicitly.
+`imageFrameRate` controls only the compatibility sampler used when exact capture is
+unavailable:
 
 ```js
 // app.js
@@ -619,7 +629,8 @@ asciiam.QUALITY; // static: quality tier definitions
 ```
 
 Lifecycle events are `ready` (emitted on the microtask after construction), `resize`,
-`frame`, and the `sequence*` events described above. `frame` payloads are only allocated when that event has subscribers.
+`frame`, `imageFramesReady`, and the `sequence*` events described above. The GIF event
+reports `frameCount` and total `duration` in seconds. `frame` payloads are only allocated when that event has subscribers.
 The `onReady` option is available when a constructor callback is more convenient.
 
 ## Behavior you should know about
@@ -742,8 +753,8 @@ git push origin feature/ascii-media-change
 | `animateImageMask`                                  | `boolean`                                  | `true`                      | Enables image-cell animation.                                      |
 | `imageMaskMode`                                     | legacy image-mask mode                     | `waveSweep`                 | Deprecated compatibility option for `mode: 'image'`; use global `mode`. |
 | `imageAnimationRange`                               | `{ min, max } \| null`                     | `null`                      | Animates only cells inside inclusive RGB bounds.                   |
-| `animateImageFrames`                               | `boolean`                                  | `true`                      | Resamples animated GIF frames while the instance is running.       |
-| `imageFrameRate`                                   | `number`                                   | `12`                        | Caps animated-image sampling from 1 through 60 frames per second.  |
+| `animateImageFrames`                               | `boolean`                                  | `true`                      | Plays captured animated GIF frames.                                |
+| `imageFrameRate`                                   | `number`                                   | `12`                        | Caps fallback GIF sampling from 1 through 60 frames per second.    |
 | `snowDensity` / `sparkleDensity`                    | `number`                                   | `0.02` / `0.05`             | Sets sparse particle counts as grid fractions.                     |
 | `fireDensity` / `starfieldDensity` / `orbitDensity` | `number`                                   | `0.035` / `0.018` / `0.014` | Sets mode-specific sparse particle counts.                         |
 | `glitchIntensity`                                   | `number`                                   | `0.32`                      | Sets the approximate displaced-row share.                          |
@@ -757,7 +768,7 @@ git push origin feature/ascii-media-change
 | `start()` / `stop()` / `destroy()`                  | method                                     | —                           | Controls and disposes the renderer lifecycle.                      |
 | `setMode(mode)`                                     | method                                     | —                           | Selects a mode and restarts its timeline.                          |
 | `setOption(key, value)`                             | method                                     | —                           | Updates an option and dependent cached state.                      |
-| `setImage(url, options?)`                           | async method                               | —                           | Decodes an image; `{ animated: true }` enables frame resampling for blob GIF URLs. |
+| `setImage(url, options?)`                           | async method                               | —                           | Decodes an image; animated GIFs capture every frame when supported. |
 | `setTarget(target)`                                 | method                                     | —                           | Moves the existing canvas and bindings to another container.       |
 | `setSequence(steps, options)`                       | method                                     | —                           | Sets ordered modes, durations, staggers, overrides, and callbacks. |
 | `playSequence()` / `pauseSequence()`                | method                                     | —                           | Starts, resumes, or pauses the configured sequence.                |

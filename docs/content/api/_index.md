@@ -143,8 +143,8 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `animateImageMask` | boolean | `true` | Enables image mask animation. |
 | `imageMaskMode` | legacy image mask string | `waveSweep` | Deprecated compatibility option for `mode: 'image'`; use global `mode` for new integrations. |
 | `imageAnimationRange` | `{ min, max }` or `null` | `null` | Restricts animation to an inclusive RGB box. |
-| `animateImageFrames` | boolean | `true` | Resamples animated GIF frames while running. |
-| `imageFrameRate` | number | `12` | Caps animated-image sampling from 1 through 60 fps. |
+| `animateImageFrames` | boolean | `true` | Plays captured or fallback-sampled GIF frames. |
+| `imageFrameRate` | number | `12` | Caps fallback GIF sampling from 1 through 60 fps. |
 
 ## Mode-specific options
 
@@ -171,7 +171,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `setMode(mode)` | `void` | Selects a mode, resets local time, and interrupts manual sequence playback. |
 | `setOption(key, value)` | `void` | Updates an option and rebuilds affected caches or state. |
 | `setTarget(target)` | `void` | Moves the presentation canvas and target bindings. |
-| `setImage(source, options?)` | `Promise<HTMLImageElement \| null>` | Decodes an image; `{ animated: true }` identifies animated blob URLs. |
+| `setImage(source, options?)` | `Promise<HTMLImageElement \| null>` | Decodes an image; supported browsers capture every GIF frame and its delay. |
 | `setCursor(x, y?)` | `void` | Sets cursor coordinates or clears them when `x` is `null`. |
 | `attachStats(element)` | `void` | Selects the element that receives FPS and grid output. |
 
@@ -274,6 +274,7 @@ Keep the returned unsubscribe function when a listener belongs to a component li
 | `frame` | A frame is rendered. |
 | `rendererChange` | Requested or resolved renderer changes. |
 | `rendererFallback` | WebGL context loss switches presentation to Canvas 2D. |
+| `imageFramesReady` | Exact GIF capture completes; detail includes `frameCount` and total `duration` in seconds. |
 | `sequenceStart`, `sequenceResume` | Sequence playback starts or resumes. |
 | `sequencePause`, `sequenceStop` | Playback pauses or stops. |
 | `sequenceLoop`, `sequenceComplete` | Sequence loops or finishes. |

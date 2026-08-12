@@ -63,8 +63,8 @@ afterEach(() => {
 describe('demo toolbar quality-of-life controls', () => {
   it('renders included image manifest entries as selectable defaults', async () => {
     activeDom = createDemo([
-      { name: 'Bird Silhouette', src: '/assets/images/bird-silhouette.svg' },
-      { name: 'Hawk Silhouette', src: '/assets/images/hawk-silhouette.svg' },
+      { name: 'Bird Silhouette', src: '/assets/images/bird-silhouette.svg', thumbnail: '/assets/thumbnails/bird.webp' },
+      { name: 'Hawk Silhouette', src: '/assets/images/hawk-silhouette.svg', thumbnail: '/assets/thumbnails/hawk.webp' },
     ]);
     await new Promise((resolve) => setImmediate(resolve));
     const { document } = activeDom.window;
@@ -74,6 +74,19 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(document.getElementById('imageStatus').textContent).toBe(
       '2 included images ready. Select one to apply it.'
     );
+    expect([...document.querySelectorAll('#localImages img')].map((image) => image.src)).toEqual([
+      'https://demo.test/assets/thumbnails/bird.webp',
+      'https://demo.test/assets/thumbnails/hawk.webp',
+    ]);
+  });
+
+  it('does not decode original media when a gallery thumbnail is unavailable', async () => {
+    activeDom = createDemo([{ name: 'Large GIF', src: '/assets/images/large.gif' }]);
+    await new Promise((resolve) => setImmediate(resolve));
+    const { document } = activeDom.window;
+
+    expect(document.querySelector('#localImages img')).toBeNull();
+    expect(document.querySelector('.image-card__placeholder').textContent).toBe('Preview unavailable');
   });
 
   it('tracks dirty state and supports undo and redo', () => {

@@ -1,6 +1,9 @@
 /assets/images/*
   Cache-Control: public, max-age=31536000, immutable
 
+/assets/thumbnails/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /libs/*
   Cache-Control: public, max-age=300, must-revalidate
 

@@ -1014,7 +1014,9 @@
                 overflow: hidden;
                 text-align: start;
                 isolation: isolate;
-                contain: layout paint;
+                contain: layout paint style;
+                content-visibility: auto;
+                contain-intrinsic-size: auto 140px;
                 border: 1px solid var(--clr-border);
                 background: var(--clr-surface-2);
                 /* GPU-safe interactive card */
@@ -1039,6 +1041,17 @@
                 opacity: 0.72;
                 background: oklch(0.92 0.01 255);
                 transition: opacity var(--time-fast) var(--ease-fluid);
+            }
+            .image-card__placeholder {
+                display: grid;
+                place-items: center;
+                inline-size: 100%;
+                block-size: 92px;
+                color: var(--clr-text-dim);
+                background: var(--clr-surface-2);
+                font-size: var(--font-xs);
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
             }
             .image-card:hover img,
             .image-select[aria-pressed="true"] img { opacity: 1; }
@@ -2597,7 +2610,7 @@
                         <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
                         <span class="ui-switch__label">Play animated image frames</span>
                     </label>
-                    <label class="cpop-label row" for="imageFrameRate" style="margin-top:var(--space-xs)">GIF sample rate <span class="val" id="imageFrameRateVal">12 fps</span></label>
+                    <label class="cpop-label row" for="imageFrameRate" style="margin-top:var(--space-xs)">GIF fallback rate <span class="val" id="imageFrameRateVal">12 fps</span></label>
                     <input type="range" id="imageFrameRate" min="1" max="30" step="1" value="12" />
                     <p class="image-library-help" style="margin-block-start:var(--space-xs);text-align:start">GIF frames are resampled at this rate; the renderer continues at the selected display frame rate.</p>
                 </div>
@@ -3594,6 +3607,8 @@
                 const cardButtons = [...button.closest(".image-card").querySelectorAll("button")];
                 cardButtons.forEach((control) => { control.disabled = true; });
                 setImageStatus(`Loading ${image.alt || image.name}…`);
+                let capturedFrames = 0;
+                const stopListening = anim.on("imageFramesReady", ({ frameCount }) => { capturedFrames = frameCount || 0; });
                 try {
                     anim.opts.colorFromImage = true;
                     if (colorFromImgEl) {
@@ -3605,10 +3620,11 @@
                     document.getElementById("preset").value = "";
                     markSelectedImage(button);
                     renderUsage();
-                    setImageStatus(`${image.alt || image.name} selected.`);
+                    setImageStatus(`${image.alt || image.name} selected.${capturedFrames ? ` ${capturedFrames} GIF frames captured.` : ""}`);
                 } catch {
                     setImageStatus("The image could not be loaded. Try another included file or upload.", true);
                 } finally {
+                    stopListening();
                     cardButtons.forEach((control) => { control.disabled = false; });
                 }
             }
@@ -3625,12 +3641,22 @@
                 button.setAttribute("aria-label", `Use ${image.alt || image.name} as the background`);
                 button.onclick = () => useLibraryImage(image, button);
 
-                const thumbnail = document.createElement("img");
-                thumbnail.src = image.thumbnail || image.src;
-                thumbnail.alt = "";
-                thumbnail.loading = "lazy";
-                thumbnail.decoding = "async";
-                button.appendChild(thumbnail);
+                if (image.thumbnail) {
+                    const thumbnail = document.createElement("img");
+                    thumbnail.src = image.thumbnail;
+                    thumbnail.alt = "";
+                    thumbnail.width = 320;
+                    thumbnail.height = 180;
+                    thumbnail.loading = "lazy";
+                    thumbnail.decoding = "async";
+                    thumbnail.fetchPriority = "low";
+                    button.appendChild(thumbnail);
+                } else {
+                    const placeholder = document.createElement("span");
+                    placeholder.className = "image-card__placeholder";
+                    placeholder.textContent = "Preview unavailable";
+                    button.appendChild(placeholder);
+                }
 
                 const caption = document.createElement("figcaption");
                 caption.textContent = image.name;
@@ -3675,15 +3701,18 @@
                 }
                 anim.opts.imageChars = anim.opts.charSet;
                 setImageStatus(`Loading ${file.name}…`);
+                let capturedFrames = 0;
+                const stopListening = anim.on("imageFramesReady", ({ frameCount }) => { capturedFrames = frameCount || 0; });
                 try {
                     await anim.setImage(url, { animated: file.type === "image/gif" });
                     document.getElementById("preset").value = "";
                     markSelectedImage(null);
                     renderUsage();
-                    setImageStatus(`${file.name} selected.`);
+                    setImageStatus(`${file.name} selected.${capturedFrames ? ` ${capturedFrames} GIF frames captured.` : ""}`);
                 } catch {
                     setImageStatus("The uploaded image could not be loaded.", true);
                 } finally {
+                    stopListening();
                     URL.revokeObjectURL(url);
                 }
             };

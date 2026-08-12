@@ -82,3 +82,5 @@ Call `destroy()` when removing the target. This releases observers, subscription
 | Code | constructor options | Serializes the current supported configuration. |
 
 The Image popover exposes centered uniform, horizontal, and vertical scaling; field of view; silhouette-aware luminance mapping; animated-image playback and sample rate; sampled color; and an optional RGB animation range. The global Mode popover remains the animation selector after an image is loaded.
+
+`npm run prepare:bg` generates static 320×180 WebP menu previews when ImageMagick is available. GIF previews use the first frame and image orientation is normalized during generation. Opening the Image popover therefore decodes bounded static previews, not full-resolution sources or animated GIF streams. An original asset is loaded only after its card is selected.

@@ -99,6 +99,8 @@ describe("asciiam lifecycle", () => {
         jest.restoreAllMocks();
         delete globalThis.ResizeObserver;
         delete globalThis.IntersectionObserver;
+        delete globalThis.ImageDecoder;
+        delete globalThis.fetch;
     });
 
     it("constructs, starts, resizes, and destroys without throwing", async () => {
@@ -742,6 +744,80 @@ describe("asciiam lifecycle", () => {
         expect(animation._resampleImage).toHaveBeenCalledTimes(1);
         animation._advanceImageFrames(250);
         expect(animation._resampleImage).toHaveBeenCalledTimes(2);
+        animation.destroy();
+    });
+
+    it("captures every decoded GIF frame and preserves its frame timing", async () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 16 },
+            clientHeight: { configurable: true, value: 8 },
+        });
+        const context = {
+            ...makeContext(),
+            getImageData: jest.fn(() => ({ data: new Uint8ClampedArray([255, 255, 255, 255, 0, 0, 0, 255]) })),
+        };
+        HTMLCanvasElement.prototype.getContext = jest.fn(() => context);
+        const closeFrame = jest.fn();
+        const closeDecoder = jest.fn();
+        globalThis.ImageDecoder = class {
+            static isTypeSupported = jest.fn(async () => true);
+            constructor() {
+                this.tracks = { ready: Promise.resolve(), selectedTrack: { frameCount: 2 } };
+            }
+            async decode({ frameIndex }) {
+                return {
+                    image: {
+                        displayWidth: 2,
+                        displayHeight: 1,
+                        duration: frameIndex === 0 ? 40000 : 60000,
+                        close: closeFrame,
+                    },
+                };
+            }
+            close() { closeDecoder(); }
+        };
+        globalThis.fetch = jest.fn(async () => ({
+            ok: true,
+            arrayBuffer: async () => new ArrayBuffer(8),
+        }));
+        const animation = new asciiam(host, { respectReducedMotion: false });
+        animation.cols = 2;
+        animation.rows = 1;
+        animation._sourceImage = { width: 2, height: 1 };
+        animation._animatedImage = true;
+        const ready = jest.fn();
+        animation.on("imageFramesReady", ready);
+
+        await animation._captureAnimatedImageFrames("frame-test.gif");
+
+        expect(animation._capturedImageFrames).toHaveLength(2);
+        expect(animation._capturedImageFrames.map((frame) => frame.duration)).toEqual([40, 60]);
+        expect(animation._sourceImage).toEqual({ width: 2, height: 1 });
+        expect(closeFrame).toHaveBeenCalledTimes(2);
+        expect(closeDecoder).toHaveBeenCalledTimes(1);
+        expect(ready).toHaveBeenCalledWith({ frameCount: 2, duration: 0.1 }, animation);
+        animation.destroy();
+    });
+
+    it("advances captured GIF grids using their decoded durations", () => {
+        const animation = new asciiam(document.querySelector("#host"), { respectReducedMotion: false });
+        const first = { cols: 1, rows: 1, chars: ["A"], colors: [null] };
+        const second = { cols: 1, rows: 1, chars: ["B"], colors: [null] };
+        animation._sourceImage = { width: 1, height: 1 };
+        animation._animatedImage = true;
+        animation._capturedImageFrames = [
+            { grid: first, duration: 40 },
+            { grid: second, duration: 60 },
+        ];
+        animation._imageGrid = first;
+
+        animation._advanceImageFrames(39);
+        expect(animation._imageGrid).toBe(first);
+        animation._advanceImageFrames(1);
+        expect(animation._imageGrid).toBe(second);
+        animation._advanceImageFrames(60);
+        expect(animation._imageGrid).toBe(first);
         animation.destroy();
     });
 
