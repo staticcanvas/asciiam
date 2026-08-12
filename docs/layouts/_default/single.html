@@ -1,0 +1,15 @@
+{{ define "main" }}
+<header class="hero hero-compact">
+  <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
+  <p class="hero-eyebrow">{{ with .Parent }}{{ .Title }}{{ else }}Documentation{{ end }}</p>
+  <h1 class="hero-title">{{ .Title }}</h1>
+  {{ with .Description }}<p class="hero-desc">{{ . }}</p>{{ end }}
+</header>
+<div class="content-grid">
+  <article class="doc-content prose">{{ .Content }}</article>
+  <aside class="toc-panel" aria-label="On this page">
+    <p class="toc-title">On this page</p>
+    {{ .TableOfContents }}
+  </aside>
+</div>
+{{ end }}

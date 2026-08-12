@@ -4,6 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>asciiam — background utility</title>
+        <link rel="icon" href="./assets/branding/asciiam-logo.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -239,6 +240,11 @@
             }
             .stage-label > span { color: var(--clr-primary); }
             .stage-label small  { font: inherit; letter-spacing: inherit; }
+            .brand-icon {
+                inline-size: var(--space-md);
+                block-size: var(--space-md);
+                flex: 0 0 auto;
+            }
 
             .stage-title {
                 position: absolute;
@@ -392,6 +398,24 @@
                 pointer-events: auto;
             }
             .preview-scene-background { display: block; padding: 0; }
+            .ascii-media {
+                position: relative;
+                isolation: isolate;
+                overflow: hidden;
+                min-inline-size: 0;
+                background: var(--clr-bg-base);
+            }
+            .ascii-media::after {
+                content: "ASCII MEDIA";
+                position: absolute;
+                inset-block-end: var(--space-xs);
+                inset-inline-end: var(--space-sm);
+                color: var(--clr-text-dim);
+                font-size: 9px;
+                letter-spacing: 0.14em;
+                pointer-events: none;
+            }
+            .ascii-media > canvas { z-index: var(--z-base) !important; }
 
             /* Hero card preview */
             .hero-card-preview-stack {
@@ -460,7 +484,7 @@
             .preview-hero-card--vertical {
                 position: relative;
                 width: min(440px, 90vw);
-                padding: clamp(1.75rem, 5vw, 2.75rem);
+                padding: 0;
                 background: oklch(0.12 0.025 255 / 0.88);
                 backdrop-filter: blur(24px) saturate(180%);
                 -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -472,6 +496,10 @@
                 overflow: hidden;
                 transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
             }
+            .hero-card-media {
+                min-block-size: clamp(9.5rem, 25vw, 13rem);
+                border-block-end: 1px solid var(--clr-border);
+            }
             .preview-hero-card:hover {
                 transform: translateY(-4px);
                 border-color: var(--clr-primary);
@@ -479,34 +507,18 @@
                     0 28px 60px oklch(from var(--clr-primary) l c h / 0.25),
                     inset 0 1px 0 rgb(255 255 255 / 0.25);
             }
-            .hero-card-reveal-layer {
-                position: absolute;
-                inset: 0;
-                background: radial-gradient(circle at 50% 0%, oklch(from var(--clr-primary) l c h / 0.25), transparent 75%);
-                opacity: 0.4;
-                pointer-events: none;
-                transition: opacity 300ms ease;
-            }
-            .preview-hero-card:hover .hero-card-reveal-layer {
-                opacity: 1;
-            }
             .preview-hero-card[data-hero-variant="split"] {
                 width: min(720px, 94vw);
+                display: grid;
+                grid-template-columns: minmax(15rem, 0.8fr) minmax(0, 1.2fr);
             }
             .preview-hero-card[data-hero-variant="split"] .hero-card-content {
-                display: grid;
-                grid-template-columns: minmax(0, 1.35fr) minmax(12rem, 0.65fr);
-                column-gap: var(--space-lg);
+                justify-content: center;
             }
-            .preview-hero-card[data-hero-variant="split"] .hero-card-actions {
-                grid-column: 2;
-                grid-row: 1 / 4;
-                align-content: center;
-                align-items: stretch;
-                flex-direction: column;
-                padding-inline-start: var(--space-md);
-                border-inline-start: 1px solid var(--clr-border);
-                margin: 0;
+            .preview-hero-card[data-hero-variant="split"] .hero-card-media {
+                min-block-size: 20rem;
+                border-block-end: 0;
+                border-inline-end: 1px solid var(--clr-border);
             }
             .preview-hero-card[data-hero-variant="terminal"] {
                 width: min(560px, 92vw);
@@ -526,6 +538,7 @@
                 display: flex;
                 flex-direction: column;
                 gap: var(--space-xs);
+                padding: clamp(1.5rem, 4vw, 2.5rem);
             }
             .kicker-dot {
                 display: inline-block;
@@ -611,6 +624,17 @@
                 backdrop-filter: blur(20px) saturate(160%);
                 -webkit-backdrop-filter: blur(20px) saturate(160%);
                 border: 1px solid oklch(from var(--clr-border) l c h / 0.70);
+            }
+            .preview-splash-body {
+                display: grid;
+                grid-template-columns: minmax(0, 1.05fr) minmax(15rem, 0.95fr);
+                align-items: center;
+                gap: var(--space-lg);
+            }
+            .splash-ascii-media {
+                min-block-size: clamp(12rem, 32vw, 19rem);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.28);
+                box-shadow: 10px 10px 0 oklch(from var(--clr-primary) l c h / 0.07);
             }
             .preview-splash-nav, .preview-splash-meta {
                 display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);
@@ -1127,6 +1151,7 @@
             .token-comment  { color: var(--syntax-comment); font-style: italic; }
             .token-number   { color: var(--syntax-number); }
             .token-property { color: var(--syntax-property); }
+            .token-tag      { color: var(--syntax-keyword); }
 
             /* ── §15 Footer ── */
             .site-footer {
@@ -1142,6 +1167,12 @@
                 line-height: 1.7;
                 content-visibility: auto;
                 contain-intrinsic-size: auto 240px;
+            }
+            .footer-brand,
+            .about-brand {
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
             }
             .footer-brand { margin-block-end: var(--space-xs); color: var(--clr-text-main); font-size: var(--font-md); }
             .footer-brand span, .site-footer a { color: var(--clr-primary); }
@@ -1178,6 +1209,9 @@
                 .site-footer { grid-template-columns: 1fr; }
             }
             @media (max-width: 720px) {
+                .about-sticky-bar { padding-inline: var(--space-sm); }
+                .about-container { padding-inline: var(--space-sm); }
+                .about-footer { align-items: flex-start; flex-direction: column; }
                 .stage-title { font-size: var(--font-lg); }
                 .stage-label { inset-block-start: var(--space-sm); inset-inline-start: var(--space-sm); }
                 .stage-label small { display: none; }
@@ -1248,6 +1282,16 @@
                 }
                 .hero-card-actions { flex-direction: column; align-items: stretch; }
                 .hero-repo-btn { justify-content: center; }
+            }
+            @media (max-width: 720px) {
+                .preview-hero-card[data-hero-variant="split"] { display: block; }
+                .preview-hero-card[data-hero-variant="split"] .hero-card-media {
+                    min-block-size: 10rem;
+                    border-inline-end: 0;
+                    border-block-end: 1px solid var(--clr-border);
+                }
+                .preview-splash-body { grid-template-columns: 1fr; }
+                .splash-ascii-media { min-block-size: 9rem; }
             }
 
             /* ── §17 Accessibility — reduced motion ── */
@@ -1591,6 +1635,30 @@
                 margin: 0;
                 max-inline-size: 820px;
             }
+            .about-resource-nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: var(--space-xs);
+                margin-block-start: var(--space-xs);
+            }
+            .about-resource-nav a {
+                display: inline-flex;
+                align-items: center;
+                min-block-size: 34px;
+                padding-inline: 12px;
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-pill);
+                background: var(--clr-primary-tint);
+                color: var(--clr-text-main);
+                font-size: var(--font-xs);
+                text-decoration: none;
+                transition: transform 140ms ease, border-color 140ms ease, color 140ms ease;
+            }
+            .about-resource-nav a:hover {
+                transform: translateY(-1px);
+                border-color: var(--clr-primary);
+                color: var(--clr-primary);
+            }
 
             .about-section-heading {
                 font-size: var(--font-xs);
@@ -1635,188 +1703,53 @@
             .about-reference-card ol,
             .about-reference-card ul { padding-inline-start: var(--space-md); }
             .about-reference-card li + li { margin-block-start: var(--space-xs); }
-            .about-section-intro {
-                max-inline-size: 820px;
-                margin-block: calc(var(--space-md) * -0.5) var(--space-md);
-                color: var(--clr-text-muted);
-                font-size: var(--font-sm);
-                line-height: 1.6;
+            .about-docs-callout {
+                margin-block: var(--space-xl);
+                padding: clamp(var(--space-lg), 4vw, var(--space-2xl));
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.36);
+                border-radius: var(--radius-lg);
+                background:
+                    radial-gradient(circle at 88% 18%, oklch(from var(--clr-accent2) l c h / 0.14), transparent 42%),
+                    linear-gradient(145deg, oklch(from var(--clr-surface-2) l c h / 0.72), oklch(from var(--clr-bg-base) l c h / 0.58));
             }
-            .about-usage-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: var(--space-md);
-                margin-block-end: var(--space-md);
-            }
-            .about-usage-card {
-                min-inline-size: 0;
-                padding: var(--space-md);
-                border: 1px solid oklch(from var(--clr-border) l c h / 0.55);
-                border-radius: var(--radius-md);
-                background: oklch(from var(--clr-surface-2) l c h / 0.58);
-            }
-            .about-usage-card h3 {
-                margin-block-end: var(--space-xs);
-                color: var(--clr-text-main);
-                font-size: var(--font-sm);
-            }
-            .about-code-block {
-                overflow-x: auto;
-                margin: 0;
-                padding: var(--space-sm);
-                border: 1px solid var(--clr-border);
-                border-radius: var(--radius-sm);
-                background: oklch(from var(--clr-bg-base) l c h / 0.72);
-                color: var(--clr-text-main);
-                font: 400 var(--font-xs)/1.65 "JetBrains Mono", ui-monospace, monospace;
-                tab-size: 2;
-            }
-            .about-table-wrap {
-                overflow-x: auto;
-                border: 1px solid var(--clr-border);
-                border-radius: var(--radius-md);
-                background: oklch(from var(--clr-surface-2) l c h / 0.58);
-            }
-            .about-control-table {
-                inline-size: 100%;
-                min-inline-size: 680px;
-                border-collapse: collapse;
-                color: var(--clr-text-muted);
-                font-size: var(--font-xs);
-                text-align: start;
-            }
-            .about-control-table th,
-            .about-control-table td {
-                padding: var(--space-sm) var(--space-md);
-                border-block-end: 1px solid var(--clr-border);
-                vertical-align: top;
-                text-align: start;
-            }
-            .about-control-table th { color: var(--clr-text-main); font-weight: 600; }
-            .about-control-table tbody tr:last-child td { border-block-end: 0; }
-            .about-export-table {
-                inline-size: 100%;
-                min-inline-size: 720px;
-                border-collapse: collapse;
-                color: var(--clr-text-muted);
-                font-size: var(--font-xs);
-                text-align: start;
-            }
-            .about-export-table th,
-            .about-export-table td {
-                padding: var(--space-sm) var(--space-md);
-                border-block-end: 1px solid var(--clr-border);
-                vertical-align: top;
-                text-align: start;
-            }
-            .about-export-table th { color: var(--clr-text-main); font-weight: 600; }
-            .about-export-table tbody tr:last-child td { border-block-end: 0; }
-            .about-export-table code { color: var(--clr-primary); }
-
-            /* Detailed 6-column Feature Grid */
-            .feature-grid-detailed {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-                gap: var(--space-md);
-            }
-            .feature-card-lg {
-                background: oklch(from var(--clr-surface-2) l c h / 0.42);
-                border: 1px solid oklch(from var(--clr-border) l c h / 0.45);
-                border-radius: var(--radius-md);
-                padding: var(--space-lg);
-                display: flex;
-                flex-direction: column;
-                gap: var(--space-sm);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
-            }
-            .feature-card-lg:hover {
-                border-color: var(--clr-primary);
-                transform: translateY(-2px);
-                box-shadow: 0 8px 24px oklch(from var(--clr-primary) l c h / 0.20);
-            }
-            .feature-card-lg h3 {
-                font-size: var(--font-sm);
+            .about-docs-kicker {
+                margin: 0 0 var(--space-xs);
+                color: var(--clr-primary);
+                font-size: 11px;
                 font-weight: 600;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+            }
+            .about-docs-callout h2 {
+                max-inline-size: 720px;
+                margin: 0;
                 color: var(--clr-text-main);
-                margin: 0;
-                display: flex;
-                align-items: center;
-                gap: 8px;
+                font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+                line-height: 1.08;
+                letter-spacing: -0.035em;
             }
-            .feature-card-lg p {
-                font-size: 13px;
+            .about-docs-callout > p:not(.about-docs-kicker) {
+                max-inline-size: 760px;
+                margin: var(--space-md) 0 0;
                 color: var(--clr-text-muted);
-                line-height: 1.55;
-                margin: 0;
+                line-height: 1.7;
             }
-            .feature-tag-list {
+            .about-docs-actions {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 6px;
-                margin-block-start: 4px;
-            }
-            .feature-tag {
-                font-size: 11px;
-                font-family: var(--font-mono);
-                background: oklch(0 0 0 / 0.35);
-                color: var(--clr-primary);
-                border: 1px solid oklch(from var(--clr-primary) l c h / 0.25);
-                padding: 2px 7px;
-                border-radius: 4px;
-            }
-
-            .about-header {
-                display: flex;
-                align-items: flex-start;
-                justify-content: space-between;
-                padding: var(--space-md) var(--space-md) var(--space-xs);
-                border-block-end: 1px solid oklch(from var(--clr-border) l c h / 0.40);
-            }
-            .about-badge {
-                display: inline-block;
-                font-size: 11px;
-                font-weight: 600;
-                letter-spacing: 0.12em;
-                text-transform: uppercase;
-                color: var(--clr-primary);
-                margin-block-end: 4px;
-            }
-            .about-title {
-                font-size: var(--font-md);
-                font-weight: 600;
-                color: var(--clr-text-main);
-                margin: 0;
-                line-height: 1.25;
-            }
-            .about-close-btn {
-                background: transparent;
-                border: none;
-                color: var(--clr-text-muted);
-                cursor: pointer;
-                padding: 4px;
-                display: inline-flex;
                 align-items: center;
-                justify-content: center;
-                border-radius: var(--radius-pill);
-                transition: color 140ms ease, background-color 140ms ease;
+                gap: var(--space-sm);
+                margin-block-start: var(--space-lg);
             }
-            .about-close-btn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; }
-            .about-close-btn:hover { color: var(--clr-text-main); background: var(--clr-primary-tint); }
-
-            .about-body {
-                padding: var(--space-md);
-                display: flex;
-                flex-direction: column;
-                gap: var(--space-md);
-            }
-            .about-lead {
-                font-size: var(--font-sm);
+            .about-docs-actions > a:not(.about-cta-btn) {
                 color: var(--clr-text-muted);
-                line-height: 1.5;
-                margin: 0;
+                font-size: var(--font-xs);
+                text-underline-offset: 4px;
             }
+            .about-docs-actions > a:not(.about-cta-btn):hover {
+                color: var(--clr-primary);
+            }
+
 
             /* NPM Install Bar & Package Badge */
             .npm-install-bar {
@@ -1883,65 +1816,13 @@
             .npm-link-btn svg { width: 14px; height: 14px; }
             .npm-link-btn:hover { color: #CB3837; border-color: #CB3837; background: oklch(0.55 0.22 25 / 0.15); }
 
-            /* Fluent UI Midnight Feature Cards */
-            .feature-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                gap: var(--space-sm);
-            }
-            .feature-card {
-                background: oklch(from var(--clr-surface-2) l c h / 0.65);
-                border: 1px solid oklch(from var(--clr-border) l c h / 0.50);
-                border-radius: var(--radius-sm);
-                padding: var(--space-sm) var(--space-md);
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-                transition: border-color 180ms ease, transform 180ms ease;
-            }
-            .feature-card:hover {
-                border-color: oklch(from var(--clr-primary) l c h / 0.50);
-                transform: translateY(-2px);
-            }
-            .feature-icon {
-                inline-size: 28px;
-                block-size: 28px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 6px;
-                background: var(--clr-primary-tint);
-                color: var(--clr-primary);
-                margin-block-end: 2px;
-            }
-            .feature-icon svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
-            .feature-card h3 {
-                font-size: var(--font-xs);
-                font-weight: 600;
-                letter-spacing: 0.04em;
-                color: var(--clr-text-main);
-                margin: 0;
-                text-transform: uppercase;
-            }
-            .feature-card p {
-                font-size: 12px;
-                color: var(--clr-text-muted);
-                line-height: 1.45;
-                margin: 0;
-            }
-            .feature-card code {
-                font-size: 11px;
-                background: oklch(0 0 0 / 0.3);
-                padding: 1px 4px;
-                border-radius: 3px;
-                color: var(--clr-primary);
-            }
-
             .about-footer {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding-block-start: var(--space-xs);
+                gap: var(--space-md);
+                margin-block-start: var(--space-xl);
+                padding-block-start: var(--space-md);
                 border-block-start: 1px solid oklch(from var(--clr-border) l c h / 0.30);
             }
             .about-cta-btn {
@@ -1958,6 +1839,7 @@
                 font-weight: 600;
                 letter-spacing: 0.04em;
                 text-transform: uppercase;
+                text-decoration: none;
                 cursor: pointer;
                 box-shadow: 0 4px 14px oklch(from var(--clr-primary) l c h / 0.40);
                 transition: transform 160ms ease, box-shadow 160ms ease;
@@ -2007,6 +1889,94 @@
             }
             .chk input { width: auto; }
             .chk label { margin: 0 !important; color: inherit; text-transform: none; letter-spacing: normal; }
+            #flipGradientBtn { margin-inline-start: auto; }
+
+            .sequence-toolbar,
+            .sequence-step__header,
+            .sequence-step__actions {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: var(--space-xs);
+            }
+            .sequence-toolbar { justify-content: space-between; }
+            .sequence-list {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-sm);
+                max-block-size: min(52dvh, 32rem);
+                overflow-y: auto;
+                list-style: none;
+            }
+            .sequence-empty {
+                padding: var(--space-md);
+                border: 1px dashed var(--clr-border);
+                color: var(--clr-text-dim);
+                font-size: var(--font-xs);
+                text-align: center;
+            }
+            .sequence-step {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-sm);
+                padding: var(--space-sm);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                background: var(--clr-surface-2);
+            }
+            .sequence-step[aria-current="step"] {
+                border-color: var(--clr-primary);
+                box-shadow: inset 3px 0 0 var(--clr-primary);
+            }
+            .sequence-step__header { justify-content: space-between; }
+            .sequence-step__index {
+                color: var(--clr-primary);
+                font-size: var(--font-xs);
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+            .sequence-step__grid {
+                display: grid;
+                grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(5.5rem, 0.6fr));
+                gap: var(--space-xs);
+            }
+            .sequence-step__grid label,
+            .sequence-step__options label {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                color: var(--clr-text-muted);
+                font-size: 10px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .sequence-step input[type="number"],
+            .sequence-step textarea {
+                inline-size: 100%;
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                background: var(--clr-bg-base);
+                color: var(--clr-text-main);
+                font: inherit;
+                padding: 7px var(--space-xs);
+            }
+            .sequence-step textarea {
+                min-block-size: 5.5rem;
+                resize: vertical;
+                font-family: "JetBrains Mono", ui-monospace, monospace;
+                font-size: 11px;
+            }
+            .sequence-step__options summary {
+                color: var(--clr-text-muted);
+                cursor: pointer;
+                font-size: var(--font-xs);
+            }
+            .sequence-step__error { color: var(--clr-danger); font-size: 10px; }
+            .sequence-status { color: var(--clr-text-muted); font-size: var(--font-xs); }
+            @media (max-width: 560px) {
+                .sequence-step__grid { grid-template-columns: 1fr 1fr; }
+                .sequence-step__grid label:first-child { grid-column: 1 / -1; }
+            }
             /* Toolbar responsive rules live after the component SOT so they win the cascade. */
             @media (max-width: 720px) {
                 .ctrl-bar > .ctrl-pill .ctrl-pill__status { display: none; }
@@ -2042,13 +2012,16 @@
     <body>
         <main>
         <section class="stage" id="stage" aria-labelledby="stageProductTag" data-preview="background">
-            <div class="stage-label" id="stageProductTag">staticcanvas <span>/// asciiam</span> <small>(Ascii Background Animator) <span data-package-version>v1.0.0</span></small></div>
+            <div class="stage-label" id="stageProductTag">
+                <img class="brand-icon" src="./assets/branding/asciiam-logo.svg" width="512" height="512" alt="" aria-hidden="true" />
+                staticcanvas <span>/// asciiam</span> <small>(Ascii Background Animator) <span data-package-version>v0.10.0</span></small>
+            </div>
             <div class="preview-switcher" role="group" aria-label="Preview display type">
                 <button type="button" data-preview-type="background" aria-pressed="true">Background</button>
                 <button type="button" data-preview-type="hero-card" aria-pressed="false">Hero card</button>
                 <button type="button" data-preview-type="splash" aria-pressed="false">Splash page</button>
             </div>
-            <div class="preview-scene preview-scene-background" data-preview-scene="background" data-active="true" aria-hidden="false">
+            <div class="preview-scene preview-scene-background" data-preview-scene="background" data-ascii-target="background" data-active="true" aria-hidden="false">
             </div>
             <div class="preview-scene" data-preview-scene="hero-card" data-active="false" aria-hidden="true" inert>
                 <div class="hero-card-preview-stack">
@@ -2058,10 +2031,10 @@
                     <button type="button" data-hero-card-variant="terminal" aria-pressed="false">Terminal</button>
                 </div>
                 <article class="preview-hero-card preview-hero-card--vertical" data-hero-variant="vertical">
-                    <div class="hero-card-reveal-layer" aria-hidden="true"></div>
+                    <div class="ascii-media hero-card-media" data-ascii-target="hero-card" role="img" aria-label="Animated ASCII media generated by asciiam"></div>
                     <div class="hero-card-content">
                         <div class="preview-kicker">
-                            <span class="kicker-dot"></span> Canvas 2D Motion Graphics
+                            <span class="kicker-dot"></span> WebGL2 / Canvas ASCII Media
                         </div>
                         <h2>Elevate your background with ASCII.</h2>
                         <p class="preview-copy">
@@ -2084,10 +2057,13 @@
             <div class="preview-scene" data-preview-scene="splash" data-active="false" aria-hidden="true" inert>
                 <div class="preview-splash-shell">
                     <div class="preview-splash-nav"><span>staticcanvas</span><span class="preview-splash-links">work notes contact</span></div>
-                    <div class="preview-splash">
-                        <div class="preview-kicker">Canvas-native experiences</div>
-                        <h2>Motion with a smaller footprint.</h2>
-                        <p class="preview-copy">A full splash-page composition for testing navigation, headline scale, and supporting content.</p>
+                    <div class="preview-splash-body">
+                        <div class="preview-splash">
+                            <div class="preview-kicker">Canvas-native experiences</div>
+                            <h2>Motion with a smaller footprint.</h2>
+                            <p class="preview-copy">A splash-page hero where asciiam replaces the conventional image region with generated ASCII media.</p>
+                        </div>
+                        <div class="ascii-media splash-ascii-media" data-ascii-target="splash" role="img" aria-label="Animated ASCII splash media generated by asciiam"></div>
                     </div>
                     <div class="preview-splash-meta"><span>asciiam / 01</span><span>scroll to configure</span></div>
                 </div>
@@ -2140,6 +2116,11 @@
                         <option value="deepRipple">deepRipple</option>
                         <option value="snowDrift">snowDrift</option>
                         <option value="emberSparkle">emberSparkle</option>
+                        <option value="risingEmbers">risingEmbers</option>
+                        <option value="deepSpace">deepSpace</option>
+                        <option value="signalGlitch">signalGlitch</option>
+                        <option value="terminalType">terminalType</option>
+                        <option value="orbitalFlow">orbitalFlow</option>
                         <option value="imageReveal">imageReveal</option>
                     </select>
                 </div>
@@ -2174,6 +2155,46 @@
                         <option value="ultra" selected>Ultra performance</option>
                     </select>
                 </div>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="renderer">Rendering backend</label>
+                    <select id="renderer">
+                        <option value="auto" selected>Auto — WebGL2 preferred</option>
+                        <option value="webgl2">GPU — WebGL2</option>
+                        <option value="canvas2d">CPU — Canvas 2D</option>
+                    </select>
+                    <p class="sequence-status" id="rendererStatus" role="status" aria-live="polite">WebGL2 preferred with Canvas 2D fallback.</p>
+                </div>
+            </div>
+
+            <!-- Sequence -->
+            <button class="ctrl-pill" id="sequenceTriggerBtn" type="button" title="Build and play an animation sequence"
+                    popovertarget="pop-sequence" aria-expanded="false" aria-controls="pop-sequence">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14"/><path d="M5 12h14"/><path d="M5 18h14"/><path d="M2 6h.01"/><path d="M2 12h.01"/><path d="M2 18h.01"/></svg>
+                <span>Sequence</span>
+                <span class="ctrl-pill__status" id="sequenceToolbarStatus">off</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-sequence" popover>
+                <section class="cpop-group" aria-labelledby="sequenceEditorLabel">
+                    <div class="sequence-toolbar">
+                        <span class="cpop-label" id="sequenceEditorLabel">Animation sequence</span>
+                        <div class="sequence-step__actions">
+                            <button class="mode-btn" id="addSequenceStepBtn" type="button">Add animation</button>
+                            <button class="mode-btn" id="playSequenceBtn" type="button" disabled>Play</button>
+                            <button class="mode-btn" id="stopSequenceBtn" type="button" disabled>Stop</button>
+                        </div>
+                    </div>
+                    <label class="ui-switch" for="sequenceLoopToggle">
+                        <input class="ui-switch__control" type="checkbox" id="sequenceLoopToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Repeat sequence</span>
+                    </label>
+                    <p class="sequence-status" id="sequenceStatus" role="status" aria-live="polite">Add an animation to begin.</p>
+                    <ol class="sequence-list" id="sequenceList" aria-label="Ordered animation steps"></ol>
+                </section>
+                <section class="cpop-group">
+                    <span class="cpop-label">Callbacks</span>
+                    <p class="sequence-status">Step callbacks and sequence lifecycle events are emitted at runtime and included in the generated code example.</p>
+                </section>
             </div>
 
             <!-- Mode -->
@@ -2244,7 +2265,11 @@
                     <select id="revealDirection">
                         <option value="left-to-right">Left to right</option>
                         <option value="right-to-left">Right to left</option>
+                        <option value="top-to-bottom">Top to bottom</option>
+                        <option value="bottom-to-top">Bottom to top</option>
+                        <option value="diagonal">Diagonal</option>
                         <option value="center">Center out</option>
+                        <option value="edges">Edges inward</option>
                     </select>
                 </div>
                 <div class="cpop-group">
@@ -2328,6 +2353,7 @@
                 </div>
                 <div class="chk" id="gradAnimateRow" style="display:none">
                     <input type="checkbox" id="gradAnimate" /><label for="gradAnimate" style="margin:0">Animate angle</label>
+                    <button class="mode-btn" id="flipGradientBtn" type="button" title="Reverse the gradient stop order">Flip direction</button>
                 </div>
                 <div class="cpop-group">
                     <label class="ui-switch" for="cursorToggle">
@@ -2402,11 +2428,11 @@
 
             <span class="ctrl-bar__separator" aria-hidden="true"></span>
 
-            <!-- More / secondary controls -->
+            <!-- Advanced / secondary controls -->
             <button class="ctrl-pill" id="moreTriggerBtn" type="button" title="Open advanced and workspace controls"
                     popovertarget="pop-more" aria-expanded="false" aria-controls="pop-more">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>
-                <span>More</span>
+                <span>Advanced</span>
             </button>
             <div class="ctrl-popover" id="pop-more" popover>
                 <section class="cpop-group" aria-labelledby="moreAdvancedLabel">
@@ -2447,8 +2473,9 @@
             <div class="ctrl-popover ctrl-popover--fullscreen" id="pop-about" popover="auto">
                 <div class="about-sticky-bar">
                     <div class="about-brand">
+                        <img class="brand-icon" src="./assets/branding/asciiam-logo.svg" width="512" height="512" alt="" aria-hidden="true" />
                         <span class="about-badge">staticcanvas /// asciiam</span>
-                        <span class="npm-ver-badge" style="margin-left:8px">v1.0.0</span>
+                        <span class="npm-ver-badge" style="margin-left:8px" data-package-version>v0.10.0</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:12px">
                         <button class="about-cta-btn" popovertarget="pop-about" popovertargetaction="hide">
@@ -2462,16 +2489,16 @@
 
                 <div class="about-container">
                     <div class="about-hero">
-                        <h1 class="about-hero-title">High-Performance ASCII Background Animator</h1>
+                        <h1 class="about-hero-title">Efficient ASCII Background Animator</h1>
                         <p class="about-hero-subtitle">
-                            Zero-dependency Canvas 2D background rendering engine for web applications, splash pages, and technical documentation. Features dense &amp; sparse matrix math, photographic image sampling, multi-stop gradient color blending, and GPU-safe auto-pausing.
+                            Zero-dependency ASCII media engine for application backgrounds, hero image regions, splash pages, and technical documentation. WebGL2 is selected first with Canvas 2D fallback, while shared frame scheduling and off-screen pausing bound multi-instance work.
                         </p>
 
                         <div class="npm-install-bar" style="margin-block-start:var(--space-sm);max-inline-size:540px">
                             <div class="npm-install-cmd">
                                 <span class="npm-prompt">$</span>
                                 <code>npm install @staticcanvas/asciiam</code>
-                                <span class="npm-ver-badge">v1.0.0</span>
+                                <span class="npm-ver-badge" data-package-version>v0.10.0</span>
                             </div>
                             <button class="npm-copy-btn" id="copyNpmInstallAbout" type="button" aria-label="Copy npm install command">
                                 <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -2481,250 +2508,53 @@
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0H0zm19.2 19.2H12v-9.6H9.6v9.6H4.8V4.8h14.4v14.4z"/></svg>
                             </a>
                         </div>
+                        <nav class="about-resource-nav" aria-label="asciiam documentation resources">
+                            <a href="./docs/">Documentation</a>
+                            <a href="./docs/gallery/">Preset gallery</a>
+                            <a href="./docs/api/">API reference</a>
+                            <a href="./docs/changelog/">Changelog</a>
+                        </nav>
                     </div>
 
-                    <h2 class="about-section-heading" id="aboutUsageTitle">Usage and export formats</h2>
-                    <p class="about-section-intro">
-                        Choose the package entry for a bundler, native ESM for module scripts, or UMD for a classic script tag. Readable and minified browser bundles expose the same API.
-                    </p>
-                    <div class="about-usage-grid" aria-labelledby="aboutUsageTitle">
-                        <section class="about-usage-card" aria-labelledby="aboutPackageUsageTitle">
-                            <h3 id="aboutPackageUsageTitle">Package ESM</h3>
-                            <pre class="about-code-block"><code>import asciiam from '@staticcanvas/asciiam';
-
-const anim = new asciiam('#hero', asciiam.presets.heroWave);
-anim.start();</code></pre>
-                        </section>
-                        <section class="about-usage-card" aria-labelledby="aboutBrowserEsmTitle">
-                            <h3 id="aboutBrowserEsmTitle">Browser ESM</h3>
-                            <pre class="about-code-block"><code>&lt;script type="module"&gt;
-  import asciiam from './libs/asciiam.esm.min.js';
-  new asciiam('#hero', asciiam.presets.heroWave).start();
-&lt;/script&gt;</code></pre>
-                        </section>
-                        <section class="about-usage-card" aria-labelledby="aboutUmdUsageTitle">
-                            <h3 id="aboutUmdUsageTitle">Classic script / UMD</h3>
-                            <pre class="about-code-block"><code>&lt;script src="./libs/asciiam.min.js"&gt;&lt;/script&gt;
-&lt;script&gt;
-  new asciiam('#hero', asciiam.presets.heroWave).start();
-&lt;/script&gt;</code></pre>
-                        </section>
-                    </div>
-                    <div class="about-table-wrap" tabindex="0" role="region" aria-label="Available package and browser exports">
-                        <table class="about-export-table">
-                            <thead><tr><th scope="col">Export</th><th scope="col">File or specifier</th><th scope="col">Use</th></tr></thead>
-                            <tbody>
-                                <tr><td>Package ESM</td><td><code>@staticcanvas/asciiam</code></td><td>Bundlers and ESM-aware runtimes; resolves to the readable ESM build.</td></tr>
-                                <tr><td>Browser ESM</td><td><code>asciiam.esm.js</code></td><td>Native module script with readable source.</td></tr>
-                                <tr><td>Browser ESM, minified</td><td><code>asciiam.esm.min.js</code></td><td>Native module script for deployment.</td></tr>
-                                <tr><td>UMD</td><td><code>asciiam.js</code></td><td>Classic script that provides the global <code>asciiam</code> constructor.</td></tr>
-                                <tr><td>UMD, minified</td><td><code>asciiam.min.js</code></td><td>Classic script for deployment and the default jsDelivr/unpkg entry.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h2 class="about-section-heading">Architectural Highlights &amp; Features</h2>
-
-                    <div class="feature-grid-detailed">
-                        <!-- 1. Render Modes -->
-                        <div class="feature-card-lg">
-                            <h3>
-                                <div class="feature-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
-                                Rendering Algorithms &amp; Math
-                            </h3>
-                            <p>
-                                Supports full matrix scanning and sparse particle loops. Dense algorithms visit every cell in the grid per frame; sparse algorithms skip inactive cells to maximize 60fps power efficiency.
-                            </p>
-                            <div class="feature-tag-list">
-                                <span class="feature-tag">wave</span>
-                                <span class="feature-tag">current</span>
-                                <span class="feature-tag">ripple</span>
-                                <span class="feature-tag">vortex</span>
-                                <span class="feature-tag">plasma</span>
-                                <span class="feature-tag">fadeIn</span>
-                                <span class="feature-tag">fadeOut</span>
-                                <span class="feature-tag">matrix</span>
-                                <span class="feature-tag">snow</span>
-                                <span class="feature-tag">sparkle</span>
-                                <span class="feature-tag">customCell(api)</span>
-                            </div>
+                    <section class="about-overview" aria-labelledby="aboutOverviewTitle">
+                        <h2 class="about-section-heading" id="aboutOverviewTitle">Product overview</h2>
+                        <div class="about-reference-grid">
+                            <article class="about-reference-card">
+                                <h3>GPU-first renderer</h3>
+                                <p>WebGL2 batches glyph instances when available. Canvas 2D remains the explicit CPU renderer and automatic fallback.</p>
+                            </article>
+                            <article class="about-reference-card">
+                                <h3>ASCII media</h3>
+                                <p>Procedural fields and sampled images render as glyph grids for backgrounds, bounded hero cards, and splash compositions.</p>
+                            </article>
+                            <article class="about-reference-card">
+                                <h3>Efficient lifecycle</h3>
+                                <p>Instances share frame scheduling, pause when hidden or off-screen, and expose cleanup through <code>destroy()</code>.</p>
+                            </article>
                         </div>
+                    </section>
 
-                        <!-- 2. Photographic Image Engine -->
-                        <div class="feature-card-lg">
-                            <h3>
-                                <div class="feature-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
-                                Photographic Image Sampling
-                            </h3>
-                            <p>
-                                Sample any photographic or vector graphic into character density maps. Features FOV viewport zoom, image scaling, pixel color extraction, and dynamic character set re-sampling.
-                            </p>
-                            <div class="feature-tag-list">
-                                <span class="feature-tag">PNG/JPEG/WebP/SVG</span>
-                                <span class="feature-tag">imageScale</span>
-                                <span class="feature-tag">imageFov</span>
-                                <span class="feature-tag">colorFromImage</span>
-                                <span class="feature-tag">waveSweep</span>
-                                <span class="feature-tag">radialRipple</span>
-                                <span class="feature-tag">scanlinePass</span>
-                                <span class="feature-tag">thermalNoise</span>
-                            </div>
+                    <section class="about-docs-callout" aria-labelledby="aboutDocsTitle">
+                        <p class="about-docs-kicker">Detailed reference lives in Hugo</p>
+                        <h2 id="aboutDocsTitle">Configure here. Validate here. Document there.</h2>
+                        <p>
+                            Use the web utility to create and preview a configuration. Use the documentation for installation,
+                            renderer behavior, image sampling, animation sequences, persistence, and the complete API contract.
+                        </p>
+                        <div class="about-docs-actions">
+                            <a class="about-cta-btn" href="./docs/">Open documentation</a>
+                            <a href="./docs/guides/web-utility/">Web utility guide</a>
+                            <a href="./docs/gallery/">Preset gallery</a>
+                            <a href="./docs/api/">API reference</a>
                         </div>
+                    </section>
 
-                        <!-- 3. Color & Gradient System -->
-                        <div class="feature-card-lg">
-                            <h3>
-                                <div class="feature-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 1 0 10 10"/></svg></div>
-                                Multi-Stop Gradients &amp; Color
-                            </h3>
-                            <p>
-                                Single-pass color synthesis supporting 1–6 gradient stop colors, linear, radial, and cubic blending equations, smooth angle rotation, animated hue shifts, and color breathing dynamics.
-                            </p>
-                            <div class="feature-tag-list">
-                                <span class="feature-tag">1-6 Stops</span>
-                                <span class="feature-tag">Linear/Radial/Cubic</span>
-                                <span class="feature-tag">hueRotate</span>
-                                <span class="feature-tag">breathe</span>
-                                <span class="feature-tag">Animate Angle</span>
-                            </div>
-                        </div>
-
-                        <!-- 4. Motion Dynamics -->
-                        <div class="feature-card-lg">
-                            <h3>
-                                <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 3v3"/><path d="M18.5 5.5l-2.12 2.12"/><path d="M21 12h-3"/><path d="M18.5 18.5l-2.12-2.12"/><path d="M12 21v-3"/><path d="M5.5 18.5l2.12-2.12"/><path d="M3 12h3"/><path d="M5.5 5.5l2.12 2.12"/></svg></div>
-                                Motion Dynamics &amp; Cursor Glow
-                            </h3>
-                            <p>
-                                Control animation frame rate, edge vignette fading, frame-blend motion trails, sine pulse expansion, and real-time interactive mouse cursor glow radius.
-                            </p>
-                            <div class="feature-tag-list">
-                                <span class="feature-tag">speed</span>
-                                <span class="feature-tag">edgeFade</span>
-                                <span class="feature-tag">trail</span>
-                                <span class="feature-tag">pulse</span>
-                                <span class="feature-tag">cursor.radius</span>
-                                <span class="feature-tag">cursor.strength</span>
-                            </div>
-                        </div>
-
-                        <!-- 5. Performance Architecture -->
-                        <div class="feature-card-lg">
-                            <h3>
-                                <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-                                Power Optimization &amp; Lifecycle
-                            </h3>
-                            <p>
-                                Automatically pauses execution when offscreen via IntersectionObserver or when the browser tab is hidden. Font rendering uses quantized level caching with zero DOM reflows.
-                            </p>
-                            <div class="feature-tag-list">
-                                <span class="feature-tag">IntersectionObserver</span>
-                                <span class="feature-tag">PageVisibility API</span>
-                                <span class="feature-tag">Quantized Cache</span>
-                                <span class="feature-tag">Zero Dependencies</span>
-                                <span class="feature-tag">Reduced Motion</span>
-                            </div>
-                        </div>
-
-                        <!-- 6. Integration & Distribution -->
-                        <div class="feature-card-lg">
-                            <h3>
-                                <div class="feature-icon"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
-                                Module Integration &amp; API
-                            </h3>
-                            <p>
-                                Packaged as ESM and UMD builds. Easily initialize onto any container, mount responsive listeners, and dynamically tweak options at runtime.
-                            </p>
-                            <div class="feature-tag-list">
-                                <span class="feature-tag">ESM / UMD</span>
-                                <span class="feature-tag">new asciiam('#target', opts)</span>
-                                <span class="feature-tag">start() / stop()</span>
-                                <span class="feature-tag">setOption(key, val)</span>
-                                <span class="feature-tag">destroy()</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h2 class="about-section-heading">Working with the demo</h2>
-                    <div class="about-reference-grid">
-                        <section class="about-reference-card" aria-labelledby="aboutConfigureTitle">
-                            <h3 id="aboutConfigureTitle">1. Configure</h3>
-                            <ol>
-                                <li>Start with a named preset or select a rendering mode.</li>
-                                <li>Choose quality, character density, spatial origin, color, motion, and backdrop settings.</li>
-                                <li>Use Image to upload a browser-local file or select an included asset from <code>public/assets/images</code>.</li>
-                            </ol>
-                        </section>
-                        <section class="about-reference-card" aria-labelledby="aboutValidateTitle">
-                            <h3 id="aboutValidateTitle">2. Preview and validate</h3>
-                            <ul>
-                                <li>Switch between Background, Hero card, and Splash page to inspect contrast and content interference.</li>
-                                <li>Enable FPS to compare quality tiers and cell counts.</li>
-                                <li>Use Undo and Redo while testing combinations; Reset restores demo defaults without deleting saved presets.</li>
-                            </ul>
-                        </section>
-                        <section class="about-reference-card" aria-labelledby="aboutIntegrateTitle">
-                            <h3 id="aboutIntegrateTitle">3. Integrate</h3>
-                            <ul>
-                                <li>Open Code for a configuration generated from the current controls.</li>
-                                <li>Install the package or load the UMD bundle, construct an instance, then call <code>start()</code>.</li>
-                                <li>Call <code>destroy()</code> when removing a mounted instance so observers and event subscriptions are released.</li>
-                            </ul>
-                        </section>
-                    </div>
-
-                    <h2 class="about-section-heading">Control reference</h2>
-                    <div class="about-table-wrap" tabindex="0" role="region" aria-label="Animation control reference">
-                        <table class="about-control-table">
-                            <thead><tr><th scope="col">Control</th><th scope="col">Purpose</th><th scope="col">Persistence</th></tr></thead>
-                            <tbody>
-                                <tr><td>Preset</td><td>Loads built-in configurations and manages named browser-local presets.</td><td>Saved presets remain local to this browser.</td></tr>
-                                <tr><td>Quality</td><td>Changes density, DPR limit, font levels, and optional frame-rate throttling.</td><td>Restored on the next visit.</td></tr>
-                                <tr><td>Mode / Charset</td><td>Selects the cell algorithm and the light-to-heavy character ramp.</td><td>Restored on the next visit.</td></tr>
-                                <tr><td>Motion / Align</td><td>Controls speed, edge fade, trail, pulse, and the spatial origin used by radial modes.</td><td>Restored on the next visit.</td></tr>
-                                <tr><td>Color / Backdrop</td><td>Configures foreground color animation and an independent solid or multi-stop gradient layer.</td><td>Restored on the next visit.</td></tr>
-                                <tr><td>Image</td><td>Samples browser-supported images into the current character grid and applies a reveal mask.</td><td>Image URLs and uploaded object URLs are not restored.</td></tr>
-                                <tr><td>Theme / FPS</td><td>Changes demo contrast and exposes the current frame/cell measurements.</td><td>Theme uses its own key; FPS is restored with demo settings.</td></tr>
-                                <tr><td>Undo / Redo / Reset</td><td>Moves through recent configuration states or restores the documented defaults.</td><td>History lasts for the current page session.</td></tr>
-                                <tr><td>Code</td><td>Shows a copyable constructor configuration matching the current demo state.</td><td>Generated live; not stored separately.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h2 class="about-section-heading">Operational notes</h2>
-                    <div class="about-reference-grid">
-                        <section class="about-reference-card" aria-labelledby="aboutLifecycleTitle">
-                            <h3 id="aboutLifecycleTitle">Lifecycle and accessibility</h3>
-                            <ul>
-                                <li>The target must have measurable width and height before construction.</li>
-                                <li>Rendering pauses when off-screen or when the document is hidden and resumes without accumulating elapsed time.</li>
-                                <li>Reduced-motion preferences are honored by default; toolbar controls use native semantics and keyboard navigation.</li>
-                            </ul>
-                        </section>
-                        <section class="about-reference-card" aria-labelledby="aboutImageTitle">
-                            <h3 id="aboutImageTitle">Images and local defaults</h3>
-                            <ul>
-                                <li>The bundled library is generated from supported files in <code>public/assets/images</code>.</li>
-                                <li>After adding PNG, JPEG, GIF, WebP, AVIF, or SVG files, run <code>npm run prepare:bg</code>; development and production builds run it automatically.</li>
-                                <li>Uploaded files remain browser-local and use temporary object URLs that are revoked after decoding.</li>
-                            </ul>
-                        </section>
-                        <section class="about-reference-card" aria-labelledby="aboutStorageTitle">
-                            <h3 id="aboutStorageTitle">Storage and cleanup</h3>
-                            <ul>
-                                <li>Demo options and named presets use versioned local storage and do not leave the browser.</li>
-                                <li>Uploaded files use temporary object URLs that are revoked after image decoding.</li>
-                                <li>Call the unsubscribe function returned by <code>on()</code>, or call <code>destroy()</code> to clear every subscription at once.</li>
-                            </ul>
-                        </section>
-                    </div>
-
-                    <div style="margin-block-start:var(--space-2xl);padding-block-start:var(--space-md);border-block-start:1px solid oklch(from var(--clr-border) l c h / 0.30);display:flex;align-items:center;justify-content:space-between">
+                    <footer class="about-footer">
                         <button class="about-cta-btn" popovertarget="pop-about" popovertargetaction="hide">
-                            Explore Live Canvas
+                            Continue to canvas
                         </button>
-                        <span class="about-version">asciiam v1.0.0 · Released under MIT License · staticcanvas</span>
-                    </div>
+                        <span class="about-version">asciiam <span data-package-version>v0.10.0</span> · MIT License · staticcanvas</span>
+                    </footer>
                 </div>
             </div>
 
@@ -2745,19 +2575,31 @@ anim.start();</code></pre>
                 <div class="cpop-group">
                     <label class="cpop-label row" for="imageScale">Image scale <span class="val" id="imageScaleVal">1.00×</span></label>
                     <input type="range" id="imageScale" min="0.5" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="imageScaleX" style="margin-top:var(--space-xs)">Horizontal scale <span class="val" id="imageScaleXVal">1.00×</span></label>
+                    <input type="range" id="imageScaleX" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="imageScaleY" style="margin-top:var(--space-xs)">Vertical scale <span class="val" id="imageScaleYVal">1.00×</span></label>
+                    <input type="range" id="imageScaleY" min="0.25" max="3" step="0.05" value="1" />
                     <label class="cpop-label row" for="imageFov" style="margin-top:var(--space-xs)">Image FOV <span class="val" id="imageFovVal">100%</span></label>
                     <input type="range" id="imageFov" min="0.25" max="1" step="0.05" value="1" />
+                    <label class="cpop-label" for="imageLuminance" style="margin-top:var(--space-xs)">Luminance mapping</label>
+                    <select id="imageLuminance">
+                        <option value="auto" selected>Auto (silhouette aware)</option>
+                        <option value="normal">Normal</option>
+                        <option value="invert">Invert</option>
+                    </select>
                 </div>
                 <div class="cpop-group">
-                    <label class="cpop-label" for="imageMaskMode">Image animation effect</label>
-                    <select id="imageMaskMode">
-                        <option value="waveSweep" selected>Wave sweep</option>
-                        <option value="radialRipple">Radial spotlight</option>
-                        <option value="scanlinePass">CRT scanline</option>
-                        <option value="thermalNoise">Digital noise shimmer</option>
-                        <option value="halftonePulse">Halftone breath</option>
-                        <option value="fullStatic">Static image (no mask)</option>
-                    </select>
+                    <p class="image-library-help">The global Mode control animates the sampled image. Every animation mode remains available after an image is loaded.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="animateImageFramesToggle">
+                        <input class="ui-switch__control" type="checkbox" id="animateImageFramesToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Play animated image frames</span>
+                    </label>
+                    <label class="cpop-label row" for="imageFrameRate" style="margin-top:var(--space-xs)">GIF sample rate <span class="val" id="imageFrameRateVal">12 fps</span></label>
+                    <input type="range" id="imageFrameRate" min="1" max="30" step="1" value="12" />
+                    <p class="image-library-help" style="margin-block-start:var(--space-xs);text-align:start">GIF frames are resampled at this rate; the renderer continues at the selected display frame rate.</p>
                 </div>
                 <div class="cpop-group">
                     <label class="ui-switch" for="colorFromImageToggle">
@@ -2765,6 +2607,24 @@ anim.start();</code></pre>
                         <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
                         <span class="ui-switch__label">Color from image</span>
                     </label>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="imageColorRangeToggle">
+                        <input class="ui-switch__control" type="checkbox" id="imageColorRangeToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Animate selected color range only</span>
+                    </label>
+                    <div id="imageColorRangeControls" hidden>
+                        <div class="grad-stops-grid" style="margin-block-start:var(--space-sm)">
+                            <label class="cpop-label" for="imageColorRangeMin">Range minimum
+                                <input type="color" id="imageColorRangeMin" value="#000000" />
+                            </label>
+                            <label class="cpop-label" for="imageColorRangeMax">Range maximum
+                                <input type="color" id="imageColorRangeMax" value="#ffffff" />
+                            </label>
+                        </div>
+                        <p class="image-library-help" style="margin-block-start:var(--space-xs);text-align:start">Each sampled red, green, and blue channel must fall between these bounds. Other ASCII cells remain static.</p>
+                    </div>
                 </div>
                 <div class="cpop-group cpop-browser">
                     <div class="image-browser-head">
@@ -2791,7 +2651,7 @@ anim.start();</code></pre>
                         <div class="npm-install-cmd">
                             <span class="npm-prompt">$</span>
                             <code>npm install @staticcanvas/asciiam</code>
-                            <span class="npm-ver-badge">v1.0.0</span>
+                            <span class="npm-ver-badge" data-package-version>v0.10.0</span>
                         </div>
                         <button class="npm-copy-btn" id="copyNpmInstallCode" type="button" aria-label="Copy npm install command">
                             <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -2820,14 +2680,15 @@ anim.start();</code></pre>
 
         <footer class="site-footer">
             <div>
-                <p class="footer-brand">staticcanvas <span>/// asciiam</span></p>
+                <p class="footer-brand"><img class="brand-icon" src="./assets/branding/asciiam-logo.svg" width="512" height="512" alt="" aria-hidden="true" />staticcanvas <span>/// asciiam</span></p>
                 <p class="footer-copy">ASCII Background Animator. Released under the <a href="https://opensource.org/license/mit" target="_blank" rel="license noopener noreferrer">MIT License</a>.</p>
-                <p class="performance-policy">Zero runtime dependencies · Canvas 2D · offscreen auto-pause · reduced-motion aware</p>
+                <p class="performance-policy">Zero runtime dependencies · WebGL2 + Canvas 2D fallback · offscreen auto-pause · reduced-motion aware</p>
             </div>
             <div>
-                <p class="footer-copy">Built with browser-native JavaScript and Canvas 2D. The demo uses uploaded files or a build-generated local image library.</p>
+                <p class="footer-copy">Built with browser-native JavaScript, WebGL2, and Canvas 2D fallback. The demo uses uploaded files or a build-generated local image library.</p>
                 <nav class="footer-resources" aria-label="Technology and resource links">
                     <a href="https://developer.mozilla.org/docs/Web/API/Canvas_API" target="_blank" rel="noopener noreferrer">Canvas 2D</a>
+                    <a href="https://developer.mozilla.org/docs/Web/API/WebGL_API" target="_blank" rel="noopener noreferrer">WebGL2</a>
                     <a href="https://developer.mozilla.org/docs/Web/JavaScript" target="_blank" rel="noopener noreferrer">JavaScript</a>
                     <a href="https://developers.cloudflare.com/pages/" target="_blank" rel="noopener noreferrer">Cloudflare Pages</a>
                 </nav>
@@ -2844,7 +2705,7 @@ anim.start();</code></pre>
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js"></script>
+        <script src="./libs/asciiam.js?v=0.10.0"></script>
         <script>
             /* ============================== demo wiring ============================== */
             const stage = document.getElementById("stage");
@@ -2853,6 +2714,7 @@ anim.start();</code></pre>
             const savedPresetsStorageKey = "asciiam:saved-presets:v1";
             const demoDefaults = Object.assign({}, asciiam.presets.heroWave, {
                 quality: "ultra",
+                renderer: "auto",
                 charSet: asciiam.CHARACTER_SETS.asciiExtended,
                 imageChars: asciiam.CHARACTER_SETS.asciiExtended,
                 align: "center",
@@ -2865,9 +2727,14 @@ anim.start();</code></pre>
                 colorAnimation: null,
                 image: null,
                 imageScale: 1,
+                imageScaleX: 1,
+                imageScaleY: 1,
                 imageFov: 1,
+                imageLuminance: "auto",
                 fit: "cover",
-                imageMaskMode: "waveSweep",
+                imageAnimationRange: null,
+                animateImageFrames: true,
+                imageFrameRate: 12,
                 revealDirection: "center",
                 animateImageMask: true,
                 colorFromImage: false,
@@ -2878,6 +2745,13 @@ anim.start();</code></pre>
                 bandWidth: 0.14,
                 snowDensity: 0.02,
                 sparkleDensity: 0.05,
+                fireDensity: 0.035,
+                starfieldDensity: 0.018,
+                orbitDensity: 0.014,
+                glitchIntensity: 0.32,
+                typewriterDuration: 4.5,
+                sequence: null,
+                sequenceOptions: null,
             });
             let restoredSettings = null;
             try {
@@ -2885,11 +2759,15 @@ anim.start();</code></pre>
             } catch {
                 restoredSettings = null;
             }
-            const initialOptions = Object.assign({}, demoDefaults, restoredSettings?.options || {});
-            const anim = new asciiam(stage, initialOptions);
+            const requestedPresetName = new URLSearchParams(location.search).get("preset");
+            const requestedPreset = requestedPresetName && Object.prototype.hasOwnProperty.call(asciiam.presets, requestedPresetName)
+                ? asciiam.presets[requestedPresetName]
+                : null;
+            const initialOptions = Object.assign({}, demoDefaults, restoredSettings?.options || {}, requestedPreset || {});
+            const anim = new asciiam(document.querySelector('[data-ascii-target="background"]'), initialOptions);
             let settingsReady = false;
             let activePresetSnapshot = null;
-            let activePresetLabel = restoredSettings?.options ? "Custom" : "heroWave";
+            let activePresetLabel = requestedPreset ? requestedPresetName : restoredSettings?.options ? "Custom" : "heroWave";
             let optionHistory = [];
             let historyIndex = -1;
             let historyTimer = null;
@@ -2909,6 +2787,7 @@ anim.start();</code></pre>
                     scene.setAttribute("aria-hidden", String(!isActive));
                     scene.toggleAttribute("inert", !isActive);
                 });
+                anim.setTarget(document.querySelector(`[data-ascii-target="${type}"]`));
             }
             previewButtons.forEach((button) => button.addEventListener("click", () => setPreviewType(button.dataset.previewType)));
             const heroCard = document.querySelector(".preview-hero-card");
@@ -2918,6 +2797,7 @@ anim.start();</code></pre>
                     document.querySelectorAll("[data-hero-card-variant]").forEach((candidate) => {
                         candidate.setAttribute("aria-pressed", String(candidate === button));
                     });
+                    anim.setTarget(document.querySelector('[data-ascii-target="hero-card"]'));
                 });
             });
 
@@ -2933,7 +2813,11 @@ anim.start();</code></pre>
                 button.onclick = () => setAlignment(button.dataset.align);
             });
 
-            const modes = ["wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut", "matrix", "snow", "sparkle", "image"];
+            const modes = [
+                "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
+                "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom",
+                "matrix", "snow", "sparkle", "fire", "starfield", "glitch", "typewriter", "orbit",
+            ];
             const modeButtonsEl = document.getElementById("modeButtons");
             function setActiveModeButton(mode) {
                 [...modeButtonsEl.children].forEach((button) => {
@@ -2941,7 +2825,7 @@ anim.start();</code></pre>
                     button.setAttribute("aria-pressed", String(isActive));
                 });
                 const revealDirectionGroup = document.getElementById("revealDirectionGroup");
-                if (revealDirectionGroup) revealDirectionGroup.hidden = mode !== "fadeIn" && mode !== "fadeOut";
+                if (revealDirectionGroup) revealDirectionGroup.hidden = !["fadeIn", "fadeOut", "dissolveIn", "dissolveOut"].includes(mode);
             }
             modes.forEach((m) => {
                 const b = document.createElement("button");
@@ -2951,12 +2835,9 @@ anim.start();</code></pre>
                 b.dataset.mode = m;
                 b.setAttribute("aria-pressed", String(m === "wave"));
                 b.onclick = () => {
-                    // When an image is loaded and user picks a non-image mode,
-                    // keep _sourceImage alive so imageChars still drive the grid.
-                    // Switching TO "image" mode re-applies the native image renderer.
-                    if (m !== "image" && anim._sourceImage) {
-                        // Sync imageChars from current charSet so the mode's
-                        // character output reflects the selected character set.
+                    // Image sampling is a source layer; mode changes only select
+                    // the global animation algorithm and retain the source.
+                    if (anim._sourceImage) {
                         anim.opts.imageChars = anim.opts.charSet;
                         anim._resampleImage();
                     }
@@ -2966,6 +2847,303 @@ anim.start();</code></pre>
                 };
                 modeButtonsEl.appendChild(b);
             });
+
+            /* ── Ordered animation sequence editor ── */
+            let sequenceDraft = Array.isArray(initialOptions.sequence)
+                ? initialOptions.sequence.map((step, index) => ({
+                    id: step.id || `step-${index + 1}`,
+                    mode: step.mode || "wave",
+                    duration: Number(step.duration) > 0 ? Number(step.duration) : 5,
+                    delay: Number(step.delay) > 0 ? Number(step.delay) : 0,
+                    options: step.options && typeof step.options === "object" ? { ...step.options } : {},
+                    transition: step.transition?.type === "morph"
+                        ? { type: "morph", duration: Number(step.transition.duration) > 0 ? Number(step.transition.duration) : 0.8, easing: step.transition.easing || "easeInOut" }
+                        : { type: "cut", duration: 0, easing: "linear" },
+                }))
+                : [];
+            let sequenceStepCounter = sequenceDraft.length;
+            let sequenceLoop = initialOptions.sequenceOptions?.loop !== false;
+            const sequenceList = document.getElementById("sequenceList");
+            const sequenceStatus = document.getElementById("sequenceStatus");
+            const sequenceLoopToggle = document.getElementById("sequenceLoopToggle");
+            const playSequenceBtn = document.getElementById("playSequenceBtn");
+            const stopSequenceBtn = document.getElementById("stopSequenceBtn");
+
+            function serializableSequence() {
+                return sequenceDraft.map((step) => ({
+                    id: step.id,
+                    mode: step.mode,
+                    duration: step.duration,
+                    delay: step.delay,
+                    options: { ...step.options },
+                    transition: { ...step.transition },
+                }));
+            }
+
+            function setSequenceStatus(message, isError = false) {
+                sequenceStatus.textContent = message;
+                sequenceStatus.dataset.error = String(isError);
+            }
+
+            function updateSequenceButtons() {
+                const state = anim.getSequenceState();
+                playSequenceBtn.disabled = sequenceDraft.length === 0;
+                playSequenceBtn.textContent = state.running ? "Pause" : state.index >= 0 ? "Resume" : "Play";
+                stopSequenceBtn.disabled = state.index < 0;
+                document.getElementById("sequenceToolbarStatus").textContent = sequenceDraft.length
+                    ? state.running ? `${state.index + 1}/${sequenceDraft.length}` : `${sequenceDraft.length} steps`
+                    : "off";
+                [...sequenceList.children].forEach((item, index) => {
+                    if (index === state.index && state.index >= 0) item.setAttribute("aria-current", "step");
+                    else item.removeAttribute("aria-current");
+                });
+            }
+
+            function configureSequence({ announce = true } = {}) {
+                sequenceLoop = sequenceLoopToggle.checked;
+                sequenceLoopToggle.setAttribute("aria-checked", String(sequenceLoop));
+                if (sequenceDraft.length) {
+                    anim.setSequence(serializableSequence(), { loop: sequenceLoop, autoplay: false });
+                    if (announce) setSequenceStatus(`${sequenceDraft.length} animation${sequenceDraft.length === 1 ? "" : "s"} configured.`);
+                } else {
+                    anim.clearSequence();
+                    if (announce) setSequenceStatus("Add an animation to begin.");
+                }
+                updateSequenceButtons();
+                renderUsage();
+            }
+
+            function moveSequenceStep(index, direction) {
+                const target = index + direction;
+                if (target < 0 || target >= sequenceDraft.length) return;
+                [sequenceDraft[index], sequenceDraft[target]] = [sequenceDraft[target], sequenceDraft[index]];
+                renderSequenceEditor();
+                configureSequence();
+            }
+
+            function renderSequenceEditor() {
+                sequenceList.replaceChildren();
+                sequenceLoopToggle.checked = sequenceLoop;
+                sequenceLoopToggle.setAttribute("aria-checked", String(sequenceLoop));
+                if (!sequenceDraft.length) {
+                    const empty = document.createElement("li");
+                    empty.className = "sequence-empty";
+                    empty.textContent = "No animations in this sequence.";
+                    sequenceList.appendChild(empty);
+                    updateSequenceButtons();
+                    return;
+                }
+
+                sequenceDraft.forEach((step, index) => {
+                    const item = document.createElement("li");
+                    item.className = "sequence-step";
+                    item.dataset.sequenceStep = step.id;
+
+                    const header = document.createElement("div");
+                    header.className = "sequence-step__header";
+                    const indexLabel = document.createElement("span");
+                    indexLabel.className = "sequence-step__index";
+                    indexLabel.textContent = `Step ${index + 1}`;
+                    const actions = document.createElement("div");
+                    actions.className = "sequence-step__actions";
+                    const up = document.createElement("button");
+                    up.className = "mode-btn";
+                    up.type = "button";
+                    up.textContent = "Up";
+                    up.disabled = index === 0;
+                    up.setAttribute("aria-label", `Move step ${index + 1} up`);
+                    up.onclick = () => moveSequenceStep(index, -1);
+                    const down = document.createElement("button");
+                    down.className = "mode-btn";
+                    down.type = "button";
+                    down.textContent = "Down";
+                    down.disabled = index === sequenceDraft.length - 1;
+                    down.setAttribute("aria-label", `Move step ${index + 1} down`);
+                    down.onclick = () => moveSequenceStep(index, 1);
+                    const remove = document.createElement("button");
+                    remove.className = "mode-btn";
+                    remove.type = "button";
+                    remove.textContent = "Remove";
+                    remove.setAttribute("aria-label", `Remove step ${index + 1}`);
+                    remove.onclick = () => {
+                        sequenceDraft.splice(index, 1);
+                        renderSequenceEditor();
+                        configureSequence();
+                    };
+                    actions.append(up, down, remove);
+                    header.append(indexLabel, actions);
+
+                    const grid = document.createElement("div");
+                    grid.className = "sequence-step__grid";
+                    const modeLabel = document.createElement("label");
+                    modeLabel.textContent = "Animation";
+                    const modeSelect = document.createElement("select");
+                    modeSelect.setAttribute("aria-label", `Step ${index + 1} animation`);
+                    modes.forEach((mode) => {
+                        const option = document.createElement("option");
+                        option.value = mode;
+                        option.textContent = mode;
+                        modeSelect.appendChild(option);
+                    });
+                    modeSelect.value = step.mode;
+                    modeSelect.onchange = () => {
+                        step.mode = modeSelect.value;
+                        configureSequence();
+                    };
+                    modeLabel.appendChild(modeSelect);
+
+                    const durationLabel = document.createElement("label");
+                    durationLabel.textContent = "Duration (s)";
+                    const durationInput = document.createElement("input");
+                    durationInput.type = "number";
+                    durationInput.min = "0.1";
+                    durationInput.step = "0.1";
+                    durationInput.value = String(step.duration);
+                    durationInput.onchange = () => {
+                        step.duration = Math.max(0.1, Number(durationInput.value) || 5);
+                        durationInput.value = String(step.duration);
+                        configureSequence();
+                    };
+                    durationLabel.appendChild(durationInput);
+
+                    const delayLabel = document.createElement("label");
+                    delayLabel.textContent = "Stagger (s)";
+                    const delayInput = document.createElement("input");
+                    delayInput.type = "number";
+                    delayInput.min = "0";
+                    delayInput.step = "0.1";
+                    delayInput.value = String(step.delay);
+                    delayInput.onchange = () => {
+                        step.delay = Math.max(0, Number(delayInput.value) || 0);
+                        delayInput.value = String(step.delay);
+                        configureSequence();
+                    };
+                    delayLabel.appendChild(delayInput);
+                    const transitionLabel = document.createElement("label");
+                    transitionLabel.textContent = "Transition in";
+                    const transitionSelect = document.createElement("select");
+                    transitionSelect.setAttribute("aria-label", `Step ${index + 1} transition`);
+                    transitionSelect.append(new Option("Cut", "cut"), new Option("Morph", "morph"));
+                    transitionSelect.value = step.transition?.type || "cut";
+                    const morphDuration = document.createElement("input");
+                    morphDuration.type = "number";
+                    morphDuration.min = "0.1";
+                    morphDuration.step = "0.1";
+                    morphDuration.value = String(step.transition?.duration || 0.8);
+                    morphDuration.setAttribute("aria-label", `Step ${index + 1} morph duration in seconds`);
+                    morphDuration.hidden = transitionSelect.value !== "morph";
+                    transitionSelect.onchange = () => {
+                        step.transition = transitionSelect.value === "morph"
+                            ? { type: "morph", duration: Math.max(0.1, Number(morphDuration.value) || 0.8), easing: "easeInOut" }
+                            : { type: "cut", duration: 0, easing: "linear" };
+                        morphDuration.hidden = transitionSelect.value !== "morph";
+                        configureSequence();
+                    };
+                    morphDuration.onchange = () => {
+                        const duration = Math.max(0.1, Number(morphDuration.value) || 0.8);
+                        morphDuration.value = String(duration);
+                        step.transition = { type: "morph", duration, easing: "easeInOut" };
+                        configureSequence();
+                    };
+                    transitionLabel.append(transitionSelect, morphDuration);
+                    grid.append(modeLabel, durationLabel, delayLabel, transitionLabel);
+
+                    const details = document.createElement("details");
+                    details.className = "sequence-step__options";
+                    const summary = document.createElement("summary");
+                    summary.textContent = "Step option overrides (JSON)";
+                    const optionsLabel = document.createElement("label");
+                    optionsLabel.textContent = "Options object";
+                    const optionsInput = document.createElement("textarea");
+                    optionsInput.spellcheck = false;
+                    optionsInput.value = JSON.stringify(step.options, null, 2);
+                    const error = document.createElement("span");
+                    error.className = "sequence-step__error";
+                    error.setAttribute("role", "alert");
+                    optionsInput.onchange = () => {
+                        try {
+                            const value = JSON.parse(optionsInput.value || "{}");
+                            if (!value || Array.isArray(value) || typeof value !== "object") throw new Error("Use a JSON object.");
+                            step.options = value;
+                            error.textContent = "";
+                            configureSequence();
+                        } catch (parseError) {
+                            error.textContent = parseError.message;
+                        }
+                    };
+                    optionsLabel.append(optionsInput, error);
+                    details.append(summary, optionsLabel);
+
+                    item.append(header, grid, details);
+                    sequenceList.appendChild(item);
+                });
+                updateSequenceButtons();
+            }
+
+            function syncSequenceEditorFromOpts() {
+                const configured = Array.isArray(anim.opts.sequence) ? anim.opts.sequence : [];
+                sequenceDraft = configured.map((step, index) => ({
+                    id: step.id || `step-${index + 1}`,
+                    mode: step.mode || "wave",
+                    duration: Number(step.duration) > 0 ? Number(step.duration) : 5,
+                    delay: Number(step.delay) > 0 ? Number(step.delay) : 0,
+                    options: step.options && typeof step.options === "object" ? { ...step.options } : {},
+                    transition: step.transition?.type === "morph"
+                        ? { type: "morph", duration: Number(step.transition.duration) > 0 ? Number(step.transition.duration) : 0.8, easing: step.transition.easing || "easeInOut" }
+                        : { type: "cut", duration: 0, easing: "linear" },
+                }));
+                sequenceStepCounter = sequenceDraft.length;
+                sequenceLoop = anim.opts.sequenceOptions?.loop !== false;
+                renderSequenceEditor();
+            }
+
+            document.getElementById("addSequenceStepBtn").onclick = () => {
+                sequenceStepCounter += 1;
+                sequenceDraft.push({
+                    id: `step-${Date.now()}-${sequenceStepCounter}`,
+                    mode: anim.opts.mode,
+                    duration: anim.opts.mode === "fadeIn" || anim.opts.mode === "fadeOut" ? 3 : 5,
+                    delay: 0,
+                    options: {},
+                    transition: { type: "cut", duration: 0, easing: "linear" },
+                });
+                renderSequenceEditor();
+                configureSequence();
+            };
+            sequenceLoopToggle.onchange = () => configureSequence();
+            playSequenceBtn.onclick = () => {
+                const state = anim.getSequenceState();
+                if (state.running) anim.pauseSequence();
+                else {
+                    if (!state.configured) configureSequence({ announce: false });
+                    anim.playSequence();
+                }
+                updateSequenceButtons();
+            };
+            stopSequenceBtn.onclick = () => {
+                anim.stopSequence();
+                setSequenceStatus("Sequence stopped.");
+                updateSequenceButtons();
+            };
+            anim.on("sequenceStepStart", ({ index, step }) => {
+                setActiveModeButton(step.mode);
+                setSequenceStatus(`Playing step ${index + 1}: ${step.mode}.`);
+                updateSequenceButtons();
+                updateToolbarSummaries();
+            });
+            anim.on("sequencePause", () => {
+                setSequenceStatus("Sequence paused.");
+                updateSequenceButtons();
+            });
+            anim.on("sequenceComplete", () => {
+                setSequenceStatus("Sequence complete.");
+                updateSequenceButtons();
+            });
+            anim.on("sequenceInterrupt", () => {
+                setSequenceStatus("Sequence interrupted by a manual mode change.");
+                updateSequenceButtons();
+            });
+            renderSequenceEditor();
 
             /* ── Compact toolbar information architecture ── */
             function organizeToolbarOverflow() {
@@ -3061,10 +3239,19 @@ anim.start();</code></pre>
             }
 
             function applyDemoOptions(options, presetName = "", referenceLabel = presetName || "Custom") {
+                const activeMode = anim.opts.mode || "wave";
                 const qualityName = options.quality || "ultra";
                 const quality = asciiam.QUALITY[qualityName] || asciiam.QUALITY.ultra;
                 Object.assign(anim.opts, demoDefaults, quality, options, { quality: qualityName });
-                if (anim.opts.mode === "image" && !anim._sourceImage) anim.opts.mode = "wave";
+                anim.opts.mode = activeMode === "image" ? "wave" : activeMode;
+                const requestedRenderer = anim.opts.renderer || "auto";
+                if (anim.getRendererInfo().requested !== requestedRenderer) anim.setRenderer(requestedRenderer);
+                anim.setMode(anim.opts.mode);
+                if (Array.isArray(anim.opts.sequence) && anim.opts.sequence.length) {
+                    anim.setSequence(anim.opts.sequence, anim.opts.sequenceOptions || {});
+                } else {
+                    anim.clearSequence();
+                }
                 anim._buildFontCache();
                 anim._resize();
                 syncControlsFromOpts();
@@ -3086,18 +3273,30 @@ anim.start();</code></pre>
             };
 
             document.getElementById("quality").onchange = (e) => {
-                const q = asciiam.QUALITY[e.target.value];
-                Object.assign(anim.opts, q);
-                anim._buildFontCache();
-                anim._resize();
+                anim.setOption("quality", e.target.value);
                 document.getElementById("preset").value = "";
                 renderUsage();
             };
+            function updateRendererControls(info = anim.getRendererInfo()) {
+                document.getElementById("renderer").value = info.requested;
+                document.getElementById("rendererStatus").textContent = info.backend === "webgl2"
+                    ? "WebGL2 GPU renderer active."
+                    : info.requested === "canvas2d"
+                      ? "Canvas 2D CPU renderer active."
+                      : "WebGL2 unavailable; Canvas 2D fallback active.";
+                updateToolbarSummaries();
+            }
+            document.getElementById("renderer").onchange = (e) => {
+                anim.setRenderer(e.target.value);
+                renderUsage();
+            };
+            anim.on("rendererChange", (info) => updateRendererControls(info));
             const customCharSet = document.getElementById("customCharSet");
             const customCharSetGroup = document.getElementById("customCharSetGroup");
             const customCharSetStatus = document.getElementById("customCharSetStatus");
             function applyCharacterSet(cs) {
                 anim.setOption("charSet", cs);
+                anim.setOption("imageChars", cs);
                 document.getElementById("preset").value = "";
                 renderUsage();
             }
@@ -3143,6 +3342,7 @@ anim.start();</code></pre>
             };
             document.getElementById("revealDirection").onchange = (e) => {
                 anim.setOption("revealDirection", e.target.value);
+                anim.start();
                 renderUsage();
             };
             document.getElementById("edgeFade").oninput = (e) => {
@@ -3246,6 +3446,12 @@ anim.start();</code></pre>
             }
             document.getElementById("colorMode").onchange = syncColor;
             document.getElementById("gradType").onchange = syncColor;
+            document.getElementById("flipGradientBtn").onclick = () => {
+                const inputs = [...document.querySelectorAll("#gradStopsContainer .grad-stop-input")];
+                const reversed = inputs.map((input) => input.value).reverse();
+                inputs.forEach((input, index) => { input.value = reversed[index]; });
+                syncColor();
+            };
             document.getElementById("gradSteps").onchange = (e) => {
                 const count = parseInt(e.target.value, 10) || 2;
                 renderGradStops(count);
@@ -3396,9 +3602,7 @@ anim.start();</code></pre>
                     }
                     anim.opts.imageChars = anim.opts.charSet;
                     await anim.setImage(image.image || image.src);
-                    anim.setMode("image");
                     document.getElementById("preset").value = "";
-                    setActiveModeButton("image");
                     markSelectedImage(button);
                     renderUsage();
                     setImageStatus(`${image.alt || image.name} selected.`);
@@ -3443,7 +3647,7 @@ anim.start();</code></pre>
 
             async function loadLocalImages() {
                 try {
-                    const response = await fetch("/assets/backgrounds.json");
+                    const response = await fetch("/assets/backgrounds.json", { cache: "no-store" });
                     if (!response.ok) throw new Error("manifest unavailable");
                     const images = await response.json();
                     if (Array.isArray(images) && images.length) {
@@ -3472,10 +3676,8 @@ anim.start();</code></pre>
                 anim.opts.imageChars = anim.opts.charSet;
                 setImageStatus(`Loading ${file.name}…`);
                 try {
-                    await anim.setImage(url);
-                    anim.setMode("image");
+                    await anim.setImage(url, { animated: file.type === "image/gif" });
                     document.getElementById("preset").value = "";
-                    setActiveModeButton("image");
                     markSelectedImage(null);
                     renderUsage();
                     setImageStatus(`${file.name} selected.`);
@@ -3485,8 +3687,34 @@ anim.start();</code></pre>
                     URL.revokeObjectURL(url);
                 }
             };
-            document.getElementById("imageMaskMode").onchange = (e) => {
-                anim.setOption("imageMaskMode", e.target.value);
+            const imageColorRangeToggle = document.getElementById("imageColorRangeToggle");
+            const imageColorRangeControls = document.getElementById("imageColorRangeControls");
+            const imageColorRangeMin = document.getElementById("imageColorRangeMin");
+            const imageColorRangeMax = document.getElementById("imageColorRangeMax");
+            function applyImageAnimationRange() {
+                const enabled = imageColorRangeToggle.checked;
+                imageColorRangeToggle.setAttribute("aria-checked", String(enabled));
+                imageColorRangeControls.hidden = !enabled;
+                anim.setOption("imageAnimationRange", enabled ? {
+                    min: imageColorRangeMin.value,
+                    max: imageColorRangeMax.value,
+                } : null);
+                renderUsage();
+            }
+            imageColorRangeToggle.onchange = applyImageAnimationRange;
+            imageColorRangeMin.onchange = applyImageAnimationRange;
+            imageColorRangeMax.onchange = applyImageAnimationRange;
+            const animateImageFramesToggle = document.getElementById("animateImageFramesToggle");
+            animateImageFramesToggle.onchange = (event) => {
+                anim.setOption("animateImageFrames", event.target.checked);
+                event.target.setAttribute("aria-checked", String(event.target.checked));
+                renderUsage();
+            };
+            document.getElementById("imageFrameRate").oninput = (event) => {
+                const value = Number(event.target.value);
+                anim.setOption("imageFrameRate", value);
+                document.getElementById("imageFrameRateVal").textContent = `${value} fps`;
+                setRangeFill(event.target);
                 renderUsage();
             };
             document.getElementById("imageScale").oninput = (e) => {
@@ -3496,11 +3724,24 @@ anim.start();</code></pre>
                 setRangeFill(e.target);
                 renderUsage();
             };
+            ["imageScaleX", "imageScaleY"].forEach((id) => {
+                document.getElementById(id).oninput = (event) => {
+                    const value = parseFloat(event.target.value);
+                    anim.setOption(id, value);
+                    document.getElementById(`${id}Val`).textContent = value.toFixed(2) + "×";
+                    setRangeFill(event.target);
+                    renderUsage();
+                };
+            });
             document.getElementById("imageFov").oninput = (e) => {
                 const value = parseFloat(e.target.value);
                 anim.setOption("imageFov", value);
                 document.getElementById("imageFovVal").textContent = Math.round(value * 100) + "%";
                 setRangeFill(e.target);
+                renderUsage();
+            };
+            document.getElementById("imageLuminance").onchange = (event) => {
+                anim.setOption("imageLuminance", event.target.value);
                 renderUsage();
             };
 
@@ -3510,6 +3751,13 @@ anim.start();</code></pre>
                 setActiveModeButton(anim.opts.mode);
                 setAlignment(anim.opts.align || "center");
                 document.getElementById("quality").value = anim.opts.quality || "ultra";
+                document.getElementById("renderer").value = anim.opts.renderer || "auto";
+                const rendererInfo = anim.getRendererInfo();
+                document.getElementById("rendererStatus").textContent = rendererInfo.backend === "webgl2"
+                    ? "WebGL2 GPU renderer active."
+                    : rendererInfo.requested === "canvas2d"
+                      ? "Canvas 2D CPU renderer active."
+                      : "WebGL2 unavailable; Canvas 2D fallback active.";
                 const charSetEntry = Object.entries(asciiam.CHARACTER_SETS).find(([, value]) => value === anim.opts.charSet);
                 const charSetSelect = document.getElementById("charSet");
                 charSetSelect.value = charSetEntry ? charSetEntry[0] : "custom";
@@ -3525,7 +3773,7 @@ anim.start();</code></pre>
                 document.getElementById("pulse").value = anim.opts.pulse ? anim.opts.pulse.amplitude : 0;
                 document.getElementById("pulseVal").textContent = (anim.opts.pulse ? anim.opts.pulse.amplitude : 0).toFixed(2);
                 // Sync range fills after value update
-                ['speed','edgeFade','trail','pulse','imageScale','imageFov','backdropOpacity','backdropAngle'].forEach((id) => {
+                ['speed','edgeFade','trail','pulse','imageScale','imageScaleX','imageScaleY','imageFov','backdropOpacity','backdropAngle'].forEach((id) => {
                     const el = document.getElementById(id);
                     if (el) setRangeFill(el);
                 });
@@ -3567,9 +3815,12 @@ anim.start();</code></pre>
                     colorFromImgEl.checked = !!anim.opts.colorFromImage;
                     colorFromImgEl.setAttribute('aria-checked', String(colorFromImgEl.checked));
                 }
-                if (document.getElementById("imageMaskMode")) {
-                    document.getElementById("imageMaskMode").value = anim.opts.imageMaskMode || "waveSweep";
-                }
+                const imageRange = anim.opts.imageAnimationRange;
+                imageColorRangeToggle.checked = !!imageRange;
+                imageColorRangeToggle.setAttribute("aria-checked", String(!!imageRange));
+                imageColorRangeControls.hidden = !imageRange;
+                imageColorRangeMin.value = imageRange?.min || "#000000";
+                imageColorRangeMax.value = imageRange?.max || "#ffffff";
                 document.getElementById("colorMode").value = anim.opts.colorAnimation
                     ? anim.opts.colorAnimation.type
                     : anim.opts.gradient
@@ -3591,20 +3842,30 @@ anim.start();</code></pre>
                 }
                 document.getElementById("imageScale").value = anim.opts.imageScale;
                 document.getElementById("imageScaleVal").textContent = anim.opts.imageScale.toFixed(2) + "×";
+                document.getElementById("imageScaleX").value = anim.opts.imageScaleX || 1;
+                document.getElementById("imageScaleXVal").textContent = (anim.opts.imageScaleX || 1).toFixed(2) + "×";
+                document.getElementById("imageScaleY").value = anim.opts.imageScaleY || 1;
+                document.getElementById("imageScaleYVal").textContent = (anim.opts.imageScaleY || 1).toFixed(2) + "×";
+                document.getElementById("animateImageFramesToggle").checked = anim.opts.animateImageFrames !== false;
+                document.getElementById("animateImageFramesToggle").setAttribute("aria-checked", String(anim.opts.animateImageFrames !== false));
+                document.getElementById("imageFrameRate").value = anim.opts.imageFrameRate || 12;
+                document.getElementById("imageFrameRateVal").textContent = `${anim.opts.imageFrameRate || 12} fps`;
                 document.getElementById("imageFov").value = anim.opts.imageFov;
                 document.getElementById("imageFovVal").textContent = Math.round(anim.opts.imageFov * 100) + "%";
+                document.getElementById("imageLuminance").value = anim.opts.imageLuminance || "auto";
+                syncSequenceEditorFromOpts();
             }
             function escapeHtml(value) {
                 return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
             }
             function highlightJavaScript(value) {
-                const tokenPattern = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"(?=\s*:))|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\b(const|let|var|new|true|false|null|undefined|return|await|async|function|class|import|from|export|default|if|else|try|catch|finally|throw)\b|\b(\d+(?:\.\d+)?)\b/g;
+                const tokenPattern = /(<\/?[A-Za-z][^>\n]*>)|(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"(?=\s*:))|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\b(const|let|var|new|true|false|null|undefined|return|await|async|function|class|import|from|export|default|if|else|try|catch|finally|throw)\b|\b(\d+(?:\.\d+)?)\b/g;
                 let highlighted = "";
                 let cursor = 0;
                 for (const match of value.matchAll(tokenPattern)) {
-                    const [token, comment, property, string, keyword, number] = match;
+                    const [token, tag, comment, property, string, keyword, number] = match;
                     highlighted += escapeHtml(value.slice(cursor, match.index));
-                    const type = comment ? "comment" : property ? "property" : string ? "string" : keyword ? "keyword" : number ? "number" : "";
+                    const type = tag ? "tag" : comment ? "comment" : property ? "property" : string ? "string" : keyword ? "keyword" : number ? "number" : "";
                     highlighted += `<span class="token-${type}">${escapeHtml(token)}</span>`;
                     cursor = match.index + token.length;
                 }
@@ -3615,6 +3876,7 @@ anim.start();</code></pre>
                 const options = {
                     mode: anim.opts.mode,
                     quality: document.getElementById("quality").value,
+                    renderer: document.getElementById("renderer").value,
                     charSet: anim.opts.charSet,
                     align: anim.opts.align,
                     color: anim.opts.color,
@@ -3625,37 +3887,57 @@ anim.start();</code></pre>
                     pulse: anim.opts.pulse,
                     cursor: anim.opts.cursor,
                 };
-                if (anim.opts.mode === "fadeIn" || anim.opts.mode === "fadeOut") {
+                if (["fadeIn", "fadeOut", "dissolveIn", "dissolveOut"].includes(anim.opts.mode)) {
                     options.revealDirection = anim.opts.revealDirection || "center";
                 }
-                if (anim.opts.mode === "image") {
+                if (anim._sourceImage || anim.opts.imageAnimationRange) {
                     options.image = "./your-image.png";
                     options.imageScale = anim.opts.imageScale;
+                    options.imageScaleX = anim.opts.imageScaleX;
+                    options.imageScaleY = anim.opts.imageScaleY;
                     options.imageFov = anim.opts.imageFov;
+                    options.imageLuminance = anim.opts.imageLuminance;
+                    options.animateImageFrames = anim.opts.animateImageFrames;
+                    options.imageFrameRate = anim.opts.imageFrameRate;
                     options.fit = anim.opts.fit;
                     options.colorFromImage = anim.opts.colorFromImage;
                     options.imageChars = anim.opts.imageChars;
+                    options.animateImageMask = anim.opts.animateImageMask;
+                    if (anim.opts.imageAnimationRange) options.imageAnimationRange = anim.opts.imageAnimationRange;
                 }
                 if (colorMode === "gradient" && anim.opts.gradient) options.gradient = anim.opts.gradient;
                 if (colorMode === "hueRotate" || colorMode === "breathe") options.colorAnimation = anim.opts.colorAnimation;
                 if (anim.opts.backdrop && anim.opts.backdrop.enabled) options.backdrop = anim.opts.backdrop;
                 let source = `const anim = new asciiam("#hero", ${JSON.stringify(options, null, 2)});`;
-                if (anim.opts.mode === "image") source += `\n// Replace ./your-image.png with your image URL or path.`;
-                source += "\nanim.start();";
+                if (anim._sourceImage || anim.opts.imageAnimationRange) source += `\n// Replace ./your-image.png with your image URL or path.`;
+                if (sequenceDraft.length) {
+                    source += `\n\nanim.setSequence(${JSON.stringify(serializableSequence(), null, 2)}, { loop: ${sequenceLoop} });`;
+                    source += `\nanim.on("sequenceStepStart", ({ index, step }) => {`;
+                    source += `\n  console.log("started", index, step.mode);`;
+                    source += `\n});`;
+                    source += `\nanim.on("sequenceStepComplete", ({ index, step }) => {`;
+                    source += `\n  console.log("completed", index, step.mode);`;
+                    source += `\n});`;
+                    source += "\nanim.playSequence();";
+                } else {
+                    source += "\nanim.start();";
+                }
                 return source;
             }
             function getPersistableOptions() {
                 const keys = [
-                    "mode", "quality", "charSet", "align", "color", "gradient", "backdrop",
+                    "mode", "quality", "renderer", "charSet", "align", "color", "gradient", "backdrop",
                     "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "colorAnimation",
-                    "imageScale", "imageFov", "fit", "colorFromImage", "imageMaskMode", "revealDirection",
+                    "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
+                    "fireDensity", "starfieldDensity", "orbitDensity", "glitchIntensity", "typewriterDuration",
+                    "sequence", "sequenceOptions",
                 ];
                 const options = {};
                 keys.forEach((key) => {
                     if (anim.opts[key] !== undefined) options[key] = anim.opts[key];
                 });
                 options.quality = document.getElementById("quality").value;
-                if (options.mode === "image") options.mode = "wave";
+                delete options.mode;
                 return JSON.parse(JSON.stringify(options));
             }
             function snapshotKey(options) {
@@ -3685,16 +3967,26 @@ anim.start();</code></pre>
                 const directionLabels = {
                     "left-to-right": "L→R",
                     "right-to-left": "R→L",
+                    "top-to-bottom": "T→B",
+                    "bottom-to-top": "B→T",
+                    diagonal: "Diagonal",
                     center: "Center",
+                    edges: "Edges",
                 };
-                const motion = mode === "fadeIn" || mode === "fadeOut"
+                const motion = ["fadeIn", "fadeOut", "dissolveIn", "dissolveOut"].includes(mode)
                     ? directionLabels[anim.opts.revealDirection] || "Center"
                     : `${Number(anim.opts.speed).toFixed(1)}×`;
                 const backdropLabel = backdrop
                     ? backdrop.gradient?.type || "solid"
                     : "off";
 
-                setToolbarSummary("qualityTriggerBtn", "qualityToolbarStatus", "Quality", document.getElementById("quality").value);
+                const rendererBackend = anim.getRendererInfo().backend === "webgl2" ? "GPU" : "CPU";
+                setToolbarSummary("qualityTriggerBtn", "qualityToolbarStatus", "Quality", `${document.getElementById("quality").value} · ${rendererBackend}`);
+                const sequenceState = anim.getSequenceState();
+                const sequenceLabel = sequenceDraft.length
+                    ? sequenceState.running ? `${sequenceState.index + 1}/${sequenceDraft.length}` : `${sequenceDraft.length} steps`
+                    : "off";
+                setToolbarSummary("sequenceTriggerBtn", "sequenceToolbarStatus", "Sequence", sequenceLabel);
                 setToolbarSummary("modeTriggerBtn", "modeToolbarStatus", "Mode", mode);
                 setToolbarSummary("charsetTriggerBtn", "charsetToolbarStatus", "Character set", charset === "asciiExtended" ? "extended" : charset);
                 setToolbarSummary("motionTriggerBtn", "motionToolbarStatus", "Motion", motion);
@@ -3740,9 +4032,10 @@ anim.start();</code></pre>
                 const nextIndex = historyIndex + direction;
                 if (nextIndex < 0 || nextIndex >= optionHistory.length) return;
                 historyIndex = nextIndex;
+                const targetSnapshot = optionHistory[historyIndex];
                 applyingHistory = true;
                 try {
-                    applyDemoOptions(optionHistory[historyIndex]);
+                    applyDemoOptions(targetSnapshot);
                 } finally {
                     applyingHistory = false;
                 }
@@ -3752,8 +4045,14 @@ anim.start();</code></pre>
                 updatePresetDirtyState();
                 syncHistoryButtons();
             }
-            document.getElementById("undoSettingsBtn").onclick = () => applyHistory(-1);
-            document.getElementById("redoSettingsBtn").onclick = () => applyHistory(1);
+            document.getElementById("undoSettingsBtn").onclick = (event) => {
+                event.preventDefault();
+                applyHistory(-1);
+            };
+            document.getElementById("redoSettingsBtn").onclick = (event) => {
+                event.preventDefault();
+                applyHistory(1);
+            };
             document.addEventListener("keydown", (event) => {
                 const target = event.target;
                 if (!(event.ctrlKey || event.metaKey) || event.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable) return;
@@ -3949,9 +4248,10 @@ anim.start();</code></pre>
                 control.addEventListener("change", renderUsage);
             });
             syncControlsFromOpts();
-            if (restoredSettings?.options) document.getElementById("preset").value = "";
+            if (requestedPreset) document.getElementById("preset").value = requestedPresetName;
+            else if (restoredSettings?.options) document.getElementById("preset").value = "";
             renderSavedPresetList();
-            activePresetSnapshot = restoredSettings?.options ? null : getPersistableOptions();
+            activePresetSnapshot = requestedPreset || !restoredSettings?.options ? getPersistableOptions() : null;
             updatePresetDirtyState();
             settingsReady = true;
             optionHistory = [getPersistableOptions()];

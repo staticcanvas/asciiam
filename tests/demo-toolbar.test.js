@@ -2,259 +2,546 @@
  * @jest-environment node
  */
 
-import { afterEach, describe, expect, it } from "@jest/globals";
-import { readFileSync } from "node:fs";
-import { JSDOM, VirtualConsole } from "jsdom";
+import { afterEach, describe, expect, it } from '@jest/globals';
+import { readFileSync } from 'node:fs';
+import { JSDOM, VirtualConsole } from 'jsdom';
 
-const projectFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const projectFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-function createDemo(includedImages = []) {
-    const dom = new JSDOM(projectFile("public/index.html"), {
-        runScripts: "outside-only",
-        url: "https://demo.test/",
-        virtualConsole: new VirtualConsole(),
-    });
-    const { window } = dom;
-    const stage = window.document.getElementById("stage");
-    Object.defineProperties(stage, {
-        clientWidth: { configurable: true, value: 320 },
-        clientHeight: { configurable: true, value: 180 },
-    });
-    window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
-    window.requestAnimationFrame = () => 1;
-    window.cancelAnimationFrame = () => {};
-    window.ResizeObserver = class { observe() {} disconnect() {} };
-    window.IntersectionObserver = class { observe() {} disconnect() {} };
-    window.HTMLElement.prototype.showPopover = function showPopover() {};
-    window.HTMLElement.prototype.hidePopover = function hidePopover() {};
-    window.HTMLCanvasElement.prototype.getContext = () => ({
-        setTransform() {}, clearRect() {}, fillRect() {}, fillText() {}, save() {}, restore() {}, drawImage() {},
-        measureText: () => ({ width: 8 }),
-        createLinearGradient: () => ({ addColorStop() {} }),
-        createRadialGradient: () => ({ addColorStop() {} }),
-        getImageData: () => ({ data: new Uint8ClampedArray(4) }),
-    });
-    window.fetch = async (resource) => Response.json(
-        String(resource) === "/assets/backgrounds.json" ? includedImages : [],
-    );
-    window.eval(projectFile("public/libs/asciiam.js"));
-    const demoScript = [...window.document.querySelectorAll("script:not([src])")].at(-1);
-    window.eval(demoScript.textContent);
-    return dom;
+function createDemo(includedImages = [], url = 'https://demo.test/') {
+  const dom = new JSDOM(projectFile('public/index.html'), {
+    runScripts: 'outside-only',
+    url,
+    virtualConsole: new VirtualConsole(),
+  });
+  const { window } = dom;
+  const stage = window.document.getElementById('stage');
+  Object.defineProperties(stage, {
+    clientWidth: { configurable: true, value: 320 },
+    clientHeight: { configurable: true, value: 180 },
+  });
+  window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+  window.requestAnimationFrame = () => 1;
+  window.cancelAnimationFrame = () => {};
+  window.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  };
+  window.IntersectionObserver = class {
+    observe() {}
+    disconnect() {}
+  };
+  window.HTMLElement.prototype.showPopover = function showPopover() {};
+  window.HTMLElement.prototype.hidePopover = function hidePopover() {};
+  window.HTMLCanvasElement.prototype.getContext = () => ({
+    setTransform() {},
+    clearRect() {},
+    fillRect() {},
+    fillText() {},
+    save() {},
+    restore() {},
+    drawImage() {},
+    measureText: () => ({ width: 8 }),
+    createLinearGradient: () => ({ addColorStop() {} }),
+    createRadialGradient: () => ({ addColorStop() {} }),
+    getImageData: () => ({ data: new Uint8ClampedArray(4) }),
+  });
+  window.fetch = async (resource) =>
+    Response.json(String(resource) === '/assets/backgrounds.json' ? includedImages : []);
+  window.eval(projectFile('public/libs/asciiam.js'));
+  const demoScript = [...window.document.querySelectorAll('script:not([src])')].at(-1);
+  window.eval(demoScript.textContent);
+  return dom;
 }
 
 let activeDom = null;
 afterEach(() => {
-    activeDom?.window.close();
-    activeDom = null;
+  activeDom?.window.close();
+  activeDom = null;
 });
 
-describe("demo toolbar quality-of-life controls", () => {
-    it("renders included image manifest entries as selectable defaults", async () => {
-        activeDom = createDemo([
-            { name: "Bird Silhouette", src: "/assets/images/bird-silhouette.svg" },
-            { name: "Hawk Silhouette", src: "/assets/images/hawk-silhouette.svg" },
-        ]);
-        await new Promise((resolve) => setImmediate(resolve));
-        const { document } = activeDom.window;
+describe('demo toolbar quality-of-life controls', () => {
+  it('renders included image manifest entries as selectable defaults', async () => {
+    activeDom = createDemo([
+      { name: 'Bird Silhouette', src: '/assets/images/bird-silhouette.svg' },
+      { name: 'Hawk Silhouette', src: '/assets/images/hawk-silhouette.svg' },
+    ]);
+    await new Promise((resolve) => setImmediate(resolve));
+    const { document } = activeDom.window;
 
-        expect(document.querySelectorAll("#localImages .image-select")).toHaveLength(2);
-        expect(document.getElementById("localImageSection").hidden).toBe(false);
-        expect(document.getElementById("imageStatus").textContent).toBe("2 included images ready. Select one to apply it.");
+    expect(document.querySelectorAll('#localImages .image-select')).toHaveLength(2);
+    expect(document.getElementById('localImageSection').hidden).toBe(false);
+    expect(document.getElementById('imageStatus').textContent).toBe(
+      '2 included images ready. Select one to apply it.'
+    );
+  });
+
+  it('tracks dirty state and supports undo and redo', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const speed = document.getElementById('speed');
+    const indicator = document.getElementById('presetDirtyIndicator');
+    const undo = document.getElementById('undoSettingsBtn');
+    const redo = document.getElementById('redoSettingsBtn');
+
+    expect(indicator.textContent).toBe('heroWave');
+    expect(undo.disabled).toBe(true);
+
+    speed.value = '2';
+    speed.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(indicator.textContent).toBe('Modified');
+    expect(undo.disabled).toBe(false);
+    undo.click();
+    expect(speed.value).toBe('1');
+    expect(redo.disabled).toBe(false);
+
+    redo.click();
+    expect(speed.value).toBe('2');
+  });
+
+  it('uses one toolbar tab stop and arrow keys skip disabled controls', () => {
+    activeDom = createDemo();
+    const { document, KeyboardEvent } = activeDom.window;
+    const controls = [...document.querySelectorAll('.ctrl-bar > .ctrl-pill')];
+    const preset = document.getElementById('presetTriggerBtn');
+
+    expect(controls.filter((control) => control.tabIndex === 0)).toEqual([preset]);
+    preset.focus();
+    preset.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+    expect(document.activeElement.textContent).toContain('Sequence');
+    expect(controls.filter((control) => control.tabIndex === 0)).toEqual([document.activeElement]);
+  });
+
+  it('keeps the primary dock on-screen and moves secondary controls into Advanced', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    const primaryLabels = [...document.querySelectorAll('.ctrl-bar > .ctrl-pill')].map((control) =>
+      control.textContent.trim().replace(/\s+/g, ' ')
+    );
+    const advanced = document.getElementById('moreAdvancedActions');
+    const workspace = document.getElementById('moreWorkspaceActions');
+
+    expect(primaryLabels).toHaveLength(8);
+    expect(primaryLabels.join(' ')).toContain('Preset');
+    expect(primaryLabels.join(' ')).toContain('Sequence');
+    expect(primaryLabels.join(' ')).toContain('Mode');
+    expect(primaryLabels.join(' ')).toContain('Motion');
+    expect(primaryLabels.join(' ')).toContain('Color');
+    expect(primaryLabels.join(' ')).toContain('Advanced');
+    expect(primaryLabels.join(' ')).toContain('Image');
+    expect(primaryLabels.join(' ')).toContain('Code');
+    expect(advanced.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(4);
+    expect(workspace.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(4);
+    expect(
+      document.getElementById('pop-more').contains(document.getElementById('pop-quality'))
+    ).toBe(true);
+    expect(document.querySelector('.stage-top-actions').firstElementChild.id).toBe(
+      'aboutTriggerBtn'
+    );
+    expect(document.getElementById('pop-more').contains(document.getElementById('pop-about'))).toBe(
+      false
+    );
+  });
+
+  it('surfaces live values, contextual reveal direction, and clear action groups', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const revealGroup = document.getElementById('revealDirectionGroup');
+    const fadeInButton = document.querySelector('[data-mode="fadeIn"]');
+
+    expect(document.getElementById('qualityToolbarStatus').textContent).toBe('ultra · CPU');
+    expect(document.getElementById('modeToolbarStatus').textContent).toBe('wave');
+    expect(document.getElementById('motionToolbarStatus').textContent).toBe('1.0×');
+    expect(revealGroup.hidden).toBe(true);
+
+    fadeInButton.click();
+    expect(revealGroup.hidden).toBe(false);
+    expect(document.getElementById('motionToolbarStatus').textContent).toBe('Center');
+
+    const direction = document.getElementById('revealDirection');
+    direction.value = 'right-to-left';
+    direction.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(document.getElementById('motionToolbarStatus').textContent).toBe('R→L');
+    expect(document.getElementById('motionTriggerBtn').getAttribute('aria-label')).toBe(
+      'Motion, R→L'
+    );
+    ['top-to-bottom', 'bottom-to-top', 'diagonal', 'edges'].forEach((value) => {
+      expect(direction.querySelector(`option[value="${value}"]`)).not.toBeNull();
     });
 
-    it("tracks dirty state and supports undo and redo", () => {
-        activeDom = createDemo();
-        const { document, Event } = activeDom.window;
-        const speed = document.getElementById("speed");
-        const indicator = document.getElementById("presetDirtyIndicator");
-        const undo = document.getElementById("undoSettingsBtn");
-        const redo = document.getElementById("redoSettingsBtn");
+    expect(document.querySelectorAll('.ctrl-bar__separator')).toHaveLength(2);
+    expect(document.getElementById('themeToggleBtn').classList).toContain('ctrl-pill--utility');
+    expect(document.querySelector('.ctrl-pill--code').classList).toContain('ctrl-pill--primary');
+  });
 
-        expect(indicator.textContent).toBe("heroWave");
-        expect(undo.disabled).toBe(true);
-
-        speed.value = "2";
-        speed.dispatchEvent(new Event("input", { bubbles: true }));
-
-        expect(indicator.textContent).toBe("Modified");
-        expect(undo.disabled).toBe(false);
-        undo.click();
-        expect(speed.value).toBe("1");
-        expect(redo.disabled).toBe(false);
-
-        redo.click();
-        expect(speed.value).toBe("2");
+  it('offers transition-focused and coined animation modes', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    ['irisIn', 'irisOut', 'dissolveIn', 'dissolveOut', 'lumaFold', 'riftLace', 'echoBloom'].forEach((mode) => {
+      const button = document.querySelector(`[data-mode="${mode}"]`);
+      expect(button).not.toBeNull();
+      button.click();
+      expect(document.getElementById('modeToolbarStatus').textContent).toBe(mode);
     });
+  });
 
-    it("uses one toolbar tab stop and arrow keys skip disabled controls", () => {
-        activeDom = createDemo();
-        const { document, KeyboardEvent } = activeDom.window;
-        const controls = [...document.querySelectorAll(".ctrl-bar > .ctrl-pill")];
-        const preset = document.getElementById("presetTriggerBtn");
+  it('lets developers select automatic, WebGL2, or Canvas 2D rendering', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const renderer = document.getElementById('renderer');
 
-        expect(controls.filter((control) => control.tabIndex === 0)).toEqual([preset]);
-        preset.focus();
-        preset.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    expect([...renderer.options].map((option) => option.value)).toEqual([
+      'auto',
+      'webgl2',
+      'canvas2d',
+    ]);
+    expect(document.getElementById('rendererStatus').textContent).toContain('fallback');
+    renderer.value = 'canvas2d';
+    renderer.dispatchEvent(new Event('change', { bubbles: true }));
 
-        expect(document.activeElement.textContent).toContain("Mode");
-        expect(controls.filter((control) => control.tabIndex === 0)).toEqual([document.activeElement]);
+    expect(document.getElementById('rendererStatus').textContent).toContain('CPU renderer active');
+    expect(document.getElementById('qualityToolbarStatus').textContent).toBe('ultra · CPU');
+    expect(document.getElementById('usageCodePopover').textContent).toContain(
+      '"renderer": "canvas2d"'
+    );
+  });
+
+  it('controls backdrop opacity from zero to one with exact input', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const enabled = document.getElementById('backdropEnable');
+    const range = document.getElementById('backdropOpacity');
+    const number = document.getElementById('backdropOpacityNumber');
+    const value = document.getElementById('backdropOpacityVal');
+
+    expect(range.min).toBe('0');
+    expect(range.max).toBe('1');
+    expect(range.step).toBe('0.01');
+    enabled.checked = true;
+    enabled.dispatchEvent(new Event('change', { bubbles: true }));
+
+    number.value = '0';
+    number.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(range.value).toBe('0');
+    expect(value.textContent).toBe('0.00');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"opacity": 0');
+
+    range.value = '1';
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(number.value).toBe('1.00');
+    expect(value.textContent).toBe('1.00');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"opacity": 1');
+
+    number.value = '1.5';
+    number.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(number.value).toBe('1.00');
+    expect(range.value).toBe('1');
+  });
+
+  it('offers the vortex mode and preset through the live controls', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    const vortexButton = document.querySelector('[data-mode="vortex"]');
+
+    expect(vortexButton).not.toBeNull();
+    expect(document.querySelector('#preset option[value="vortexFlow"]')).not.toBeNull();
+    vortexButton.click();
+    expect(vortexButton.getAttribute('aria-pressed')).toBe('true');
+    expect(document.getElementById('modeToolbarStatus').textContent).toBe('vortex');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"mode": "vortex"');
+  });
+
+  it('offers the plasma mode and preset through the live controls', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    const plasmaButton = document.querySelector('[data-mode="plasma"]');
+
+    expect(plasmaButton).not.toBeNull();
+    expect(document.querySelector('#preset option[value="plasmaField"]')).not.toBeNull();
+    plasmaButton.click();
+    expect(plasmaButton.getAttribute('aria-pressed')).toBe('true');
+    expect(document.getElementById('modeToolbarStatus').textContent).toBe('plasma');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"mode": "plasma"');
+  });
+
+  it('offers the remaining animation inventory through modes and presets', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    const expected = [
+      ['fire', 'risingEmbers'],
+      ['starfield', 'deepSpace'],
+      ['glitch', 'signalGlitch'],
+      ['typewriter', 'terminalType'],
+      ['orbit', 'orbitalFlow'],
+    ];
+
+    expected.forEach(([mode, preset]) => {
+      const button = document.querySelector(`[data-mode="${mode}"]`);
+      expect(button).not.toBeNull();
+      expect(document.querySelector(`#preset option[value="${preset}"]`)).not.toBeNull();
+      button.click();
+      expect(button.getAttribute('aria-pressed')).toBe('true');
+      expect(document.getElementById('modeToolbarStatus').textContent).toBe(mode);
+      expect(document.getElementById('usageCodePopover').textContent).toContain(
+        `"mode": "${mode}"`
+      );
     });
+  });
 
-    it("keeps the primary dock on-screen and moves secondary controls into More", () => {
-        activeDom = createDemo();
-        const { document } = activeDom.window;
-        const primaryLabels = [...document.querySelectorAll(".ctrl-bar > .ctrl-pill")]
-            .map((control) => control.textContent.trim().replace(/\s+/g, " "));
-        const advanced = document.getElementById("moreAdvancedActions");
-        const workspace = document.getElementById("moreWorkspaceActions");
+  it('opens a gallery preset through the web utility query parameter', () => {
+    activeDom = createDemo([], 'https://demo.test/?preset=deepSpace');
+    const { document } = activeDom.window;
 
-        expect(primaryLabels).toHaveLength(7);
-        expect(primaryLabels.join(" ")).toContain("Preset");
-        expect(primaryLabels.join(" ")).toContain("Mode");
-        expect(primaryLabels.join(" ")).toContain("Motion");
-        expect(primaryLabels.join(" ")).toContain("Color");
-        expect(primaryLabels.join(" ")).toContain("More");
-        expect(primaryLabels.join(" ")).toContain("Image");
-        expect(primaryLabels.join(" ")).toContain("Code");
-        expect(advanced.querySelectorAll(":scope > .ctrl-pill")).toHaveLength(4);
-        expect(workspace.querySelectorAll(":scope > .ctrl-pill")).toHaveLength(4);
-        expect(document.getElementById("pop-more").contains(document.getElementById("pop-quality"))).toBe(true);
-        expect(document.querySelector(".stage-top-actions").firstElementChild.id).toBe("aboutTriggerBtn");
-        expect(document.getElementById("pop-more").contains(document.getElementById("pop-about"))).toBe(false);
-    });
+    expect(document.getElementById('preset').value).toBe('deepSpace');
+    expect(document.querySelector('[data-mode="starfield"]').getAttribute('aria-pressed')).toBe(
+      'true'
+    );
+    expect(document.getElementById('presetDirtyIndicator').textContent).toBe('deepSpace');
+    expect(document.getElementById('usageCodePopover').textContent).toContain(
+      '"mode": "starfield"'
+    );
+  });
 
-    it("surfaces live values, contextual reveal direction, and clear action groups", () => {
-        activeDom = createDemo();
-        const { document, Event } = activeDom.window;
-        const revealGroup = document.getElementById("revealDirectionGroup");
-        const fadeInButton = document.querySelector('[data-mode="fadeIn"]');
+  it('keeps the global mode when a preset changes and exposes no image-only effect menu', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const ripple = document.querySelector('[data-mode="ripple"]');
+    const preset = document.getElementById('preset');
 
-        expect(document.getElementById("qualityToolbarStatus").textContent).toBe("ultra");
-        expect(document.getElementById("modeToolbarStatus").textContent).toBe("wave");
-        expect(document.getElementById("motionToolbarStatus").textContent).toBe("1.0×");
-        expect(revealGroup.hidden).toBe(true);
+    ripple.click();
+    preset.value = 'deepSpace';
+    preset.dispatchEvent(new Event('change', { bubbles: true }));
 
-        fadeInButton.click();
-        expect(revealGroup.hidden).toBe(false);
-        expect(document.getElementById("motionToolbarStatus").textContent).toBe("Center");
+    expect(document.getElementById('modeToolbarStatus').textContent).toBe('ripple');
+    expect(document.querySelector('[data-mode="ripple"]').getAttribute('aria-pressed')).toBe('true');
+    expect(document.getElementById('imageMaskMode')).toBeNull();
+    expect(document.querySelector('[data-mode="image"]')).toBeNull();
+  });
 
-        const direction = document.getElementById("revealDirection");
-        direction.value = "right-to-left";
-        direction.dispatchEvent(new Event("change", { bubbles: true }));
-        expect(document.getElementById("motionToolbarStatus").textContent).toBe("R→L");
-        expect(document.getElementById("motionTriggerBtn").getAttribute("aria-label")).toBe("Motion, R→L");
+  it('configures an incoming morph transition in the sequence editor', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    document.getElementById('addSequenceStepBtn').click();
+    document.getElementById('addSequenceStepBtn').click();
+    const secondStep = document.querySelectorAll('.sequence-step')[1];
+    const transition = secondStep.querySelector('select[aria-label="Step 2 transition"]');
+    const duration = secondStep.querySelector('input[aria-label="Step 2 morph duration in seconds"]');
 
-        expect(document.querySelectorAll(".ctrl-bar__separator")).toHaveLength(2);
-        expect(document.getElementById("themeToggleBtn").classList).toContain("ctrl-pill--utility");
-        expect(document.querySelector(".ctrl-pill--code").classList).toContain("ctrl-pill--primary");
-    });
+    transition.value = 'morph';
+    transition.dispatchEvent(new Event('change', { bubbles: true }));
+    duration.value = '1.2';
+    duration.dispatchEvent(new Event('change', { bubbles: true }));
 
-    it("controls backdrop opacity from zero to one with exact input", () => {
-        activeDom = createDemo();
-        const { document, Event } = activeDom.window;
-        const enabled = document.getElementById("backdropEnable");
-        const range = document.getElementById("backdropOpacity");
-        const number = document.getElementById("backdropOpacityNumber");
-        const value = document.getElementById("backdropOpacityVal");
+    expect(duration.hidden).toBe(false);
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"type": "morph"');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"duration": 1.2');
+  });
 
-        expect(range.min).toBe("0");
-        expect(range.max).toBe("1");
-        expect(range.step).toBe("0.01");
-        enabled.checked = true;
-        enabled.dispatchEvent(new Event("change", { bubbles: true }));
+  it('renders hero and splash ASCII as media slots and moves one canvas between them', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    const heroButton = document.querySelector('[data-preview-type="hero-card"]');
+    const splashButton = document.querySelector('[data-preview-type="splash"]');
 
-        number.value = "0";
-        number.dispatchEvent(new Event("input", { bubbles: true }));
-        expect(range.value).toBe("0");
-        expect(value.textContent).toBe("0.00");
-        expect(document.getElementById("usageCodePopover").textContent).toContain('"opacity": 0');
+    heroButton.click();
+    expect(document.querySelector('[data-ascii-target="hero-card"] > canvas')).not.toBeNull();
+    expect(document.querySelector('.preview-hero-card .hero-card-content')).not.toBeNull();
+    expect(document.querySelector('.hero-card-reveal-layer')).toBeNull();
 
-        range.value = "1";
-        range.dispatchEvent(new Event("input", { bubbles: true }));
-        expect(number.value).toBe("1.00");
-        expect(value.textContent).toBe("1.00");
-        expect(document.getElementById("usageCodePopover").textContent).toContain('"opacity": 1');
+    splashButton.click();
+    expect(document.querySelector('[data-ascii-target="splash"] > canvas')).not.toBeNull();
+    expect(document.querySelector('[data-ascii-target="hero-card"] > canvas')).toBeNull();
+  });
 
-        number.value = "1.5";
-        number.dispatchEvent(new Event("change", { bubbles: true }));
-        expect(number.value).toBe("1.00");
-        expect(range.value).toBe("1");
-    });
+  it('configures an image animation color range and includes it in generated code', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const toggle = document.getElementById('imageColorRangeToggle');
+    const min = document.getElementById('imageColorRangeMin');
+    const max = document.getElementById('imageColorRangeMax');
 
-    it("offers the vortex mode and preset through the live controls", () => {
-        activeDom = createDemo();
-        const { document } = activeDom.window;
-        const vortexButton = document.querySelector('[data-mode="vortex"]');
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event('change', { bubbles: true }));
+    min.value = '#800000';
+    min.dispatchEvent(new Event('change', { bubbles: true }));
+    max.value = '#ff8080';
+    max.dispatchEvent(new Event('change', { bubbles: true }));
+    document.querySelector('[data-mode="ripple"]').click();
 
-        expect(vortexButton).not.toBeNull();
-        expect(document.querySelector('#preset option[value="vortexFlow"]')).not.toBeNull();
-        vortexButton.click();
-        expect(vortexButton.getAttribute("aria-pressed")).toBe("true");
-        expect(document.getElementById("modeToolbarStatus").textContent).toBe("vortex");
-        expect(document.getElementById("usageCodePopover").textContent).toContain('"mode": "vortex"');
-    });
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    expect(document.getElementById('imageColorRangeControls').hidden).toBe(false);
+    expect(document.getElementById('usageCodePopover').textContent).toContain(
+      '"imageAnimationRange"'
+    );
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"min": "#800000"');
+  });
 
-    it("offers the plasma mode and preset through the live controls", () => {
-        activeDom = createDemo();
-        const { document } = activeDom.window;
-        const plasmaButton = document.querySelector('[data-mode="plasma"]');
+  it('exposes independent horizontal and vertical image scaling', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const horizontal = document.getElementById('imageScaleX');
+    const vertical = document.getElementById('imageScaleY');
 
-        expect(plasmaButton).not.toBeNull();
-        expect(document.querySelector('#preset option[value="plasmaField"]')).not.toBeNull();
-        plasmaButton.click();
-        expect(plasmaButton.getAttribute("aria-pressed")).toBe("true");
-        expect(document.getElementById("modeToolbarStatus").textContent).toBe("plasma");
-        expect(document.getElementById("usageCodePopover").textContent).toContain('"mode": "plasma"');
-    });
+    horizontal.value = '1.75';
+    horizontal.dispatchEvent(new Event('input', { bubbles: true }));
+    vertical.value = '0.65';
+    vertical.dispatchEvent(new Event('input', { bubbles: true }));
 
-    it("renders safe, classified syntax tokens with the JetBrains Mono code font", () => {
-        activeDom = createDemo();
-        const { document } = activeDom.window;
-        const code = document.getElementById("usageCodePopover");
-        const fontLink = document.querySelector("link[href*='family=JetBrains+Mono']");
+    expect(document.getElementById('imageScaleXVal').textContent).toBe('1.75×');
+    expect(document.getElementById('imageScaleYVal').textContent).toBe('0.65×');
+  });
 
-        expect(fontLink.href).toContain("family=JetBrains+Mono");
-        expect(code.querySelectorAll(".token-keyword").length).toBeGreaterThan(0);
-        expect(code.querySelectorAll(".token-property").length).toBeGreaterThan(0);
-        expect(code.querySelectorAll(".token-string").length).toBeGreaterThan(0);
-        expect(code.querySelectorAll(".token-number").length).toBeGreaterThan(0);
-        expect(code.querySelector(".token-")).toBeNull();
-        expect(code.textContent).toContain("<=>?@");
-        expect(code.innerHTML).toContain("&lt;");
-    });
+  it('exposes animated-image playback and sampling-rate controls', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const playback = document.getElementById('animateImageFramesToggle');
+    const frameRate = document.getElementById('imageFrameRate');
 
-    it("provides workflow, control, and operational references in About", () => {
-        activeDom = createDemo();
-        const { document } = activeDom.window;
-        const headings = [...document.querySelectorAll("#pop-about h2")].map((heading) => heading.textContent.trim());
+    playback.checked = false;
+    playback.dispatchEvent(new Event('change', { bubbles: true }));
+    frameRate.value = '18';
+    frameRate.dispatchEvent(new Event('input', { bubbles: true }));
 
-        expect(headings).toEqual(expect.arrayContaining([
-            "Usage and export formats",
-            "Architectural Highlights & Features",
-            "Working with the demo",
-            "Control reference",
-            "Operational notes",
-        ]));
-        expect(document.querySelectorAll(".about-export-table tbody tr")).toHaveLength(5);
-        expect(document.querySelectorAll(".about-control-table tbody tr")).toHaveLength(9);
-        expect(document.getElementById("pop-about").textContent).toContain("public/assets/images");
-    });
+    expect(playback.getAttribute('aria-checked')).toBe('false');
+    expect(document.getElementById('imageFrameRateVal').textContent).toBe('18 fps');
+  });
 
-    it("opens About with Ctrl or Command+A without overriding editable fields", () => {
-        activeDom = createDemo();
-        const { document, KeyboardEvent } = activeDom.window;
-        const about = document.getElementById("pop-about");
-        const input = document.getElementById("savedPresetName");
-        let openCount = 0;
-        about.showPopover = () => { openCount += 1; };
+  it('exposes silhouette-aware SVG luminance mapping', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const luminance = document.getElementById('imageLuminance');
 
-        document.dispatchEvent(new KeyboardEvent("keydown", { key: "a", ctrlKey: true, bubbles: true }));
-        document.dispatchEvent(new KeyboardEvent("keydown", { key: "A", metaKey: true, bubbles: true }));
-        expect(openCount).toBe(2);
+    expect(luminance.value).toBe('auto');
+    luminance.value = 'invert';
+    luminance.dispatchEvent(new Event('change', { bubbles: true }));
 
-        input.dispatchEvent(new KeyboardEvent("keydown", { key: "a", ctrlKey: true, bubbles: true }));
-        expect(openCount).toBe(2);
-        expect(document.getElementById("aboutTriggerBtn").getAttribute("aria-keyshortcuts")).toBe("Control+A Meta+A");
-    });
+    expect(luminance.value).toBe('invert');
+  });
+
+  it('renders safe, classified syntax tokens with the JetBrains Mono code font', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    const code = document.getElementById('usageCodePopover');
+    const fontLink = document.querySelector("link[href*='family=JetBrains+Mono']");
+
+    expect(fontLink.href).toContain('family=JetBrains+Mono');
+    expect(code.querySelectorAll('.token-keyword').length).toBeGreaterThan(0);
+    expect(code.querySelectorAll('.token-property').length).toBeGreaterThan(0);
+    expect(code.querySelectorAll('.token-string').length).toBeGreaterThan(0);
+    expect(code.querySelectorAll('.token-number').length).toBeGreaterThan(0);
+    expect(code.querySelector('.token-')).toBeNull();
+    expect(code.textContent).toContain('<=>?@');
+    expect(code.innerHTML).toContain('&lt;');
+  });
+
+  it('flips the foreground gradient stop direction', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const colorMode = document.getElementById('colorMode');
+    colorMode.value = 'gradient';
+    colorMode.dispatchEvent(new Event('change', { bubbles: true }));
+    const before = [...document.querySelectorAll('#gradStopsContainer .grad-stop-input')].map(
+      (input) => input.value
+    );
+
+    document.getElementById('flipGradientBtn').click();
+    const after = [...document.querySelectorAll('#gradStopsContainer .grad-stop-input')].map(
+      (input) => input.value
+    );
+
+    expect(after).toEqual(before.reverse());
+    expect(document.getElementById('usageCodePopover').textContent).toContain(
+      `"stops": [\n      "${after[0]}"`
+    );
+  });
+
+  it('builds, reorders, times, and plays an animation sequence', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const add = document.getElementById('addSequenceStepBtn');
+
+    add.click();
+    document.querySelector('[data-mode="fadeOut"]').click();
+    add.click();
+    document.querySelector('[data-mode="fadeIn"]').click();
+    add.click();
+
+    const steps = () => [...document.querySelectorAll('#sequenceList .sequence-step')];
+    expect(steps()).toHaveLength(3);
+    expect(document.getElementById('sequenceToolbarStatus').textContent).toBe('3 steps');
+
+    const duration = steps()[0].querySelector('input[type="number"]');
+    duration.value = '5';
+    duration.dispatchEvent(new Event('change', { bubbles: true }));
+    const stagger = steps()[1].querySelectorAll('input[type="number"]')[1];
+    stagger.value = '1.5';
+    stagger.dispatchEvent(new Event('change', { bubbles: true }));
+
+    steps()[2].querySelector('button[aria-label="Move step 3 up"]').click();
+    expect(steps()[1].querySelector('select').value).toBe('fadeIn');
+
+    document.getElementById('playSequenceBtn').click();
+    expect(document.getElementById('sequenceStatus').textContent).toContain('Playing step 1');
+    expect(steps()[0].getAttribute('aria-current')).toBe('step');
+
+    const source = document.getElementById('usageCodePopover').textContent;
+    expect(source).toContain('anim.setSequence');
+    expect(source).toContain('"duration": 5');
+    expect(source).toContain('"delay": 1.5');
+    expect(source).toContain('anim.on("sequenceStepStart"');
+    expect(source).toContain('anim.playSequence()');
+  });
+
+  it('keeps About concise and routes detailed guidance to documentation', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    const headings = [...document.querySelectorAll('#pop-about h2')].map((heading) =>
+      heading.textContent.trim()
+    );
+
+    expect(headings).toEqual(
+      expect.arrayContaining(['Product overview', 'Configure here. Validate here. Document there.'])
+    );
+    expect(document.querySelectorAll('.about-reference-card')).toHaveLength(3);
+    expect(document.querySelector('.about-export-table')).toBeNull();
+    expect(document.querySelector('.about-control-table')).toBeNull();
+    expect(document.getElementById('pop-about').textContent).toContain('WebGL2');
+    expect(document.getElementById('pop-about').textContent).toContain('Canvas 2D');
+    expect(document.querySelector('.about-hero-title').textContent).toBe(
+      'Efficient ASCII Background Animator'
+    );
+    expect(document.querySelector('#pop-about a[href="./docs/"]')).not.toBeNull();
+    expect(
+      document.querySelector('#pop-about a[href="./docs/guides/web-utility/"]')
+    ).not.toBeNull();
+    expect(document.querySelector('#pop-about a[href="./docs/gallery/"]')).not.toBeNull();
+    expect(document.querySelector('#pop-about a[href="./docs/api/"]')).not.toBeNull();
+  });
+
+  it('opens About with Ctrl or Command+A without overriding editable fields', () => {
+    activeDom = createDemo();
+    const { document, KeyboardEvent } = activeDom.window;
+    const about = document.getElementById('pop-about');
+    const input = document.getElementById('savedPresetName');
+    let openCount = 0;
+    about.showPopover = () => {
+      openCount += 1;
+    };
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true })
+    );
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'A', metaKey: true, bubbles: true })
+    );
+    expect(openCount).toBe(2);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+    expect(openCount).toBe(2);
+    expect(document.getElementById('aboutTriggerBtn').getAttribute('aria-keyshortcuts')).toBe(
+      'Control+A Meta+A'
+    );
+  });
 });

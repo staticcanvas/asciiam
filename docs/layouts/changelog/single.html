@@ -1,0 +1,21 @@
+{{ define "main" }}
+<header class="hero hero-compact changelog-hero">
+  <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
+  <p class="hero-eyebrow">Release ledger</p>
+  <h1 class="hero-title">{{ .Title }}</h1>
+  {{ with .Description }}<p class="hero-desc">{{ . }}</p>{{ end }}
+  <dl class="release-summary" aria-label="Current release summary">
+    <div><dt>Current</dt><dd>v{{ hugo.Data.presets.version }}</dd></div>
+    <div><dt>API status</dt><dd>Documented baseline</dd></div>
+    <div><dt>License</dt><dd>MIT</dd></div>
+  </dl>
+</header>
+<div class="content-grid changelog-grid">
+  <article class="doc-content prose changelog-content">{{ .Content }}</article>
+  <aside class="toc-panel release-index" aria-label="Release index">
+    <p class="toc-title">Release index</p>
+    {{ .TableOfContents }}
+    <a class="release-api-link" href="{{ (site.GetPage "/api").RelPermalink }}">Open API reference →</a>
+  </aside>
+</div>
+{{ end }}

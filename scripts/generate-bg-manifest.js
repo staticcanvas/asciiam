@@ -22,7 +22,7 @@ await writeFile(manifestPath, `${JSON.stringify(images, null, 2)}\n`);
 
 const packageJson = JSON.parse(await readFile(resolve("package.json"), "utf8"));
 const publicPage = await readFile(publicPagePath, "utf8");
-const versionedPage = publicPage.replace(/(<span data-package-version>)v[^<]+(<\/span>)/, `$1v${packageJson.version}$2`);
+const versionedPage = publicPage.replace(/(<span data-package-version>)v[^<]+(<\/span>)/g, `$1v${packageJson.version}$2`);
 await writeFile(publicPagePath, versionedPage);
 
 console.log(`Public metadata: v${packageJson.version}; ${images.length} background image(s)`);

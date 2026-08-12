@@ -19,6 +19,9 @@ function copyPublicLibraries() {
       mkdirSync(destination, { recursive: true });
       cpSync(resolve(bundleDist), destination, { recursive: true });
       cpSync(resolve('public/index.html'), resolve(destination, 'index.html'));
+      const brandingDestination = resolve('public/assets/branding');
+      mkdirSync(brandingDestination, { recursive: true });
+      cpSync(resolve('branding/asciiam-logo.svg'), resolve(brandingDestination, 'asciiam-logo.svg'));
     },
   };
 }
@@ -85,6 +88,7 @@ export default defineConfig({
           },
         },
         { src: 'src', dest: packageDist },
+        { src: 'branding', dest: packageDist },
         { src: 'jsr.jsonc', dest: packageDist },
       ],
       hook: 'writeBundle',

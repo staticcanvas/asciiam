@@ -1,0 +1,431 @@
+{
+  "version": "0.10.0",
+  "presets": [
+    {
+      "name": "heroWave",
+      "title": "Hero Wave",
+      "mode": "wave",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "wave",
+        "color": "#4FA8FF",
+        "speed": 1,
+        "edgeFade": 0.25
+      }
+    },
+    {
+      "name": "subtleCurrent",
+      "title": "Subtle Current",
+      "mode": "current",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "current",
+        "color": "#4FA8FF",
+        "speed": 0.6,
+        "minOpacity": 0.03,
+        "maxOpacity": 0.45
+      }
+    },
+    {
+      "name": "matrixRain",
+      "title": "Matrix Rain",
+      "mode": "matrix",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "matrix",
+        "color": "#3CF07A",
+        "speed": 1,
+        "charSet": " 01アイウエオ"
+      }
+    },
+    {
+      "name": "softRipple",
+      "title": "Soft Ripple",
+      "mode": "ripple",
+      "category": "spatial",
+      "previewable": true,
+      "options": {
+        "mode": "ripple",
+        "color": "#4FA8FF",
+        "speed": 0.8,
+        "edgeFade": 0.4
+      }
+    },
+    {
+      "name": "vortexFlow",
+      "title": "Vortex Flow",
+      "mode": "vortex",
+      "category": "spatial",
+      "previewable": true,
+      "options": {
+        "mode": "vortex",
+        "color": "#C04FFF",
+        "speed": 0.65,
+        "edgeFade": 0.2,
+        "gradient": {
+          "type": "radial",
+          "center": [
+            0.5,
+            0.5
+          ],
+          "radius": 0.9,
+          "stops": [
+            "#4FA8FF",
+            "#C04FFF"
+          ],
+          "steps": 2
+        }
+      }
+    },
+    {
+      "name": "plasmaField",
+      "title": "Plasma Field",
+      "mode": "plasma",
+      "category": "spatial",
+      "previewable": true,
+      "options": {
+        "mode": "plasma",
+        "color": "#72F1B8",
+        "speed": 0.55,
+        "minOpacity": 0.04,
+        "maxOpacity": 0.68,
+        "gradient": {
+          "type": "linear",
+          "angle": 25,
+          "stops": [
+            "#72F1B8",
+            "#4FA8FF",
+            "#C04FFF"
+          ],
+          "steps": 3
+        }
+      }
+    },
+    {
+      "name": "introReveal",
+      "title": "Intro Reveal",
+      "mode": "fadeIn",
+      "category": "reveals",
+      "previewable": true,
+      "options": {
+        "mode": "fadeIn",
+        "color": "#4FA8FF",
+        "speed": 1,
+        "loop": false,
+        "revealDirection": "left-to-right"
+      }
+    },
+    {
+      "name": "outroFade",
+      "title": "Outro Fade",
+      "mode": "fadeOut",
+      "category": "reveals",
+      "previewable": true,
+      "options": {
+        "mode": "fadeOut",
+        "color": "#4FA8FF",
+        "speed": 1,
+        "loop": false,
+        "revealDirection": "right-to-left"
+      }
+    },
+    {
+      "name": "scanline",
+      "title": "Scanline",
+      "mode": "wave",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "wave",
+        "color": "#4FA8FF",
+        "speed": 1.4,
+        "ambient": 0,
+        "bandWidth": 0.04,
+        "edgeFade": 0.2
+      }
+    },
+    {
+      "name": "snowfall",
+      "title": "Snowfall",
+      "mode": "snow",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "snow",
+        "color": "#E8EEF7",
+        "speed": 0.5,
+        "snowDensity": 0.025
+      }
+    },
+    {
+      "name": "sparkleField",
+      "title": "Sparkle Field",
+      "mode": "sparkle",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "sparkle",
+        "color": "#4FA8FF",
+        "speed": 0.8,
+        "sparkleDensity": 0.04
+      }
+    },
+    {
+      "name": "pulseGlow",
+      "title": "Pulse Glow",
+      "mode": "current",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "current",
+        "color": "#4FA8FF",
+        "speed": 0.5,
+        "pulse": {
+          "amplitude": 0.4,
+          "speed": 0.6
+        }
+      }
+    },
+    {
+      "name": "cursorGlow",
+      "title": "Cursor Glow",
+      "mode": "current",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "current",
+        "color": "#4FA8FF",
+        "speed": 0.4,
+        "minOpacity": 0.03,
+        "maxOpacity": 0.4,
+        "cursor": {
+          "enabled": true,
+          "radius": 160,
+          "strength": 0.7
+        }
+      }
+    },
+    {
+      "name": "auroraCurrent",
+      "title": "Aurora Current",
+      "mode": "current",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "current",
+        "color": "#72F1B8",
+        "speed": 0.45,
+        "minOpacity": 0.04,
+        "maxOpacity": 0.5,
+        "gradient": {
+          "type": "linear",
+          "angle": 25,
+          "stops": [
+            "#72F1B8",
+            "#4FA8FF",
+            "#C04FFF"
+          ],
+          "steps": 3
+        }
+      }
+    },
+    {
+      "name": "terminalMatrix",
+      "title": "Terminal Matrix",
+      "mode": "matrix",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "matrix",
+        "color": "#3CF07A",
+        "speed": 1.1,
+        "charSet": " 01アイウエオカキクケコ",
+        "maxOpacity": 0.75
+      }
+    },
+    {
+      "name": "blueprintWave",
+      "title": "Blueprint Wave",
+      "mode": "wave",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "wave",
+        "color": "#78B7FF",
+        "speed": 0.8,
+        "charSet": " ░▒▓█",
+        "edgeFade": 0.3,
+        "gradient": {
+          "type": "linear",
+          "angle": 90,
+          "stops": [
+            "#173A63",
+            "#78B7FF"
+          ],
+          "steps": 2
+        }
+      }
+    },
+    {
+      "name": "deepRipple",
+      "title": "Deep Ripple",
+      "mode": "ripple",
+      "category": "spatial",
+      "previewable": true,
+      "options": {
+        "mode": "ripple",
+        "color": "#C04FFF",
+        "speed": 0.55,
+        "edgeFade": 0.5,
+        "gradient": {
+          "type": "radial",
+          "center": [
+            0.5,
+            0.5
+          ],
+          "radius": 0.9,
+          "stops": [
+            "#4FA8FF",
+            "#C04FFF",
+            "#0A0C10"
+          ],
+          "steps": 3
+        }
+      }
+    },
+    {
+      "name": "snowDrift",
+      "title": "Snow Drift",
+      "mode": "snow",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "snow",
+        "color": "#E8EEF7",
+        "speed": 0.35,
+        "snowDensity": 0.035,
+        "charSet": " ·*❄"
+      }
+    },
+    {
+      "name": "emberSparkle",
+      "title": "Ember Sparkle",
+      "mode": "sparkle",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "sparkle",
+        "color": "#FF9D5C",
+        "speed": 0.65,
+        "sparkleDensity": 0.06,
+        "charSet": " .·+*#"
+      }
+    },
+    {
+      "name": "risingEmbers",
+      "title": "Rising Embers",
+      "mode": "fire",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "fire",
+        "color": "#FF9D5C",
+        "speed": 0.7,
+        "fireDensity": 0.035,
+        "trail": 0.18,
+        "trailColor": "#070809",
+        "charSet": " .·+*#",
+        "gradient": {
+          "type": "linear",
+          "angle": 90,
+          "stops": [
+            "#FFDF8A",
+            "#FF9D5C",
+            "#C04F32"
+          ],
+          "steps": 3
+        }
+      }
+    },
+    {
+      "name": "deepSpace",
+      "title": "Deep Space",
+      "mode": "starfield",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "starfield",
+        "color": "#E8EEF7",
+        "speed": 0.65,
+        "starfieldDensity": 0.018,
+        "charSet": " ·+*"
+      }
+    },
+    {
+      "name": "signalGlitch",
+      "title": "Signal Glitch",
+      "mode": "glitch",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "glitch",
+        "color": "#72F1B8",
+        "speed": 0.8,
+        "charSet": " 01<>/\\|#@",
+        "glitchIntensity": 0.32
+      }
+    },
+    {
+      "name": "terminalType",
+      "title": "Terminal Type",
+      "mode": "typewriter",
+      "category": "reveals",
+      "previewable": true,
+      "options": {
+        "mode": "typewriter",
+        "color": "#72F1B8",
+        "speed": 1,
+        "loop": true,
+        "typewriterDuration": 4.5,
+        "charSet": " 01ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      }
+    },
+    {
+      "name": "orbitalFlow",
+      "title": "Orbital Flow",
+      "mode": "orbit",
+      "category": "particles",
+      "previewable": true,
+      "options": {
+        "mode": "orbit",
+        "color": "#C04FFF",
+        "speed": 0.55,
+        "orbitDensity": 0.014,
+        "trail": 0.12,
+        "trailColor": "#070809",
+        "charSet": " ·+*#"
+      }
+    },
+    {
+      "name": "imageReveal",
+      "title": "Image Reveal",
+      "mode": "image",
+      "category": "image",
+      "previewable": false,
+      "options": {
+        "mode": "image",
+        "color": "#4FA8FF",
+        "imageScale": 1,
+        "imageScaleX": 1,
+        "imageScaleY": 1,
+        "imageFov": 1,
+        "fit": "cover",
+        "colorFromImage": true,
+        "animateImageMask": true
+      }
+    }
+  ]
+}

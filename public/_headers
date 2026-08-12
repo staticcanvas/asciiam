@@ -2,9 +2,18 @@
   Cache-Control: public, max-age=31536000, immutable
 
 /libs/*
-  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+  Cache-Control: public, max-age=300, must-revalidate
 
 /assets/backgrounds.json
+  Cache-Control: no-cache
+
+/docs/css/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+/docs/js/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+/docs/libs/*
   Cache-Control: public, max-age=300, must-revalidate
 
 /*

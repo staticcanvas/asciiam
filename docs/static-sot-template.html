@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AETHER — AI Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --void: #040407;
+        --ink: #0a0a10;
+        --surface: #0f0f18;
+        --glass: rgba(255, 255, 255, 0.03);
+        --border: rgba(255, 255, 255, 0.07);
+        --border-bright: rgba(255, 255, 255, 0.15);
+        --plasma: #00ffe5;
+        --plasma-dim: rgba(0, 255, 229, 0.12);
+        --amber: #ffb830;
+        --ember: #ff4c1a;
+        --white: #e8e8f0;
+        --muted: #5a5a72;
+        --code-bg: #080810;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--void);
+        color: var(--white);
+        font-family: 'Space Mono', monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        overflow-x: hidden;
+        cursor: none;
+      }
+
+      .cursor {
+        position: fixed;
+        width: 12px;
+        height: 12px;
+        background: var(--plasma);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        mix-blend-mode: exclusion;
+        transition: transform 0.1s ease;
+        left: -20px;
+        top: -20px;
+      }
+      .cursor-ring {
+        position: fixed;
+        width: 36px;
+        height: 36px;
+        border: 1px solid rgba(0, 255, 229, 0.4);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        transition: border-color 0.2s, transform 0.2s;
+        left: -30px;
+        top: -30px;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+        opacity: 0.025;
+        pointer-events: none;
+        z-index: 9990;
+      }
+
+      body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.07) 2px,
+          rgba(0, 0, 0, 0.07) 4px
+        );
+        pointer-events: none;
+        z-index: 9989;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+
+      aside {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 260px;
+        height: 100vh;
+        border-right: 1px solid var(--border);
+        background: var(--ink);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+        z-index: 100;
+      }
+
+      .sidebar-glow {
+        position: absolute;
+        top: -40px;
+        left: -40px;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(0, 255, 229, 0.07) 0%, transparent 70%);
+        pointer-events: none;
+        flex-shrink: 0;
+      }
+
+      .logo-area {
+        padding: 32px 28px 28px;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .logo-word {
+        font-family: 'Syne', sans-serif;
+        font-weight: 800;
+        font-size: 22px;
+        letter-spacing: 0.2em;
+        color: var(--white);
+        display: block;
+      }
+
+      .logo-sub {
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .logo-sub::before {
+        content: '';
+        display: inline-block;
+        width: 18px;
+        height: 1px;
+        background: var(--plasma);
+      }
+
+      .version-chip {
+        display: inline-block;
+        background: var(--plasma-dim);
+        border: 1px solid rgba(0, 255, 229, 0.25);
+        color: var(--plasma);
+        font-size: 9px;
+        padding: 2px 8px;
+        border-radius: 2px;
+        letter-spacing: 0.1em;
+        margin-top: 10px;
+        font-family: 'Space Mono', monospace;
+      }
+
+      .nav-section {
+        padding: 22px 0 8px;
+      }
+
+      .nav-label {
+        font-size: 9px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 0 28px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .nav-label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 28px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        transition: all 0.2s;
+        border-left: 2px solid transparent;
+        margin-left: -1px;
+      }
+
+      .nav-item:hover,
+      .nav-item.active {
+        color: var(--white);
+        border-left-color: var(--plasma);
+        background: linear-gradient(90deg, rgba(0, 255, 229, 0.06), transparent);
+      }
+
+      .nav-item.active {
+        color: var(--plasma);
+      }
+
+      .nav-dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.5;
+        flex-shrink: 0;
+      }
+
+      .nav-item.active .nav-dot {
+        opacity: 1;
+        background: var(--plasma);
+      }
+
+      .sidebar-footer {
+        margin-top: auto;
+        padding: 20px 28px;
+        border-top: 1px solid var(--border);
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 0.05em;
+        flex-shrink: 0;
+      }
+
+      .status-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--plasma);
+        box-shadow: 0 0 8px var(--plasma);
+        animation: pulse 2s infinite;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      main {
+        margin-left: 260px;
+        min-height: 100vh;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        padding: 14px 52px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(4, 4, 7, 0.88);
+        backdrop-filter: blur(20px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+      }
+
+      .breadcrumb span {
+        color: var(--white);
+      }
+      .breadcrumb-sep {
+        color: var(--border-bright);
+      }
+
+      .search-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--glass);
+        border: 1px solid var(--border);
+        padding: 7px 14px;
+        border-radius: 4px;
+        font-family: 'Space Mono', monospace;
+        font-size: 11px;
+        color: var(--muted);
+        cursor: pointer;
+        transition: border-color 0.2s;
+        min-width: 200px;
+      }
+
+      .search-bar:hover {
+        border-color: var(--border-bright);
+        color: var(--white);
+      }
+
+      .search-kbd {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 2px;
+        padding: 1px 5px;
+        font-size: 9px;
+        letter-spacing: 0.05em;
+      }
+
+      .hero {
+        padding: 80px 52px 60px;
+        position: relative;
+        border-bottom: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      .hero-bg {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .hero-grid {
+        position: absolute;
+        inset: 0;
+        background-image: linear-gradient(rgba(0, 255, 229, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 255, 229, 0.04) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: radial-gradient(ellipse 80% 80% at 60% 50%, black 30%, transparent 80%);
+      }
+
+      .hero-orb {
+        position: absolute;
+        right: 8%;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(0, 255, 229, 0.06) 0%, transparent 70%);
+        animation: orb-drift 8s ease-in-out infinite alternate;
+      }
+
+      @keyframes orb-drift {
+        from {
+          transform: translateY(-50%) scale(1);
+        }
+        to {
+          transform: translateY(-55%) scale(1.08);
+        }
+      }
+
+      .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 10px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--plasma);
+        margin-bottom: 20px;
+        opacity: 0;
+        animation: fade-up 0.6s 0.1s forwards;
+      }
+
+      .hero-eyebrow::before {
+        content: '';
+        width: 24px;
+        height: 1px;
+        background: var(--plasma);
+      }
+
+      .hero-title {
+        font-family: 'Syne', sans-serif;
+        font-weight: 800;
+        font-size: clamp(40px, 5.5vw, 68px);
+        line-height: 0.95;
+        letter-spacing: -0.02em;
+        margin-bottom: 24px;
+        opacity: 0;
+        animation: fade-up 0.6s 0.2s forwards;
+      }
+
+      .hero-title em {
+        font-style: italic;
+        font-family: 'Instrument Serif', serif;
+        color: transparent;
+        -webkit-text-stroke: 1px var(--plasma);
+      }
+
+      .hero-desc {
+        max-width: 520px;
+        font-size: 13px;
+        color: rgba(232, 232, 240, 0.6);
+        line-height: 1.85;
+        margin-bottom: 36px;
+        opacity: 0;
+        animation: fade-up 0.6s 0.3s forwards;
+      }
+
+      .hero-actions {
+        display: flex;
+        gap: 12px;
+        opacity: 0;
+        animation: fade-up 0.6s 0.4s forwards;
+      }
+
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--plasma);
+        color: var(--void);
+        font-family: 'Space Mono', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 11px 22px;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn-primary:hover {
+        box-shadow: 0 0 28px rgba(0, 255, 229, 0.4);
+      }
+
+      .btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        color: var(--white);
+        font-family: 'Space Mono', monospace;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 10px 22px;
+        border: 1px solid var(--border-bright);
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+
+      .btn-ghost:hover {
+        border-color: var(--plasma);
+        color: var(--plasma);
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+      }
+
+      .doc-content {
+        padding: 52px 52px 80px;
+        border-right: 1px solid var(--border);
+        min-width: 0;
+      }
+
+      .toc-panel {
+        padding: 40px 28px;
+        position: sticky;
+        top: 57px;
+        height: calc(100vh - 57px);
+        overflow-y: auto;
+      }
+
+      .doc-section {
+        margin-bottom: 64px;
+        opacity: 0;
+        transform: translateY(18px);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+      }
+
+      .doc-section.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .section-tag {
+        display: inline-block;
+        font-size: 9px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--plasma);
+        margin-bottom: 14px;
+        border-left: 2px solid var(--plasma);
+        padding-left: 8px;
+      }
+
+      h2.doc-heading {
+        font-family: 'Syne', sans-serif;
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        margin-bottom: 16px;
+        color: var(--white);
+      }
+
+      h3.doc-subheading {
+        font-family: 'Syne', sans-serif;
+        font-weight: 600;
+        font-size: 15px;
+        letter-spacing: -0.01em;
+        margin-bottom: 12px;
+        margin-top: 32px;
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      h3.doc-subheading::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border: 1px solid var(--plasma);
+        transform: rotate(45deg);
+        flex-shrink: 0;
+      }
+
+      p.doc-p {
+        color: rgba(232, 232, 240, 0.62);
+        line-height: 1.85;
+        margin-bottom: 16px;
+        font-size: 13px;
+      }
+
+      .code-block {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-left: 2px solid var(--plasma);
+        margin: 24px 0;
+        overflow: hidden;
+      }
+
+      .code-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .code-lang {
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--plasma);
+      }
+
+      .code-copy {
+        font-size: 9px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted);
+        cursor: pointer;
+        transition: color 0.2s;
+        background: none;
+        border: none;
+        font-family: 'Space Mono', monospace;
+        padding: 2px 8px;
+      }
+
+      .code-copy:hover {
+        color: var(--plasma);
+      }
+
+      pre {
+        padding: 20px;
+        overflow-x: auto;
+        font-family: 'Space Mono', monospace;
+        font-size: 12px;
+        line-height: 1.7;
+        color: rgba(232, 232, 240, 0.78);
+      }
+
+      .tk {
+        color: var(--plasma);
+      }
+      .ts {
+        color: var(--amber);
+      }
+      .tn {
+        color: #a78bfa;
+      }
+      .tc {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .kw {
+        color: var(--ember);
+      }
+      .fn {
+        color: #60a5fa;
+      }
+
+      .callout {
+        padding: 16px 20px;
+        border-left: 2px solid;
+        margin: 24px 0;
+        font-size: 12px;
+        line-height: 1.7;
+      }
+
+      .callout-info {
+        border-color: var(--plasma);
+        background: rgba(0, 255, 229, 0.04);
+        color: rgba(232, 232, 240, 0.7);
+      }
+      .callout-warn {
+        border-color: var(--amber);
+        background: rgba(255, 184, 48, 0.04);
+        color: rgba(232, 232, 240, 0.7);
+      }
+
+      .callout-label {
+        font-size: 9px;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        font-weight: 700;
+      }
+
+      .callout-info .callout-label {
+        color: var(--plasma);
+      }
+      .callout-warn .callout-label {
+        color: var(--amber);
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin: 24px 0;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 20px;
+        transition: all 0.25s;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--plasma), transparent);
+        opacity: 0;
+        transition: opacity 0.25s;
+      }
+
+      .card:hover {
+        border-color: rgba(0, 255, 229, 0.2);
+        background: rgba(0, 255, 229, 0.02);
+      }
+      .card:hover::before {
+        opacity: 1;
+      }
+
+      .card-icon {
+        font-size: 22px;
+        margin-bottom: 12px;
+        display: block;
+      }
+
+      .card-title {
+        font-family: 'Syne', sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 6px;
+        color: var(--white);
+      }
+
+      .card-desc {
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .param-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 12px;
+      }
+
+      .param-table th {
+        text-align: left;
+        padding: 10px 14px;
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        font-weight: 400;
+      }
+
+      .param-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: top;
+        line-height: 1.6;
+        color: rgba(232, 232, 240, 0.65);
+      }
+
+      .param-table tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .tag {
+        display: inline-block;
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 2px;
+        letter-spacing: 0.05em;
+        vertical-align: middle;
+      }
+
+      .tag-req {
+        background: rgba(255, 76, 26, 0.15);
+        color: var(--ember);
+        border: 1px solid rgba(255, 76, 26, 0.25);
+      }
+      .tag-opt {
+        background: rgba(90, 90, 114, 0.3);
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+      .tag-type {
+        background: rgba(96, 165, 250, 0.1);
+        color: #60a5fa;
+        border: 1px solid rgba(96, 165, 250, 0.2);
+        font-family: 'Space Mono', monospace;
+      }
+
+      code {
+        font-family: 'Space Mono', monospace;
+        font-size: 11px;
+        background: rgba(0, 255, 229, 0.07);
+        border: 1px solid rgba(0, 255, 229, 0.15);
+        color: var(--plasma);
+        padding: 1px 5px;
+        border-radius: 2px;
+      }
+
+      .toc-title {
+        font-size: 9px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+
+      .toc-item {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        text-decoration: none;
+        padding: 5px 0;
+        transition: color 0.2s;
+        letter-spacing: 0.02em;
+      }
+
+      .toc-item:hover {
+        color: var(--white);
+      }
+      .toc-item.toc-active {
+        color: var(--plasma);
+      }
+      .toc-item.toc-sub {
+        padding-left: 14px;
+        font-size: 10px;
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border: 1px solid var(--border);
+        margin: 28px 0;
+      }
+
+      .stat {
+        padding: 20px;
+        border-right: 1px solid var(--border);
+        text-align: center;
+      }
+
+      .stat:last-child {
+        border-right: none;
+      }
+
+      .stat-num {
+        font-family: 'Syne', sans-serif;
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--plasma);
+        display: block;
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+
+      .stat-label {
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+        margin: 40px 0;
+      }
+
+      .method {
+        display: inline-block;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        padding: 3px 7px;
+        border-radius: 2px;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+
+      .method-post {
+        background: rgba(0, 255, 229, 0.1);
+        color: var(--plasma);
+        border: 1px solid rgba(0, 255, 229, 0.25);
+      }
+      .method-get {
+        background: rgba(96, 165, 250, 0.1);
+        color: #60a5fa;
+        border: 1px solid rgba(96, 165, 250, 0.25);
+      }
+
+      .endpoint {
+        display: flex;
+        align-items: center;
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        padding: 12px 16px;
+        margin: 16px 0;
+        font-size: 12px;
+        font-family: 'Space Mono', monospace;
+        color: rgba(232, 232, 240, 0.6);
+      }
+
+      .endpoint-path {
+        color: var(--white);
+      }
+
+      .timeline {
+        position: relative;
+        padding-left: 24px;
+        margin: 24px 0;
+      }
+
+      .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 1px;
+        background: linear-gradient(180deg, var(--plasma), transparent);
+      }
+
+      .timeline-item {
+        position: relative;
+        padding-bottom: 24px;
+      }
+
+      .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -28px;
+        top: 6px;
+        width: 8px;
+        height: 8px;
+        border: 1px solid var(--plasma);
+        background: var(--void);
+        transform: rotate(45deg);
+      }
+
+      .timeline-label {
+        font-size: 10px;
+        color: var(--plasma);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .timeline-text {
+        font-size: 12px;
+        color: rgba(232, 232, 240, 0.6);
+        line-height: 1.7;
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-bright);
+        border-radius: 2px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--muted);
+      }
+
+      @media (max-width: 900px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+        aside {
+          display: none;
+        }
+        main {
+          margin-left: 0;
+        }
+        .content-grid {
+          grid-template-columns: 1fr;
+        }
+        .toc-panel {
+          display: none;
+        }
+        .hero {
+          padding: 40px 24px;
+        }
+        .doc-content {
+          padding: 32px 24px;
+        }
+        .topbar {
+          padding: 14px 24px;
+        }
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+        .stats-row {
+          grid-template-columns: 1fr;
+        }
+        .stat {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+        .stat:last-child {
+          border-bottom: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cursor" id="cursor"></div>
+    <div class="cursor-ring" id="cursorRing"></div>
+
+    <div class="shell">
+      <aside>
+        <div class="sidebar-glow"></div>
+        <div class="logo-area">
+          <span class="logo-word">AETHER</span>
+          <span class="logo-sub">AI Documentation</span>
+          <span class="version-chip">v4.2.1 &mdash; STABLE</span>
+        </div>
+        <nav>
+          <div class="nav-section">
+            <div class="nav-label">Getting Started</div>
+            <a href="#intro" class="nav-item active"><span class="nav-dot"></span>Introduction</a>
+            <a href="#quickstart" class="nav-item"><span class="nav-dot"></span>Quickstart</a>
+            <a href="#auth" class="nav-item"><span class="nav-dot"></span>Authentication</a>
+          </div>
+          <div class="nav-section">
+            <div class="nav-label">Core Concepts</div>
+            <a href="#models" class="nav-item"><span class="nav-dot"></span>Models</a>
+            <a href="#messages" class="nav-item"><span class="nav-dot"></span>Messages API</a>
+            <a href="#streaming" class="nav-item"><span class="nav-dot"></span>Streaming</a>
+            <a href="#context" class="nav-item"><span class="nav-dot"></span>Context Window</a>
+          </div>
+          <div class="nav-section">
+            <div class="nav-label">Advanced</div>
+            <a href="#tools" class="nav-item"><span class="nav-dot"></span>Tool Use</a>
+            <a href="#vision" class="nav-item"><span class="nav-dot"></span>Vision</a>
+            <a href="#rate-limits" class="nav-item"><span class="nav-dot"></span>Rate Limits</a>
+            <a href="#errors" class="nav-item"><span class="nav-dot"></span>Errors</a>
+          </div>
+          <div class="nav-section">
+            <div class="nav-label">Reference</div>
+            <a href="#sdk" class="nav-item"><span class="nav-dot"></span>SDK Reference</a>
+            <a href="#changelog" class="nav-item"><span class="nav-dot"></span>Changelog</a>
+          </div>
+        </nav>
+        <div class="sidebar-footer">
+          <div><span class="status-dot"></span>All systems operational</div>
+          <div style="margin-top: 8px; opacity: 0.6">Last updated Apr 2026</div>
+        </div>
+      </aside>
+
+      <main>
+        <div class="topbar">
+          <div class="breadcrumb">
+            AETHER <span class="breadcrumb-sep">/</span> <span>Introduction</span>
+          </div>
+          <div class="search-bar">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <circle cx="6.5" cy="6.5" r="4.5" />
+              <path d="M11 11l3 3" />
+            </svg>
+            Search documentation
+            <span class="search-kbd">&#8984;K</span>
+          </div>
+        </div>
+
+        <div class="hero">
+          <div class="hero-bg">
+            <div class="hero-grid"></div>
+            <div class="hero-orb"></div>
+          </div>
+          <div class="hero-eyebrow">Intelligence Layer Documentation</div>
+          <h1 class="hero-title">Build with<br /><em>machine</em><br />cognition.</h1>
+          <p class="hero-desc">
+            Complete reference for the AETHER AI API. From first token to production scale &mdash;
+            every primitive, every parameter, every edge case. Documented by the system that wrote
+            itself.
+          </p>
+          <div class="hero-actions">
+            <a href="#quickstart" class="btn-primary">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M6 3l7 5-7 5V3z" />
+              </svg>
+              Start Building
+            </a>
+            <a href="#messages" class="btn-ghost">API Reference</a>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="doc-content">
+            <div class="doc-section" id="intro">
+              <div class="section-tag">001 &mdash; Introduction</div>
+              <h2 class="doc-heading">What is AETHER?</h2>
+              <p class="doc-p">
+                AETHER is a large language model API built for production. It exposes a unified
+                interface over multiple model families, handling the infrastructure complexity so
+                you can focus on capability &mdash; not plumbing.
+              </p>
+              <p class="doc-p">
+                This documentation covers the full surface area of the API. Every endpoint, every
+                parameter, every failure mode. It was written to be <em>actually read</em>, not just
+                referenced in a panic at 2am.
+              </p>
+
+              <div class="stats-row">
+                <div class="stat">
+                  <span class="stat-num">200T</span>
+                  <span class="stat-label">Training Tokens</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-num">128K</span>
+                  <span class="stat-label">Context Window</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-num">99.97%</span>
+                  <span class="stat-label">Uptime SLA</span>
+                </div>
+              </div>
+
+              <div class="card-grid">
+                <div class="card">
+                  <span class="card-icon">&#9889;</span>
+                  <div class="card-title">Low Latency</div>
+                  <div class="card-desc">
+                    Sub-200ms TTFT on Turbo tier. Streaming output arrives in realtime with
+                    backpressure support.
+                  </div>
+                </div>
+                <div class="card">
+                  <span class="card-icon">&#128295;</span>
+                  <div class="card-title">Tool Use</div>
+                  <div class="card-desc">
+                    Structured function calling with JSON Schema validation and parallel execution.
+                  </div>
+                </div>
+                <div class="card">
+                  <span class="card-icon">&#128065;</span>
+                  <div class="card-title">Vision</div>
+                  <div class="card-desc">
+                    Native image understanding. Diagrams, screenshots, documents, raw pixels.
+                  </div>
+                </div>
+                <div class="card">
+                  <span class="card-icon">&#8635;</span>
+                  <div class="card-title">Streaming</div>
+                  <div class="card-desc">
+                    Server-sent events for token-by-token delivery. Full SSE spec compliance.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="doc-section" id="quickstart">
+              <div class="section-tag">002 &mdash; Quickstart</div>
+              <h2 class="doc-heading">First request in<br />under 60 seconds.</h2>
+              <p class="doc-p">
+                Install the SDK, set your key, send a message. That's the whole loop. Every other
+                concept in this documentation is variation on this core pattern.
+              </p>
+
+              <h3 class="doc-subheading">Install</h3>
+              <div class="code-block">
+                <div class="code-header">
+                  <span class="code-lang">Terminal</span>
+                  <button class="code-copy" onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><span class="tc"># npm</span>
+npm install @aether/sdk
+
+<span class="tc"># pnpm</span>
+pnpm add @aether/sdk</pre>
+              </div>
+
+              <h3 class="doc-subheading">Send a message</h3>
+              <div class="code-block">
+                <div class="code-header">
+                  <span class="code-lang">TypeScript</span>
+                  <button class="code-copy" onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><span class="kw">import</span> Aether <span class="kw">from</span> <span class="ts">'@aether/sdk'</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">Aether</span>({
+  <span class="tk">apiKey</span>: process.env.<span class="tk">AETHER_API_KEY</span>
+});
+
+<span class="kw">const</span> message = <span class="kw">await</span> client.messages.<span class="fn">create</span>({
+  <span class="tk">model</span>: <span class="ts">'aether-4-opus'</span>,
+  <span class="tk">max_tokens</span>: <span class="tn">1024</span>,
+  <span class="tk">messages</span>: [
+    {
+      <span class="tk">role</span>: <span class="ts">'user'</span>,
+      <span class="tk">content</span>: <span class="ts">'Explain quantum entanglement.'</span>
+    }
+  ]
+});
+
+console.<span class="fn">log</span>(message.content[<span class="tn">0</span>].text);</pre>
+              </div>
+
+              <div class="callout callout-info">
+                <div class="callout-label">Note</div>
+                Store your API key in environment variables. Never commit credentials to source
+                control. Use a secrets manager in production environments.
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="doc-section" id="messages">
+              <div class="section-tag">003 &mdash; Messages API</div>
+              <h2 class="doc-heading">The messages<br />endpoint.</h2>
+              <p class="doc-p">
+                The <code>messages</code> endpoint is the core of AETHER. Send a list of messages,
+                receive a response. The model is stateless &mdash; every request is complete and
+                self-contained. You own the conversation history.
+              </p>
+
+              <div class="endpoint">
+                <span class="method method-post">POST</span>
+                <span class="endpoint-path">/v1/messages</span>
+              </div>
+
+              <h3 class="doc-subheading">Request Parameters</h3>
+              <table class="param-table">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>model</code></td>
+                    <td><span class="tag tag-type">string</span></td>
+                    <td><span class="tag tag-req">Required</span></td>
+                    <td>Model identifier. See model reference for available values.</td>
+                  </tr>
+                  <tr>
+                    <td><code>messages</code></td>
+                    <td><span class="tag tag-type">array</span></td>
+                    <td><span class="tag tag-req">Required</span></td>
+                    <td>
+                      Alternating user/assistant message array. Must begin with a user message.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><code>max_tokens</code></td>
+                    <td><span class="tag tag-type">integer</span></td>
+                    <td><span class="tag tag-req">Required</span></td>
+                    <td>Upper bound on output tokens. Does not guarantee this length.</td>
+                  </tr>
+                  <tr>
+                    <td><code>system</code></td>
+                    <td><span class="tag tag-type">string</span></td>
+                    <td><span class="tag tag-opt">Optional</span></td>
+                    <td>System prompt. Sets context, persona, and behavioral constraints.</td>
+                  </tr>
+                  <tr>
+                    <td><code>temperature</code></td>
+                    <td><span class="tag tag-type">float</span></td>
+                    <td><span class="tag tag-opt">Optional</span></td>
+                    <td>Sampling temperature 0&ndash;1. Higher = more variation. Default: 1.0.</td>
+                  </tr>
+                  <tr>
+                    <td><code>stream</code></td>
+                    <td><span class="tag tag-type">boolean</span></td>
+                    <td><span class="tag tag-opt">Optional</span></td>
+                    <td>Enable SSE streaming. Returns incremental tokens as they generate.</td>
+                  </tr>
+                  <tr>
+                    <td><code>tools</code></td>
+                    <td><span class="tag tag-type">array</span></td>
+                    <td><span class="tag tag-opt">Optional</span></td>
+                    <td>Array of tool definitions. Enables function calling behavior.</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="callout callout-warn">
+                <div class="callout-label">Warning</div>
+                Setting <code>temperature</code> above 0.8 on structured output tasks significantly
+                increases malformed JSON. For deterministic extraction, use 0.0&ndash;0.2.
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="doc-section" id="tools">
+              <div class="section-tag">004 &mdash; Tool Use</div>
+              <h2 class="doc-heading">Extend the model<br />with functions.</h2>
+              <p class="doc-p">
+                Tools let AETHER call your code. Define function schemas, the model decides when to
+                invoke them, you execute and return results. The model completes its response using
+                the data you provided.
+              </p>
+
+              <div class="code-block">
+                <div class="code-header">
+                  <span class="code-lang">TypeScript</span>
+                  <button class="code-copy" onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><span class="kw">const</span> response = <span class="kw">await</span> client.messages.<span class="fn">create</span>({
+  <span class="tk">model</span>: <span class="ts">'aether-4-sonnet'</span>,
+  <span class="tk">max_tokens</span>: <span class="tn">1024</span>,
+  <span class="tk">tools</span>: [
+    {
+      <span class="tk">name</span>: <span class="ts">'get_weather'</span>,
+      <span class="tk">description</span>: <span class="ts">'Fetch current weather for a city'</span>,
+      <span class="tk">input_schema</span>: {
+        <span class="tk">type</span>: <span class="ts">'object'</span>,
+        <span class="tk">properties</span>: {
+          <span class="tk">city</span>: {
+            <span class="tk">type</span>: <span class="ts">'string'</span>,
+            <span class="tk">description</span>: <span class="ts">'City name'</span>
+          }
+        },
+        <span class="tk">required</span>: [<span class="ts">'city'</span>]
+      }
+    }
+  ],
+  <span class="tk">messages</span>: [{
+    <span class="tk">role</span>: <span class="ts">'user'</span>,
+    <span class="tk">content</span>: <span class="ts">'What is the weather in Tokyo?'</span>
+  }]
+});</pre>
+              </div>
+
+              <h3 class="doc-subheading">Tool execution lifecycle</h3>
+              <div class="timeline">
+                <div class="timeline-item">
+                  <div class="timeline-label">01 &mdash; Request</div>
+                  <div class="timeline-text">
+                    Send messages array with tool definitions. Model receives full context including
+                    schemas.
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-label">02 &mdash; Decision</div>
+                  <div class="timeline-text">
+                    Model decides whether to call a tool or respond directly. Returns a
+                    <code>tool_use</code> content block.
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-label">03 &mdash; Execution</div>
+                  <div class="timeline-text">
+                    Your code executes the function. The model has no access to the execution
+                    environment.
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-label">04 &mdash; Result</div>
+                  <div class="timeline-text">
+                    Return a <code>tool_result</code> block in a new request. Model completes its
+                    response with your data.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="doc-section" id="changelog">
+              <div class="section-tag">005 &mdash; Changelog</div>
+              <h2 class="doc-heading">What's changed.</h2>
+              <div class="timeline" style="margin-top: 28px">
+                <div class="timeline-item">
+                  <div class="timeline-label">April 2026 &mdash; v4.2.1</div>
+                  <div class="timeline-text">
+                    Parallel tool calls now stable. Reduced TTFT on Opus by 18ms median. Fixed edge
+                    case in multi-turn system prompt inheritance. SDK updated with full TypeScript
+                    generics coverage.
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-label">February 2026 &mdash; v4.1.0</div>
+                  <div class="timeline-text">
+                    Vision input GA across all tiers. PDF document ingestion with 200 page limit.
+                    Extended context window to 128K for Opus. Streaming tool use enters public beta.
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-label">November 2025 &mdash; v4.0.0</div>
+                  <div class="timeline-text">
+                    AETHER 4 model family released. Major capability uplift on reasoning, code
+                    generation, and instruction following. New safety architecture with real-time
+                    policy enforcement layer.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="toc-panel">
+            <div class="toc-title">On this page</div>
+            <a href="#intro" class="toc-item toc-active">Introduction</a>
+            <a href="#quickstart" class="toc-item">Quickstart</a>
+            <a href="#auth" class="toc-item toc-sub">Authentication</a>
+            <a href="#messages" class="toc-item">Messages API</a>
+            <a href="#messages" class="toc-item toc-sub">Parameters</a>
+            <a href="#streaming" class="toc-item">Streaming</a>
+            <a href="#tools" class="toc-item">Tool Use</a>
+            <a href="#tools" class="toc-item toc-sub">Lifecycle</a>
+            <a href="#tools" class="toc-item toc-sub">Parallel calls</a>
+            <a href="#changelog" class="toc-item">Changelog</a>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const cursor = document.getElementById('cursor');
+      const ring = document.getElementById('cursorRing');
+      let mx = 0,
+        my = 0,
+        rx = 0,
+        ry = 0;
+
+      document.addEventListener('mousemove', (e) => {
+        mx = e.clientX;
+        my = e.clientY;
+        cursor.style.left = mx - 6 + 'px';
+        cursor.style.top = my - 6 + 'px';
+      });
+
+      (function animRing() {
+        rx += (mx - rx) * 0.12;
+        ry += (my - ry) * 0.12;
+        ring.style.left = rx - 18 + 'px';
+        ring.style.top = ry - 18 + 'px';
+        requestAnimationFrame(animRing);
+      })();
+
+      document.querySelectorAll('a, button, .card').forEach((el) => {
+        el.addEventListener('mouseenter', () => {
+          cursor.style.transform = 'scale(2)';
+          ring.style.transform = 'scale(1.5)';
+          ring.style.borderColor = 'rgba(0,255,229,0.7)';
+        });
+        el.addEventListener('mouseleave', () => {
+          cursor.style.transform = 'scale(1)';
+          ring.style.transform = 'scale(1)';
+          ring.style.borderColor = 'rgba(0,255,229,0.4)';
+        });
+      });
+
+      function copyCode(btn) {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.innerText).catch(() => {});
+        btn.textContent = 'Copied';
+        setTimeout(() => (btn.textContent = 'Copy'), 1800);
+      }
+
+      const obs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) e.target.classList.add('visible');
+          });
+        },
+        { threshold: 0.08 }
+      );
+
+      document.querySelectorAll('.doc-section').forEach((s) => obs.observe(s));
+
+      const tocLinks = document.querySelectorAll('.toc-item');
+      const navLinks = document.querySelectorAll('.nav-item');
+
+      const secObs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              const id = e.target.id;
+              tocLinks.forEach((l) => l.classList.remove('toc-active'));
+              navLinks.forEach((l) => l.classList.remove('active'));
+              const tocActive = document.querySelector(`.toc-item[href="#${id}"]`);
+              const navActive = document.querySelector(`.nav-item[href="#${id}"]`);
+              if (tocActive) tocActive.classList.add('toc-active');
+              if (navActive) navActive.classList.add('active');
+            }
+          });
+        },
+        { threshold: 0.35 }
+      );
+
+      document.querySelectorAll('.doc-section').forEach((s) => secObs.observe(s));
+    </script>
+  </body>
+</html>

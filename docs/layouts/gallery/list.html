@@ -1,0 +1,36 @@
+{{ define "head" }}<script type="module" src="{{ "js/gallery.js" | relURL }}"></script>{{ end }}
+{{ define "main" }}
+<header class="hero hero-compact">
+  <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
+  <p class="hero-eyebrow">Live presets · bounded renderer pool</p>
+  <h1 class="hero-title">Preset <em>gallery.</em></h1>
+  <p class="hero-desc">{{ .Description }}</p>
+</header>
+{{ $utilityURL := partial "web-utility-url.html" . }}
+<section class="gallery-page" data-preset-gallery data-library-url="{{ "libs/asciiam.esm.js" | relURL }}" data-utility-url="{{ $utilityURL }}">
+  <div class="gallery-toolbar">
+    <label class="gallery-search" for="preset-search">Search presets
+      <input id="preset-search" type="search" autocomplete="off" placeholder="Name or mode">
+    </label>
+    <div class="filter-row" role="group" aria-label="Preset category">
+      {{ range slice "all" "fields" "spatial" "particles" "reveals" "image" }}
+      <button type="button" data-gallery-filter="{{ . }}" aria-pressed="{{ if eq . "all" }}true{{ else }}false{{ end }}">{{ . | title }}</button>
+      {{ end }}
+    </div>
+  </div>
+  <p class="gallery-status" role="status" aria-live="polite"></p>
+  <div class="gallery-grid">
+    {{ range hugo.Data.presets.presets }}
+    <article class="preset-card card" data-preset-card data-name="{{ .name }}" data-mode="{{ .mode }}" data-category="{{ .category }}" data-previewable="{{ .previewable }}" data-options="{{ .options | jsonify | base64Encode }}">
+      <div class="preset-preview" data-preset-preview data-state="queued" aria-label="Animated preview of {{ .title }}"></div>
+      <header><div><h2>{{ .title }}</h2><span class="preset-mode">{{ .name }}</span></div><span class="preset-mode">{{ .mode }}</span></header>
+      <div class="preset-actions">
+        <button type="button" data-copy-preset>Copy configuration</button>
+        <a data-open-preset href="{{ $utilityURL }}?preset={{ .name | urlquery }}">Open in utility</a>
+      </div>
+    </article>
+    {{ end }}
+  </div>
+  <div class="prose gallery-reference">{{ .Content }}</div>
+</section>
+{{ end }}

@@ -59,21 +59,48 @@ strangers with confidence."
       arrow, and mathematical presets alongside the existing specialist sets.
 - [x] **Animation mode inventory.** The current engine and practical next modes are
       recorded here for implementation planning.
-  - [x] Supported — `wave`, `current`, `ripple`, `vortex`, `plasma`, `fadeIn`, `fadeOut`, `matrix`,
-        `snow`, `sparkle`, `image`, and registered/custom cell modes.
+  - [x] Ordered animation sequences — a single renderer can now play, stagger, loop,
+        pause, seek, skip, and interrupt timed mode steps. Per-step option overrides,
+        callbacks, lifecycle events, persistence, generated code, and an accessible
+        move-up/down demo editor are included without adding another per-cell pass.
+- [x] **120 Hz Ultra performance audit.** Reduced the 1080p Ultra dense grid from
+      6,150 to 2,700 cells, quantized opacity to eight levels, cached cell coordinates
+      and baselines, skipped idle sequence dispatch, and avoided redundant Canvas alpha
+      writes. The four-instance JavaScript benchmark increased from 175 to 457
+      theoretical shared-frame FPS; physical output remains bounded by display refresh.
+- [x] **Sustained CPU audit.** Performance and Ultra now use a shared, bounded glyph
+      atlas for solid-color modes. Font shaping and rasterization occur when an atlas is
+      created instead of for every glyph on every frame. Dynamic gradients, animated
+      colors, and image-derived colors retain the direct text path. Solid horizontal
+      waves cache their static ambient field and redraw only the moving band, reducing
+      four-instance 1080p Ultra JavaScript frame time from 2.816 ms to 0.606 ms in the
+      final shared-cache benchmark.
+- [x] **GPU-first rendering policy.** Display canvases request desynchronized,
+      non-readback Canvas 2D contexts and compositor-layer promotion. Image sampling
+      uses a separate readback-optimized canvas. `getRendererInfo()` reports the policy;
+      hardware acceleration remains controlled by the browser and graphics driver.
+- [x] **Selectable WebGL2 renderer.** Added `auto`, `webgl2`, and `canvas2d` backends.
+      WebGL2 uses a white glyph texture, instanced quad batching, shader gradients, GPU
+      blending for trails and backdrops, explicit high-performance adapter preference,
+      live backend switching, initialization fallback, and context-loss fallback.
+  - [x] Supported — `wave`, `current`, `ripple`, `vortex`, `plasma`, `fadeIn`, `fadeOut`,
+        `matrix`, `snow`, `sparkle`, `fire`, `starfield`, `glitch`, `typewriter`, `orbit`,
+        `image`, and registered/custom cell modes.
   - [x] Vortex/swirl — a cached three-arm radial flow rotates around the selected
         spatial origin without trigonometry in the dense per-cell loop.
   - [x] Plasma/noise field — three cached low-frequency fields blend into organic
         motion with only six trigonometric calculations per frame.
-  - [ ] Fire/embers — bottom-origin heat ramp plus sparse rising particles.
-  - [ ] Starfield/tunnel — depth-scaled sparse particles around the selected origin.
-  - [ ] Glitch/scramble — timed character displacement and scan-band corruption.
-  - [ ] Typewriter/reveal — deterministic line or word sequencing.
-  - [ ] Orbit/particle flow — sparse glyph paths around one or more focal points.
-  - [ ] Audio spectrum/waveform — opt-in `AnalyserNode` input; requires an explicit
-        media source or microphone permission and should remain outside core defaults.
-  - [ ] Worker renderer — evaluate `OffscreenCanvas` only if future dense modes show
-        main-thread pressure; current cached Canvas 2D modes do not require it.
+  - [x] Fire/embers — a bottom-origin heat ramp emits sparse particles with drift and lifetime decay.
+  - [x] Starfield/tunnel — depth-projected sparse particles expand from the selected origin.
+  - [x] Glitch/scramble — deterministic timed displacement and scan-band corruption.
+  - [x] Typewriter/reveal — deterministic row-major sequencing with a visible cursor.
+  - [x] Orbit/particle flow — sparse glyphs follow elliptical paths around the selected origin.
+  - [x] Audio spectrum/waveform evaluation — keep audio input outside the core renderer.
+        An `AnalyserNode` requires user-owned media lifecycle, permission, and cleanup;
+        consumers can drive registered modes or `setCursor()` from analyser data.
+  - [x] Worker renderer evaluation — defer `OffscreenCanvas`. The current cached dense
+        renderer meets its frame budget, while worker transfer would complicate text
+        metrics, image decoding, lifecycle events, and DOM-owned resize handling.
 - [x] **Reset settings.** Added a first-class Reset toolbar action that restores the
       documented demo defaults without deleting the user's saved preset library.
 - [x] **Local saved presets.** Users can name, save, overwrite, load, and delete
@@ -88,7 +115,7 @@ strangers with confidence."
   - [x] Visual grouping distinguishes configuration, utilities, media, and the
         primary Code action while preserving keyboard order and mobile scrolling.
   - [x] Reworked the overflowing dock into seven primary actions. Quality, Charset,
-        Align, Backdrop, Theme, history, Reset, and About now live in a grouped More
+        Align, Backdrop, Theme, history, Reset, and About now live in a grouped Advanced
         popover; narrow screens use a two-row four-column dock instead of off-screen items.
   - [x] Mobile horizontal scrolling with full-size touch targets.
   - [x] Code remains the final control and uses logical auto-margin on wide screens.
@@ -99,9 +126,12 @@ strangers with confidence."
         or Custom state and mirrors that status in the trigger's accessible name.
   - [x] Added WAI-ARIA toolbar roving focus with one tab stop, disabled-control
         skipping, wrapping Left/Right arrows, and Home/End navigation.
-  - [ ] Evaluate user-defined toolbar ordering only after real usage data exists.
+  - [x] User-defined toolbar ordering evaluation — defer until real usage data shows
+        repeated ordering friction. The current fixed order preserves roving-focus,
+        responsive grouping, saved-state semantics, and documentation consistency.
 - [x] **Local image workflows.** The Image popover supports bundled defaults and
       browser-local uploads without a remote image provider or server credential.
+
   - [x] Expanded About with a three-step workflow, complete control/persistence
         reference, and operational notes covering sizing, lifecycle, accessibility,
         local images, storage, and cleanup.
@@ -113,8 +143,30 @@ strangers with confidence."
 
 - [x] **README image-library documentation.** Documented included defaults, local
       uploads, supported formats, manifest generation, and the clone workflow.
+- [ ] are we able to process gifs and or vedio files,
+- [ ] ive created the docs
+-
 
 ## Should do before wider distribution
+
+- [x] **Multi-instance frame scheduling.** Active renderers share one
+      `requestAnimationFrame` callback while retaining independent time, visibility,
+      throttling, and lifecycle state. All quality tiers are uncapped, and blank glyphs
+      are rejected before Canvas state changes.
+
+- [x] **Hero and splash media-slot correction.** The preview templates now place one
+      movable asciiam canvas in the card/splash image region instead of displaying a
+      stage-wide canvas behind overlaid content.
+- [x] **Public parameter audit.** Live quality, font-family, font-level, DPR, image-fit,
+      and mode changes now rebuild or reset the renderer state they affect. Image mask
+      mode and animation-range options are included in types, generated usage, saved
+      demo settings, and README reference tables.
+- [x] **Animation restart and speed audit.** Mode selection restarts local timelines,
+      image mask variants have regression coverage, and sparse/image animation speed is
+      applied once rather than squared.
+- [x] **Image color-range animation.** Inclusive RGB bounds are converted to a compact
+      per-cell mask during image sampling; cells outside the range remain static without
+      per-frame color conversion.
 
 - [x] **Automated lifecycle smoke coverage.** Jest/JSDOM now exercises construction,
       animation start, observer-driven resize, and teardown with a mocked Canvas 2D
@@ -158,10 +210,9 @@ strangers with confidence."
 
 ## Explicitly out of scope for now
 
-- WebGL/WebGPU rendering path. Canvas 2D is comfortably fast enough at the densities
-  this is meant for (background decoration, not full-viewport high-density art); a
-  GPU path would only make sense if someone wants far higher character counts than a
-  background effect realistically needs.
+- WebGPU backend. WebGL2 now provides the selectable GPU path with much broader browser
+  coverage, while Canvas 2D remains the compatibility and explicitly selectable CPU
+  backend. A separate WebGPU implementation would currently duplicate those paths.
 - Server-side rendering / static ASCII export. This is a live animation engine, not an
   ASCII-art generation tool for static output.
 

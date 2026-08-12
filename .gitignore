@@ -24,3 +24,6 @@ automation-devops
 
 # Local task-list backup
 pending-tasks copy.md
+
+# context source
+context-source/

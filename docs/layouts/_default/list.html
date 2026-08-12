@@ -1,0 +1,28 @@
+{{ define "main" }}
+<header class="hero hero-compact">
+  <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
+  <p class="hero-eyebrow">Documentation section</p>
+  <h1 class="hero-title">{{ .Title }}</h1>
+  {{ with .Description }}<p class="hero-desc">{{ . }}</p>{{ end }}
+</header>
+<div class="content-grid">
+  <section class="doc-content prose">
+    {{ .Content }}
+    {{ with .Pages }}
+    <div class="card-grid">
+      {{ range . }}
+      <article class="card">
+        <span class="card-index">{{ printf "%03d" .Weight }}</span>
+        <h2 class="card-title"><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+        <p class="card-desc">{{ .Description }}</p>
+      </article>
+      {{ end }}
+    </div>
+    {{ end }}
+  </section>
+  <aside class="toc-panel" aria-label="On this page">
+    <p class="toc-title">On this page</p>
+    {{ .TableOfContents }}
+  </aside>
+</div>
+{{ end }}

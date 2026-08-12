@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="{{ site.Language.Locale }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ site.Params.description }}{{ end }}">
+  <meta name="theme-color" content="#101522">
+  <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} | {{ site.Title }}{{ end }}</title>
+  <link rel="icon" href="{{ "branding/asciiam-logo.svg" | relURL }}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700;800&family=Work+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ "css/docs.css" | relURL }}">
+  <script defer src="{{ "js/docs.js" | relURL }}"></script>
+  {{ block "head" . }}{{ end }}
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="shell">
+    <aside aria-label="Documentation navigation">
+      <div class="sidebar-glow"></div>
+      <div class="logo-area">
+        <a class="logo-lockup" href="{{ site.Home.RelPermalink }}" aria-label="asciiam documentation home">
+          <img src="{{ "branding/asciiam-logo.svg" | relURL }}" alt="" aria-hidden="true">
+          <span><span class="logo-word">ASCIIAM</span><span class="logo-sub">staticcanvas docs</span></span>
+        </a>
+        <span class="version-chip">v{{ hugo.Data.presets.version }}</span>
+      </div>
+      <nav class="nav-section" aria-label="Primary documentation">
+        <span class="nav-label">Documentation</span>
+        {{ range site.Menus.main }}
+          <a class="nav-item" href="{{ .URL }}"{{ if or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) (eq $.RelPermalink .URL) }} aria-current="page"{{ end }}><span class="nav-dot"></span>{{ .Name }}</a>
+        {{ end }}
+      </nav>
+      <nav class="nav-section" aria-label="Project resources">
+        <span class="nav-label">Resources</span>
+        <a class="nav-item" href="{{ partial "web-utility-url.html" . }}"><span class="nav-dot"></span>Web utility</a>
+        <a class="nav-item" href="{{ site.Params.repositoryURL }}"><span class="nav-dot"></span>Source</a>
+        <a class="nav-item" href="{{ site.Params.packageURL }}"><span class="nav-dot"></span>npm package</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div><span class="status-dot"></span>WebGL2 / Canvas 2D</div>
+        <div class="sidebar-update">Documentation v{{ hugo.Data.presets.version }}</div>
+      </div>
+    </aside>
+    <main id="main-content">
+      <div class="topbar">
+        <div class="breadcrumb">ASCIIAM <span class="breadcrumb-sep">/</span> <span>{{ if .IsHome }}Documentation{{ else }}{{ .Title }}{{ end }}</span></div>
+        <label class="search-bar" for="docs-search">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
+          <input id="docs-search" type="search" placeholder="Find on this page" autocomplete="off">
+          <kbd class="search-kbd">Ctrl K</kbd>
+        </label>
+      </div>
+      {{ block "main" . }}{{ end }}
+      {{ partial "site-footer.html" . }}
+    </main>
+  </div>
+</body>
+</html>

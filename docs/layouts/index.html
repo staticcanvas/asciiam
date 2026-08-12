@@ -1,0 +1,56 @@
+{{ define "head" }}
+  <script type="module" src="{{ "js/home.js" | relURL }}"></script>
+{{ end }}
+{{ define "main" }}
+<header class="hero home-hero" id="hero" data-asciiam-hero data-image-url="{{ "images/domitian-tunnel-5122424_1920.jpg" | relURL }}">
+  <div class="hero-asciiam-stage" data-asciiam-stage aria-hidden="true"></div>
+  <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">ASCII animation engine · v{{ hugo.Data.presets.version }}</p>
+    <h1 class="hero-title">Render animated<br><em>ASCII media</em><br>on the GPU.</h1>
+    <p class="hero-desc">asciiam converts procedural fields and sampled images into animated glyph grids. Select WebGL2 or Canvas 2D, compose ordered sequences, and transfer presets between the gallery and web utility.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="{{ "/getting-started/" | relURL }}">Start building</a>
+      <a class="btn-ghost" href="{{ "/api/" | relURL }}">API reference</a>
+    </div>
+  </div>
+  <output class="hero-renderer-status" data-hero-stats aria-live="polite">Initialising renderer</output>
+</header>
+<div class="content-grid home-content-grid">
+  <div class="doc-content prose">
+    <section class="doc-section" data-reveal>
+      <p class="section-tag">001 — Runtime</p>
+      <h2>One animation state,<br>two presentation backends.</h2>
+      <p>Animation modes, sequences, glyph selection, and image masks share one public API. WebGL2 batches visible glyphs into an instanced draw. Canvas 2D remains available for explicit CPU rendering and automatic fallback.</p>
+      <div class="stats-row" aria-label="Project characteristics">
+        <div class="stat"><strong>0</strong><span>Runtime dependencies</span></div>
+        <div class="stat"><strong>17</strong><span>Built-in modes</span></div>
+        <div class="stat"><strong>{{ len hugo.Data.presets.presets }}</strong><span>Included presets</span></div>
+      </div>
+    </section>
+    <section class="doc-section" data-reveal>
+      <p class="section-tag">002 — Workflows</p>
+      <h2>Choose a documentation path.</h2>
+      <div class="card-grid">
+        <article class="card"><span class="card-index">01</span><h3 class="card-title"><a href="{{ "/getting-started/" | relURL }}">Install and initialize</a></h3><p class="card-desc">Load ESM or UMD, size a target, choose a renderer, and start an instance.</p></article>
+        <article class="card"><span class="card-index">02</span><h3 class="card-title"><a href="{{ "/guides/" | relURL }}">Configure animations</a></h3><p class="card-desc">Use modes, sequences, images, gradients, performance tiers, and lifecycle controls.</p></article>
+        <article class="card"><span class="card-index">03</span><h3 class="card-title"><a href="{{ "/gallery/" | relURL }}">Select a preset</a></h3><p class="card-desc">Preview included configurations and transfer one to the web utility.</p></article>
+        <article class="card"><span class="card-index">04</span><h3 class="card-title"><a href="{{ "/api/" | relURL }}">Read the API reference</a></h3><p class="card-desc">Review options, methods, events, sequence objects, and renderer information.</p></article>
+      </div>
+    </section>
+  </div>
+  <aside class="toc-panel home-quickstart" aria-label="Quick start">
+    <p class="toc-title">Quick start</p>
+    <div class="mini-code"><span>app.js</span><pre><code>import asciiam from '@staticcanvas/asciiam';
+
+const animation = new asciiam('#hero', {
+  ...asciiam.presets.heroWave,
+  renderer: 'auto'
+});
+
+animation.start();</code></pre></div>
+    <a class="toc-item" href="{{ "/gallery/" | relURL }}">Preset gallery</a>
+    <a class="toc-item" href="{{ partial "web-utility-url.html" . }}">Web utility</a>
+  </aside>
+</div>
+{{ end }}

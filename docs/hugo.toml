@@ -1,0 +1,47 @@
+baseURL = "/"
+relativeURLs = true
+locale = "en-AU"
+title = "asciiam documentation"
+enableRobotsTXT = true
+disableKinds = ["taxonomy", "term", "RSS"]
+
+[params]
+description = "Reference documentation for the asciiam ASCII animation engine."
+repositoryURL = "https://gitlab.com/staticcanvas/asciiam"
+packageURL = "https://www.npmjs.com/package/@staticcanvas/asciiam"
+
+[markup]
+  [markup.highlight]
+  codeFences = true
+  guessSyntax = false
+  lineNos = false
+  noClasses = false
+  style = "github-dark"
+  [markup.goldmark.renderer]
+  unsafe = true
+
+[menus]
+  [[menus.main]]
+  name = "Start"
+  pageRef = "/getting-started"
+  weight = 10
+  [[menus.main]]
+  name = "Guides"
+  pageRef = "/guides"
+  weight = 20
+  [[menus.main]]
+  name = "Gallery"
+  pageRef = "/gallery"
+  weight = 30
+  [[menus.main]]
+  name = "API"
+  pageRef = "/api"
+  weight = 40
+  [[menus.main]]
+  name = "Changelog"
+  pageRef = "/changelog"
+  weight = 50
+  [[menus.main]]
+  name = "Version"
+  pageRef = "/version"
+  weight = 60

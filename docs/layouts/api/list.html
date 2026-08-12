@@ -1,0 +1,21 @@
+{{ define "main" }}
+<header class="hero hero-compact api-hero">
+  <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
+  <p class="hero-eyebrow">Runtime contract · v{{ hugo.Data.presets.version }}</p>
+  <h1 class="hero-title">{{ .Title }}</h1>
+  {{ with .Description }}<p class="hero-desc">{{ . }}</p>{{ end }}
+  <nav class="api-paths" aria-label="API task shortcuts">
+    <a href="#constructor"><span>01</span><strong>Construct</strong><small>Target and initialise</small></a>
+    <a href="#core-options"><span>02</span><strong>Configure</strong><small>Options and renderers</small></a>
+    <a href="#sequence-objects"><span>03</span><strong>Sequence</strong><small>Compose animation steps</small></a>
+    <a href="#events"><span>04</span><strong>Observe</strong><small>Events and callbacks</small></a>
+  </nav>
+</header>
+<div class="content-grid api-content-grid">
+  <article class="doc-content prose api-reference">{{ .Content }}</article>
+  <aside class="toc-panel" aria-label="API contents">
+    <p class="toc-title">API contents</p>
+    {{ .TableOfContents }}
+  </aside>
+</div>
+{{ end }}
