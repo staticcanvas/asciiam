@@ -49,12 +49,13 @@ describe('Hugo documentation source', () => {
       'docs/content/changelog.md',
       'docs/content/version.md',
       'docs/content/attributions.md',
-      'public/docs/index.html',
-      'public/docs/index.json',
-      'public/docs/examples/index.html',
-      'public/docs/attributions/index.html',
-      'public/docs/gallery/index.html',
-      'public/docs/api/index.html',
+      'public/index.html',
+      'public/index.json',
+      'public/examples/index.html',
+      'public/attributions/index.html',
+      'public/gallery/index.html',
+      'public/api/index.html',
+      'public/webutil/index.html',
     ].forEach((path) => expect(projectFile(path).length).toBeGreaterThan(100));
   });
 
@@ -83,6 +84,22 @@ describe('Hugo documentation source', () => {
     expect(base).toContain('{{ if not .IsHome }}');
     expect(icons).toContain('Local Lucide icon subset');
     expect(icons).toContain('class="nav-icon lucide"');
+  });
+
+  it('publishes documentation at the root and the application at a relative webutil route', () => {
+    const buildScript = projectFile('scripts/build-docs.js');
+    const utilityPartial = projectFile('docs/layouts/partials/web-utility-url.html');
+    const builtHome = projectFile('public/index.html');
+    const builtApi = projectFile('public/api/index.html');
+    const builtUtility = projectFile('public/webutil/index.html');
+
+    expect(buildScript).toContain("'../public'");
+    expect(buildScript).not.toContain('public/docs');
+    expect(utilityPartial).toContain('printf "%swebutil/"');
+    expect(builtHome).toContain('href=webutil/>Web utility</a>');
+    expect(builtApi).toContain('href=../webutil/>');
+    expect(builtUtility).toContain('href="../">Documentation</a>');
+    expect(builtUtility).not.toContain('./docs/');
   });
 
   it('provides standard search shortcuts, metadata, tags, and repository edit links', () => {
@@ -199,8 +216,8 @@ describe('Hugo documentation source', () => {
     const config = projectFile('docs/hugo.toml');
     const template = projectFile('docs/layouts/_default/baseof.html');
     const stylesheet = projectFile('docs/static/css/docs.css');
-    const builtHome = projectFile('public/docs/index.html');
-    const builtApi = projectFile('public/docs/api/index.html');
+    const builtHome = projectFile('public/index.html');
+    const builtApi = projectFile('public/api/index.html');
 
     expect(config).toContain('relativeURLs = true');
     expect(template).toContain('"css/docs.css" | relURL');
@@ -225,8 +242,8 @@ describe('Hugo documentation source', () => {
     const apiLayout = projectFile('docs/layouts/api/list.html');
     const changelogLayout = projectFile('docs/layouts/changelog/single.html');
     const stylesheet = projectFile('docs/static/css/docs.css');
-    const builtApi = projectFile('public/docs/api/index.html');
-    const builtChangelog = projectFile('public/docs/changelog/index.html');
+    const builtApi = projectFile('public/api/index.html');
+    const builtChangelog = projectFile('public/changelog/index.html');
 
     expect(base).toContain('partial "site-footer.html"');
     expect(footer).toContain('Zero runtime dependencies');

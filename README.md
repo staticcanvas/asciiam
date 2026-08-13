@@ -39,7 +39,7 @@ Version sources that must remain aligned:
 | `package.json`           | Package version and generated documentation data version. |
 | `docs/data/presets.json` | Generated Hugo version and gallery data.                  |
 | `README.md`              | Repository-facing version and release summary.            |
-| `public/index.html`      | Web utility version labels and install badges.            |
+| `docs/static/webutil/index.html` | Web utility version labels and install badges.   |
 
 ## Install
 
@@ -68,7 +68,8 @@ Use a pinned browser bundle from jsDelivr when a package manager is not used:
 
 - `src/asciiam.js` — the source module.
 - `src/asciiam.d.ts` — TypeScript declarations for options, events, and methods.
-- `public/index.html` — interactive static demo with live controls for every mode/option.
+- `docs/static/webutil/` — authored static web utility, published at `/webutil/`, with
+  live controls for every mode and option.
 - `docs/` — Hugo source for the homepage, guides, gallery, API reference, changelog,
   and version pages.
 - `docs/static-sot-template.html` — visual-design provenance retained from the original
@@ -83,15 +84,16 @@ Use a pinned browser bundle from jsDelivr when a package manager is not used:
 - `scripts/generate-docs-data.js` — generates gallery data and copies the current ESM
   browser bundle and brand asset into the Hugo static tree.
 
-The build produces UMD and ESM bundles in `dist/asciiam/dist` and copies the browser
-bundles to `public/libs`, so `public` can be deployed as a standalone Cloudflare Pages app.
+The build produces UMD and ESM bundles in `dist/asciiam/dist` and stages the web-utility
+copies in `docs/static/webutil/libs`. Hugo then creates the complete deployable site in
+`public`: documentation at `/` and the web utility at `/webutil/`.
 
 ## Cloudflare Pages demo
 
 Configure the Pages project with `npm run site:build` as the build command and `public`
-as the output directory. `site:build` generates Hugo into `public/docs` before building
-the library bundles used by the web utility. Using `npm run build` alone builds the
-library and utility assets but does not generate documentation.
+as the output directory. `site:build` builds the library, stages the web utility, then
+generates Hugo at the deployment root. Using `npm run build` alone builds the package
+and stages utility assets but does not regenerate the deployable `public` tree.
 
 The demo does not require runtime API credentials or a server-side image service.
 
@@ -101,21 +103,21 @@ The Image popover provides two image sources:
 
 | Source            | Behavior                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Included defaults | Selects an image listed in `public/assets/backgrounds.json`.                                                        |
+| Included defaults | Selects an image listed in `docs/static/webutil/assets/backgrounds.json`.                                           |
 | Upload            | Reads a file selected from the user's device through a temporary object URL; the file is not uploaded or persisted. |
 
 To add images to a clone:
 
-1. Copy PNG, JPEG, GIF, WebP, AVIF, or SVG files into `public/assets/images`.
-2. Run `npm run prepare:bg` to regenerate `public/assets/backgrounds.json`.
+1. Copy PNG, JPEG, GIF, WebP, AVIF, or SVG files into `docs/static/webutil/assets/images`.
+2. Run `npm run prepare:bg` to regenerate `docs/static/webutil/assets/backgrounds.json`.
 3. Reload the demo and open Image to select the new entry.
 
 `npm run dev` and `npm run build` run the manifest generator automatically. The
-generated manifest contains display names and URL-encoded `/assets/images/...` paths;
+generated manifest contains display names and deployment-relative `./assets/images/...` paths;
 it does not embed image data.
 
 When ImageMagick is available, the generator also creates static 320×180 WebP previews
-in `public/assets/thumbnails`. Animated sources use their first frame and EXIF
+in `docs/static/webutil/assets/thumbnails`. Animated sources use their first frame and EXIF
 orientation is applied during generation. The Image menu loads only these bounded
 previews; original photographs and GIFs are decoded after selection. Without
 ImageMagick or an existing preview, a placeholder is shown instead of loading the
@@ -123,7 +125,7 @@ original asset into the menu.
 
 ### Hugo documentation site
 
-Install Hugo Extended, or run Docker, then build the documentation into `public/docs`:
+Install Hugo Extended, or run Docker, then build the complete site into `public`:
 
 ```bash
 # shell
@@ -141,10 +143,9 @@ Start the documentation development server with generated preset data:
 npm run docs:serve
 ```
 
-The Hugo development server publishes the documentation at its own root. The deployable
-site build publishes the same output under `public/docs`. Documentation asset URLs are
-relative, so the output works at `/docs/` and beneath a project path such as
-`/asciiam/docs/`.
+The Hugo development server and deployable build both publish documentation at the site
+root and the utility at `/webutil/`. Asset and navigation URLs are relative, so the output
+also works beneath a project path such as `/asciiam/`.
 
 Documentation search is available with `Ctrl+K`, `Command+K`, or `/`. The static Hugo
 index ranks page titles, descriptions, tags, keywords, and body text without an external
@@ -843,10 +844,10 @@ git push origin feature/ascii-media-change
 
 - Documentation navigation embeds selected [Lucide](https://lucide.dev/) SVG paths under
   the ISC License; Feather-derived designs retain their MIT notice.
-- `public/assets/images/bird-silhouette.svg` is the
+- `docs/static/webutil/assets/images/bird-silhouette.svg` is the
   [Bird Shape vector from SVG Repo](https://www.svgrepo.com/svg/23736/bird-shape), identified
   by SVG Repo as CC0.
-- `public/assets/images/earth-landmask-256-slow.gif` uses a globe land-mask source associated
+- `docs/static/webutil/assets/images/earth-landmask-256-slow.gif` uses a globe land-mask source associated
   with [PAT](https://ian.macky.net/pat/map/globe.html), whose maps and generating scripts are
   public domain.
 - Demonstration photographs include files sourced from Pexels and Pixabay. Creator/provider

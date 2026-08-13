@@ -40,8 +40,8 @@ await Promise.all([
     cp(new URL("../src/asciiam.js", import.meta.url), new URL("asciiam.mjs", docsLibrary)),
     cp(new URL("../src/mesh.js", import.meta.url), new URL("mesh.js", docsLibrary)),
     cp(new URL("../src/gltf.js", import.meta.url), new URL("gltf.js", docsLibrary)),
-    cp(new URL("../public/assets/branding/asciiam-logo.svg", import.meta.url), new URL("asciiam-logo.svg", docsBranding)),
-    cp(new URL("../public/assets/images/domitian-tunnel-5122424_1920.jpg", import.meta.url), new URL("domitian-tunnel-5122424_1920.jpg", docsImages)),
+    cp(new URL("../branding/asciiam-logo.svg", import.meta.url), new URL("asciiam-logo.svg", docsBranding)),
+    cp(new URL("../docs/static/webutil/assets/images/domitian-tunnel-5122424_1920.jpg", import.meta.url), new URL("domitian-tunnel-5122424_1920.jpg", docsImages)),
 ]);
 
 console.log(`Documentation data: v${packageMetadata.version}; ${presets.length} preset(s)`);

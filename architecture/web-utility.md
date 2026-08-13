@@ -1,17 +1,18 @@
 # Web utility architecture
 
-The web utility is a static browser application. It uses the version-aligned UMD
-runtime from `public/libs` and native ES modules for utility behavior. It has no
-framework lifecycle or server-owned state.
+The web utility is a static browser application authored under `docs/static/webutil` and
+published at `/webutil/`. It uses the version-aligned UMD runtime staged in its local
+`libs` directory and native ES modules for utility behavior. It has no framework
+lifecycle or server-owned state.
 
 ## Module boundaries
 
 | Source | Responsibility |
 | --- | --- |
-| `public/index.html` | Semantic structure, control markup, responsive layout, and visual tokens. |
-| `public/js/webutil.js` | Renderer ownership, DOM event wiring, persistence, history, preview movement, image loading, and control synchronization. |
-| `public/js/webutil-sequence.js` | Pure normalization and serialization for editable sequence nodes. |
-| `public/js/webutil-code.js` | Escape-safe JavaScript presentation and syntax highlighting. |
+| `docs/static/webutil/index.html` | Semantic structure, control markup, responsive layout, and visual tokens. |
+| `docs/static/webutil/js/webutil.js` | Renderer ownership, DOM event wiring, persistence, history, preview movement, image loading, and control synchronization. |
+| `docs/static/webutil/js/webutil-sequence.js` | Pure normalization and serialization for editable sequence nodes. |
+| `docs/static/webutil/js/webutil-code.js` | Escape-safe JavaScript presentation and syntax highlighting. |
 
 Keep transformation logic in a focused module when it can run without the DOM. Keep
 renderer and interface coordination in `webutil.js`; splitting event wiring by control
@@ -24,9 +25,11 @@ synchronize code output, status chips, persistence, and history. Sequence drafts
 plain serializable records until `configureSequence()` commits them to the runtime.
 Uploaded object URLs are transient and are never persisted.
 
-The included image inventory comes from `public/assets/backgrounds.json`. The build
-script derives that manifest and its thumbnails from `public/assets/images`; utility
-code must not scan directories or depend on a remote image service.
+The included image inventory comes from
+`docs/static/webutil/assets/backgrounds.json`. The build script derives that manifest
+and its thumbnails from `docs/static/webutil/assets/images`; utility code must not scan
+directories or depend on a remote image service. Manifest URLs are relative to the
+utility route so project-path deployments remain valid.
 
 ## Control hierarchy
 
@@ -48,7 +51,7 @@ loads makes included sources available without blocking initial utility startup.
 
 ## Verification
 
-- Run `node --check public/js/webutil*.js` for syntax.
+- Run `node --check docs/static/webutil/js/webutil*.js` for syntax.
 - Run `npm test -- --runInBand tests/demo-toolbar.test.js tests/image-library.test.js`.
 - Run the full test and build pipeline after runtime or generated-code changes.
 - Check the dock at wide and narrow viewports in a real browser; DOM tests cannot

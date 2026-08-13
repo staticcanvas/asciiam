@@ -1,128 +1,3778 @@
-/*! asciiam v0.10.0 | https://gitlab.com/staticcanvas/asciiam#readme | MIT */
-var t=Object.defineProperty,e=Object.defineProperties,i=Object.getOwnPropertyDescriptors,s=Object.getOwnPropertySymbols,a=Object.prototype.hasOwnProperty,n=Object.prototype.propertyIsEnumerable,r=(e,i,s)=>i in e?t(e,i,{enumerable:!0,configurable:!0,writable:!0,value:s}):e[i]=s,o=(t,e)=>{for(var i in e||(e={}))a.call(e,i)&&r(t,i,e[i]);if(s)for(var i of s(e))n.call(e,i)&&r(t,i,e[i]);return t},h=(t,s)=>e(t,i(s)),l=(t,e,i)=>r(t,"symbol"!=typeof e?e+"":e,i),c=(t,e,i)=>new Promise((s,a)=>{var n=t=>{try{o(i.next(t))}catch(t){a(t)}},r=t=>{try{o(i.throw(t))}catch(t){a(t)}},o=t=>t.done?s(t.value):Promise.resolve(t.value).then(n,r);o((i=i.apply(t,e)).next())});const m=1e-8,d=Object.freeze([0,0,0]),u=Object.freeze([1,1,1]),p=Object.freeze([-.4,.7,1]),_=Object.freeze({position:[0,0,4],target:[0,0,0],up:[0,1,0],fov:Math.PI/3,near:.01,far:100,orthographicScale:2.5});function g(t,e,i){const s=t&&t.length>=3?t:e,a=Number(s[0]),n=Number(s[1]),r=Number(s[2]);return Number.isFinite(a)&&Number.isFinite(n)&&Number.isFinite(r)?(i[0]=a,i[1]=n,i[2]=r):(i[0]=e[0],i[1]=e[1],i[2]=e[2]),i}function f(t,e,i,s){const a=Math.hypot(t,e,i);return a<=m?(s[0]=0,s[1]=0,s[2]=0,s):(s[0]=t/a,s[1]=e/a,s[2]=i/a,s)}function v(t,e={}){var i,s,a,n,r,o,h;if(!t||"object"!=typeof t)throw new TypeError("asciiam: mesh must be an object");const l=t.positions;if(!(l instanceof Float32Array||l instanceof Float64Array))throw new TypeError("asciiam: mesh.positions must be Float32Array or Float64Array");if(l.length<3||l.length%3!=0)throw new RangeError("asciiam: mesh.positions must contain complete XYZ triples");const c=l.length/3,m=Math.max(3,null!=(i=e.maxVertices)?i:1e5);if(c>m)throw new RangeError(`asciiam: mesh exceeds ${m} vertices`);for(let t=0;t<l.length;t++)if(!Number.isFinite(l[t]))throw new TypeError("asciiam: mesh positions must be finite");const d=null!=(s=t.indices)?s:null;if(!(null===d||d instanceof Uint8Array||d instanceof Uint16Array||d instanceof Uint32Array))throw new TypeError("asciiam: mesh.indices must be Uint8Array, Uint16Array, Uint32Array, or null");if(d)for(let t=0;t<d.length;t++)if(d[t]>=c)throw new RangeError("asciiam: mesh index exceeds the vertex count");const u=null!=(a=t.primitive)?a:"triangles";if(!["points","lines","triangles"].includes(u))throw new TypeError('asciiam: mesh.primitive must be "points", "lines", or "triangles"');const p=null!=(n=null==d?void 0:d.length)?n:c,_="triangles"===u?3:"lines"===u?2:1;if(p%_!==0)throw new RangeError(`asciiam: ${u} require complete ${_}-element groups`);const g=p/_,f=Math.max(1,null!=(r=e.maxPrimitives)?r:1e5);if(g>f)throw new RangeError(`asciiam: mesh exceeds ${f} primitives`);const v=null!=(o=t.normals)?o:null;if(!(null===v||v instanceof Float32Array&&v.length===l.length))throw new TypeError("asciiam: mesh.normals must be a Float32Array matching positions");const y=null!=(h=t.colors)?h:null;if(!(null===y||y instanceof Float32Array&&y.length===4*c))throw new TypeError("asciiam: mesh.colors must contain one RGBA Float32 tuple per vertex");return Object.freeze({positions:l,indices:d,normals:v,colors:y,primitive:u,vertexCount:c,primitiveCount:g})}class y{constructor(t,e){this._forward=new Float64Array(3),this._right=new Float64Array(3),this._up=new Float64Array(3),this._light=new Float64Array(3),this._normal=new Float64Array(3),this._cameraPosition=new Float64Array(3),this._cameraTarget=new Float64Array(3),this._cameraUp=new Float64Array(3),this._translation=new Float64Array(3),this._rotation=new Float64Array(3),this._scale=new Float64Array(3),this._inputLight=new Float64Array(3),this.result={depth:null,intensity:null,occupied:null,drawn:0},this.resize(t,e)}
-/** Resize cell buffers only when the grid dimensions change. */resize(t,e){const i=Math.max(1,Math.round(t)),s=Math.max(1,Math.round(e));if(this.cols===i&&this.rows===s)return;this.cols=i,this.rows=s;const a=i*s;this.depth=new Float32Array(a),this.intensity=new Float32Array(a),this.occupied=new Uint8Array(a),this.result.depth=this.depth,this.result.intensity=this.intensity,this.result.occupied=this.occupied}
-/** Ensure projected and world-coordinate buffers fit the active vertex count. */_ensureVertices(t){const e=3*t;(!this.projected||this.projected.length<e)&&(this.projected=new Float32Array(e),this.world=new Float32Array(e),this.visible=new Uint8Array(t))}
-/** Build a camera basis once per rasterized frame. */_prepareCamera(t){const e=g(null==t?void 0:t.position,_.position,this._cameraPosition),i=g(null==t?void 0:t.target,_.target,this._cameraTarget),s=g(null==t?void 0:t.up,_.up,this._cameraUp);f(i[0]-e[0],i[1]-e[1],i[2]-e[2],this._forward),f(this._forward[1]*s[2]-this._forward[2]*s[1],this._forward[2]*s[0]-this._forward[0]*s[2],this._forward[0]*s[1]-this._forward[1]*s[0],this._right),f(this._right[1]*this._forward[2]-this._right[2]*this._forward[1],this._right[2]*this._forward[0]-this._right[0]*this._forward[2],this._right[0]*this._forward[1]-this._right[1]*this._forward[0],this._up)}
-/** Project every model vertex and retain world coordinates for face lighting. */_project(t,e){this._ensureVertices(t.vertexCount);const i=e.camera;this._prepareCamera(i);const s=e.transform||{},a=g(s.position,d,this._translation),n=g(s.rotation,d,this._rotation),r=g(s.scale,u,this._scale),o=Math.sin(n[0]),h=Math.cos(n[0]),l=Math.sin(n[1]),c=Math.cos(n[1]),p=Math.sin(n[2]),f=Math.cos(n[2]),v=Math.max(m,Number(null==i?void 0:i.near)||_.near),y=Math.max(v+m,Number(null==i?void 0:i.far)||_.far),w=this.cols/this.rows,M="orthographic"!==e.projection,b=Math.tan(.5*Math.max(.05,Math.min(Math.PI-.05,Number(null==i?void 0:i.fov)||_.fov))),x=Math.max(m,Number(null==i?void 0:i.orthographicScale)||_.orthographicScale),S=t.positions,C=this.projected,F=this.world,A=this.visible,T=this._right,R=this._up,E=this._forward,O=this._cameraPosition;for(let e=0;e<t.vertexCount;e++){const t=3*e,i=S[t]*r[0],s=S[t+1]*r[1],n=S[t+2]*r[2],m=s*o+n*h,d=i*c+m*l,u=s*h-n*o,_=-i*l+m*c,g=d*f-u*p+a[0],L=d*p+u*f+a[1],I=_+a[2];F[t]=g,F[t+1]=L,F[t+2]=I;const q=g-O[0],P=L-O[1],k=I-O[2],B=q*T[0]+P*T[1]+k*T[2],D=q*R[0]+P*R[1]+k*R[2],G=q*E[0]+P*E[1]+k*E[2];A[e]=G>=v&&G<=y?1:0;const z=M?G*b:x,U=B/(z*w),N=D/z;C[t]=(.5*U+.5)*(this.cols-1),C[t+1]=(.5-.5*N)*(this.rows-1),C[t+2]=G}}
-/** Store one visible sample when it is nearer than the current cell value. */_sample(t,e,i,s){const a=Math.round(t),n=Math.round(e);if(a<0||a>=this.cols||n<0||n>=this.rows||i<=0)return;const r=n*this.cols+a;i>=this.depth[r]||(this.depth[r]=i,this.intensity[r]=s,this.occupied[r]=1)}
-/** Draw a depth-interpolated edge with a cell-space DDA. */_line(t,e,i){if(!this.visible[t]||!this.visible[e])return;const s=3*t,a=3*e,n=this.projected[s],r=this.projected[s+1],o=this.projected[s+2],h=this.projected[a]-n,l=this.projected[a+1]-r,c=this.projected[a+2]-o,m=Math.max(1,Math.ceil(Math.max(Math.abs(h),Math.abs(l))));for(let t=0;t<=m;t++){const e=t/m;this._sample(n+h*e,r+l*e,o+c*e,i)}}
-/** Fill one projected triangle with barycentric depth interpolation. */_triangle(t,e,i,s){if(!this.visible[t]||!this.visible[e]||!this.visible[i])return;const a=3*t,n=3*e,r=3*i,o=this.projected[a],h=this.projected[a+1],l=this.projected[n],c=this.projected[n+1],d=this.projected[r],u=this.projected[r+1],p=(c-u)*(o-d)+(d-l)*(h-u);if(Math.abs(p)<=m)return;const _=Math.max(0,Math.floor(Math.min(o,l,d))),g=Math.min(this.cols-1,Math.ceil(Math.max(o,l,d))),f=Math.max(0,Math.floor(Math.min(h,c,u))),v=Math.min(this.rows-1,Math.ceil(Math.max(h,c,u))),y=this.projected[a+2],w=this.projected[n+2],M=this.projected[r+2],b=1/p;for(let t=f;t<=v;t++){const e=t+.5;for(let i=_;i<=g;i++){const a=i+.5,n=((c-u)*(a-d)+(d-l)*(e-u))*b,r=((u-h)*(a-d)+(o-d)*(e-u))*b,m=1-n-r;n<0||r<0||m<0||this._sample(i,t,n*y+r*w+m*M,s)}}}
-/** Resolve flat face lighting from transformed world coordinates. */_faceIntensity(t,e,i,s,a){const n=3*t,r=3*e,o=3*i,h=this.world[r]-this.world[n],l=this.world[r+1]-this.world[n+1],c=this.world[r+2]-this.world[n+2],m=this.world[o]-this.world[n],d=this.world[o+1]-this.world[n+1],u=this.world[o+2]-this.world[n+2];f(l*u-c*d,c*m-h*u,h*d-l*m,this._normal);const p=Math.abs(this._normal[0]*this._light[0]+this._normal[1]*this._light[1]+this._normal[2]*this._light[2]);return Math.min(1,s+p*a)}
-/** Rasterize one frame and return stable buffer references plus occupied count. */rasterize(t,e={}){var i,s,a,n,r,o,h;const l=t.vertexCount?t:v(t,e.limits);this.depth.fill(1/0),this.intensity.fill(0),this.occupied.fill(0),this._project(l,e);const c=g(null==(i=e.light)?void 0:i.direction,p,this._inputLight);f(c[0],c[1],c[2],this._light);const m=Math.max(0,Math.min(1,Number(null!=(a=null==(s=e.light)?void 0:s.ambient)?a:.15))),d=Math.max(0,Number(null!=(r=null==(n=e.light)?void 0:n.intensity)?r:.85)),u=null!=(o=e.style)?o:"triangles"===l.primitive?"solid":l.primitive,_=l.indices,y=null!=(h=null==_?void 0:_.length)?h:l.vertexCount;if("points"===l.primitive)for(let t=0;t<y;t++){const e=_?_[t]:t;if(!this.visible[e])continue;const i=3*e;this._sample(this.projected[i],this.projected[i+1],this.projected[i+2],1)}else if("lines"===l.primitive)for(let t=0;t<y;t+=2)this._line(_?_[t]:t,_?_[t+1]:t+1,1);else for(let t=0;t<y;t+=3){const e=_?_[t]:t,i=_?_[t+1]:t+1,s=_?_[t+2]:t+2,a=this._faceIntensity(e,i,s,m,d);if("points"===u){const t=3*e,n=3*i,r=3*s;this.visible[e]&&this._sample(this.projected[t],this.projected[t+1],this.projected[t+2],a),this.visible[i]&&this._sample(this.projected[n],this.projected[n+1],this.projected[n+2],a),this.visible[s]&&this._sample(this.projected[r],this.projected[r+1],this.projected[r+2],a)}else"wireframe"===u?(this._line(e,i,a),this._line(i,s,a),this._line(s,e,a)):this._triangle(e,i,s,a)}let w=0;for(let t=0;t<this.occupied.length;t++)w+=this.occupied[t];return this.result.drawn=w,this.result}}const w=1179937895,M=Object.freeze({SCALAR:1,VEC2:2,VEC3:3,VEC4:4,MAT2:4,MAT3:9,MAT4:16}),b=Object.freeze({5120:1,5121:1,5122:2,5123:2,5125:4,5126:4});function x(t){if(null==t?void 0:t.aborted)throw new DOMException("The model load was aborted.","AbortError")}function S(t,e,i){if(5120===i)return t.getInt8(e);if(5121===i)return t.getUint8(e);if(5122===i)return t.getInt16(e,!0);if(5123===i)return t.getUint16(e,!0);if(5125===i)return t.getUint32(e,!0);if(5126===i)return t.getFloat32(e,!0);throw new TypeError(`asciiam: unsupported glTF componentType ${i}`)}function C(t,e){return 5120===e?Math.max(t/127,-1):5121===e?t/255:5122===e?Math.max(t/32767,-1):5123===e?t/65535:5125===e?t/4294967295:t}function F(t){const e=t.indexOf(",");if(e<0)throw new TypeError("asciiam: malformed glTF data URI");const i=t.slice(5,e),s=t.slice(e+1);if(i.includes(";base64")){const t=globalThis.atob(s),e=new Uint8Array(t.length);for(let i=0;i<t.length;i++)e[i]=t.charCodeAt(i);return e.buffer}return(new TextEncoder).encode(decodeURIComponent(s)).buffer}function A(t,e,i){return c(this,null,function*(){var s;const a=yield fetch(t,{signal:e});if(!a.ok)throw new Error(`asciiam: model request failed with ${a.status}`);const n=Number(a.headers.get("content-length"))||null;if(!(null==(s=a.body)?void 0:s.getReader)||"function"!=typeof i){const t=yield a.arrayBuffer();return i&&i({loaded:t.byteLength,total:n}),t}const r=a.body.getReader(),o=[];let h=0;for(;;){const{done:t,value:e}=yield r.read();if(t)break;o.push(e),h+=e.byteLength,i({loaded:h,total:n})}const l=new Uint8Array(h);let c=0;for(const t of o)l.set(t,c),c+=t.byteLength;return l.buffer})}function T(t){const e=new DataView(t);if(e.byteLength<20||e.getUint32(0,!0)!==w)throw new TypeError("asciiam: invalid GLB header");if(2!==e.getUint32(4,!0))throw new TypeError("asciiam: only GLB version 2 is supported");if(e.getUint32(8,!0)!==e.byteLength)throw new RangeError("asciiam: GLB length does not match its header");let i=12,s=null,a=null;for(;i+8<=e.byteLength;){const n=e.getUint32(i,!0),r=e.getUint32(i+4,!0);if(i+=8,i+n>e.byteLength)throw new RangeError("asciiam: GLB chunk exceeds the container");const o=t.slice(i,i+n);if(1313821514===r&&null===s){const t=new Uint8Array(o);let e=t.length;for(;e&&t[e-1]<=32;)e--;const i=(new TextDecoder).decode(t.subarray(0,e));s=JSON.parse(i)}else 5130562===r&&null===a&&(a=o);i+=n}if(!s)throw new TypeError("asciiam: GLB does not contain a JSON chunk");return{json:s,binary:a}}function R(t,e,i,s=!1){var a,n,r,o;const h=null==(a=t.accessors)?void 0:a[i];if(!h)throw new RangeError(`asciiam: missing glTF accessor ${i}`);const l=M[h.type],c=b[h.componentType];if(!l||!c)throw new TypeError(`asciiam: unsupported accessor ${i}`);const m=h.count*l,d=s?new Uint32Array(m):new Float32Array(m);if(void 0!==h.bufferView){const a=null==(n=t.bufferViews)?void 0:n[h.bufferView];if(!a)throw new RangeError(`asciiam: missing bufferView ${h.bufferView}`);const r=e[a.buffer];if(!r)throw new RangeError(`asciiam: missing buffer ${a.buffer}`);const o=new DataView(r),m=c*l,u=a.byteStride||m;if(u<m)throw new RangeError(`asciiam: accessor ${i} has an invalid stride`);const p=(a.byteOffset||0)+(h.byteOffset||0);for(let t=0;t<h.count;t++){const e=p+t*u;for(let i=0;i<l;i++){const a=S(o,e+i*c,h.componentType);d[t*l+i]=!s&&h.normalized?C(a,h.componentType):a}}}if(h.sparse){const i=h.sparse,a=null==(r=t.bufferViews)?void 0:r[i.indices.bufferView],n=null==(o=t.bufferViews)?void 0:o[i.values.bufferView];if(!a||!n)throw new RangeError("asciiam: sparse accessor references a missing bufferView");const m=new DataView(e[a.buffer]),u=new DataView(e[n.buffer]),p=b[i.indices.componentType];if(![5121,5123,5125].includes(i.indices.componentType))throw new TypeError("asciiam: invalid sparse index component type");const _=(a.byteOffset||0)+(i.indices.byteOffset||0),g=(n.byteOffset||0)+(i.values.byteOffset||0);for(let t=0;t<i.count;t++){const e=S(m,_+t*p,i.indices.componentType);if(e>=h.count)throw new RangeError("asciiam: sparse accessor index exceeds accessor count");for(let i=0;i<l;i++){const a=S(u,g+(t*l+i)*c,h.componentType);d[e*l+i]=!s&&h.normalized?C(a,h.componentType):a}}}return{values:d,components:l}}function E(){return new Float64Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])}function O(t,e){const i=new Float32Array(t.length);for(let s=0;s<t.length;s+=3){const a=t[s],n=t[s+1],r=t[s+2];i[s]=e[0]*a+e[4]*n+e[8]*r+e[12],i[s+1]=e[1]*a+e[5]*n+e[9]*r+e[13],i[s+2]=e[2]*a+e[6]*n+e[10]*r+e[14]}return i}function L(t,e){if(!t)return null;const i=e[0],s=e[4],a=e[8],n=e[1],r=e[5],o=e[9],h=e[2],l=e[6],c=e[10],m=i*(r*c-o*l)-s*(n*c-o*h)+a*(n*l-r*h),d=Math.abs(m)>Number.EPSILON?1/m:1,u=(r*c-o*l)*d,p=(o*h-n*c)*d,_=(n*l-r*h)*d,g=(a*l-s*c)*d,f=(i*c-a*h)*d,v=(s*h-i*l)*d,y=(s*o-a*r)*d,w=(a*n-i*o)*d,M=(i*r-s*n)*d,b=new Float32Array(t.length);for(let e=0;e<t.length;e+=3){const i=u*t[e]+p*t[e+1]+_*t[e+2],s=g*t[e]+f*t[e+1]+v*t[e+2],a=y*t[e]+w*t[e+1]+M*t[e+2],n=Math.hypot(i,s,a)||1;b[e]=i/n,b[e+1]=s/n,b[e+2]=a/n}return b}function I(t,e,i){const s=e||Uint32Array.from({length:i},(t,e)=>e);if(void 0===t||4===t)return{primitive:"triangles",indices:s};if(0===t)return{primitive:"points",indices:s};if(1===t)return{primitive:"lines",indices:s};const a=[];if(2===t){for(let t=0;t<s.length;t++)a.push(s[t],s[(t+1)%s.length]);return{primitive:"lines",indices:new Uint32Array(a)}}if(3===t){for(let t=0;t+1<s.length;t++)a.push(s[t],s[t+1]);return{primitive:"lines",indices:new Uint32Array(a)}}if(5===t){for(let t=0;t+2<s.length;t++)t%2?a.push(s[t+1],s[t],s[t+2]):a.push(s[t],s[t+1],s[t+2]);return{primitive:"triangles",indices:new Uint32Array(a)}}if(6===t){for(let t=1;t+1<s.length;t++)a.push(s[0],s[t],s[t+1]);return{primitive:"triangles",indices:new Uint32Array(a)}}throw new TypeError(`asciiam: unsupported glTF primitive mode ${t}`)}function q(t,e,i){var s,a,n,r,o,h,l;const c=null!=(a=null!=(s=i.scene)?s:t.scene)?a:0,m=null==(n=t.scenes)?void 0:n[c];if(!m)throw new RangeError(`asciiam: missing glTF scene ${c}`);const d=[],u=Math.max(3,null!=(o=null==(r=i.limits)?void 0:r.maxVertices)?o:1e5),p=Math.max(1,null!=(l=null==(h=i.limits)?void 0:h.maxPrimitives)?l:1e5);let _=0,g=0;const f=(i,s,a)=>{var n,r,o,h,l,c,m;if(a.has(i))throw new TypeError("asciiam: glTF node hierarchy contains a cycle");const v=null==(n=t.nodes)?void 0:n[i];if(!v)throw new RangeError(`asciiam: missing glTF node ${i}`);const y=new Set(a);y.add(i);const w=function(t,e){const i=new Float64Array(16);for(let s=0;s<4;s++)for(let a=0;a<4;a++)i[4*s+a]=t[a]*e[4*s]+t[4+a]*e[4*s+1]+t[8+a]*e[4*s+2]+t[12+a]*e[4*s+3];return i}(s,function(t){if(t.matrix)return new Float64Array(t.matrix);const e=t.translation||[0,0,0],i=t.rotation||[0,0,0,1],s=t.scale||[1,1,1],a=i[0],n=i[1],r=i[2],o=i[3],h=a+a,l=n+n,c=r+r,m=a*h,d=a*l,u=a*c,p=n*l,_=n*c,g=r*c,f=o*h,v=o*l,y=o*c;return new Float64Array([(1-(p+g))*s[0],(d+y)*s[0],(u-v)*s[0],0,(d-y)*s[1],(1-(m+g))*s[1],(_+f)*s[1],0,(u+v)*s[2],(_-f)*s[2],(1-(m+p))*s[2],0,e[0],e[1],e[2],1])}(v));if(void 0!==v.mesh){const i=null==(r=t.meshes)?void 0:r[v.mesh];if(!i)throw new RangeError(`asciiam: missing glTF mesh ${v.mesh}`);for(const s of i.primitives||[]){const i=null==(o=s.attributes)?void 0:o.POSITION;if(void 0===i)throw new TypeError("asciiam: glTF mesh primitive requires POSITION");const a=null==(h=t.accessors)?void 0:h[i];if(!a||"VEC3"!==a.type)throw new TypeError("asciiam: POSITION must be VEC3");if(_+=a.count,_>u)throw new RangeError(`asciiam: model exceeds ${u} vertices`);const n=void 0===s.indices?a.count:null==(c=null==(l=t.accessors)?void 0:l[s.indices])?void 0:c.count;if(!Number.isInteger(n))throw new RangeError("asciiam: model references a missing index accessor");const r=null!=(m=s.mode)?m:4;if(g+=0===r?n:1===r?n/2:2===r?n:3===r?Math.max(0,n-1):4===r?n/3:Math.max(0,n-2),g>p)throw new RangeError(`asciiam: model exceeds ${p} primitives`);const f=R(t,e,i);if(3!==f.components)throw new TypeError("asciiam: POSITION must be VEC3");const v=void 0===s.attributes.NORMAL?null:R(t,e,s.attributes.NORMAL);if(v&&3!==v.components)throw new TypeError("asciiam: NORMAL must be VEC3");if(v&&v.values.length!==f.values.length)throw new RangeError("asciiam: NORMAL count must match POSITION");const y=void 0===s.attributes.COLOR_0?null:R(t,e,s.attributes.COLOR_0);if(y&&![3,4].includes(y.components))throw new TypeError("asciiam: COLOR_0 must be VEC3 or VEC4");if(y&&y.values.length/y.components!==f.values.length/3)throw new RangeError("asciiam: COLOR_0 count must match POSITION");const M=void 0===s.indices?null:R(t,e,s.indices,!0);if(M&&1!==M.components)throw new TypeError("asciiam: indices accessor must be SCALAR");const b=(null==M?void 0:M.values)||null,x=I(s.mode,b,f.values.length/3);let S=null;if(y){const t=f.values.length/3;S=new Float32Array(4*t);for(let e=0;e<t;e++)S[4*e]=y.values[e*y.components],S[4*e+1]=y.values[e*y.components+1],S[4*e+2]=y.values[e*y.components+2],S[4*e+3]=4===y.components?y.values[4*e+3]:1}d.push({primitive:x.primitive,positions:O(f.values,w),normals:L(null==v?void 0:v.values,w),colors:S,indices:x.indices})}}for(const t of v.children||[])f(t,w,y)};for(const t of m.nodes||[])f(t,E(),new Set);if(!d.length)throw new TypeError("asciiam: glTF scene contains no mesh primitives");const y=d[0].primitive;if(d.some(t=>t.primitive!==y))throw new TypeError("asciiam: mixed point, line, and triangle topologies require separate models");const w=d.reduce((t,e)=>t+e.positions.length/3,0),M=d.reduce((t,e)=>t+e.indices.length,0),b=new Float32Array(3*w),x=d.some(t=>t.normals),S=d.some(t=>t.colors),C=x?new Float32Array(3*w):null,F=S?new Float32Array(4*w):null,A=new(w>65535?Uint32Array:Uint16Array)(M);let T=0,q=0;for(const t of d){const e=t.positions.length/3;if(b.set(t.positions,3*T),C&&t.normals&&C.set(t.normals,3*T),F)if(t.colors)F.set(t.colors,4*T);else for(let t=0;t<e;t++)F.fill(1,4*(T+t),4*(T+t+1));for(let e=0;e<t.indices.length;e++)A[q++]=t.indices[e]+T;T+=e}return v({positions:b,indices:A,normals:C,colors:F,primitive:y},i.limits)}function P(t){return c(this,arguments,function*(t,e={}){var i,s;let a;x(e.signal);let n=null,r=e.baseUrl||null;if("string"==typeof t){const o=new URL(t,(null==(i=globalThis.document)?void 0:i.baseURI)||(null==(s=globalThis.location)?void 0:s.href)).href,h=yield A(o,e.signal,e.onProgress);r=r||o;const l=new DataView(h);l.byteLength>=4&&l.getUint32(0,!0)===w?({json:a,binary:n}=T(h)):a=JSON.parse((new TextDecoder).decode(h))}else if("undefined"!=typeof Blob&&t instanceof Blob){const i=yield t.arrayBuffer();x(e.signal);const s=new DataView(i);s.byteLength>=4&&s.getUint32(0,!0)===w?({json:a,binary:n}=T(i)):a=JSON.parse((new TextDecoder).decode(i))}else if(t instanceof ArrayBuffer||ArrayBuffer.isView(t)){const e=t instanceof ArrayBuffer?t:t.buffer.slice(t.byteOffset,t.byteOffset+t.byteLength),i=new DataView(e);i.byteLength>=4&&i.getUint32(0,!0)===w?({json:a,binary:n}=T(e)):a=JSON.parse((new TextDecoder).decode(e))}else{if(!t||"object"!=typeof t||!t.asset)throw new TypeError("asciiam: model source must be a URL, Blob, byte buffer, or glTF object");a=t}!function(t){var e,i,s;if("2.0"!==(null==(e=t.asset)?void 0:e.version)&&!String((null==(i=t.asset)?void 0:i.minVersion)||"").startsWith("2."))throw new TypeError("asciiam: only glTF 2.x assets are supported");if(null==(s=t.extensionsRequired)?void 0:s.length)throw new TypeError(`asciiam: unsupported required glTF extensions: ${t.extensionsRequired.join(", ")}`)}(a),x(e.signal);const l=yield function(t,e,i,s){return c(this,null,function*(){const a=t.buffers||[],n=new Array(a.length);for(let t=0;t<a.length;t++){x(s.signal);const r=a[t];let l;if(r.uri)if(r.uri.startsWith("data:"))l=F(r.uri);else{if(!i)throw new TypeError(`asciiam: glTF buffer ${t} requires a base URL`);const e=new URL(r.uri,i).href;l=yield A(e,s.signal,e=>{var i;return null==(i=s.onProgress)?void 0:i.call(s,h(o({},e),{buffer:t}))})}else{if(0!==t||!e)throw new TypeError(`asciiam: glTF buffer ${t} has no URI or GLB chunk`);l=e}if(l.byteLength<r.byteLength)throw new RangeError(`asciiam: glTF buffer ${t} is shorter than declared`);n[t]=l}return n})}(a,n,r,e);return q(a,l,e)})}const k=new Set(["matrix","snow","sparkle","fire","starfield","orbit"]);class B{constructor(t,e={}){if(this.canvas=t,this.gl=t.getContext("webgl2",{alpha:!0,antialias:!1,depth:!1,stencil:!1,desynchronized:!1!==e.desynchronized,powerPreference:e.powerPreference||"high-performance",premultipliedAlpha:!0,preserveDrawingBuffer:!0}),!this.gl)throw new Error("WebGL2 unavailable");this.capacity=4096,this.count=0,this.stride=12,this.instances=new Float32Array(this.capacity*this.stride),this.atlasKey="",this.gradientTextures=new Map,this._initialize()}_shader(t,e){const i=this.gl,s=i.createShader(t);if(i.shaderSource(s,e),i.compileShader(s),!i.getShaderParameter(s,i.COMPILE_STATUS))throw new Error(i.getShaderInfoLog(s)||"WebGL shader compile failed");return s}_program(t,e){const i=this.gl,s=i.createProgram();if(i.attachShader(s,this._shader(i.VERTEX_SHADER,t)),i.attachShader(s,this._shader(i.FRAGMENT_SHADER,e)),i.linkProgram(s),!i.getProgramParameter(s,i.LINK_STATUS))throw new Error(i.getProgramInfoLog(s)||"WebGL program link failed");return s}_initialize(){const t=this.gl;this.program=this._program("#version 300 es\n                in vec2 a_corner;\n                in vec4 a_rect;\n                in vec4 a_uv;\n                in vec4 a_color;\n                uniform vec2 u_viewport;\n                out vec2 v_uv;\n                out vec4 v_color;\n                out vec2 v_position;\n                void main() {\n                    vec2 pixel = a_rect.xy + a_corner * a_rect.zw;\n                    vec2 clip = pixel / u_viewport * 2.0 - 1.0;\n                    gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);\n                    v_uv = mix(a_uv.xy, a_uv.zw, a_corner);\n                    v_color = a_color;\n                    v_position = pixel / u_viewport;\n                }","#version 300 es\n                precision mediump float;\n                uniform sampler2D u_atlas;\n                uniform sampler2D u_gradient;\n                uniform bool u_use_gradient;\n                uniform int u_gradient_type;\n                uniform float u_gradient_angle;\n                in vec2 v_uv;\n                in vec4 v_color;\n                in vec2 v_position;\n                out vec4 outColor;\n                void main() {\n                    float mask = texture(u_atlas, v_uv).a;\n                    if (mask < 0.01) discard;\n                    vec4 color = v_color;\n                    if (u_use_gradient) {\n                        vec2 p = v_position - vec2(0.5);\n                        float t;\n                        if (u_gradient_type == 1) t = clamp(length(p) * 1.4142, 0.0, 1.0);\n                        else {\n                            vec2 dir = vec2(cos(u_gradient_angle), sin(u_gradient_angle));\n                            t = clamp(dot(p, dir) + 0.5, 0.0, 1.0);\n                        }\n                        color.rgb = texture(u_gradient, vec2(t, 0.5)).rgb;\n                    }\n                    outColor = vec4(color.rgb * color.a, color.a) * mask;\n                }"),this.surfaceProgram=this._program("#version 300 es\n                in vec2 a_corner;\n                out vec2 v_position;\n                void main() { v_position = a_corner; gl_Position = vec4(a_corner * 2.0 - 1.0, 0.0, 1.0); }","#version 300 es\n                precision mediump float;\n                uniform sampler2D u_gradient;\n                uniform vec4 u_color;\n                uniform bool u_use_gradient;\n                uniform int u_gradient_type;\n                uniform float u_gradient_angle;\n                in vec2 v_position;\n                out vec4 outColor;\n                void main() {\n                    vec4 color = u_color;\n                    if (u_use_gradient) {\n                        vec2 p = v_position - vec2(0.5);\n                        float t = u_gradient_type == 1 ? clamp(length(p) * 1.4142, 0.0, 1.0)\n                            : clamp(dot(p, vec2(cos(u_gradient_angle), sin(u_gradient_angle))) + 0.5, 0.0, 1.0);\n                        color.rgb = texture(u_gradient, vec2(t, 0.5)).rgb;\n                    }\n                    outColor = vec4(color.rgb * color.a, color.a);\n                }"),this.vao=t.createVertexArray(),t.bindVertexArray(this.vao),this.cornerBuffer=t.createBuffer(),t.bindBuffer(t.ARRAY_BUFFER,this.cornerBuffer),t.bufferData(t.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),t.STATIC_DRAW);const e=t.getAttribLocation(this.program,"a_corner");t.enableVertexAttribArray(e),t.vertexAttribPointer(e,2,t.FLOAT,!1,0,0),this.instanceBuffer=t.createBuffer(),t.bindBuffer(t.ARRAY_BUFFER,this.instanceBuffer),t.bufferData(t.ARRAY_BUFFER,this.instances.byteLength,t.DYNAMIC_DRAW),[["a_rect",4,0],["a_uv",4,4],["a_color",4,8]].forEach(([e,i,s])=>{const a=t.getAttribLocation(this.program,e);t.enableVertexAttribArray(a),t.vertexAttribPointer(a,i,t.FLOAT,!1,4*this.stride,4*s),t.vertexAttribDivisor(a,1)}),this.surfaceVao=t.createVertexArray(),t.bindVertexArray(this.surfaceVao),t.bindBuffer(t.ARRAY_BUFFER,this.cornerBuffer);const i=t.getAttribLocation(this.surfaceProgram,"a_corner");t.enableVertexAttribArray(i),t.vertexAttribPointer(i,2,t.FLOAT,!1,0,0),t.enable(t.BLEND),t.blendFunc(t.ONE,t.ONE_MINUS_SRC_ALPHA)}resize(t,e){this.gl.viewport(0,0,t,e)}setAtlas(t,e){if(e===this.atlasKey)return;const i=this.gl;this.atlasTexture||(this.atlasTexture=i.createTexture()),i.bindTexture(i.TEXTURE_2D,this.atlasTexture),i.pixelStorei(i.UNPACK_PREMULTIPLY_ALPHA_WEBGL,!1),i.texParameteri(i.TEXTURE_2D,i.TEXTURE_MIN_FILTER,i.LINEAR),i.texParameteri(i.TEXTURE_2D,i.TEXTURE_MAG_FILTER,i.LINEAR),i.texParameteri(i.TEXTURE_2D,i.TEXTURE_WRAP_S,i.CLAMP_TO_EDGE),i.texParameteri(i.TEXTURE_2D,i.TEXTURE_WRAP_T,i.CLAMP_TO_EDGE),i.texImage2D(i.TEXTURE_2D,0,i.RGBA,i.RGBA,i.UNSIGNED_BYTE,t),this.atlasKey=e}hasGradient(t){return this.gradientTextures.has(t)}setGradient(t,e){if(!t||this.gradientTextures.has(e))return this.gradientTextures.get(e)||null;const i=this.gl,s=i.createTexture();if(i.bindTexture(i.TEXTURE_2D,s),i.texParameteri(i.TEXTURE_2D,i.TEXTURE_MIN_FILTER,i.LINEAR),i.texParameteri(i.TEXTURE_2D,i.TEXTURE_MAG_FILTER,i.LINEAR),i.texParameteri(i.TEXTURE_2D,i.TEXTURE_WRAP_S,i.CLAMP_TO_EDGE),i.texParameteri(i.TEXTURE_2D,i.TEXTURE_WRAP_T,i.CLAMP_TO_EDGE),i.texImage2D(i.TEXTURE_2D,0,i.RGBA,i.RGBA,i.UNSIGNED_BYTE,t),this.gradientTextures.set(e,s),this.gradientTextures.size>8){const t=this.gradientTextures.keys().next().value;i.deleteTexture(this.gradientTextures.get(t)),this.gradientTextures.delete(t)}return s}begin(t,e=!1){const i=this.gl;this.count=0,e||(i.clearColor(t[0],t[1],t[2],t[3]),i.clear(i.COLOR_BUFFER_BIT))}surface(t,e=null){const i=this.gl;i.useProgram(this.surfaceProgram),i.bindVertexArray(this.surfaceVao),i.uniform4fv(i.getUniformLocation(this.surfaceProgram,"u_color"),t),this._gradientUniforms(this.surfaceProgram,e),i.drawArrays(i.TRIANGLE_STRIP,0,4)}push(t,e,i,s,a,n,r,o){if(this.count>=this.capacity){this.capacity*=2;const t=new Float32Array(this.capacity*this.stride);t.set(this.instances),this.instances=t}const h=this.count++*this.stride,l=this.instances;l[h]=t,l[h+1]=e,l[h+2]=i,l[h+3]=s,l[h+4]=a[n],l[h+5]=a[n+1],l[h+6]=a[n+2],l[h+7]=a[n+3],l[h+8]=r[0],l[h+9]=r[1],l[h+10]=r[2],l[h+11]=r[3]*o}_gradientUniforms(t,e){const i=this.gl,s=e?this.gradientTextures.get(e.textureKey):null,a=!!s;i.uniform1i(i.getUniformLocation(t,"u_use_gradient"),a?1:0),i.uniform1i(i.getUniformLocation(t,"u_gradient_type"),"radial"===(null==e?void 0:e.type)?1:0),i.uniform1f(i.getUniformLocation(t,"u_gradient_angle"),((null==e?void 0:e.angle)||0)*Math.PI/180),a&&(i.activeTexture(i.TEXTURE1),i.bindTexture(i.TEXTURE_2D,s),i.uniform1i(i.getUniformLocation(t,"u_gradient"),1))}flush(t,e,i=null){if(!this.count)return;const s=this.gl;s.useProgram(this.program),s.bindVertexArray(this.vao),s.bindBuffer(s.ARRAY_BUFFER,this.instanceBuffer),this.instances.byteLength>s.getBufferParameter(s.ARRAY_BUFFER,s.BUFFER_SIZE)&&s.bufferData(s.ARRAY_BUFFER,this.instances.byteLength,s.DYNAMIC_DRAW),s.bufferSubData(s.ARRAY_BUFFER,0,this.instances.subarray(0,this.count*this.stride)),s.uniform2f(s.getUniformLocation(this.program,"u_viewport"),t,e),s.activeTexture(s.TEXTURE0),s.bindTexture(s.TEXTURE_2D,this.atlasTexture),s.uniform1i(s.getUniformLocation(this.program,"u_atlas"),0),this._gradientUniforms(this.program,i),s.drawArraysInstanced(s.TRIANGLE_STRIP,0,4,this.count)}destroy(){const t=this.gl;this.atlasTexture&&t.deleteTexture(this.atlasTexture),this.gradientTextures.forEach(e=>t.deleteTexture(e)),this.gradientTextures.clear(),[this.cornerBuffer,this.instanceBuffer].forEach(e=>{e&&t.deleteBuffer(e)}),[this.program,this.surfaceProgram].forEach(e=>{e&&t.deleteProgram(e)})}}const D=class t{
-/** Ensures all running instances are served by one animation-frame callback. */
-static _scheduleFrame(){null===t._schedulerRaf&&t._activeInstances.size&&(t._schedulerRaf=requestAnimationFrame(t._tickFrame))}
-/** Advances every active instance, then schedules the next shared frame. */static _tickFrame(e){t._schedulerRaf=null;for(const i of t._activeInstances)i._runFrame(e);t._scheduleFrame()}
-/** Registers a process-wide named cell callback. */static registerMode(e,i){t._registry[e]=i}
-/** Create dependency-free geometry suitable for setMesh(). */static createMeshPrimitive(t,e){if("cube"===t)return function(t=2){const e=.5*Math.max(m,Number(t)||2);return v({positions:new Float32Array([-e,-e,-e,e,-e,-e,e,e,-e,-e,e,-e,-e,-e,e,e,-e,e,e,e,e,-e,e,e]),indices:new Uint16Array([0,2,1,0,3,2,4,5,6,4,6,7,0,4,7,0,7,3,1,2,6,1,6,5,3,7,6,3,6,2,0,1,5,0,5,4])})}(null==e?void 0:e.size);if("plane"===t)return function(t={}){var e,i,s,a;const n=Math.max(m,Number(null!=(e=t.width)?e:2)),r=Math.max(m,Number(null!=(i=t.height)?i:2)),o=Math.max(1,Math.min(256,Math.round(null!=(s=t.columns)?s:1))),h=Math.max(1,Math.min(256,Math.round(null!=(a=t.rows)?a:1))),l=o+1,c=l*(h+1),d=new Float32Array(3*c),u=new(c>65535?Uint32Array:Uint16Array)(o*h*6);let p=0;for(let t=0;t<=h;t++){const e=(t/h-.5)*r;for(let t=0;t<=o;t++)d[p++]=(t/o-.5)*n,d[p++]=e,d[p++]=0}let _=0;for(let t=0;t<h;t++)for(let e=0;e<o;e++){const i=t*l+e,s=i+1,a=(t+1)*l+e,n=a+1;u[_++]=i,u[_++]=s,u[_++]=n,u[_++]=i,u[_++]=n,u[_++]=a}return v({positions:d,indices:u})}(e);if("icosphere"===t)return function(t={}){var e,i;const s=Math.max(m,Number(null!=(e=t.radius)?e:1)),a=Math.max(0,Math.min(5,Math.round(null!=(i=t.subdivisions)?i:2))),n=(1+Math.sqrt(5))/2,r=[[-1,n,0],[1,n,0],[-1,-n,0],[1,-n,0],[0,-1,n],[0,1,n],[0,-1,-n],[0,1,-n],[n,0,-1],[n,0,1],[-n,0,-1],[-n,0,1]];let o=[0,11,5,0,5,1,0,1,7,0,7,10,0,10,11,1,5,9,5,11,4,11,10,2,10,7,6,7,1,8,3,9,4,3,4,2,3,2,6,3,6,8,3,8,9,4,9,5,2,4,11,6,2,10,8,6,7,9,8,1];for(let t=0;t<a;t++){const t=new Map,e=(e,i)=>{const s=`${Math.min(e,i)}:${Math.max(e,i)}`,a=t.get(s);if(void 0!==a)return a;const n=r[e],o=r[i],h=r.length;return r.push([.5*(n[0]+o[0]),.5*(n[1]+o[1]),.5*(n[2]+o[2])]),t.set(s,h),h},i=[];for(let t=0;t<o.length;t+=3){const s=o[t],a=o[t+1],n=o[t+2],r=e(s,a),h=e(a,n),l=e(n,s);i.push(s,r,l,a,h,r,n,l,h,r,h,l)}o=i}const h=new Float32Array(3*r.length);for(let t=0;t<r.length;t++){const e=r[t],i=Math.hypot(e[0],e[1],e[2])||1;h[3*t]=e[0]/i*s,h[3*t+1]=e[1]/i*s,h[3*t+2]=e[2]/i*s}return v({positions:h,indices:new(r.length>65535?Uint32Array:Uint16Array)(o)})}(e);if("torus"===t)return function(t={}){var e,i,s,a;const n=Math.max(3,Math.min(512,Math.round(null!=(e=t.majorSegments)?e:48))),r=Math.max(3,Math.min(256,Math.round(null!=(i=t.minorSegments)?i:24))),o=Math.max(m,Number(null!=(s=t.majorRadius)?s:1)),h=Math.max(m,Number(null!=(a=t.minorRadius)?a:.38)),l=n*r,c=new Float32Array(3*l),d=new(l>65535?Uint32Array:Uint16Array)(n*r*6);let u=0;for(let t=0;t<n;t++){const e=t/n*Math.PI*2,i=Math.cos(e),s=Math.sin(e);for(let t=0;t<r;t++){const e=t/r*Math.PI*2,a=o+h*Math.cos(e);c[u++]=a*i,c[u++]=h*Math.sin(e),c[u++]=a*s}}let p=0;for(let t=0;t<n;t++){const e=(t+1)%n;for(let i=0;i<r;i++){const s=(i+1)%r,a=t*r+i,n=e*r+i,o=e*r+s,h=t*r+s;d[p++]=a,d[p++]=n,d[p++]=o,d[p++]=a,d[p++]=o,d[p++]=h}}return v({positions:c,indices:d})}(e);throw new TypeError(`asciiam: unknown mesh primitive "${t}"`)}
-/** Decode a glTF 2.0 or GLB v2 source without constructing a renderer. */static loadModel(t,e){return P(t,e)}
-/** Feature-detect before constructing, for graceful fallback in older browsers. */static isSupported(){try{const t=document.createElement("canvas");return!(!t.getContext||!t.getContext("webgl2")&&!t.getContext("2d"))}catch(t){return!1}}
-/** Creates an instance around a container or application-owned canvas. */constructor(e,i={}){const s="string"==typeof e?document.querySelector(e):e;if(!s)throw new Error("asciiam: target not found");if(this._gpuPreferred=!1!==i.preferGPU,this._desynchronized=this._gpuPreferred&&!1!==i.desynchronized,this._rendererRequested=i.renderer||(this._gpuPreferred?"auto":"canvas2d"),!["auto","webgl2","canvas2d"].includes(this._rendererRequested))throw new TypeError('asciiam: renderer must be "auto", "webgl2", or "canvas2d"');if(!t.isSupported())return console.warn("asciiam: canvas 2D not supported in this browser — instance is a no-op."),this._disabled=!0,this.start=this.stop=this.destroy=this.setMode=this.setOption=this.setTarget=this.setCursor=this.triggerInteraction=this.clearImage=this.setMesh=this.clearMesh=this.clearModel=this.setSequence=this.playSequence=this.pauseSequence=this.stopSequence=this.clearSequence=this.seekSequence=this.nextSequenceStep=this.setRenderer=()=>{},this.getSequenceState=()=>({configured:!1,running:!1,completed:!1,index:-1,length:0,loop:!1,elapsed:0,waiting:!1,loading:!1,morphing:!1,morphProgress:0}),this.getRendererInfo=()=>({requested:"canvas2d",backend:"canvas2d",gpuPreferred:!1,acceleration:"not-requested",desynchronized:!1,willReadFrequently:!1}),this.on=()=>()=>{},this.off=()=>{},this.setImage=()=>Promise.resolve(null),this.setModel=()=>Promise.resolve(null),void(this.getMeshInfo=()=>({loaded:!1,vertexCount:0,primitiveCount:0,primitive:null}));"CANVAS"===s.tagName?(this.canvas=s,this.container=s.parentElement,this._ownsCanvas=!1):(this.container=s,this.canvas=document.createElement("canvas"),this._ownsCanvas=!0,this.canvas.style.cssText="display:block;width:100%;height:100%;position:absolute;inset:0;z-index:-1;pointer-events:none;contain:strict;",this.canvas.setAttribute("aria-hidden","true"),this.canvas.setAttribute("role","presentation"),"static"===getComputedStyle(this.container).position&&(this.container.style.position="relative"),this.container.style.isolation="isolate",this.container.insertBefore(this.canvas,this.container.firstChild)),this._gpuPreferred&&(this.canvas.style.willChange="transform",this.canvas.style.backfaceVisibility="hidden",this._ownsCanvas&&(this.canvas.style.transform="translateZ(0)")),this._webgl=null;let a=!1;if("canvas2d"!==this._rendererRequested)try{this._webgl=new B(this.canvas,{desynchronized:this._desynchronized,powerPreference:i.powerPreference})}catch(t){a=!0,"webgl2"===this._rendererRequested&&console.warn("asciiam: WebGL2 initialization failed; using Canvas 2D.",t)}if(this._renderer=this._webgl?"webgl2":"canvas2d",this._webgl&&this._bindWebGLFallback(),this._webgl){const t=document.createElement("canvas");this.ctx=t.getContext("2d",{alpha:!0,willReadFrequently:!1})}else{const t={alpha:!0,desynchronized:this._desynchronized,willReadFrequently:!1};try{this.ctx=this.canvas.getContext("2d",t)}catch(t){this.ctx=this.canvas.getContext("2d",{alpha:!0})}this.ctx||(this.ctx=this.canvas.getContext("2d",{alpha:!0})),!this.ctx&&a&&(this._replacePresentationCanvas(),this.ctx=this.canvas.getContext("2d",t)||this.canvas.getContext("2d",{alpha:!0}))}if(!this.ctx)return console.warn("asciiam: failed to acquire 2D context — instance is a no-op."),this._disabled=!0,this.start=this.stop=this.destroy=this.setMode=this.setOption=this.setTarget=this.setCursor=this.triggerInteraction=this.setMesh=this.clearMesh=this.clearModel=this.setSequence=this.playSequence=this.pauseSequence=this.stopSequence=this.clearSequence=this.seekSequence=this.nextSequenceStep=this.setRenderer=()=>{},this.getSequenceState=()=>({configured:!1,running:!1,index:-1,length:0,loop:!1,elapsed:0,waiting:!1}),this.getRendererInfo=()=>({requested:this._rendererRequested,backend:"canvas2d",gpuPreferred:!1,acceleration:"not-requested",desynchronized:!1,willReadFrequently:!1}),this.on=()=>()=>{},this.off=()=>{},this.setImage=()=>Promise.resolve(null),this.setModel=()=>Promise.resolve(null),void(this.getMeshInfo=()=>({loaded:!1,vertexCount:0,primitiveCount:0,primitive:null}));const n=t.QUALITY[i.quality]||t.QUALITY.balanced;if(this.opts=Object.assign({quality:t.QUALITY[i.quality]?i.quality:"balanced",mode:"wave",charSet:t.CHARACTER_SETS.asciiExtended,fontFamily:"'IBM Plex Mono', ui-monospace, Consolas, monospace",fontSize:14,density:n.density,color:"#4FA8FF",gradient:null,background:"transparent",backdrop:null,speed:1,direction:"horizontal",revealDirection:"center",align:"center",minOpacity:.05,maxOpacity:.85,boldOnPeak:!0,loop:!0,image:null,imageChars:t.CHARACTER_SETS.asciiExtended,imageScale:1,imageScaleX:1,imageScaleY:1,imageFov:1,fit:"cover",imageLuminance:"auto",colorFromImage:!1,animateImageMask:!0,imageMaskMode:"waveSweep",imageAnimationRange:null,
-// { min:'#000000', max:'#ffffff' }; null animates every sampled color
-animateImageFrames:!0,imageFrameRate:12,edgeFade:0,maxDPR:n.maxDPR,targetFPS:n.targetFPS,showStats:!1,fontLevels:n.fontLevels||6,alphaLevels:n.alphaLevels||32,useGlyphAtlas:!!n.useGlyphAtlas,cacheStaticWave:!!n.cacheStaticWave,preferGPU:this._gpuPreferred,desynchronized:this._desynchronized,renderer:this._rendererRequested,powerPreference:i.powerPreference||"high-performance",respectReducedMotion:!0,onReady:null,onImageError:null,onModelError:null,sequence:null,sequenceOptions:null,
-// --- wave tuning (previously hardcoded) ---
-ambient:.35,
-// 0..1, base noise level between wave passes
-bandWidth:.14,
-// fraction of extent the bright band spans
-// --- free / near-free additions ---
-trail:0,
-// 0..1, afterglow strength (0 = classic full clear)
-trailColor:"#070809",pulse:null,
-// { amplitude, speed } — global opacity breathing, ~free
-colorAnimation:null,
-// { type:'hueRotate'|'breathe', speed, ... } — one calc/frame
-// --- opt-in, small added cost ---
-cursor:null,
-// { enabled, radius, strength, mode:'boost' }
-interactionRadius:180,interactionDuration:1.1,
-// --- sparse mode density ---
-snowDensity:.02,sparkleDensity:.05,fireDensity:.035,starfieldDensity:.018,orbitDensity:.014,
-// --- dense mode timing / strength ---
-glitchIntensity:.32,typewriterDuration:4.5,
-// --- dependency-free 3D-to-ASCII source ---
-mesh:null,meshPrimitive:null,meshStyle:"wireframe",meshProjection:"perspective",meshCamera:null,meshTransform:null,meshLight:null,meshAutoRotate:!0,meshRotationSpeed:[.2,.45,.1],meshMaxVertices:1e5,meshMaxPrimitives:1e5,model:null,
-// --- extensibility ---
-customCell:null},i),this._time=0,this._raf=null,this._running=!1,this._visible=!0,this._lastT=null,this._acc=0,this._resizePending=!1,this._resizeRaf=null,this._lastFillStyle=null,this._lastFont=null,this._lastAlpha=-1,this._activeGlyphAtlas=null,this._waveBaseLayer=null,this._gradientKey=null,this._gradientObj=null,this._gradientSource=null,this._backdropGradientKey=null,this._backdropGradientObj=null,this._edgeFadeCache=null,this._cell={char:" ",opacity:0,level:0,bold:!1,color:null},this._frames=0,this._fpsAccum=0,this._fps=0,this._statsEl=null,this._warnedZeroSize=!1,this._pulseFactor=1,this._animatedColor=null,this._cursor=null,this._interaction=null,this._canvasRect=null,this._sequence=null,this._applyingSequence=!1,this._events=new Map,this._morph=null,this._destroyed=!1,this._animatedImage=!1,this._imageFrameAccumulator=0,this._capturedImageFrames=null,this._imageFrameIndex=0,this._imageLoadToken=0,this._imageCaptureToken=0,this._animatedImageData=null,this._imageRecaptureTimer=null,this._imageSampleCanvas=null,this._imageSampleContext=null,this._loadedImageSource=null,this._loadedImageOptionsKey=null,this._mesh=null,this._meshRasterizer=null,this._meshBaseRotation=new Float64Array(3),this._meshRotation=new Float64Array(3),this._meshPosition=new Float64Array(3),this._meshScale=new Float64Array([1,1,1]),this._meshRasterOptions={style:this.opts.meshStyle,projection:this.opts.meshProjection,camera:this.opts.meshCamera,transform:{position:this._meshPosition,rotation:this._meshRotation,scale:this._meshScale},light:this.opts.meshLight},this._modelLoadToken=0,this._modelAbortController=null,this._loadedModelSource=null,this._api={col:0,row:0,x:0,y:0,time:0,cols:0,rows:0,w:0,h:0,charSet:"",seed:(t,e)=>this._seed(t,e),set:(t,e,i,s)=>this._setCell(t,e,i,s)},this._mq=window.matchMedia?window.matchMedia("(prefers-reduced-motion: reduce)"):null,this._reduced=!!(this._mq&&this._mq.matches&&this.opts.respectReducedMotion),this._onMqChange=t=>{this._reduced=t.matches&&this.opts.respectReducedMotion,this._reduced?(this.stop(),this._draw(16.7)):this.start()},this._mq&&(this._mq.addEventListener?this._mq.addEventListener("change",this._onMqChange):this._mq.addListener(this._onMqChange)),this._bindLifecycle(),this._bindCursor(),this._buildFontCache(),this._resize(),document.fonts&&document.fonts.ready&&document.fonts.ready.then(()=>{this._buildFontCache(),this._resize()}).catch(()=>{}),this.opts.image&&this.setImage(this.opts.image),this.opts.mesh)this.setMesh(this.opts.mesh);else if(this.opts.meshPrimitive){const e=this.opts.meshPrimitive;this.setMesh(t.createMeshPrimitive(e)),this.opts.meshPrimitive=e}if(this.opts.model&&this.setModel(this.opts.model).catch(()=>{}),Array.isArray(this.opts.sequence)&&this.opts.sequence.length){const t=this.opts.sequenceOptions||{};this.setSequence(this.opts.sequence,t),t.autoplay&&this.playSequence()}Promise.resolve().then(()=>{if(this._destroyed)return;const t={width:this.w,height:this.h,cols:this.cols,rows:this.rows};this._emit("ready",t),"function"==typeof this.opts.onReady&&this.opts.onReady(this)})}
-// ---- public API ----
-/** Starts or resumes this instance on the shared frame scheduler. */
-start(){this._disabled||this._running||(this._reduced?this._draw(16.7):(this._running=!0,this._raf=!0,t._activeInstances.add(this),t._scheduleFrame()))}
-/** Stops frame scheduling while retaining renderer and animation state. */stop(){this._running&&(this._running=!1,this._raf=null,t._activeInstances.delete(this),t._activeInstances.size||null===t._schedulerRaf||(cancelAnimationFrame(t._schedulerRaf),t._schedulerRaf=null))}
-/** Releases observers, listeners, renderer resources, and owned DOM. */destroy(){var t;this._destroyed=!0,this.stop(),this._clearMorph(),this._io&&this._io.disconnect(),this._ro&&this._ro.disconnect(),this._resizeRaf&&cancelAnimationFrame(this._resizeRaf),document.removeEventListener("visibilitychange",this._onVisChange),this._onResize&&window.removeEventListener("resize",this._onResize),this._mq&&(this._mq.removeEventListener?this._mq.removeEventListener("change",this._onMqChange):this._mq.removeListener(this._onMqChange)),this._unbindCursor(),this._onWebGLContextLost&&this.canvas.removeEventListener("webglcontextlost",this._onWebGLContextLost),this._webgl&&this._webgl.destroy(),this._sourceImage=null,this._imageGrid=null,this._capturedImageFrames=null,this._animatedImageData=null,this._imageLoadToken++,this._imageCaptureToken++,null!==this._imageRecaptureTimer&&clearTimeout(this._imageRecaptureTimer),this._imageRecaptureTimer=null,this._imageSampleCanvas=null,this._imageSampleContext=null,this._mesh=null,this._meshRasterizer=null,this._modelLoadToken++,null==(t=this._modelAbortController)||t.abort(),this._modelAbortController=null,this._loadedModelSource=null,this.canvas.parentElement&&this.canvas.parentElement.removeChild(this.canvas),this._events.clear()}
-/** Advances time-dependent state in a fixed order before presenting a frame. */_runFrame(t){var e,i;if(!this._running)return;if(document.hidden||!this._visible)return void(this._lastT=null);const s=null===this._lastT?16.7:t-this._lastT;if(this._lastT=t,this.opts.targetFPS){this._acc+=s;const t=1e3/this.opts.targetFPS;if(this._acc<t)return;this._acc%=t}if(this._advanceMorph(s),(null==(e=this._sequence)?void 0:e.running)&&this._advanceSequence(s),this._time+=.001*s*this.opts.speed,this._interaction){this._interaction.elapsed+=.001*s;const t=Math.max(.05,Number(this.opts.interactionDuration)||1.1);this._interaction.elapsed>=t&&(this._interaction=null)}this._advanceImageFrames(s),this._draw(s),(null==(i=this._events.get("frame"))?void 0:i.size)&&this._emit("frame",{time:this._time,delta:s,drawn:this._lastDrawnCount}),this.opts.showStats&&this._updateStats(s)}
-/** Subscribe to a lifecycle event. Returns an unsubscribe function. */on(t,e){if("function"!=typeof e)throw new TypeError("asciiam: event listener must be a function");let i=this._events.get(t);return i||(i=new Set,this._events.set(t,i)),i.add(e),()=>this.off(t,e)}
-/** Removes a previously registered lifecycle listener. */off(t,e){const i=this._events.get(t);i&&(i.delete(e),i.size||this._events.delete(t))}
-/** Changes the algorithm and restarts its mode-local timeline. */setMode(t,e=!1){var i;!e&&(null==(i=this._sequence)?void 0:i.running)&&((this._sequence.stepStarted||this._sequence.stepLoading)&&this._interruptSequenceStep("mode-change"),this.pauseSequence("mode-change"),this._sequence.elapsed=0,this._sequence.delayElapsed=0,this._emit("sequenceInterrupt",this._sequenceDetail({reason:"mode-change"}))),this.opts.mode=t,"clickZone"===t&&(this._interaction=null),this._time=0,this._lastT=null,"matrix"===t&&this._initMatrix(),"snow"===t&&this._initSnow(),"sparkle"===t&&this._initSparkle(),"fire"===t&&this._initFire(),"starfield"===t&&this._initStarfield(),"orbit"===t&&this._initOrbit()}
-/** Updates one option and rebuilds only its dependent state or caches. */setOption(e,i){if("mode"!==e){if("quality"===e){const e=t.QUALITY[i];if(!e)return;return this.opts.quality=i,Object.assign(this.opts,e),this._buildFontCache(),void this._resize()}this.opts[e]=i,"fontSize"!==e&&"density"!==e||(this._buildFontCache(),this._resize()),"fontFamily"===e&&(this._buildFontCache(),this._resize()),"fontLevels"===e&&this._buildFontCache(),"color"!==e&&"charSet"!==e&&"useGlyphAtlas"!==e||(this._activeGlyphAtlas=null,this._waveBaseLayer=null),"maxDPR"===e&&this._resize(),"gradient"===e&&(this._gradientKey=null,this._gradientSource=null),"backdrop"===e&&(this._backdropGradientKey=null,this._backdropGradientObj=null),"edgeFade"===e&&(this._buildEdgeFadeCache(),this._waveBaseLayer=null),"align"===e&&(this._buildSpatialCache(),this._buildCurrentCache()),"revealDirection"===e&&["fadeIn","fadeOut","irisIn","irisOut","dissolveIn","dissolveOut"].includes(this.opts.mode)&&(this._time=0,this._lastT=null),"imageScale"!==e&&"imageScaleX"!==e&&"imageScaleY"!==e&&"imageFov"!==e&&"fit"!==e&&"imageChars"!==e&&"imageLuminance"!==e&&"colorFromImage"!==e&&"imageAnimationRange"!==e||(this._sourceImage&&this._resampleImage(),this._scheduleAnimatedFrameCapture()),"animateImageFrames"===e&&(this._imageFrameAccumulator=0),"snowDensity"===e&&this._initSnow(),"sparkleDensity"===e&&this._initSparkle(),"fireDensity"===e&&this._initFire(),"starfieldDensity"===e&&this._initStarfield(),"orbitDensity"===e&&this._initOrbit(),"mesh"===e&&(i?this.setMesh(i):this.clearMesh()),"meshPrimitive"===e&&(i?(this.setMesh(t.createMeshPrimitive(i)),this.opts.meshPrimitive=i):this.opts.model||this.clearMesh()),"model"===e&&(i?this.setModel(i).catch(()=>{}):this.clearModel()),"meshStyle"!==e&&"meshProjection"!==e&&"meshCamera"!==e&&"meshLight"!==e||this._syncMeshOptions(),"meshTransform"!==e&&"meshRotationSpeed"!==e||this._syncMeshOptions(),"respectReducedMotion"===e&&(this._reduced=!!(this._mq&&this._mq.matches&&i),this._reduced&&(this.stop(),this._draw(16.7)))}else this.setMode(i)}
-/** Validate and retain typed-array geometry for the mesh animation mode. */setMesh(t){return this._mesh=v(t,{maxVertices:this.opts.meshMaxVertices,maxPrimitives:this.opts.meshMaxPrimitives}),this.opts.mesh=t,this.opts.meshPrimitive=null,this._meshRasterizer?this._meshRasterizer.resize(this.cols||1,this.rows||1):this._meshRasterizer=new y(this.cols||1,this.rows||1),this._syncMeshOptions(),this._emit("meshReady",this.getMeshInfo()),this}
-/** Release retained geometry and raster buffers. */clearMesh(){return this._mesh=null,this.opts.mesh=null,this.opts.meshPrimitive=null,this._meshRasterizer=null,this._emit("meshClear",this.getMeshInfo()),this}
-/** Report normalized topology without exposing mutable internal buffers. */getMeshInfo(){var t,e,i;return{loaded:!!this._mesh,vertexCount:(null==(t=this._mesh)?void 0:t.vertexCount)||0,primitiveCount:(null==(e=this._mesh)?void 0:e.primitiveCount)||0,primitive:(null==(i=this._mesh)?void 0:i.primitive)||null,style:this.opts.meshStyle,projection:this.opts.meshProjection}}
-/** Decode and retain a glTF 2.0 or GLB v2 model with cancellation and progress events. */setModel(t){return c(this,arguments,function*(t,e={}){var i,s,a;if(null==t||""===t)return this.clearModel(),null;const n=++this._modelLoadToken;null==(i=this._modelAbortController)||i.abort();const r=new AbortController;this._modelAbortController=r;const l=()=>r.abort();null==(s=e.signal)||s.addEventListener("abort",l,{once:!0}),this.opts.model=t,this._emit("modelLoadStart",{source:t});try{const i=yield P(t,h(o({},e),{signal:r.signal,limits:o({maxVertices:this.opts.meshMaxVertices,maxPrimitives:this.opts.meshMaxPrimitives},e.limits),onProgress:t=>{var i;null==(i=e.onProgress)||i.call(e,t),n===this._modelLoadToken&&this._emit("modelProgress",t)}}));return n!==this._modelLoadToken||this._destroyed?null:(this._loadedModelSource=t,this.setMesh(i),this.opts.model=t,this._emit("modelReady",o({source:t},this.getMeshInfo())),i)}catch(e){if(n!==this._modelLoadToken||"AbortError"===(null==e?void 0:e.name))return null;throw this._emit("modelError",{source:t,error:e}),"function"==typeof this.opts.onModelError&&this.opts.onModelError(e),e}finally{null==(a=e.signal)||a.removeEventListener("abort",l),n===this._modelLoadToken&&(this._modelAbortController=null)}})}
-/** Cancel model loading and release its retained geometry. */clearModel(){var t;return this._modelLoadToken++,null==(t=this._modelAbortController)||t.abort(),this._modelAbortController=null,this._loadedModelSource=null,this.opts.model=null,this.clearMesh(),this._emit("modelClear",{}),this}
-/** Copy public mesh options into stable arrays consumed by the hot raster loop. */_syncMeshOptions(){const t=(t,e,i)=>{for(let s=0;s<3;s++){const a=Number(null==t?void 0:t[s]);e[s]=Number.isFinite(a)?a:i[s]}},e=this.opts.meshTransform;t(null==e?void 0:e.position,this._meshPosition,[0,0,0]),t(null==e?void 0:e.rotation,this._meshBaseRotation,[0,0,0]),t(null==e?void 0:e.scale,this._meshScale,[1,1,1]),this._meshRotation.set(this._meshBaseRotation),this._meshRasterOptions.style=this.opts.meshStyle,this._meshRasterOptions.projection=this.opts.meshProjection,this._meshRasterOptions.camera=this.opts.meshCamera,this._meshRasterOptions.light=this.opts.meshLight}
-/** Move the existing renderer to another container without creating a second animation loop. */setTarget(t){const e="string"==typeof t?document.querySelector(t):t;if(!e)throw new Error("asciiam: target not found");e!==this.container?(this._unbindCursor(),this._ro&&this._ro.disconnect(),"static"===getComputedStyle(e).position&&(e.style.position="relative"),e.style.isolation="isolate",e.insertBefore(this.canvas,e.firstChild),this.container=e,this._bindCursor(),this._ro&&"ResizeObserver"in window&&(this._ro=new ResizeObserver(()=>this._scheduleResize()),this._ro.observe(e)),this._resize()):this._scheduleResize()}
-/** Configure an ordered set of mode steps without starting it. */setSequence(t,e={}){var i;if(!Array.isArray(t))throw new TypeError("asciiam: sequence steps must be an array");(null==(i=this._sequence)?void 0:i.running)&&((this._sequence.stepStarted||this._sequence.stepLoading)&&this._interruptSequenceStep("reconfigure"),this.pauseSequence("reconfigure"));const s=t.map((t,e)=>{var i,s,a;if(!t||"object"!=typeof t)throw new TypeError(`asciiam: sequence step ${e} must be an object`);if("string"!=typeof t.mode||!t.mode)throw new TypeError(`asciiam: sequence step ${e} requires a mode`);const n=Number(t.duration),r=Number(t.delay),h=Number(null==(i=t.transition)?void 0:i.duration),l="morph"===(null==(s=t.transition)?void 0:s.type)?{type:"morph",duration:Number.isFinite(h)&&h>0?h:.8,easing:["linear","easeIn","easeOut","easeInOut"].includes(t.transition.easing)?t.transition.easing:"easeInOut"}:{type:"cut",duration:0,easing:"linear"};return{id:t.id||`step-${e+1}`,label:t.label||t.mode,mode:t.mode,duration:Number.isFinite(n)&&n>0?n:5,delay:Number.isFinite(r)&&r>0?r:0,
-// `repeat` controls a mode's finite timeline within this step.
-// Preserve configurations that previously used options.loop,
-// while keeping one-shot sequence steps as the default.
-repeat:!0===t.repeat||void 0===t.repeat&&!0===(null==(a=t.options)?void 0:a.loop),
-// `undefined` retains the current image, `null` clears it, and a
-// string loads a new source before this step's duration begins.
-image:Object.prototype.hasOwnProperty.call(t,"image")?null===t.image?null:String(t.image):void 0,imageOptions:t.imageOptions&&"object"==typeof t.imageOptions?o({},t.imageOptions):{},options:t.options&&"object"==typeof t.options?o({},t.options):{},transition:l,onStart:"function"==typeof t.onStart?t.onStart:null,onComplete:"function"==typeof t.onComplete?t.onComplete:null,onInterrupt:"function"==typeof t.onInterrupt?t.onInterrupt:null,onError:"function"==typeof t.onError?t.onError:null}});return this._sequence={steps:s,index:-1,elapsed:0,delayElapsed:0,stepStarted:!1,stepLoading:!1,activationToken:0,startedOnce:!1,completed:!1,running:!1,loop:!1!==e.loop,onStepStart:"function"==typeof e.onStepStart?e.onStepStart:null,onStepComplete:"function"==typeof e.onStepComplete?e.onStepComplete:null,onStepInterrupt:"function"==typeof e.onStepInterrupt?e.onStepInterrupt:null,onComplete:"function"==typeof e.onComplete?e.onComplete:null},this.opts.sequence=s,this.opts.sequenceOptions=h(o({},e),{loop:!1!==e.loop,autoplay:!!e.autoplay}),this}
-/** Start or resume the configured sequence. Also starts the renderer if needed. */playSequence(t){const e=this._sequence;if(!e||!e.steps.length)return this;const i=e.index<0||e.completed;if(e.running=!0,void 0!==t||i){const e=void 0===t?0:this._normalizeSequenceIndex(t);this._activateSequenceStep(e)}return this._emit(i?"sequenceStart":"sequenceResume",this._sequenceDetail()),this.start(),this}
-/** Pauses sequence time without stopping the renderer. */pauseSequence(t="pause"){var e;return(null==(e=this._sequence)?void 0:e.running)?(this._sequence.running=!1,this._emit("sequencePause",this._sequenceDetail({reason:t})),this):this}
-/** Stops sequence playback and resets its position. */stopSequence(){return this._sequence?((this._sequence.stepStarted||this._sequence.stepLoading)&&this._interruptSequenceStep("stop"),this._sequence.running=!1,this._sequence.index=-1,this._sequence.elapsed=0,this._sequence.delayElapsed=0,this._sequence.stepStarted=!1,this._sequence.stepLoading=!1,this._sequence.activationToken++,this._sequence.startedOnce=!1,this._sequence.completed=!1,this._clearMorph(),this._emit("sequenceStop",this._sequenceDetail({reason:"stop"})),this):this}
-/** Removes the configured sequence and transient morph state. */clearSequence(){return this.stopSequence(),this._sequence=null,this.opts.sequence=null,this.opts.sequenceOptions=null,this}
-/** Selects a step using normalized wraparound indexing. */seekSequence(t){var e;return(null==(e=this._sequence)?void 0:e.steps.length)?((this._sequence.stepStarted||this._sequence.stepLoading)&&this._interruptSequenceStep("seek"),this._activateSequenceStep(this._normalizeSequenceIndex(t)),this):this}
-/** Interrupts the active step and advances according to loop policy. */nextSequenceStep(){const t=this._sequence;if(!(null==t?void 0:t.steps.length))return this;(t.stepStarted||t.stepLoading)&&this._interruptSequenceStep("skip");const e=t.index+1;return e<t.steps.length?this._activateSequenceStep(e):t.loop?(this._emit("sequenceLoop",this._sequenceDetail()),this._activateSequenceStep(0)):this._completeSequence(),this}
-/** Returns a serializable snapshot of sequence playback state. */getSequenceState(){var t,e,i,s;const a=this._sequence;return{configured:!!(null==a?void 0:a.steps.length),running:!!(null==a?void 0:a.running),completed:!!(null==a?void 0:a.completed),index:null!=(t=null==a?void 0:a.index)?t:-1,length:null!=(e=null==a?void 0:a.steps.length)?e:0,loop:null!=(i=null==a?void 0:a.loop)&&i,elapsed:null!=(s=null==a?void 0:a.elapsed)?s:0,waiting:!!a&&a.index>=0&&!a.stepStarted,loading:!!(null==a?void 0:a.stepLoading),morphing:!!this._morph,morphProgress:this._morph?Math.min(1,this._morph.elapsed/this._morph.duration):0}}
-/** Reports requested policy and the resolved presentation backend. */getRendererInfo(){var t,e,i;const s=(null==(t=this._webgl)?void 0:t.gl)||this.ctx,a="function"==typeof(null==s?void 0:s.getContextAttributes)?s.getContextAttributes():null;return{requested:this._rendererRequested,backend:this._renderer,gpuPreferred:this._gpuPreferred,acceleration:"webgl2"===this._renderer?"gpu-api-preferred":this._gpuPreferred?"browser-managed":"not-requested",desynchronized:null!=(e=null==a?void 0:a.desynchronized)?e:this._desynchronized,willReadFrequently:null!=(i=null==a?void 0:a.willReadFrequently)&&i}}
-/** Replaces presentation resources while retaining instance-level state. */setRenderer(t,e=t){if(!["auto","webgl2","canvas2d"].includes(t))throw new TypeError('asciiam: renderer must be "auto", "webgl2", or "canvas2d"');const i="canvas2d"!==t;if(i&&"webgl2"===this._renderer||!i&&"canvas2d"===this._renderer){const t=this._rendererRequested!==e;return this._rendererRequested=e,this.opts.renderer=e,t&&this._emit("rendererChange",this.getRendererInfo()),this._renderer}const s=this.canvas,a=document.createElement("canvas");if(a.style.cssText=s.style.cssText,a.setAttribute("aria-hidden","true"),a.setAttribute("role","presentation"),s.replaceWith(a),this._io&&(this._io.disconnect(),this._io.observe(a)),this._webgl&&this._webgl.destroy(),this._onWebGLContextLost&&s.removeEventListener("webglcontextlost",this._onWebGLContextLost),this.canvas=a,this._ownsCanvas=!0,this._webgl=null,i)try{this._webgl=new B(a,{desynchronized:this._desynchronized,powerPreference:this.opts.powerPreference})}catch(e){"webgl2"===t&&console.warn("asciiam: WebGL2 initialization failed; using Canvas 2D.",e)}if(this._renderer=this._webgl?"webgl2":"canvas2d",this._webgl&&this._bindWebGLFallback(),this._webgl){const t=document.createElement("canvas");this.ctx=t.getContext("2d",{alpha:!0,willReadFrequently:!1})}else this.ctx=a.getContext("2d",{alpha:!0,desynchronized:this._desynchronized,willReadFrequently:!1}),!this.ctx&&i&&(this._replacePresentationCanvas(),this._io&&(this._io.disconnect(),this._io.observe(this.canvas)),this.ctx=this.canvas.getContext("2d",{alpha:!0,desynchronized:this._desynchronized,willReadFrequently:!1})||this.canvas.getContext("2d",{alpha:!0}));if(!this.ctx)throw new Error("asciiam: failed to initialize renderer fallback");return this._rendererRequested=e,this.opts.renderer=e,this._webglAtlas=null,this._activeGlyphAtlas=null,this._waveBaseLayer=null,this._buildFontCache(),this._resize(),this._emit("rendererChange",this.getRendererInfo()),this._renderer}_replacePresentationCanvas(){const t=this.canvas,e=document.createElement("canvas");return e.style.cssText=t.style.cssText,e.setAttribute("aria-hidden",t.getAttribute("aria-hidden")||"true"),e.setAttribute("role",t.getAttribute("role")||"presentation"),t.parentNode&&t.replaceWith(e),this.canvas=e,this._ownsCanvas=!0,e}_bindWebGLFallback(){this._onWebGLContextLost=t=>{t.preventDefault();const e=this._rendererRequested;this.setRenderer("canvas2d",e),this._emit("rendererFallback",o({reason:"context-lost"},this.getRendererInfo()))},this.canvas.addEventListener("webglcontextlost",this._onWebGLContextLost,!1)}_normalizeSequenceIndex(t){const e=Math.max(0,this._sequence.steps.length-1);return Math.max(0,Math.min(e,Math.round(Number(t)||0)))}_activateSequenceStep(t){const e=this._sequence;e.stepLoading&&(this._imageLoadToken++,this._imageCaptureToken++),e.index=t,e.elapsed=0,e.delayElapsed=0,e.stepStarted=!1,e.stepLoading=!1,e.activationToken++,e.completed=!1,0===e.steps[t].delay&&this._startSequenceStep()}_startSequenceStep(){const t=this._sequence,e=t.steps[t.index];if(t.stepStarted||t.stepLoading)return;const i=t.activationToken;null===e.image&&this.clearImage();const s=void 0===e.imageOptions.animated?"":String(!!e.imageOptions.animated);if("string"==typeof e.image&&(e.image!==this._loadedImageSource||s!==this._loadedImageOptionsKey))return t.stepLoading=!0,void this.setImage(e.image,e.imageOptions).then(s=>{s&&t.activationToken===i&&(t.stepLoading=!1,t.running&&this._commitSequenceStep(e))}).catch(s=>{if(t.activationToken!==i)return;t.stepLoading=!1,t.running=!1;const a=this._sequenceDetail({step:e,reason:"image-error",error:s});this._callSequenceCallback(e.onError,a),this._emit("sequenceStepError",a)});this._commitSequenceStep(e)}
-/** Applies a decoded sequence step and starts its timed lifecycle. */_commitSequenceStep(t){const e=this._sequence;e.startedOnce&&this._beginMorph(t.transition),this._applyingSequence=!0;try{for(const[e,i]of Object.entries(t.options))"mode"!==e&&"image"!==e&&"loop"!==e&&"sequence"!==e&&"sequenceOptions"!==e&&this.setOption(e,i);this.setOption("loop",t.repeat),this.setMode(t.mode,!0)}finally{this._applyingSequence=!1}e.stepStarted=!0,e.startedOnce=!0;const i=this._sequenceDetail({step:t});this._callSequenceCallback(t.onStart,i),this._callSequenceCallback(e.onStepStart,i),this._emit("sequenceStepStart",i)}_completeSequenceStep(){const t=this._sequence,e=t.steps[t.index],i=this._sequenceDetail({step:e,reason:"complete"});this._callSequenceCallback(e.onComplete,i),this._callSequenceCallback(t.onStepComplete,i),this._emit("sequenceStepComplete",i),t.stepStarted=!1}_interruptSequenceStep(t){const e=this._sequence,i=e.steps[e.index];e.stepLoading&&(this._imageLoadToken++,this._imageCaptureToken++);const s=this._sequenceDetail({step:i,reason:t});this._callSequenceCallback(null==i?void 0:i.onInterrupt,s),this._callSequenceCallback(e.onStepInterrupt,s),this._emit("sequenceStepInterrupt",s),e.stepStarted=!1,e.stepLoading=!1,e.activationToken++}_completeSequence(){const t=this._sequence;t.running=!1,t.completed=!0;const e=this._sequenceDetail({reason:"complete"});this._callSequenceCallback(t.onComplete,e),this._emit("sequenceComplete",e)}_sequenceDetail(t={}){var e,i,s,a;const n=this._sequence;return o({index:null!=(e=null==n?void 0:n.index)?e:-1,length:null!=(i=null==n?void 0:n.steps.length)?i:0,loop:null!=(s=null==n?void 0:n.loop)&&s,elapsed:null!=(a=null==n?void 0:n.elapsed)?a:0,step:n&&n.index>=0?n.steps[n.index]:null},t)}_callSequenceCallback(t,e){if(t)try{t(e,this)}catch(t){console.error("asciiam: sequence callback failed",t)}}_beginMorph(t){if(this._clearMorph(),this._reduced||"morph"!==(null==t?void 0:t.type)||!this.canvas.parentElement)return;const e=1e3*Math.max(.05,Number(t.duration)||.8),i=document.createElement("canvas");i.width=this.canvas.width,i.height=this.canvas.height,i.className="asciiam-morph-layer",i.setAttribute("aria-hidden","true"),i.style.cssText=this.canvas.style.cssText,i.style.pointerEvents="none",i.style.opacity="1",i.style.willChange="opacity";try{const t=i.getContext("2d",{alpha:!0});if(!t)return;t.drawImage(this.canvas,0,0)}catch(t){return}this.canvas.after(i),this._morph={canvas:i,elapsed:0,duration:e,easing:t.easing||"easeInOut"},this._emit("sequenceMorphStart",this._sequenceDetail({transition:t}))}_advanceMorph(t){const e=this._morph;if(!e)return;e.elapsed=Math.min(e.duration,e.elapsed+Math.max(0,t));const i=e.elapsed/e.duration;let s=i;if("easeIn"===e.easing?s=i*i:"easeOut"===e.easing?s=1-(1-i)*(1-i):"easeInOut"===e.easing&&(s=i<.5?2*i*i:1-Math.pow(-2*i+2,2)/2),e.canvas.style.opacity=String(1-s),i>=1){const t=this._sequenceDetail({transition:{type:"morph",duration:e.duration/1e3,easing:e.easing}});this._clearMorph(),this._emit("sequenceMorphComplete",t)}}_clearMorph(){var t;(null==(t=this._morph)?void 0:t.canvas.parentElement)&&this._morph.canvas.remove(),this._morph=null}_advanceSequence(t){const e=this._sequence;if(!(null==e?void 0:e.running)||!e.steps.length)return;let i=Math.max(0,t)/1e3;for(;i>0&&e.running;){const t=e.steps[e.index];if(!e.stepStarted){const s=Math.max(0,t.delay-e.delayElapsed),a=Math.min(i,s);if(e.delayElapsed+=a,i-=a,e.delayElapsed+Number.EPSILON<t.delay)return;if(this._startSequenceStep(),!e.stepStarted)return;if(i<=0)return}const s=Math.max(0,t.duration-e.elapsed),a=Math.min(i,s);if(e.elapsed+=a,i-=a,e.elapsed+Number.EPSILON<t.duration)return;this._completeSequenceStep();const n=e.index+1;n<e.steps.length?this._activateSequenceStep(n):e.loop?(this._emit("sequenceLoop",this._sequenceDetail()),this._activateSequenceStep(0)):this._completeSequence()}}
-/** Returns a Promise that resolves once the image is sampled into the ASCII grid. */setImage(t,e={}){if(null==t||""===t)return this.clearImage(),Promise.resolve(null);this.opts.image=String(t);const i=++this._imageLoadToken,s=++this._imageCaptureToken;return null!==this._imageRecaptureTimer&&clearTimeout(this._imageRecaptureTimer),this._imageRecaptureTimer=null,this._capturedImageFrames=null,this._animatedImageData=null,this._imageFrameIndex=0,new Promise((a,n)=>{const r=new Image;r.crossOrigin="anonymous",r.onload=()=>c(this,null,function*(){var n;if(i!==this._imageLoadToken||this._destroyed)a(null);else{if(this._sourceImage=r,this._loadedImageSource=String(t),this._loadedImageOptionsKey=void 0===e.animated?"":String(!!e.animated),this._animatedImage=null!=(n=e.animated)?n:/^(?:data:image\/gif)|\.gif(?:$|[?#])/i.test(String(t)),this._imageFrameAccumulator=0,this._resampleImage(),this._animatedImage)try{yield this._captureAnimatedImageFrames(t,i,s)}catch(t){console.warn("asciiam: exact GIF frame capture unavailable; using browser frame sampling.",t)}i!==this._imageLoadToken||this._destroyed?a(null):a(r)}}),r.onerror=e=>{i!==this._imageLoadToken||this._destroyed?a(null):(console.warn("asciiam: failed to load image:",t),this.opts.onImageError&&this.opts.onImageError(e),n(e))},r.src=t})}
-/** Clears the sampled image while retaining the active procedural mode. */clearImage(){return this._imageLoadToken++,this._imageCaptureToken++,null!==this._imageRecaptureTimer&&clearTimeout(this._imageRecaptureTimer),this._imageRecaptureTimer=null,this._sourceImage=null,this._loadedImageSource=null,this._loadedImageOptionsKey=null,this._imageGrid=null,this._capturedImageFrames=null,this._animatedImageData=null,this._animatedImage=!1,this._imageFrameIndex=0,this._imageFrameAccumulator=0,this._activeGlyphAtlas=null,this.opts.image=null,this}
-/** Decodes a GIF once and stores per-frame ASCII grids instead of bitmaps. */_captureAnimatedImageFrames(t){return c(this,arguments,function*(t,e=this._imageLoadToken,i=this._imageCaptureToken){const s=globalThis.ImageDecoder;if("function"!=typeof s)return!1;if("function"==typeof s.isTypeSupported&&!(yield s.isTypeSupported("image/gif")))return!1;let a=this._animatedImageData;if(!a){const s=yield fetch(t);if(!s.ok)throw new Error(`GIF fetch failed with ${s.status}`);if(a=yield s.arrayBuffer(),e!==this._imageLoadToken||i!==this._imageCaptureToken||this._destroyed)return!1;this._animatedImageData=a}const n=new s({data:a,type:"image/gif",preferAnimation:!0});try{yield n.tracks.ready;const t=n.tracks.selectedTrack,s=(null==t?void 0:t.frameCount)||0;if(s<2)return!1;const a=this._sourceImage,r=new Array(s);let o=0;for(let t=0;t<s;t++){if(e!==this._imageLoadToken||i!==this._imageCaptureToken||this._destroyed)return!1;const s=(yield n.decode({frameIndex:t,completeFramesOnly:!0})).image;try{this._sourceImage=s,this._resampleImage();const e=Math.max(10,Number(s.duration)>0?Number(s.duration)/1e3:100);o+=e,r[t]={grid:this._imageGrid,duration:e}}finally{this._sourceImage===s&&(this._sourceImage=a),"function"==typeof s.close&&s.close()}t%8==7&&(yield new Promise(t=>setTimeout(t,0)))}return e===this._imageLoadToken&&i===this._imageCaptureToken&&!this._destroyed&&(this._capturedImageFrames=r,this._imageFrameIndex=0,this._imageFrameAccumulator=0,this._imageGrid=r[0].grid,this._emit("imageFramesReady",{frameCount:s,duration:o/1e3}),!0)}finally{"function"==typeof n.close&&n.close()}})}
-/** Debounces GIF recapture after geometry or sampling options change. */_scheduleAnimatedFrameCapture(){if(!this._animatedImage||!this._animatedImageData||this._destroyed)return;this._capturedImageFrames=null,this._imageFrameIndex=0,this._imageFrameAccumulator=0;const t=this._imageLoadToken,e=++this._imageCaptureToken;null!==this._imageRecaptureTimer&&clearTimeout(this._imageRecaptureTimer),this._imageRecaptureTimer=setTimeout(()=>{this._imageRecaptureTimer=null,this._captureAnimatedImageFrames(null,t,e).catch(t=>{console.warn("asciiam: GIF frame recapture unavailable; using browser frame sampling.",t)})},180)}
-/** Advances captured frames or the browser-timed compatibility sampler. */_advanceImageFrames(t){var e;if(!this._animatedImage||!this.opts.animateImageFrames||!this._sourceImage)return;if(null==(e=this._capturedImageFrames)?void 0:e.length){this._imageFrameAccumulator+=Math.max(0,t);let e=this._capturedImageFrames[this._imageFrameIndex],i=!1;for(;this._imageFrameAccumulator>=e.duration;)this._imageFrameAccumulator-=e.duration,this._imageFrameIndex=(this._imageFrameIndex+1)%this._capturedImageFrames.length,e=this._capturedImageFrames[this._imageFrameIndex],i=!0;return void(i&&(this._imageGrid=e.grid,this._activeGlyphAtlas=null))}const i=1e3/Math.max(1,Math.min(60,Number(this.opts.imageFrameRate)||12));this._imageFrameAccumulator+=Math.max(0,t),this._imageFrameAccumulator<i||(this._imageFrameAccumulator%=i,this._resampleImage())}
-/** Programmatically drive the cursor-reactive modifier (e.g. for touch, audio-sync, demos). Pass null to clear. */setCursor(t,e){this._cursor=null==t?null:{x:t,y:e}}
-/** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */triggerInteraction(t=this._originX,e=this._originY){Number.isFinite(t)&&Number.isFinite(e)&&(this._interaction={x:t,y:e,elapsed:0})}_emit(t,e){const i=this._events.get(t);i&&[...i].forEach(t=>t(e,this))}
-// ---- lifecycle ----
-_bindLifecycle(){"IntersectionObserver"in window&&(this._io=new IntersectionObserver(t=>{this._visible=t[0].isIntersecting,this._visible&&(this._lastT=null)},{threshold:0}),this._io.observe(this.canvas)),this._onVisChange=()=>{document.hidden||(this._lastT=null)},document.addEventListener("visibilitychange",this._onVisChange);const t=this.container||this.canvas.parentElement;"ResizeObserver"in window&&t?(this._ro=new ResizeObserver(()=>this._scheduleResize()),this._ro.observe(t)):(this._onResize=()=>this._scheduleResize(),window.addEventListener("resize",this._onResize))}_scheduleResize(){this._resizePending||(this._resizePending=!0,this._resizeRaf=requestAnimationFrame(()=>{this._resizeRaf=null,this._resizePending=!1,this._resize()}))}
-// Pointer tracking supplies cursor modifiers and interactive modes. The
-// presentation canvas remains pointer-transparent; listeners belong to target.
-_bindCursor(){const t=this.container||this.canvas.parentElement;t&&(this._onPointerMove=t=>{this._canvasRect||(this._canvasRect=this.canvas.getBoundingClientRect()),this._cursor={x:t.clientX-this._canvasRect.left,y:t.clientY-this._canvasRect.top}},this._onPointerLeave=()=>{this._cursor=null},this._onPointerDown=t=>{this._canvasRect||(this._canvasRect=this.canvas.getBoundingClientRect()),this.triggerInteraction(t.clientX-this._canvasRect.left,t.clientY-this._canvasRect.top)},t.addEventListener("pointermove",this._onPointerMove,{passive:!0}),t.addEventListener("pointerleave",this._onPointerLeave,{passive:!0}),t.addEventListener("pointerdown",this._onPointerDown,{passive:!0}))}_unbindCursor(){const t=this.container||this.canvas.parentElement;t&&this._onPointerMove&&(t.removeEventListener("pointermove",this._onPointerMove),t.removeEventListener("pointerleave",this._onPointerLeave),t.removeEventListener("pointerdown",this._onPointerDown))}
-// ---- sizing / measurement ----
-_buildFontCache(){this.ctx.font=`${this.opts.fontSize}px ${this.opts.fontFamily}`;const t=this.ctx.measureText("M");this.charW=Math.max(4,t.width*this.opts.density),this.charH=Math.max(6,1.2*this.opts.fontSize*this.opts.density);const e=Math.max(2,Math.round(this.opts.fontLevels||2));this.opts.fontLevels=e,this._fontRegular=[],this._fontBold=[];for(let t=0;t<e;t++){const i=1+t/(e-1)*.5,s=Math.round(this.opts.fontSize*i*10)/10;this._fontRegular.push(`400 ${s}px ${this.opts.fontFamily}`),this._fontBold.push(`700 ${s}px ${this.opts.fontFamily}`)}this._activeGlyphAtlas=null,this._waveBaseLayer=null}_getGlyphAtlas(){if(!this.opts.useGlyphAtlas||this.opts.gradient||this.opts.colorAnimation||this.opts.colorFromImage)return null;const e=this._imageGrid&&this.opts.imageChars||"",i=[...new Set(this.opts.charSet+e)].join("");if(this._glyphAtlas&&this._glyphAtlasCharSet===i&&this._glyphAtlasColor===this.opts.color&&this._glyphAtlasRegular===this._fontRegular&&this._glyphAtlasBold===this._fontBold&&this._glyphAtlasCharHeight===this.charH)return this._glyphAtlas;const s=[...i],a=JSON.stringify([s.join(""),this._fontRegular,this._fontBold,this.opts.color,this.charH]),n=t._glyphAtlases.get(a);if(n)return t._glyphAtlases.delete(a),t._glyphAtlases.set(a,n),this._cacheGlyphAtlas(n,i),n;const r=1.5*this.opts.fontSize,o=Math.max(4,Math.ceil(r+4)),h=Math.max(6,Math.ceil(this.charH+4)),l=Math.max(1,Math.floor(2048/o)),c=2*this._fontRegular.length,m=s.length*c,d=Math.ceil(m/l),u=document.createElement("canvas");u.width=l*o,u.height=d*h;const p=u.getContext("2d",{alpha:!0,willReadFrequently:!1});if(!p)return null;p.textBaseline="alphabetic",p.fillStyle=this.opts.color;const _=h-2,g=new Map(s.map((t,e)=>[t,e])),f=new Uint16Array(m),v=new Uint16Array(m);for(let t=0;t<2;t++){const e=t?this._fontBold:this._fontRegular;for(let i=0;i<e.length;i++){p.font=e[i];const a=t*e.length+i;for(let t=0;t<s.length;t++){const e=a*s.length+t,i=e%l*o,n=Math.floor(e/l)*h;f[e]=i,v[e]=n,p.fillText(s[t],i+2,n+_)}}}const y={canvas:u,characterIndex:g,characters:s.length,sourceX:f,sourceY:v,tileWidth:o,tileHeight:h,baseline:_,padding:2};return t._glyphAtlases.set(a,y),t._glyphAtlases.size>t._glyphAtlasLimit&&t._glyphAtlases.delete(t._glyphAtlases.keys().next().value),this._cacheGlyphAtlas(y,i),y}_cacheGlyphAtlas(t,e=this.opts.charSet){this._glyphAtlas=t,this._glyphAtlasCharSet=e,this._glyphAtlasColor=this.opts.color,this._glyphAtlasRegular=this._fontRegular,this._glyphAtlasBold=this._fontBold,this._glyphAtlasCharHeight=this.charH}
-/** Re-measures the grid and invalidates geometry-dependent state and caches. */_resize(){var t;const e=Math.min(window.devicePixelRatio||1,this.opts.maxDPR);this._dpr=e;const i=this.canvas.parentElement||this.canvas,s=i.clientWidth,a=i.clientHeight;(s<2||a<2)&&!this._warnedZeroSize&&(console.warn("asciiam: container has zero (or near-zero) size — give it an explicit width/height. Nothing will render until it does."),this._warnedZeroSize=!0),this.w=s,this.h=a,this.canvas.width=Math.max(1,Math.round(s*e)),this.canvas.height=Math.max(1,Math.round(a*e)),this.canvas.style.width=s+"px",this.canvas.style.height=a+"px",this._webgl?this._webgl.resize(this.canvas.width,this.canvas.height):this.ctx.setTransform(e,0,0,e,0,0),this.cols=Math.max(1,Math.ceil(s/this.charW)),this.rows=Math.max(1,Math.ceil(a/this.charH)),this._meshRasterizer&&this._meshRasterizer.resize(this.cols,this.rows),this._columnX=new Float32Array(this.cols),this._rowY=new Float32Array(this.rows),this._rowBaseline=new Float32Array(this.rows);const n=.78*this.charH;for(let t=0;t<this.cols;t++)this._columnX[t]=t*this.charW;for(let t=0;t<this.rows;t++){const e=t*this.charH;this._rowY[t]=e,this._rowBaseline[t]=e+n}this._buildSeedCache(),this._buildSpatialCache(),this._buildCurrentCache(),this._buildEdgeFadeCache(),this._gradientKey=null,this._gradientSource=null,this._backdropGradientKey=null,this._backdropGradientObj=null,this._waveBaseLayer=null,this._canvasRect=this.canvas.getBoundingClientRect(),this._sourceImage&&this._resampleImage(),this._scheduleAnimatedFrameCapture(),"matrix"===this.opts.mode&&this._initMatrix(),"snow"===this.opts.mode&&this._initSnow(),"sparkle"===this.opts.mode&&this._initSparkle(),"fire"===this.opts.mode&&this._initFire(),"starfield"===this.opts.mode&&this._initStarfield(),"orbit"===this.opts.mode&&this._initOrbit(),this._reduced&&this._draw(16.7),(null==(t=this._events.get("resize"))?void 0:t.size)&&this._emit("resize",{width:this.w,height:this.h,cols:this.cols,rows:this.rows})}_buildEdgeFadeCache(){if(!(this.opts.edgeFade&&this.cols&&this.rows&&this.w&&this.h))return void(this._edgeFadeCache=null);const t=this.opts.edgeFade;this._edgeFadeCache=new Float32Array(this.cols*this.rows);for(let e=0;e<this.rows;e++)for(let i=0;i<this.cols;i++){const s=i*this.charW/this.w*2-1,a=e*this.charH/this.h*2-1,n=Math.min(1.4,Math.sqrt(s*s+a*a)),r=Math.max(0,(n-(1-t))/t);this._edgeFadeCache[e*this.cols+i]=1-Math.min(1,r)}}_buildSeedCache(){const t=this.cols*this.rows;this._seedCache=new Float32Array(t),this._seedNextRowCache=new Float32Array(t);for(let t=0;t<this.rows;t++){const e=t*this.cols;for(let i=0;i<this.cols;i++)this._seedCache[e+i]=this._seed(i,t),this._seedNextRowCache[e+i]=this._seed(i,t+1)}}_buildCurrentCache(){const t=this.cols*this.rows;this._currentSinX=new Float32Array(t),this._currentCosX=new Float32Array(t),this._currentSinY=new Float32Array(t),this._currentCosY=new Float32Array(t),this._currentSinXY=new Float32Array(t),this._currentCosXY=new Float32Array(t);for(let t=0;t<this.rows;t++){const e=t*this.charH,i=t*this.cols;for(let t=0;t<this.cols;t++){const s=i+t,a=t*this.charW-this._originX,n=e-this._originY,r=.02*a,o=.035*n,h=.015*(a+n);this._currentSinX[s]=Math.sin(r),this._currentCosX[s]=Math.cos(r),this._currentSinY[s]=Math.sin(o),this._currentCosY[s]=Math.cos(o),this._currentSinXY[s]=Math.sin(h),this._currentCosXY[s]=Math.cos(h)}}}_buildSpatialCache(){if(!this.cols||!this.rows)return;switch(this.opts.align){case"top-left":this._originX=0,this._originY=0;break;case"top":this._originX=.5*this.w,this._originY=0;break;case"top-right":this._originX=this.w,this._originY=0;break;case"left":this._originX=0,this._originY=.5*this.h;break;case"right":this._originX=this.w,this._originY=.5*this.h;break;case"bottom-left":this._originX=0,this._originY=this.h;break;case"bottom":this._originX=.5*this.w,this._originY=this.h;break;case"bottom-right":this._originX=this.w,this._originY=this.h;break;default:this._originX=.5*this.w,this._originY=.5*this.h}const t=this.cols*this.rows;this._rippleSin=new Float32Array(t),this._rippleCos=new Float32Array(t),this._imageRippleSin=new Float32Array(t),this._imageRippleCos=new Float32Array(t),this._rippleFalloff=new Float32Array(t),this._vortexSin=new Float32Array(t),this._vortexCos=new Float32Array(t),this._plasmaSinA=new Float32Array(t),this._plasmaCosA=new Float32Array(t),this._plasmaSinB=new Float32Array(t),this._plasmaCosB=new Float32Array(t),this._plasmaSinC=new Float32Array(t),this._plasmaCosC=new Float32Array(t);for(let t=0;t<this.rows;t++){const e=t*this.charH,i=t*this.cols;for(let t=0;t<this.cols;t++){const s=i+t,a=t*this.charW,n=a-this._originX,r=e-this._originY,o=Math.hypot(n,r),h=3*Math.atan2(r,n)+.045*o,l=.018*a+.011*e,c=.028*o,m=.009*a-.021*e;this._rippleSin[s]=Math.sin(.06*o),this._rippleCos[s]=Math.cos(.06*o),this._imageRippleSin[s]=Math.sin(.05*o),this._imageRippleCos[s]=Math.cos(.05*o),this._rippleFalloff[s]=Math.max(0,1-o/(.85*Math.max(this.w,this.h))),this._vortexSin[s]=Math.sin(h),this._vortexCos[s]=Math.cos(h),this._plasmaSinA[s]=Math.sin(l),this._plasmaCosA[s]=Math.cos(l),this._plasmaSinB[s]=Math.sin(c),this._plasmaCosB[s]=Math.cos(c),this._plasmaSinC[s]=Math.sin(m),this._plasmaCosC[s]=Math.cos(m)}}}_seed(t,e){const i=43758.5453*Math.sin(12.9898*t+78.233*e);return i-Math.floor(i)}
-// ---- gradient (built once per frame at most, never per cell) ----
-_getGradient(){const t=this.opts.gradient;if(!t)return null;if(!t.animate&&t===this._gradientSource&&this._gradientObj)return this._gradientObj;const e=JSON.stringify(t)+(t.animate?Math.floor(20*this._time):"");if(!t.animate&&e===this._gradientKey)return this._gradientObj;const i=this._expandGradientStops(t);let s;if("radial"===t.type){const e=this.w*(t.center?t.center[0]:.5),i=this.h*(t.center?t.center[1]:.5),a=Math.max(this.w,this.h)*(t.radius||.75);s=this.ctx.createRadialGradient(e,i,0,e,i,a)}else{const e=((t.angle||0)+(t.animate?20*this._time:0))*Math.PI/180,i=Math.cos(e),a=Math.sin(e),n=this.w/2,r=this.h/2,o=(Math.abs(i)*this.w+Math.abs(a)*this.h)/2;s=this.ctx.createLinearGradient(n-i*o,r-a*o,n+i*o,r+a*o)}return i.forEach(t=>s.addColorStop(Math.min(1,Math.max(0,t.offset)),t.color)),this._gradientKey=e,this._gradientObj=s,this._gradientSource=t,s}_getBackdropGradient(t){if(!t||!t.stops)return null;const e=JSON.stringify(t)+`:${this.w}x${this.h}`+(t.animate?`:${Math.floor(20*this._time)}`:"");if(e===this._backdropGradientKey)return this._backdropGradientObj;const i=this._expandGradientStops(t);let s;if("radial"===t.type){const e=this.w*(t.center?t.center[0]:.5),i=this.h*(t.center?t.center[1]:.5),a=Math.max(this.w,this.h)*(t.radius||.75);s=this.ctx.createRadialGradient(e,i,0,e,i,a)}else{const e=((t.angle||0)+(t.animate?20*this._time:0))*Math.PI/180,i=Math.cos(e),a=Math.sin(e),n=this.w/2,r=this.h/2,o=(Math.abs(i)*this.w+Math.abs(a)*this.h)/2;s=this.ctx.createLinearGradient(n-i*o,r-a*o,n+i*o,r+a*o)}return i.forEach(t=>s.addColorStop(Math.min(1,Math.max(0,t.offset)),t.color)),this._backdropGradientKey=e,this._backdropGradientObj=s,s}_expandGradientStops(t){const e=t.stops||["#4FA8FF","#C04FFF"];if(e.some(t=>"object"==typeof t&&null!==t)){const t=Math.max(1,e.length-1);return e.map((e,i)=>({offset:Math.min(1,Math.max(0,"object"==typeof e&&void 0!==e.offset?e.offset:i/t)),color:"string"==typeof e?e:e.color})).sort((t,e)=>t.offset-e.offset)}const i=e.map(t=>"string"==typeof t?t:t.color),s=Math.max(1,Math.min(6,Math.round(t.steps||2))),a=[];for(let e=0;e<s;e++){const n=1===s?0:e/(s-1),r=n*Math.max(0,i.length-1),o=Math.min(i.length-1,Math.floor(r)),h=Math.min(i.length-1,o+1),l=r-o,c="cubic"===t.type?l*l*(3-2*l):l;a.push({offset:n,color:this._lerpColor(i[o],i[h],c)})}return a}
-// ---- animated color: one calculation per frame, never per cell ----
-_updateAnimatedColor(){var t,e,i;const s=this.opts.colorAnimation;if(s)if("hueRotate"===s.type){const i=((null!=(t=s.baseHue)?t:200)+this._time*(null!=(e=s.speed)?e:30))%360,a=null===s.saturation||void 0===s.saturation?80:s.saturation,n=null===s.lightness||void 0===s.lightness?60:s.lightness;this._animatedColor=`hsl(${i}, ${a}%, ${n}%)`}else if("breathe"===s.type){const t=(Math.sin(this._time*(null!=(i=s.speed)?i:1))+1)/2;this._animatedColor=this._lerpColor(s.colorA||"#4FA8FF",s.colorB||"#C04FFF",t)}else this._animatedColor=null;else this._animatedColor=null}_lerpColor(t,e,i){const s=this._hexToRgb(t),a=this._hexToRgb(e);if(!s||!a)return t;return`rgb(${Math.round(s[0]+(a[0]-s[0])*i)},${Math.round(s[1]+(a[1]-s[1])*i)},${Math.round(s[2]+(a[2]-s[2])*i)})`}_hexToRgb(t){const e=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(t);return e?[parseInt(e[1],16),parseInt(e[2],16),parseInt(e[3],16)]:null}
-// ---- image sampling ----
-/** Converts the current image source into glyph, color, and range-mask arrays. */
-_resampleImage(){const e=this._sourceImage;if(!e||!this.cols||!this.rows)return;const i=this.cols,s=this.rows;this._imageSampleCanvas||(this._imageSampleCanvas=document.createElement("canvas"),this._imageSampleContext=this._imageSampleCanvas.getContext("2d",{alpha:!0,willReadFrequently:!0}));const a=this._imageSampleCanvas;a.width!==i&&(a.width=i),a.height!==s&&(a.height=s);const n=this._imageSampleContext;if(!n)return;n.clearRect(0,0,i,s);const r=e.naturalWidth||e.videoWidth||e.displayWidth||e.codedWidth||e.width,o=e.naturalHeight||e.videoHeight||e.displayHeight||e.codedHeight||e.height;if(!r||!o)return;const h=r/o,l=this.charW||this.w/i||1,c=this.charH||this.h/s||1,m=i*l/(s*c);let d,u,p,_,g=0,f=0,v=i,y=s;"cover"===this.opts.fit?h>m?(_=o,p=_*m,u=0,d=(r-p)/2):(p=r,_=p/m,d=0,u=(o-_)/2):(d=0,u=0,p=r,_=o,h>m?(y=i*l/(h*c),f=(s-y)/2):(v=s*c*h/l,g=(i-v)/2));const w=Math.max(.1,this.opts.imageScale||1)/Math.max(.1,this.opts.imageFov||1);if(1!==w){const t=p/w,e=_/w;d+=(p-t)/2,u+=(_-e)/2,p=t,_=e}const M=Math.max(.1,Number(this.opts.imageScaleX)||1),b=Math.max(.1,Number(this.opts.imageScaleY)||1);if(1!==M||1!==b){const t=v*M,e=y*b;g+=(v-t)/2,f+=(y-e)/2,v=t,y=e}n.drawImage(e,d,u,p,_,g,f,v,y);const x=n.getImageData(0,0,i,s).data,S=new Array(i*s),C=new Array(i*s),F=this.opts.imageChars||this.opts.charSet||t.CHARACTER_SETS.density,A=this.opts.imageAnimationRange,T=A&&this._hexToRgb(A.min),R=A&&this._hexToRgb(A.max),E=T&&R?new Uint8Array(i*s):null,O=E?Math.min(T[0],R[0]):0,L=E?Math.max(T[0],R[0]):255,I=E?Math.min(T[1],R[1]):0,q=E?Math.max(T[1],R[1]):255,P=E?Math.min(T[2],R[2]):0,k=E?Math.max(T[2],R[2]):255;let B=0,D=0,G=0;for(let t=0;t<i*s;t++){x[4*t+3]<20?D++:(B++,G+=(.299*x[4*t]+.587*x[4*t+1]+.114*x[4*t+2])/255)}const z=this.opts.imageLuminance||"auto",U="invert"===z||"auto"===z&&D>0&&B>0&&G/B<.45;for(let t=0;t<i*s;t++){const e=x[4*t],i=x[4*t+1],s=x[4*t+2],a=x[4*t+3],n=(.299*e+.587*i+.114*s)/255,r=U?1-n:n,o=a<20?0:Math.min(F.length-1,Math.floor(r*(F.length-1)));S[t]=F[o],C[t]=a<20||U?null:`rgb(${e},${i},${s})`,E&&(E[t]=a>=20&&e>=O&&e<=L&&i>=I&&i<=q&&s>=P&&s<=k?1:0)}const N=this._imageAtlasRamp!==F;this._imageAtlasRamp=F,this._imageGrid={cols:i,rows:s,chars:S,colors:C,animationMask:E,invertedLuminance:U},this._activeGlyphAtlas=null,N&&(this._glyphAtlas=null,this._webglAtlas=null),this._waveBaseLayer=null}
-// ---- sparse mode state ----
-_initMatrix(){this._matrix=[];for(let t=0;t<this.cols;t++)this._matrix.push({y:-Math.random()*this.rows,speed:8+14*Math.random(),length:6+Math.floor(10*Math.random())})}_initSnow(){const t=Math.max(1,Math.round(this.cols*this.rows*this.opts.snowDensity));this._snow=[];for(let e=0;e<t;e++)this._snow.push({col:Math.floor(Math.random()*this.cols),y:Math.random()*this.rows,speed:2+5*Math.random(),phase:Math.random()*Math.PI*2,drift:.3+.6*Math.random()})}_initSparkle(){const t=Math.max(1,Math.round(this.cols*this.rows*this.opts.sparkleDensity));this._sparkle=[];for(let e=0;e<t;e++)this._sparkle.push({col:Math.floor(Math.random()*this.cols),row:Math.floor(Math.random()*this.rows),phase:Math.random()*Math.PI*2,speed:.6+1.4*Math.random()})}_initFire(){const t=Math.max(1,Math.round(this.cols*this.rows*this.opts.fireDensity));this._fire=[];for(let e=0;e<t;e++)this._resetFireParticle({},!0)}_resetFireParticle(t,e=!1){t.col=Math.random()*this.cols,t.y=e?this.rows*(.58+.48*Math.random()):this.rows+2*Math.random(),t.speed=5+9*Math.random(),t.phase=Math.random()*Math.PI*2,t.drift=.7+1.4*Math.random(),t.life=.45+.55*Math.random(),this._fire.includes(t)||this._fire.push(t)}_initStarfield(){const t=Math.max(1,Math.round(this.cols*this.rows*this.opts.starfieldDensity));this._starfield=[];for(let e=0;e<t;e++)this._resetStar({},!0)}_resetStar(t,e=!1){t.x=2*Math.random()-1,t.y=2*Math.random()-1,t.z=e?.08+.92*Math.random():1,t.speed=.22+.42*Math.random(),this._starfield.includes(t)||this._starfield.push(t)}_initOrbit(){const t=Math.max(1,Math.round(this.cols*this.rows*this.opts.orbitDensity)),e=Math.max(this.charW,.5*Math.min(this.w,this.h));this._orbit=[];for(let i=0;i<t;i++)this._orbit.push({angle:Math.random()*Math.PI*2,radius:e*(.12+.82*Math.random()),speed:(.28+.7*Math.random())*(Math.random()>.2?1:-1),phase:Math.random()*Math.PI*2})}
-// ---- main draw loop ----
-/** Selects dense, sparse, cached, or image-backed drawing for one frame. */
-_draw(t){var e,i,s;if(this._webgl)return void this._drawWebGL(t);const a=this.ctx;if("wave"===this.opts.mode){const t="diagonal"===this.opts.direction?this.w+this.h:"vertical"===this.opts.direction?this.h:this.w,e="diagonal"===this.opts.direction?160:140;this._wavePosition=this._time*e%(t+300)-150,this._waveBand=t*this.opts.bandWidth}else if("current"===this.opts.mode)this._currentTimeSinX=Math.sin(1.1*this._time),this._currentTimeCosX=Math.cos(1.1*this._time),this._currentTimeSinY=Math.sin(.8*-this._time),this._currentTimeCosY=Math.cos(.8*-this._time),this._currentTimeSinXY=Math.sin(1.6*this._time),this._currentTimeCosXY=Math.cos(1.6*this._time);else if("ripple"===this.opts.mode)this._rippleTimeSin=Math.sin(2.4*-this._time),this._rippleTimeCos=Math.cos(2.4*-this._time);else if("vortex"===this.opts.mode)this._vortexTimeSin=Math.sin(2*-this._time),this._vortexTimeCos=Math.cos(2*-this._time);else if("plasma"===this.opts.mode)this._plasmaTimeSinA=Math.sin(.9*this._time),this._plasmaTimeCosA=Math.cos(.9*this._time),this._plasmaTimeSinB=Math.sin(1.3*-this._time),this._plasmaTimeCosB=Math.cos(1.3*-this._time),this._plasmaTimeSinC=Math.sin(.55*this._time),this._plasmaTimeCosC=Math.cos(.55*this._time);else if("image"===this.opts.mode){const t=2.2*-this._time;this._imageRippleTimeSin=Math.sin(t),this._imageRippleTimeCos=Math.cos(t)}this.opts.trail>0?(a.save(),a.globalAlpha=this.opts.trail,a.fillStyle=this.opts.trailColor,a.fillRect(0,0,this.w,this.h),a.restore()):(a.clearRect(0,0,this.w,this.h),this.opts.background&&"transparent"!==this.opts.background&&(a.fillStyle=this.opts.background,a.fillRect(0,0,this.w,this.h))),(null==(e=this.opts.backdrop)?void 0:e.enabled)&&"over"!==this.opts.backdrop.placement&&this._drawCanvasBackdrop(),a.textBaseline="alphabetic",this._lastFillStyle=null,this._lastFont=null,this._lastAlpha=-1,this._pulseFactor=this.opts.pulse?Math.max(0,1+this.opts.pulse.amplitude*Math.sin(this._time*(null!=(i=this.opts.pulse.speed)?i:1))):1,this._updateAnimatedColor();const n=this.opts.gradient&&!this.opts.colorFromImage?this._getGradient():null;this._activeGlyphAtlas=this._getGlyphAtlas();const r=this._getWaveBaseLayer();r&&a.drawImage(r.canvas,0,0,r.canvas.width,r.canvas.height,0,0,this.w,this.h),this._drawFillStyle=n;let o=0;"mesh"===this.opts.mode?o=this._drawMesh(n):r?o=this._drawCachedHorizontalWave(r,n):k.has(this.opts.mode)?(this._imageGrid&&(o+=this._drawImageSourceBase(n)),o+=this._drawSparse(t,n)):o=this._drawDense(n),(null==(s=this.opts.backdrop)?void 0:s.enabled)&&"over"===this.opts.backdrop.placement&&this._drawCanvasBackdrop(),a.globalAlpha=1,this._lastDrawnCount=o}
-/** Draws the configured Canvas backdrop at its exact clamped alpha. */_drawCanvasBackdrop(){var t,e,i;const s=this.opts.backdrop,a=this.ctx;a.save(),a.globalAlpha=Math.max(0,Math.min(1,null!=(t=s.opacity)?t:.5)),(null==(i=null==(e=s.gradient)?void 0:e.stops)?void 0:i.length)?a.fillStyle=this._getBackdropGradient(s.gradient)||s.color||"#0a0c10":a.fillStyle=s.color||"#0a0c10",a.fillRect(0,0,this.w,this.h),a.restore()}_prepareModeFrame(){if("wave"===this.opts.mode){const t="diagonal"===this.opts.direction?this.w+this.h:"vertical"===this.opts.direction?this.h:this.w,e="diagonal"===this.opts.direction?160:140;this._wavePosition=this._time*e%(t+300)-150,this._waveBand=t*this.opts.bandWidth}else if("current"===this.opts.mode)this._currentTimeSinX=Math.sin(1.1*this._time),this._currentTimeCosX=Math.cos(1.1*this._time),this._currentTimeSinY=Math.sin(.8*-this._time),this._currentTimeCosY=Math.cos(.8*-this._time),this._currentTimeSinXY=Math.sin(1.6*this._time),this._currentTimeCosXY=Math.cos(1.6*this._time);else if("ripple"===this.opts.mode)this._rippleTimeSin=Math.sin(2.4*-this._time),this._rippleTimeCos=Math.cos(2.4*-this._time);else if("vortex"===this.opts.mode)this._vortexTimeSin=Math.sin(2*-this._time),this._vortexTimeCos=Math.cos(2*-this._time);else if("plasma"===this.opts.mode)this._plasmaTimeSinA=Math.sin(.9*this._time),this._plasmaTimeCosA=Math.cos(.9*this._time),this._plasmaTimeSinB=Math.sin(1.3*-this._time),this._plasmaTimeCosB=Math.cos(1.3*-this._time),this._plasmaTimeSinC=Math.sin(.55*this._time),this._plasmaTimeCosC=Math.cos(.55*this._time);else if("image"===this.opts.mode){const t=2.2*-this._time;this._imageRippleTimeSin=Math.sin(t),this._imageRippleTimeCos=Math.cos(t)}}_drawWebGL(t){var e,i,s;this._prepareModeFrame(),this._pulseFactor=this.opts.pulse?Math.max(0,1+this.opts.pulse.amplitude*Math.sin(this._time*(null!=(e=this.opts.pulse.speed)?e:1))):1,this._updateAnimatedColor();const a=this._getWebGLAtlas();this._webgl.setAtlas(a.canvas,a.key),this._activeWebGLAtlas=a;const n=this._colorToRgba("transparent"===this.opts.background?"transparent":this.opts.background),r=this.opts.trail>0;if(this._webgl.begin(n,r),r){const t=this._colorToRgba(this.opts.trailColor),e=[t[0],t[1],t[2],this.opts.trail];this._webgl.surface(e)}(null==(i=this.opts.backdrop)?void 0:i.enabled)&&"over"!==this.opts.backdrop.placement&&this._drawWebGLBackdrop(),this._webglGradient=this.opts.gradient&&!this.opts.colorFromImage?this._prepareWebGLGradient(this.opts.gradient):null;let o=0;"mesh"===this.opts.mode?o=this._drawMesh(null):k.has(this.opts.mode)?(this._imageGrid&&(o+=this._drawImageSourceBase(null)),o+=this._drawSparse(t,null)):o=this._drawDense(null),this._webgl.flush(this.w,this.h,this._webglGradient),(null==(s=this.opts.backdrop)?void 0:s.enabled)&&"over"===this.opts.backdrop.placement&&this._drawWebGLBackdrop(),this._lastDrawnCount=o,this._activeWebGLAtlas=null,this._webglGradient=null}
-/** Draws the configured WebGL backdrop before or after glyph instances. */_drawWebGLBackdrop(){var t;const e=this.opts.backdrop,i=this._colorToRgba(e.color||"#0a0c10"),s=Math.max(0,Math.min(1,null!=(t=e.opacity)?t:.5)),a=[i[0],i[1],i[2],s],n=e.gradient?this._prepareWebGLGradient(e.gradient):null;this._webgl.surface(a,n)}_getWebGLAtlas(){var t;const e=this._imageGrid&&this.opts.imageChars||"",i=[...new Set(this.opts.charSet+e)],s=JSON.stringify([i.join(""),this._fontRegular,this._fontBold,this.charH]);if((null==(t=this._webglAtlas)?void 0:t.key)===s)return this._webglAtlas;const a=Math.max(4,Math.ceil(1.5*this.opts.fontSize+4)),n=Math.max(6,Math.ceil(this.charH+4)),r=Math.max(1,Math.floor(2048/a)),o=i.length*this._fontRegular.length*2,h=document.createElement("canvas");h.width=r*a,h.height=Math.ceil(o/r)*n;const l=h.getContext("2d",{alpha:!0,willReadFrequently:!1});l.textBaseline="alphabetic",l.fillStyle="#ffffff";const c=n-2,m=new Map(i.map((t,e)=>[t,e])),d=new Float32Array(4*o);for(let t=0;t<2;t++){const e=t?this._fontBold:this._fontRegular;for(let s=0;s<e.length;s++){l.font=e[s];const o=t*e.length+s;for(let t=0;t<i.length;t++){const e=o*i.length+t,s=e%r*a,m=Math.floor(e/r)*n;l.fillText(i[t],s+2,m+c),d.set([s/h.width,m/h.height,(s+a)/h.width,(m+n)/h.height],4*e)}}}return this._webglAtlas={canvas:h,key:s,characterIndex:m,characters:i.length,uv:d,tileWidth:a,tileHeight:n,padding:2,baseline:c},this._webglAtlas}_prepareWebGLGradient(t){const e=this._expandGradientStops(t),i=JSON.stringify(e)+(t.animate?Math.floor(20*this._time):"");if(!this._webgl.hasGradient(i)){const t=document.createElement("canvas");t.width=256,t.height=1;const s=t.getContext("2d"),a=s.createLinearGradient(0,0,256,0);e.forEach(t=>a.addColorStop(Math.min(1,Math.max(0,t.offset)),t.color)),s.fillStyle=a,s.fillRect(0,0,256,1),this._webgl.setGradient(t,i)}return h(o({},t),{textureKey:i,angle:(t.angle||0)+(t.animate?20*this._time:0)})}_colorToRgba(t){this._rgbaCache||(this._rgbaCache=new Map);const e=this._rgbaCache.get(t);if(e)return e;let i;t&&"transparent"!==t||(i=[0,0,0,0]);const s=this._hexToRgb(t);!i&&s&&(i=[s[0]/255,s[1]/255,s[2]/255,1]);const a=/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i.exec(t);if(!i&&a&&(i=[Number(a[1])/255,Number(a[2])/255,Number(a[3])/255,void 0===a[4]?1:Number(a[4])]),i||this._colorParser||(this._colorParser=document.createElement("canvas").getContext("2d")),!i&&this._colorParser){this._colorParser.fillStyle="#000000",this._colorParser.fillStyle=t;const e=this._colorParser.fillStyle,s=this._hexToRgb(e);s&&(i=[s[0]/255,s[1]/255,s[2]/255,1])}return i||(i=[.31,.66,1,1]),this._rgbaCache.size>512&&this._rgbaCache.clear(),this._rgbaCache.set(t,i),i}_getWaveBaseLayer(){var e;if("wave"!==this.opts.mode||this._imageGrid||!this.opts.cacheStaticWave||"horizontal"!==this.opts.direction||this.opts.trail>0||this.opts.background&&"transparent"!==this.opts.background||this.opts.backdrop||this.opts.gradient||this.opts.colorAnimation||this.opts.pulse||(null==(e=this.opts.cursor)?void 0:e.enabled)&&this._cursor)return null;if(this._waveBaseLayer&&this._waveBaseCharSet===this.opts.charSet&&this._waveBaseColor===this.opts.color&&this._waveBaseAmbient===this.opts.ambient&&this._waveBaseMinOpacity===this.opts.minOpacity&&this._waveBaseMaxOpacity===this.opts.maxOpacity&&this._waveBaseBold===this.opts.boldOnPeak&&this._waveBaseAlphaLevels===this.opts.alphaLevels&&this._waveBaseSeedCache===this._seedCache&&this._waveBaseEdgeCache===this._edgeFadeCache&&this._waveBaseAtlas===this._activeGlyphAtlas)return this._waveBaseLayer;const i=JSON.stringify([this.canvas.width,this.canvas.height,this.opts.charSet,this.opts.color,this.opts.ambient,this.opts.minOpacity,this.opts.maxOpacity,this.opts.boldOnPeak,this.opts.alphaLevels,this.opts.edgeFade,this._fontRegular,this._fontBold]),s=t._waveBaseLayers.get(i);if(s)return t._waveBaseLayers.delete(i),t._waveBaseLayers.set(i,s),this._setWaveBaseLayer(s),s;const a=document.createElement("canvas");a.width=this.canvas.width,a.height=this.canvas.height;const n=a.getContext("2d",{alpha:!0,willReadFrequently:!1});if(!n)return null;n.setTransform(this._dpr,0,0,this._dpr,0,0),n.textBaseline="alphabetic",n.fillStyle=this.opts.color;let r=-1,o=null,h=0;const l=this._activeGlyphAtlas,c=this.opts.fontLevels-1,m=this.opts.charSet;for(let t=0;t<this.rows;t++){const e=this._rowBaseline[t],i=t*this.cols;for(let t=0;t<this.cols;t++){const s=i+t,a=Math.min(1,this._seedCache[s]*this.opts.ambient),d=m[Math.floor(a*(m.length-1))]||" ";if(" "===d)continue;let u=this.opts.minOpacity+(this.opts.maxOpacity-this.opts.minOpacity)*a;if(this._edgeFadeCache&&(u*=this._edgeFadeCache[s]),u=Math.round(u*this.opts.alphaLevels)/this.opts.alphaLevels,u<=0)continue;u!==r&&(n.globalAlpha=u,r=u);const p=Math.max(0,Math.min(c,Math.round(a*c))),_=this.opts.boldOnPeak&&a>.55,g=null==l?void 0:l.characterIndex.get(d);if(void 0!==g){const i=((_?this._fontRegular.length:0)+p)*l.characters+g;n.drawImage(l.canvas,l.sourceX[i],l.sourceY[i],l.tileWidth,l.tileHeight,this._columnX[t]-l.padding,e-l.baseline,l.tileWidth,l.tileHeight)}else{const i=(_?this._fontBold:this._fontRegular)[p];i!==o&&(n.font=i,o=i),n.fillText(d,this._columnX[t],e)}h++}}return this._waveBaseLayer={canvas:a,drawn:h},t._waveBaseLayers.set(i,this._waveBaseLayer),t._waveBaseLayers.size>t._waveBaseLayerLimit&&t._waveBaseLayers.delete(t._waveBaseLayers.keys().next().value),this._setWaveBaseLayer(this._waveBaseLayer),this._waveBaseLayer}_setWaveBaseLayer(t){this._waveBaseLayer=t,this._waveBaseCharSet=this.opts.charSet,this._waveBaseColor=this.opts.color,this._waveBaseAmbient=this.opts.ambient,this._waveBaseMinOpacity=this.opts.minOpacity,this._waveBaseMaxOpacity=this.opts.maxOpacity,this._waveBaseBold=this.opts.boldOnPeak,this._waveBaseAlphaLevels=this.opts.alphaLevels,this._waveBaseSeedCache=this._seedCache,this._waveBaseEdgeCache=this._edgeFadeCache,this._waveBaseAtlas=this._activeGlyphAtlas}_drawCachedHorizontalWave(t,e){const i=2*this.charW,s=Math.max(0,this._wavePosition-this._waveBand-i),a=Math.min(this.w,this._wavePosition+this._waveBand+i);if(a<=s)return t.drawn;this.ctx.clearRect(s,0,a-s,this.h);const n=Math.max(0,Math.floor(s/this.charW)),r=Math.min(this.cols-1,Math.ceil(a/this.charW));let o=0;for(let t=0;t<this.rows;t++){const i=this._rowY[t];for(let s=n;s<=r;s++){const a=this._columnX[s],n=this._waveCell(s,t,a,i);this._paintCell(n,s,t,a,i,e,this._rowBaseline[t])&&o++}}return o+1}_drawDense(t){let e=0;const i=this._columnX,s=this._rowY;for(let a=0;a<this.rows;a++){const n=s[a];for(let s=0;s<this.cols;s++){const r=i[s],o=this._computeCell(s,a,r,n);this._paintCell(o,s,a,r,n,t,this._rowBaseline[a])&&e++}}return e}
-/** Rasterize the retained mesh once, then paint only occupied ASCII cells. */_drawMesh(t){var e;if(!this._mesh||!this._meshRasterizer)return 0;this._meshRasterOptions.style=this.opts.meshStyle,this._meshRasterOptions.projection=this.opts.meshProjection,this._meshRasterOptions.camera=this.opts.meshCamera,this._meshRasterOptions.light=this.opts.meshLight;for(let t=0;t<3;t++){const i=Number(null==(e=this.opts.meshRotationSpeed)?void 0:e[t]);this._meshRotation[t]=this._meshBaseRotation[t]+(this.opts.meshAutoRotate&&Number.isFinite(i)?this._time*i:0)}const i=this._meshRasterizer.rasterize(this._mesh,this._meshRasterOptions),s=this.opts.charSet,a=Math.max(0,s.length-1);let n=0;for(let e=0;e<this.rows;e++){const r=e*this.cols;for(let o=0;o<this.cols;o++){const h=r+o;if(!i.occupied[h])continue;const l=i.intensity[h],c=s[Math.round(l*a)]||s[a]||"#",m=this.opts.minOpacity+l*(this.opts.maxOpacity-this.opts.minOpacity),d=this._setCell(c,m,l,this.opts.boldOnPeak&&l>.72);this._paintCell(d,o,e,this._columnX[o],this._rowY[e],t,this._rowBaseline[e],!1)&&n++}}return n}_drawImageSourceBase(t){const e=this._imageGrid;let i=0;for(let s=0;s<this.rows;s++){const a=this._rowY[s];for(let n=0;n<this.cols;n++){const r=s*e.cols+n,o=e.chars[r];if(!o||" "===o)continue;const h=(!e.animationMask||1===e.animationMask[r])&&this.opts.animateImageMask?this.opts.minOpacity:this.opts.maxOpacity,l=this._setCell(o,h,.5,!1);l.color=this.opts.colorFromImage?e.colors[r]:null,this._paintCell(l,n,s,this._columnX[n],a,t,this._rowBaseline[s],!1)&&i++}}return i}
-/** Advances and paints sparse particles without scanning the complete grid. */_drawSparse(t,e){let i=0;const s=this.opts.mode;if("matrix"===s){this._matrix||this._initMatrix(),this._advanceMatrix(t);for(let t=0;t<this._matrix.length;t++){const s=this._matrix[t],a=Math.max(0,Math.floor(s.y-s.length)),n=Math.min(this.rows-1,Math.floor(s.y));for(let r=a;r<=n;r++){const a=this._matrixCellAt(t,r,s),n=t*this.charW,o=r*this.charH;this._paintCell(a,t,r,n,o,e)&&i++}}}else if("snow"===s){this._snow||this._initSnow(),this._advanceSnow(t);for(let t=0;t<this._snow.length;t++){const s=this._snow[t],a=Math.floor(s.y);if(a<0||a>=this.rows)continue;const n=Math.sin(this._time*s.drift+s.phase)*this.charW*1.5,r=s.col*this.charW+n,o=a*this.charH,h=this._setCell("*",.8*this.opts.maxOpacity,.15,!1);this._paintCell(h,s.col,a,r,o,e)&&i++}}else if("sparkle"===s){this._sparkle||this._initSparkle();for(let t=0;t<this._sparkle.length;t++){const s=this._sparkle[t],a=Math.max(0,Math.sin(this._time*s.speed+s.phase));if(a<=.02)continue;const n=Math.floor(a*(this.opts.charSet.length-1)),r=s.col*this.charW,o=s.row*this.charH,h=this._setCell(this.opts.charSet[n]||"*",a*this.opts.maxOpacity,a,a>.85);this._paintCell(h,s.col,s.row,r,o,e)&&i++}}else if("fire"===s){this._fire||this._initFire(),this._advanceFire(t);const s=Math.max(1,Math.ceil(.26*this.rows)),a=this.rows-s,n=Math.floor(9*this._time);for(let t=a;t<this.rows;t++){const r=(t-a+1)/s;for(let s=0;s<this.cols;s++){const a=r*(.34+.66*this._seed(s+n,t-n));if(a<.24)continue;const o=Math.floor(a*(this.opts.charSet.length-1)),h=this._setCell(this.opts.charSet[o]||"·",a*this.opts.maxOpacity,a,a>.76);this._paintCell(h,s,t,s*this.charW,t*this.charH,e)&&i++}}for(let t=0;t<this._fire.length;t++){const s=this._fire[t],a=Math.floor(s.y),n=Math.max(0,Math.min(this.cols-1,Math.floor(s.col)));if(a<0||a>=this.rows)continue;const r=1-a/Math.max(1,this.rows-1),o=Math.max(.08,s.life*(1-.72*r)),h=Math.floor(o*(this.opts.charSet.length-1)),l=s.col*this.charW+Math.sin(this._time*s.drift+s.phase)*this.charW*1.4,c=this._setCell(this.opts.charSet[h]||"·",o*this.opts.maxOpacity,o,o>.72);this._paintCell(c,n,a,l,a*this.charH,e)&&i++}}else if("starfield"===s){this._starfield||this._initStarfield(),this._advanceStarfield(t);for(let t=0;t<this._starfield.length;t++){const s=this._starfield[t],a=this._originX+s.x/s.z*this.w*.42,n=this._originY+s.y/s.z*this.h*.42;if(a<0||a>=this.w||n<0||n>=this.h)continue;const r=Math.max(0,Math.min(this.cols-1,Math.floor(a/this.charW))),o=Math.max(0,Math.min(this.rows-1,Math.floor(n/this.charH))),h=Math.max(.12,Math.min(1,1-s.z)),l=Math.floor(h*(this.opts.charSet.length-1)),c=this._setCell(this.opts.charSet[l]||"·",h*this.opts.maxOpacity,h,h>.78);this._paintCell(c,r,o,a,n,e)&&i++}}else if("orbit"===s){this._orbit||this._initOrbit(),this._advanceOrbit(t);for(let t=0;t<this._orbit.length;t++){const s=this._orbit[t],a=this._originX+Math.cos(s.angle)*s.radius,n=this._originY+Math.sin(s.angle)*s.radius*.58;if(a<0||a>=this.w||n<0||n>=this.h)continue;const r=Math.max(0,Math.min(this.cols-1,Math.floor(a/this.charW))),o=Math.max(0,Math.min(this.rows-1,Math.floor(n/this.charH))),h=.45+.35*Math.sin(s.angle+s.phase),l=Math.floor(h*(this.opts.charSet.length-1)),c=this._setCell(this.opts.charSet[l]||"·",h*this.opts.maxOpacity,h,h>.68);this._paintCell(c,r,o,a,n,e)&&i++}}return i}
-/**
-   * Applies shared opacity and cursor modifiers, then emits one glyph through
-   * the active backend while minimizing repeated Canvas state changes.
-   */_paintCell(t,e,i,s,a,n,r,o=!0){if(o&&this._imageGrid&&"image"!==this.opts.mode&&(t=this._applyImageSource(t,e,i)),!t||" "===t.char)return!1;const h=this.ctx;let l=t.opacity*this._pulseFactor;this._edgeFadeCache&&(l*=this._edgeFadeCache[i*this.cols+e]);const c=this.opts.cursor;if(c&&c.enabled&&this._cursor){const t=s-this._cursor.x,e=a-this._cursor.y,i=Math.sqrt(t*t+e*e),n=c.radius||140;if(i<n){const t=1-i/n;l=Math.min(1,l+(c.strength||.6)*t)}}if(l<=.01)return!1;const m=this.opts.alphaLevels;if(m>1&&(l=Math.round(l*m)/m),l<=0)return!1;if(this._webgl&&this._activeWebGLAtlas){const n=this._activeWebGLAtlas,o=n.characterIndex.get(t.char);if(void 0===o)return!1;const h=((t.bold?this._fontRegular.length:0)+t.level)*n.characters+o;let c=t.color;!c&&this.opts.colorFromImage&&this._imageGrid&&(c=this._imageGrid.colors[i*this.cols+e]),c||(c=this._animatedColor||this.opts.color);const m=this._colorToRgba(c),d=4*h;return this._webgl.push(s-n.padding,(null!=r?r:a+.78*this.charH)-n.baseline,n.tileWidth,n.tileHeight,n.uv,d,m,l),!0}const d=this._activeGlyphAtlas,u=null==d?void 0:d.characterIndex.get(t.char);if(void 0!==u){l!==this._lastAlpha&&(h.globalAlpha=l,this._lastAlpha=l);const e=((t.bold?this._fontRegular.length:0)+t.level)*d.characters+u,i=(null!=r?r:a+.78*this.charH)-d.baseline;return h.drawImage(d.canvas,d.sourceX[e],d.sourceY[e],d.tileWidth,d.tileHeight,s-d.padding,i,d.tileWidth,d.tileHeight),!0}let p=t.color;if(!p&&this.opts.colorFromImage&&this._imageGrid){const t=this._imageGrid.colors[i*this.cols+e];t&&(p=t)}p||(p=n||this._animatedColor||this.opts.color),p!==this._lastFillStyle&&(h.fillStyle=p,this._lastFillStyle=p),l!==this._lastAlpha&&(h.globalAlpha=l,this._lastAlpha=l);const _=(t.bold?this._fontBold:this._fontRegular)[t.level];return _!==this._lastFont&&(h.font=_,this._lastFont=_),h.fillText(t.char,s,null!=r?r:a+.78*this.charH),!0}_advanceMatrix(t){const e=Math.min(.1,t/1e3);for(let t=0;t<this._matrix.length;t++){const i=this._matrix[t];i.y+=i.speed*e,i.y-i.length>this.rows&&(i.y=10*-Math.random(),i.speed=8+14*Math.random(),i.length=6+Math.floor(10*Math.random()))}}_advanceSnow(t){const e=Math.min(.1,t/1e3);for(let t=0;t<this._snow.length;t++){const i=this._snow[t];i.y+=i.speed*e,i.y>this.rows+1&&(i.y=-1,i.col=Math.floor(Math.random()*this.cols),i.speed=2+5*Math.random())}}_advanceFire(t){const e=Math.min(.1,t/1e3);for(let t=0;t<this._fire.length;t++){const i=this._fire[t];i.y-=i.speed*e,i.life-=.22*e,(i.y<-1||i.life<=0)&&this._resetFireParticle(i)}}_advanceStarfield(t){const e=Math.min(.1,t/1e3);for(let t=0;t<this._starfield.length;t++){const i=this._starfield[t];i.z-=i.speed*e,i.z<=.035&&this._resetStar(i)}}_advanceOrbit(t){const e=Math.min(.1,t/1e3);for(let t=0;t<this._orbit.length;t++)this._orbit[t].angle+=this._orbit[t].speed*e}_computeCell(e,i,s,a){const n=this.opts.mode;if("custom"===n&&"function"==typeof this.opts.customCell)return this._callCustom(this.opts.customCell,e,i,s,a);if(t._registry[n])return this._callCustom(t._registry[n],e,i,s,a);switch(n){case"wave":default:return this._waveCell(e,i,s,a);case"current":return this._currentCell(e,i,s,a);case"ripple":return this._rippleCell(e,i,s,a);case"vortex":return this._vortexCell(e,i,s,a);case"plasma":return this._plasmaCell(e,i,s,a);case"glitch":return this._glitchCell(e,i,s,a);case"typewriter":return this._typewriterCell(e,i,s,a);case"fadeIn":return this._fadeInCell(e,i,s,a);case"fadeOut":return this._fadeOutCell(e,i,s,a);case"irisIn":return this._irisCell(e,i,s,a,!1);case"irisOut":return this._irisCell(e,i,s,a,!0);case"dissolveIn":return this._dissolveCell(e,i,!1);case"dissolveOut":return this._dissolveCell(e,i,!0);case"lumaFold":return this._lumaFoldCell(e,i,s,a);case"riftLace":return this._riftLaceCell(e,i,s,a);case"echoBloom":return this._echoBloomCell(e,i,s,a);case"hoverZone":return this._hoverZoneCell(e,i,s,a);case"clickZone":return this._clickZoneCell(e,i,s,a);case"image":return this._imageCell(e,i,s,a)}}_callCustom(t,e,i,s,a){const n=this._api;n.col=e,n.row=i,n.x=s,n.y=a,n.time=this._time,n.cols=this.cols,n.rows=this.rows,n.w=this.w,n.h=this.h,n.charSet=this.opts.charSet;const r=t.call(this,n);return r?r===this._cell?r:this._setCell(r.char,r.opacity,r.intensity||0,!!r.bold):null}_setCell(t,e,i,s){const a=this._cell;return a.char=t,a.opacity=e,a.bold=s,a.color=null,a.level=Math.max(0,Math.min(this.opts.fontLevels-1,Math.round(i*(this.opts.fontLevels-1)))),a}_waveCell(t,e,i,s){const{charSet:a,minOpacity:n,maxOpacity:r,boldOnPeak:o,direction:h,ambient:l,bandWidth:c}=this.opts;let m,d;"vertical"===h?(m=s,d=this.h):"diagonal"===h?(m=i+s,d=this.w+this.h):(m=i,d=this.w);const u=Math.abs(m-this._wavePosition),p=this._waveBand||d*c;let _=Math.max(0,1-u/p);_=_*_*(3-2*_);const g=this._seedCache[e*this.cols+t]*l,f=Math.min(1,g+_),v=Math.floor(f*(a.length-1));return this._setCell(a[v]||" ",n+(r-n)*f,_,o&&_>.55)}_currentCell(t,e,i,s){const{charSet:a,minOpacity:n,maxOpacity:r,boldOnPeak:o}=this.opts,h=e*this.cols+t,l=(.5*(this._currentSinX[h]*this._currentTimeCosX+this._currentCosX[h]*this._currentTimeSinX)+.3*(this._currentSinY[h]*this._currentTimeCosY+this._currentCosY[h]*this._currentTimeSinY)+.2*(this._currentSinXY[h]*this._currentTimeCosXY+this._currentCosXY[h]*this._currentTimeSinXY)+1)/2,c=Math.floor(l*(a.length-1));return this._setCell(a[c]||" ",n+(r-n)*l,l,o&&l>.72)}_rippleCell(t,e,i,s){const{charSet:a,minOpacity:n,maxOpacity:r,boldOnPeak:o}=this.opts,h=e*this.cols+t,l=(this._rippleSin[h]*this._rippleTimeCos+this._rippleCos[h]*this._rippleTimeSin+1)/2*this._rippleFalloff[h],c=Math.floor(l*(a.length-1));return this._setCell(a[c]||" ",n+(r-n)*l,l,o&&l>.6)}_vortexCell(t,e,i,s){const{charSet:a,minOpacity:n,maxOpacity:r,boldOnPeak:o}=this.opts,h=e*this.cols+t,l=.5*(this._vortexSin[h]*this._vortexTimeCos+this._vortexCos[h]*this._vortexTimeSin+1),c=.25+.75*this._rippleFalloff[h],m=Math.min(1,l*c+.08*this._seedCache[h]),d=Math.floor(m*(a.length-1));return this._setCell(a[d]||" ",n+(r-n)*m,m,o&&m>.7)}_plasmaCell(t,e,i,s){const{charSet:a,minOpacity:n,maxOpacity:r,boldOnPeak:o}=this.opts,h=e*this.cols+t,l=this._plasmaSinA[h]*this._plasmaTimeCosA+this._plasmaCosA[h]*this._plasmaTimeSinA,c=this._plasmaSinB[h]*this._plasmaTimeCosB+this._plasmaCosB[h]*this._plasmaTimeSinB,m=this._plasmaSinC[h]*this._plasmaTimeCosC+this._plasmaCosC[h]*this._plasmaTimeSinC,d=Math.max(0,Math.min(1,(l+c+m+3)/6)),u=Math.floor(d*(a.length-1));return this._setCell(a[u]||" ",n+(r-n)*d,d,o&&d>.72)}_glitchCell(t,e,i,s){const{charSet:a,minOpacity:n,maxOpacity:r,boldOnPeak:o}=this.opts,h=Math.floor(12*this._time),l=this._seed(e,h),c=h%Math.max(1,this.rows),m=Math.abs(e-c)<=1||l>1-this.opts.glitchIntensity,d=(t+(m?Math.floor((l-.5)*this.cols*.18):0)+this.cols)%this.cols,u=e*this.cols+d,p=this._seedCache[u],_=m?Math.max(.35,this._seed(t+h,e)):.42*p,g=Math.floor(_*(a.length-1));return this._setCell(a[g]||" ",n+(r-n)*_,_,o&&m&&_>.7)}_typewriterCell(t,e,i,s){const{charSet:a,maxOpacity:n}=this.opts,r=Math.max(1,this.cols*this.rows),o=Math.max(.1,this.opts.typewriterDuration),h=this.opts.loop?this._time%(o+1.2):Math.min(this._time,o),l=Math.min(1,h/o),c=e*this.cols+t,m=Math.min(r-1,Math.floor(l*r));if(c>m)return null;const d=this._seedCache[c],u=1+Math.floor(d*Math.max(1,a.length-1)),p=c===m&&l<1;return this._setCell(p?"_":a[u]||"0",p?1:n,p?1:d,p)}_fadeInCell(t,e,i,s){const{charSet:a,maxOpacity:n}=this.opts,r=this.opts.loop?this._time%(2.2+1.2):Math.min(this._time,2.2+.6),o=e*this.cols+t,h=2.2*this._revealProgress(t,e)*.8+.4*this._seedCache[o],l=Math.max(0,Math.min(1,(r-h)/.6)),c=l*l*(3-2*l),m=.85+.15*this._seedNextRowCache[o],d=Math.floor(c*(a.length-1));return this._setCell(a[d]||" ",c*n*m,0,!1)}_fadeOutCell(t,e,i,s){const{charSet:a,maxOpacity:n}=this.opts,r=this.opts.loop?this._time%(2.2+1.2):Math.min(this._time,2.2+.6),o=e*this.cols+t,h=2.2*this._revealProgress(t,e)*.8+.4*this._seedCache[o],l=Math.max(0,Math.min(1,(r-h)/.6)),c=1-l*l*(3-2*l),m=.85+.15*this._seedNextRowCache[o],d=Math.floor(c*(a.length-1));return this._setCell(a[d]||" ",c*n*m,0,!1)}_revealProgress(t,e=0){const i=t/Math.max(1,this.cols-1),s=e/Math.max(1,this.rows-1);return"left-to-right"===this.opts.revealDirection?i:"right-to-left"===this.opts.revealDirection?1-i:"top-to-bottom"===this.opts.revealDirection?s:"bottom-to-top"===this.opts.revealDirection?1-s:"diagonal"===this.opts.revealDirection?.5*(i+s):"edges"===this.opts.revealDirection?1-Math.min(1,2*Math.abs(i-.5)):Math.min(1,2*Math.abs(i-.5))}_irisCell(t,e,i,s,a){const n=this.opts.loop?this._time%(2.2+1.1):Math.min(this._time,2.2),r=Math.min(1,n/2.2),o=Math.max(1,Math.hypot(this.w,this.h)),h=Math.hypot(i-this._originX,s-this._originY)/o;let l=Math.max(0,Math.min(1,(r-h+.14)/.14));a&&(l=1-l);const c=e*this.cols+t,m=l*(.82+.18*this._seedCache[c]),d=Math.floor(m*(this.opts.charSet.length-1));return this._setCell(this.opts.charSet[d]||" ",m*this.opts.maxOpacity,m,m>.74)}_dissolveCell(t,e,i){const s=this.opts.loop?this._time%3.2:Math.min(this._time,2.1),a=Math.min(1,s/2.1),n=e*this.cols+t,r=.72*this._seedCache[n]+.28*this._revealProgress(t,e);let o=Math.max(0,Math.min(1,(a-r+.12)/.12));i&&(o=1-o);const h=Math.floor((.25+.75*this._seedNextRowCache[n])*(this.opts.charSet.length-1));return this._setCell(this.opts.charSet[h]||" ",o*this.opts.maxOpacity,o,o>.82)}_lumaFoldCell(t,e,i,s){const a=i/Math.max(1,this.w),n=s/Math.max(1,this.h),r=Math.abs(Math.sin((3.2*a+1.4*n)*Math.PI+1.7*this._time)),o=Math.pow(1-r,2.4),h=Math.min(1,.12+.42*r+.78*o),l=Math.floor(h*(this.opts.charSet.length-1));return this._setCell(this.opts.charSet[l]||" ",this.opts.minOpacity+h*(this.opts.maxOpacity-this.opts.minOpacity),h,o>.58)}_riftLaceCell(t,e,i,s){const a=Math.sin(.037*i+.018*s+2.1*this._time),n=Math.sin(.052*s-.013*i-1.45*this._time),r=Math.pow(Math.max(0,1-Math.abs(a-n)),3),o=e*this.cols+t,h=Math.min(1,.9*r+.16*this._seedCache[o]),l=Math.floor(h*(this.opts.charSet.length-1));return this._setCell(this.opts.charSet[l]||" ",this.opts.minOpacity+h*(this.opts.maxOpacity-this.opts.minOpacity),h,r>.72)}_echoBloomCell(t,e,i,s){const a=.055*Math.hypot(i-this._originX,s-this._originY)-3.1*this._time,n=Math.max(0,Math.cos(a)),r=.62*Math.max(0,Math.cos(.67*a-2.1)),o=.38*Math.max(0,Math.cos(.43*a-4.2)),h=Math.min(1,Math.pow(Math.max(n,r,o),3)),l=Math.floor(h*(this.opts.charSet.length-1));return this._setCell(this.opts.charSet[l]||" ",this.opts.minOpacity+h*(this.opts.maxOpacity-this.opts.minOpacity),h,h>.76)}_hoverZoneCell(t,e,i,s){const a=e*this.cols+t,n=this._cursor;if(!n){const t=.18*this._seedCache[a],e=Math.floor(t*(this.opts.charSet.length-1));return this._setCell(this.opts.charSet[e]||" ",this.opts.minOpacity,t,!1)}const r=Math.max(1,Number(this.opts.interactionRadius)||180),o=Math.hypot(i-n.x,s-n.y),h=Math.max(0,1-o/r),l=h*h*(3-2*h),c=.72+.28*Math.sin(.085*o-4.2*this._time),m=Math.max(0,Math.min(1,l*c)),d=Math.floor(m*(this.opts.charSet.length-1)),u=this.opts.minOpacity+m*(this.opts.maxOpacity-this.opts.minOpacity);return this._setCell(this.opts.charSet[d]||" ",u,m,m>.72)}_clickZoneCell(t,e,i,s){const a=e*this.cols+t,n=this._interaction;if(!n){const t=.16*this._seedCache[a],e=Math.floor(t*(this.opts.charSet.length-1));return this._setCell(this.opts.charSet[e]||" ",this.opts.minOpacity,t,!1)}const r=Math.max(.05,Number(this.opts.interactionDuration)||1.1),o=Math.max(0,Math.min(1,n.elapsed/r)),h=Math.max(1,Number(this.opts.interactionRadius)||180),l=Math.hypot(i-n.x,s-n.y),c=o*h,m=Math.max(2*this.charW,.16*h),d=Math.max(0,1-Math.abs(l-c)/m),u=Math.max(0,1-l/h)*(1-o),p=Math.max(0,Math.min(1,Math.max(d,u)*(1-.25*o))),_=Math.floor(p*(this.opts.charSet.length-1)),g=this.opts.minOpacity+p*(this.opts.maxOpacity-this.opts.minOpacity);return this._setCell(this.opts.charSet[_]||" ",g,p,p>.72)}_imageCell(t,e,i,s){if(!this._imageGrid)return null;const a=this._imageGrid,n=e*a.cols+t,r=a.chars[n];if(!r||" "===r)return null;let o=this.opts.maxOpacity,h=!1,l=.5;const c=!a.animationMask||1===a.animationMask[n];if(this.opts.animateImageMask&&c){const a=this.opts.imageMaskMode||"waveSweep",r=this._time;if("fullStatic"===a||"static"===a)o=this.opts.maxOpacity,h=!1,l=.5;else if("scanlinePass"===a||"scanline"===a){const t=180*r%(this.h+200)-100,e=Math.abs(s-t),i=Math.max(0,1-e/(.12*this.h)),a=.35+i*i*.65;o=this.opts.minOpacity+(this.opts.maxOpacity-this.opts.minOpacity)*a,h=i>.6,l=i}else if("radialRipple"===a||"ripple"===a){const t=(this._imageRippleSin[n]*this._imageRippleTimeCos+this._imageRippleCos[n]*this._imageRippleTimeSin+1)/2;o=Math.max(this.opts.minOpacity,t*this.opts.maxOpacity),l=t,h=t>.7}else if("thermalNoise"===a||"noise"===a){const i=this._seed(t,e+Math.floor(8*r)),s=.55+.45*i;o=this.opts.maxOpacity*s,l=i}else if("halftonePulse"===a||"halftone"===a){const t=.65+.35*Math.sin(1.6*r+.02*(i+s));o=this.opts.maxOpacity*t,l=t,h=t>.85}else{const a=this._waveCell(t,e,i,s);o=Math.max(.18,a.opacity),h=a.bold,l=a.level/(this.opts.fontLevels-1)}}const m=this._setCell(r,o,l,h);return m.color=this.opts.colorFromImage?a.colors[n]:null,m}
-/**
-   * Overlays sampled glyph and color data without replacing the selected
-   * mode's opacity, timing, or particle geometry.
-   */_applyImageSource(t,e,i){const s=this._imageGrid;if(!s||e<0||i<0||e>=s.cols||i>=s.rows)return null;const a=i*s.cols+e,n=s.chars[a];if(!n||" "===n)return null;const r=!s.animationMask||1===s.animationMask[a]?t:this._setCell(n,this.opts.maxOpacity,.5,!1);return r?(r.char=n,r.color=this.opts.colorFromImage?s.colors[a]:null,r):null}
-// Sparse matrix cell: called only for rows within a column's active trail
-// range (see _drawSparse), never scanned across the full grid.
-_matrixCellAt(t,e,i){const s=i.y-e,a=Math.max(0,1-s/i.length),{charSet:n,maxOpacity:r}=this.opts,o=this._seed(t,e+Math.floor(6*this._time)),h=Math.floor(o*(n.length-1)),l=s<1;return this._setCell(n[h]||"0",a*r,a,l)}_updateStats(t){this._frames++,this._fpsAccum+=t,this._fpsAccum>=500&&(this._fps=Math.round(1e3*this._frames/this._fpsAccum),this._frames=0,this._fpsAccum=0,this._statsEl&&(this._statsEl.textContent=`${this._fps} fps · ${this.cols}×${this.rows} cells · ${this._lastDrawnCount} drawn`))}
-/** Selects the text element updated by the optional diagnostics counter. */attachStats(t){this._statsEl=t}};l(D,"QUALITY",{high:{maxDPR:3,density:.9,targetFPS:null,fontLevels:6,alphaLevels:64,useGlyphAtlas:!1,cacheStaticWave:!1},balanced:{maxDPR:2,density:1,targetFPS:null,fontLevels:5,alphaLevels:32,useGlyphAtlas:!1,cacheStaticWave:!1},performance:{maxDPR:1.5,density:1.4,targetFPS:null,fontLevels:4,alphaLevels:16,useGlyphAtlas:!0,cacheStaticWave:!1},ultra:{maxDPR:1,density:2.4,targetFPS:null,fontLevels:2,alphaLevels:8,useGlyphAtlas:!0,cacheStaticWave:!0}}),
-/** Canonical inventory used by documentation and integration tooling. */
-l(D,"BUILT_IN_MODES",Object.freeze(["wave","current","ripple","vortex","plasma","fadeIn","fadeOut","irisIn","irisOut","dissolveIn","dissolveOut","lumaFold","riftLace","echoBloom","matrix","snow","sparkle","fire","starfield","glitch","typewriter","orbit","hoverZone","clickZone","image","custom","mesh"])),l(D,"CHARACTER_SETS",{density:" .:-=+*#%@",ascii:Array.from({length:95},(t,e)=>String.fromCharCode(e+32)).join(""),asciiExtended:Array.from({length:95},(t,e)=>String.fromCharCode(e+32)).join("")+Array.from({length:95},(t,e)=>String.fromCharCode(e+161)).join(""),extended:"  .'`,^:\";~+_(){}[]<>!?ilI|/\\\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",alphanumeric:" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",uppercase:" ABCDEFGHIJKLMNOPQRSTUVWXYZ",lowercase:" abcdefghijklmnopqrstuvwxyz",symbols:" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",boxDrawing:" ─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬░▒▓█",arrows:" ←↑→↓↖↗↘↙↔↕⇐⇑⇒⇓⇔",math:" ±×÷=≠≈∞√∑∏∫∆∇∂∈∉⊂⊃≤≥",blocks:" ░▒▓█",minimal:" .oO@",technical:" .·:+=*#%@",geometric:" ·•○●□■△▲◇◆",circuit:" ·-+=oO0#@",waves:" ~≈≋∿",terminal:" 01<>/\\|[]{}#@",binary:" 01",binaryWide:" 001101",braille:"⠀⠂⠒⠲⠶⠷⠿⣿",japanese:" 01アイウエオカキクケコ",punctuation:" .,:;irsXA253hMHGS#9B&@"}),l(D,"presets",{heroWave:{mode:"wave",color:"#4FA8FF",speed:1,edgeFade:.25},subtleCurrent:{mode:"current",color:"#4FA8FF",speed:.6,minOpacity:.03,maxOpacity:.45},matrixRain:{mode:"matrix",color:"#3CF07A",speed:1,charSet:" 01アイウエオ"},softRipple:{mode:"ripple",color:"#4FA8FF",speed:.8,edgeFade:.4},vortexFlow:{mode:"vortex",color:"#C04FFF",speed:.65,edgeFade:.2,gradient:{type:"radial",center:[.5,.5],radius:.9,stops:["#4FA8FF","#C04FFF"],steps:2}},plasmaField:{mode:"plasma",color:"#72F1B8",speed:.55,minOpacity:.04,maxOpacity:.68,gradient:{type:"linear",angle:25,stops:["#72F1B8","#4FA8FF","#C04FFF"],steps:3}},introReveal:{mode:"fadeIn",color:"#4FA8FF",speed:1,loop:!1,revealDirection:"left-to-right"},outroFade:{mode:"fadeOut",color:"#4FA8FF",speed:1,loop:!1,revealDirection:"right-to-left"},scanline:{mode:"wave",color:"#4FA8FF",speed:1.4,ambient:0,bandWidth:.04,edgeFade:.2},snowfall:{mode:"snow",color:"#E8EEF7",speed:.5,snowDensity:.025},sparkleField:{mode:"sparkle",color:"#4FA8FF",speed:.8,sparkleDensity:.04},pulseGlow:{mode:"current",color:"#4FA8FF",speed:.5,pulse:{amplitude:.4,speed:.6}},cursorGlow:{mode:"current",color:"#4FA8FF",speed:.4,minOpacity:.03,maxOpacity:.4,cursor:{enabled:!0,radius:160,strength:.7}},hoverField:{mode:"hoverZone",color:"#72F1B8",charSet:" .·:+=*#%@",interactionRadius:180,minOpacity:.025,maxOpacity:.9},clickPulse:{mode:"clickZone",color:"#C04FFF",charSet:" ·•○●□■△▲◇◆",interactionRadius:220,interactionDuration:1.1,minOpacity:.02,maxOpacity:.95},auroraCurrent:{mode:"current",color:"#72F1B8",speed:.45,minOpacity:.04,maxOpacity:.5,gradient:{type:"linear",angle:25,stops:["#72F1B8","#4FA8FF","#C04FFF"],steps:3}},terminalMatrix:{mode:"matrix",color:"#3CF07A",speed:1.1,charSet:" 01アイウエオカキクケコ",maxOpacity:.75},blueprintWave:{mode:"wave",color:"#78B7FF",speed:.8,charSet:" ░▒▓█",edgeFade:.3,gradient:{type:"linear",angle:90,stops:["#173A63","#78B7FF"],steps:2}},deepRipple:{mode:"ripple",color:"#C04FFF",speed:.55,edgeFade:.5,gradient:{type:"radial",center:[.5,.5],radius:.9,stops:["#4FA8FF","#C04FFF","#0A0C10"],steps:3}},snowDrift:{mode:"snow",color:"#E8EEF7",speed:.35,snowDensity:.035,charSet:" ·*❄"},emberSparkle:{mode:"sparkle",color:"#FF9D5C",speed:.65,sparkleDensity:.06,charSet:" .·+*#"},risingEmbers:{mode:"fire",color:"#FF9D5C",speed:.7,fireDensity:.035,trail:.18,trailColor:"#070809",charSet:" .·+*#",gradient:{type:"linear",angle:90,stops:["#FFDF8A","#FF9D5C","#C04F32"],steps:3}},deepSpace:{mode:"starfield",color:"#E8EEF7",speed:.65,starfieldDensity:.018,charSet:" ·+*"},signalGlitch:{mode:"glitch",color:"#72F1B8",speed:.8,charSet:" 01<>/\\|#@",glitchIntensity:.32},terminalType:{mode:"typewriter",color:"#72F1B8",speed:1,loop:!0,typewriterDuration:4.5,charSet:" 01ABCDEFGHIJKLMNOPQRSTUVWXYZ"},orbitalFlow:{mode:"orbit",color:"#C04FFF",speed:.55,orbitDensity:.014,trail:.12,trailColor:"#070809",charSet:" ·+*#"},imageReveal:{mode:"image",color:"#4FA8FF",imageScale:1,imageScaleX:1,imageScaleY:1,imageFov:1,fit:"cover",colorFromImage:!0,animateImageMask:!0}}),
-// Registry for user-defined named modes: asciiam.registerMode('name', fn)
-l(D,"_registry",{}),l(D,"_glyphAtlases",new Map),l(D,"_glyphAtlasLimit",2),l(D,"_waveBaseLayers",new Map),l(D,"_waveBaseLayerLimit",2),l(D,"_activeInstances",new Set),l(D,"_schedulerRaf",null);let G=D;export{G as default};
-//# sourceMappingURL=asciiam.esm.js.map
+/*!
+ * asciiam — dependency-free canvas engine for animated ASCII backgrounds.
+ */
+
+import {
+    createCubeMesh,
+    createIcosphereMesh,
+    createPlaneMesh,
+    createTorusMesh,
+    MeshCellRasterizer,
+    normalizeMeshData,
+} from "./mesh.js";
+import { loadGltf } from "./gltf.js";
+
+"use strict";
+
+    // Modes rendered via their own particle/column list instead of a full
+    // cols*rows scan. Cheaper for effects where most cells are empty at any
+    // given moment (rain, snow, twinkling) — cost scales with active particle
+    // count, not grid size.
+    const SPARSE_MODES = new Set(["matrix", "snow", "sparkle", "fire", "starfield", "orbit"]);
+
+    /**
+     * Private WebGL2 presentation backend.
+     * Animation state remains in asciiam; this class owns GPU resources only.
+     */
+    class WebGL2GlyphRenderer {
+        constructor(canvas, options = {}) {
+            this.canvas = canvas;
+            this.gl = canvas.getContext("webgl2", {
+                alpha: true,
+                antialias: false,
+                depth: false,
+                stencil: false,
+                desynchronized: options.desynchronized !== false,
+                powerPreference: options.powerPreference || "high-performance",
+                premultipliedAlpha: true,
+                preserveDrawingBuffer: true,
+            });
+            if (!this.gl) throw new Error("WebGL2 unavailable");
+            this.capacity = 4096;
+            this.count = 0;
+            this.stride = 12;
+            this.instances = new Float32Array(this.capacity * this.stride);
+            this.atlasKey = "";
+            this.gradientTextures = new Map();
+            this._initialize();
+        }
+
+        _shader(type, source) {
+            const gl = this.gl;
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) || "WebGL shader compile failed");
+            return shader;
+        }
+
+        _program(vertex, fragment) {
+            const gl = this.gl;
+            const program = gl.createProgram();
+            gl.attachShader(program, this._shader(gl.VERTEX_SHADER, vertex));
+            gl.attachShader(program, this._shader(gl.FRAGMENT_SHADER, fragment));
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || "WebGL program link failed");
+            return program;
+        }
+
+        _initialize() {
+            const gl = this.gl;
+            this.program = this._program(`#version 300 es
+                in vec2 a_corner;
+                in vec4 a_rect;
+                in vec4 a_uv;
+                in vec4 a_color;
+                uniform vec2 u_viewport;
+                out vec2 v_uv;
+                out vec4 v_color;
+                out vec2 v_position;
+                void main() {
+                    vec2 pixel = a_rect.xy + a_corner * a_rect.zw;
+                    vec2 clip = pixel / u_viewport * 2.0 - 1.0;
+                    gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+                    v_uv = mix(a_uv.xy, a_uv.zw, a_corner);
+                    v_color = a_color;
+                    v_position = pixel / u_viewport;
+                }`, `#version 300 es
+                precision mediump float;
+                uniform sampler2D u_atlas;
+                uniform sampler2D u_gradient;
+                uniform bool u_use_gradient;
+                uniform int u_gradient_type;
+                uniform float u_gradient_angle;
+                in vec2 v_uv;
+                in vec4 v_color;
+                in vec2 v_position;
+                out vec4 outColor;
+                void main() {
+                    float mask = texture(u_atlas, v_uv).a;
+                    if (mask < 0.01) discard;
+                    vec4 color = v_color;
+                    if (u_use_gradient) {
+                        vec2 p = v_position - vec2(0.5);
+                        float t;
+                        if (u_gradient_type == 1) t = clamp(length(p) * 1.4142, 0.0, 1.0);
+                        else {
+                            vec2 dir = vec2(cos(u_gradient_angle), sin(u_gradient_angle));
+                            t = clamp(dot(p, dir) + 0.5, 0.0, 1.0);
+                        }
+                        color.rgb = texture(u_gradient, vec2(t, 0.5)).rgb;
+                    }
+                    outColor = vec4(color.rgb * color.a, color.a) * mask;
+                }`);
+            this.surfaceProgram = this._program(`#version 300 es
+                in vec2 a_corner;
+                out vec2 v_position;
+                void main() { v_position = a_corner; gl_Position = vec4(a_corner * 2.0 - 1.0, 0.0, 1.0); }`, `#version 300 es
+                precision mediump float;
+                uniform sampler2D u_gradient;
+                uniform vec4 u_color;
+                uniform bool u_use_gradient;
+                uniform int u_gradient_type;
+                uniform float u_gradient_angle;
+                in vec2 v_position;
+                out vec4 outColor;
+                void main() {
+                    vec4 color = u_color;
+                    if (u_use_gradient) {
+                        vec2 p = v_position - vec2(0.5);
+                        float t = u_gradient_type == 1 ? clamp(length(p) * 1.4142, 0.0, 1.0)
+                            : clamp(dot(p, vec2(cos(u_gradient_angle), sin(u_gradient_angle))) + 0.5, 0.0, 1.0);
+                        color.rgb = texture(u_gradient, vec2(t, 0.5)).rgb;
+                    }
+                    outColor = vec4(color.rgb * color.a, color.a);
+                }`);
+            this.vao = gl.createVertexArray();
+            gl.bindVertexArray(this.vao);
+            this.cornerBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.cornerBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+            const corner = gl.getAttribLocation(this.program, "a_corner");
+            gl.enableVertexAttribArray(corner);
+            gl.vertexAttribPointer(corner, 2, gl.FLOAT, false, 0, 0);
+            this.instanceBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, this.instances.byteLength, gl.DYNAMIC_DRAW);
+            [["a_rect", 4, 0], ["a_uv", 4, 4], ["a_color", 4, 8]].forEach(([name, size, offset]) => {
+                const location = gl.getAttribLocation(this.program, name);
+                gl.enableVertexAttribArray(location);
+                gl.vertexAttribPointer(location, size, gl.FLOAT, false, this.stride * 4, offset * 4);
+                gl.vertexAttribDivisor(location, 1);
+            });
+            this.surfaceVao = gl.createVertexArray();
+            gl.bindVertexArray(this.surfaceVao);
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.cornerBuffer);
+            const surfaceCorner = gl.getAttribLocation(this.surfaceProgram, "a_corner");
+            gl.enableVertexAttribArray(surfaceCorner);
+            gl.vertexAttribPointer(surfaceCorner, 2, gl.FLOAT, false, 0, 0);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        }
+
+        resize(width, height) {
+            this.gl.viewport(0, 0, width, height);
+        }
+
+        setAtlas(source, key) {
+            if (key === this.atlasKey) return;
+            const gl = this.gl;
+            if (!this.atlasTexture) this.atlasTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this.atlasTexture);
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            this.atlasKey = key;
+        }
+
+        hasGradient(key) {
+            return this.gradientTextures.has(key);
+        }
+
+        setGradient(source, key) {
+            if (!source || this.gradientTextures.has(key)) return this.gradientTextures.get(key) || null;
+            const gl = this.gl;
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            this.gradientTextures.set(key, texture);
+            if (this.gradientTextures.size > 8) {
+                const oldest = this.gradientTextures.keys().next().value;
+                gl.deleteTexture(this.gradientTextures.get(oldest));
+                this.gradientTextures.delete(oldest);
+            }
+            return texture;
+        }
+
+        begin(clearColor, preserve = false) {
+            const gl = this.gl;
+            this.count = 0;
+            if (!preserve) {
+                gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+        }
+
+        surface(color, gradient = null) {
+            const gl = this.gl;
+            gl.useProgram(this.surfaceProgram);
+            gl.bindVertexArray(this.surfaceVao);
+            gl.uniform4fv(gl.getUniformLocation(this.surfaceProgram, "u_color"), color);
+            this._gradientUniforms(this.surfaceProgram, gradient);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        push(x, y, width, height, uv, uvOffset, color, opacity) {
+            if (this.count >= this.capacity) {
+                this.capacity *= 2;
+                const grown = new Float32Array(this.capacity * this.stride);
+                grown.set(this.instances);
+                this.instances = grown;
+            }
+            const offset = this.count++ * this.stride;
+            const data = this.instances;
+            data[offset] = x;
+            data[offset + 1] = y;
+            data[offset + 2] = width;
+            data[offset + 3] = height;
+            data[offset + 4] = uv[uvOffset];
+            data[offset + 5] = uv[uvOffset + 1];
+            data[offset + 6] = uv[uvOffset + 2];
+            data[offset + 7] = uv[uvOffset + 3];
+            data[offset + 8] = color[0];
+            data[offset + 9] = color[1];
+            data[offset + 10] = color[2];
+            data[offset + 11] = color[3] * opacity;
+        }
+
+        _gradientUniforms(program, gradient) {
+            const gl = this.gl;
+            const texture = gradient ? this.gradientTextures.get(gradient.textureKey) : null;
+            const enabled = !!texture;
+            gl.uniform1i(gl.getUniformLocation(program, "u_use_gradient"), enabled ? 1 : 0);
+            gl.uniform1i(gl.getUniformLocation(program, "u_gradient_type"), gradient?.type === "radial" ? 1 : 0);
+            gl.uniform1f(gl.getUniformLocation(program, "u_gradient_angle"), ((gradient?.angle || 0) * Math.PI) / 180);
+            if (enabled) {
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.uniform1i(gl.getUniformLocation(program, "u_gradient"), 1);
+            }
+        }
+
+        flush(width, height, gradient = null) {
+            if (!this.count) return;
+            const gl = this.gl;
+            gl.useProgram(this.program);
+            gl.bindVertexArray(this.vao);
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
+            if (this.instances.byteLength > gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE)) {
+                gl.bufferData(gl.ARRAY_BUFFER, this.instances.byteLength, gl.DYNAMIC_DRAW);
+            }
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.instances.subarray(0, this.count * this.stride));
+            gl.uniform2f(gl.getUniformLocation(this.program, "u_viewport"), width, height);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, this.atlasTexture);
+            gl.uniform1i(gl.getUniformLocation(this.program, "u_atlas"), 0);
+            this._gradientUniforms(this.program, gradient);
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
+        }
+
+        destroy() {
+            const gl = this.gl;
+            if (this.atlasTexture) gl.deleteTexture(this.atlasTexture);
+            this.gradientTextures.forEach((texture) => gl.deleteTexture(texture));
+            this.gradientTextures.clear();
+            [this.cornerBuffer, this.instanceBuffer].forEach((buffer) => { if (buffer) gl.deleteBuffer(buffer); });
+            [this.program, this.surfaceProgram].forEach((program) => { if (program) gl.deleteProgram(program); });
+        }
+    }
+
+    /**
+     * Owns one ASCII animation surface, its renderer, timing, image source, and
+     * optional sequence state. Running instances share a frame scheduler.
+     */
+    class asciiam {
+        static QUALITY = {
+            high: { maxDPR: 3, density: 0.9, targetFPS: null, fontLevels: 6, alphaLevels: 64, useGlyphAtlas: false, cacheStaticWave: false },
+            balanced: { maxDPR: 2, density: 1.0, targetFPS: null, fontLevels: 5, alphaLevels: 32, useGlyphAtlas: false, cacheStaticWave: false },
+            performance: { maxDPR: 1.5, density: 1.4, targetFPS: null, fontLevels: 4, alphaLevels: 16, useGlyphAtlas: true, cacheStaticWave: false },
+            ultra: { maxDPR: 1, density: 2.4, targetFPS: null, fontLevels: 2, alphaLevels: 8, useGlyphAtlas: true, cacheStaticWave: true },
+        };
+
+        /** Canonical inventory used by documentation and integration tooling. */
+        static BUILT_IN_MODES = Object.freeze([
+            "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
+            "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace",
+            "echoBloom", "matrix", "snow", "sparkle", "fire", "starfield", "glitch",
+            "typewriter", "orbit", "hoverZone", "clickZone", "image", "custom",
+            "mesh",
+        ]);
+
+        static CHARACTER_SETS = {
+            density: " .:-=+*#%@",
+            ascii: Array.from({ length: 95 }, (_, index) => String.fromCharCode(index + 32)).join(""),
+            asciiExtended: Array.from({ length: 95 }, (_, index) => String.fromCharCode(index + 32)).join("")
+                + Array.from({ length: 95 }, (_, index) => String.fromCharCode(index + 161)).join(""),
+            extended: "  .'`,^:\";~+_(){}[]<>!?ilI|/\\\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
+            alphanumeric: " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+            uppercase: " ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            lowercase: " abcdefghijklmnopqrstuvwxyz",
+            symbols: " !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",
+            boxDrawing: " ─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬░▒▓█",
+            arrows: " ←↑→↓↖↗↘↙↔↕⇐⇑⇒⇓⇔",
+            math: " ±×÷=≠≈∞√∑∏∫∆∇∂∈∉⊂⊃≤≥",
+            blocks: " ░▒▓█",
+            minimal: " .oO@",
+            technical: " .·:+=*#%@",
+            geometric: " ·•○●□■△▲◇◆",
+            circuit: " ·-+=oO0#@",
+            waves: " ~≈≋∿",
+            terminal: " 01<>/\\|[]{}#@",
+            binary: " 01",
+            binaryWide: " 001101",
+            braille: "⠀⠂⠒⠲⠶⠷⠿⣿",
+            japanese: " 01アイウエオカキクケコ",
+            punctuation: " .,:;irsXA253hMHGS#9B&@",
+        };
+
+        static presets = {
+            heroWave: { mode: "wave", color: "#4FA8FF", speed: 1, edgeFade: 0.25 },
+            subtleCurrent: { mode: "current", color: "#4FA8FF", speed: 0.6, minOpacity: 0.03, maxOpacity: 0.45 },
+            matrixRain: { mode: "matrix", color: "#3CF07A", speed: 1, charSet: " 01アイウエオ" },
+            softRipple: { mode: "ripple", color: "#4FA8FF", speed: 0.8, edgeFade: 0.4 },
+            vortexFlow: {
+                mode: "vortex",
+                color: "#C04FFF",
+                speed: 0.65,
+                edgeFade: 0.2,
+                gradient: { type: "radial", center: [0.5, 0.5], radius: 0.9, stops: ["#4FA8FF", "#C04FFF"], steps: 2 },
+            },
+            plasmaField: {
+                mode: "plasma",
+                color: "#72F1B8",
+                speed: 0.55,
+                minOpacity: 0.04,
+                maxOpacity: 0.68,
+                gradient: { type: "linear", angle: 25, stops: ["#72F1B8", "#4FA8FF", "#C04FFF"], steps: 3 },
+            },
+            introReveal: { mode: "fadeIn", color: "#4FA8FF", speed: 1, loop: false, revealDirection: "left-to-right" },
+            outroFade: { mode: "fadeOut", color: "#4FA8FF", speed: 1, loop: false, revealDirection: "right-to-left" },
+            scanline: { mode: "wave", color: "#4FA8FF", speed: 1.4, ambient: 0, bandWidth: 0.04, edgeFade: 0.2 },
+            snowfall: { mode: "snow", color: "#E8EEF7", speed: 0.5, snowDensity: 0.025 },
+            sparkleField: { mode: "sparkle", color: "#4FA8FF", speed: 0.8, sparkleDensity: 0.04 },
+            pulseGlow: { mode: "current", color: "#4FA8FF", speed: 0.5, pulse: { amplitude: 0.4, speed: 0.6 } },
+            cursorGlow: {
+                mode: "current",
+                color: "#4FA8FF",
+                speed: 0.4,
+                minOpacity: 0.03,
+                maxOpacity: 0.4,
+                cursor: { enabled: true, radius: 160, strength: 0.7 },
+            },
+            hoverField: {
+                mode: "hoverZone",
+                color: "#72F1B8",
+                charSet: " .·:+=*#%@",
+                interactionRadius: 180,
+                minOpacity: 0.025,
+                maxOpacity: 0.9,
+            },
+            clickPulse: {
+                mode: "clickZone",
+                color: "#C04FFF",
+                charSet: " ·•○●□■△▲◇◆",
+                interactionRadius: 220,
+                interactionDuration: 1.1,
+                minOpacity: 0.02,
+                maxOpacity: 0.95,
+            },
+            auroraCurrent: {
+                mode: "current",
+                color: "#72F1B8",
+                speed: 0.45,
+                minOpacity: 0.04,
+                maxOpacity: 0.5,
+                gradient: { type: "linear", angle: 25, stops: ["#72F1B8", "#4FA8FF", "#C04FFF"], steps: 3 },
+            },
+            terminalMatrix: {
+                mode: "matrix",
+                color: "#3CF07A",
+                speed: 1.1,
+                charSet: " 01アイウエオカキクケコ",
+                maxOpacity: 0.75,
+            },
+            blueprintWave: {
+                mode: "wave",
+                color: "#78B7FF",
+                speed: 0.8,
+                charSet: " ░▒▓█",
+                edgeFade: 0.3,
+                gradient: { type: "linear", angle: 90, stops: ["#173A63", "#78B7FF"], steps: 2 },
+            },
+            deepRipple: {
+                mode: "ripple",
+                color: "#C04FFF",
+                speed: 0.55,
+                edgeFade: 0.5,
+                gradient: { type: "radial", center: [0.5, 0.5], radius: 0.9, stops: ["#4FA8FF", "#C04FFF", "#0A0C10"], steps: 3 },
+            },
+            snowDrift: {
+                mode: "snow",
+                color: "#E8EEF7",
+                speed: 0.35,
+                snowDensity: 0.035,
+                charSet: " ·*❄",
+            },
+            emberSparkle: {
+                mode: "sparkle",
+                color: "#FF9D5C",
+                speed: 0.65,
+                sparkleDensity: 0.06,
+                charSet: " .·+*#",
+            },
+            risingEmbers: {
+                mode: "fire",
+                color: "#FF9D5C",
+                speed: 0.7,
+                fireDensity: 0.035,
+                trail: 0.18,
+                trailColor: "#070809",
+                charSet: " .·+*#",
+                gradient: { type: "linear", angle: 90, stops: ["#FFDF8A", "#FF9D5C", "#C04F32"], steps: 3 },
+            },
+            deepSpace: {
+                mode: "starfield",
+                color: "#E8EEF7",
+                speed: 0.65,
+                starfieldDensity: 0.018,
+                charSet: " ·+*",
+            },
+            signalGlitch: {
+                mode: "glitch",
+                color: "#72F1B8",
+                speed: 0.8,
+                charSet: " 01<>/\\|#@",
+                glitchIntensity: 0.32,
+            },
+            terminalType: {
+                mode: "typewriter",
+                color: "#72F1B8",
+                speed: 1,
+                loop: true,
+                typewriterDuration: 4.5,
+                charSet: " 01ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            },
+            orbitalFlow: {
+                mode: "orbit",
+                color: "#C04FFF",
+                speed: 0.55,
+                orbitDensity: 0.014,
+                trail: 0.12,
+                trailColor: "#070809",
+                charSet: " ·+*#",
+            },
+            imageReveal: {
+                mode: "image",
+                color: "#4FA8FF",
+                imageScale: 1,
+                imageScaleX: 1,
+                imageScaleY: 1,
+                imageFov: 1,
+                fit: "cover",
+                colorFromImage: true,
+                animateImageMask: true,
+            },
+        };
+
+        // Registry for user-defined named modes: asciiam.registerMode('name', fn)
+        static _registry = {};
+        static _glyphAtlases = new Map();
+        static _glyphAtlasLimit = 2;
+        static _waveBaseLayers = new Map();
+        static _waveBaseLayerLimit = 2;
+        static _activeInstances = new Set();
+        static _schedulerRaf = null;
+        /** Ensures all running instances are served by one animation-frame callback. */
+        static _scheduleFrame() {
+            if (asciiam._schedulerRaf !== null || !asciiam._activeInstances.size) return;
+            asciiam._schedulerRaf = requestAnimationFrame(asciiam._tickFrame);
+        }
+        /** Advances every active instance, then schedules the next shared frame. */
+        static _tickFrame(t) {
+            asciiam._schedulerRaf = null;
+            for (const instance of asciiam._activeInstances) instance._runFrame(t);
+            asciiam._scheduleFrame();
+        }
+        /** Registers a process-wide named cell callback. */
+        static registerMode(name, fn) {
+            asciiam._registry[name] = fn;
+        }
+
+        /** Create dependency-free geometry suitable for setMesh(). */
+        static createMeshPrimitive(name, options) {
+            if (name === "cube") return createCubeMesh(options?.size);
+            if (name === "plane") return createPlaneMesh(options);
+            if (name === "icosphere") return createIcosphereMesh(options);
+            if (name === "torus") return createTorusMesh(options);
+            throw new TypeError(`asciiam: unknown mesh primitive "${name}"`);
+        }
+
+        /** Decode a glTF 2.0 or GLB v2 source without constructing a renderer. */
+        static loadModel(source, options) {
+            return loadGltf(source, options);
+        }
+
+        /** Feature-detect before constructing, for graceful fallback in older browsers. */
+        static isSupported() {
+            try {
+                const c = document.createElement("canvas");
+                return !!(c.getContext && (c.getContext("webgl2") || c.getContext("2d")));
+            } catch {
+                return false;
+            }
+        }
+
+        /** Creates an instance around a container or application-owned canvas. */
+        constructor(target, opts = {}) {
+            const el = typeof target === "string" ? document.querySelector(target) : target;
+            if (!el) throw new Error("asciiam: target not found");
+            this._gpuPreferred = opts.preferGPU !== false;
+            this._desynchronized = this._gpuPreferred && opts.desynchronized !== false;
+            this._rendererRequested = opts.renderer || (this._gpuPreferred ? "auto" : "canvas2d");
+            if (!["auto", "webgl2", "canvas2d"].includes(this._rendererRequested)) {
+                throw new TypeError('asciiam: renderer must be "auto", "webgl2", or "canvas2d"');
+            }
+            if (!asciiam.isSupported()) {
+                console.warn("asciiam: canvas 2D not supported in this browser — instance is a no-op.");
+                this._disabled = true;
+                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.clearImage = this.setMesh = this.clearMesh = this.clearModel =
+                    this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
+                    this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
+                this.getSequenceState = () => ({ configured: false, running: false, completed: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false, loading: false, morphing: false, morphProgress: 0 });
+                this.getRendererInfo = () => ({ requested: "canvas2d", backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
+                this.on = () => () => {};
+                this.off = () => {};
+                this.setImage = () => Promise.resolve(null);
+                this.setModel = () => Promise.resolve(null);
+                this.getMeshInfo = () => ({ loaded: false, vertexCount: 0, primitiveCount: 0, primitive: null });
+                return;
+            }
+
+            if (el.tagName === "CANVAS") {
+                this.canvas = el;
+                this.container = el.parentElement;
+                this._ownsCanvas = false;
+            } else {
+                this.container = el;
+                this.canvas = document.createElement("canvas");
+                this._ownsCanvas = true;
+                this.canvas.style.cssText = "display:block;width:100%;height:100%;position:absolute;inset:0;" + "z-index:-1;pointer-events:none;contain:strict;";
+                this.canvas.setAttribute("aria-hidden", "true");
+                this.canvas.setAttribute("role", "presentation");
+                if (getComputedStyle(this.container).position === "static") {
+                    this.container.style.position = "relative";
+                }
+                // Keep the negative canvas layer above the container background.
+                // Without an isolated stacking context, browsers may paint it
+                // behind the parent's background, making a working animation
+                // appear blank.
+                this.container.style.isolation = "isolate";
+                this.container.insertBefore(this.canvas, this.container.firstChild);
+            }
+            if (this._gpuPreferred) {
+                this.canvas.style.willChange = "transform";
+                this.canvas.style.backfaceVisibility = "hidden";
+                if (this._ownsCanvas) this.canvas.style.transform = "translateZ(0)";
+            }
+            this._webgl = null;
+            let webglInitializationFailed = false;
+            if (this._rendererRequested !== "canvas2d") {
+                try {
+                    this._webgl = new WebGL2GlyphRenderer(this.canvas, {
+                        desynchronized: this._desynchronized,
+                        powerPreference: opts.powerPreference,
+                    });
+                } catch (error) {
+                    webglInitializationFailed = true;
+                    if (this._rendererRequested === "webgl2") console.warn("asciiam: WebGL2 initialization failed; using Canvas 2D.", error);
+                }
+            }
+            this._renderer = this._webgl ? "webgl2" : "canvas2d";
+            if (this._webgl) this._bindWebGLFallback();
+            if (!this._webgl) {
+                const contextAttributes = {
+                    alpha: true,
+                    desynchronized: this._desynchronized,
+                    willReadFrequently: false,
+                };
+                try {
+                    this.ctx = this.canvas.getContext("2d", contextAttributes);
+                } catch {
+                    this.ctx = this.canvas.getContext("2d", { alpha: true });
+                }
+                if (!this.ctx) this.ctx = this.canvas.getContext("2d", { alpha: true });
+                if (!this.ctx && webglInitializationFailed) {
+                    this._replacePresentationCanvas();
+                    this.ctx = this.canvas.getContext("2d", contextAttributes) || this.canvas.getContext("2d", { alpha: true });
+                }
+            } else {
+                const measureCanvas = document.createElement("canvas");
+                this.ctx = measureCanvas.getContext("2d", { alpha: true, willReadFrequently: false });
+            }
+            if (!this.ctx) {
+                console.warn("asciiam: failed to acquire 2D context — instance is a no-op.");
+                this._disabled = true;
+                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.setMesh = this.clearMesh = this.clearModel =
+                    this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
+                    this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
+                this.getSequenceState = () => ({ configured: false, running: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false });
+                this.getRendererInfo = () => ({ requested: this._rendererRequested, backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
+                this.on = () => () => {};
+                this.off = () => {};
+                this.setImage = () => Promise.resolve(null);
+                this.setModel = () => Promise.resolve(null);
+                this.getMeshInfo = () => ({ loaded: false, vertexCount: 0, primitiveCount: 0, primitive: null });
+                return;
+            }
+
+            const quality = asciiam.QUALITY[opts.quality] || asciiam.QUALITY.balanced;
+
+            this.opts = Object.assign(
+                {
+                    quality: asciiam.QUALITY[opts.quality] ? opts.quality : "balanced",
+                    mode: "wave",
+                    charSet: asciiam.CHARACTER_SETS.asciiExtended,
+                    fontFamily: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
+                    fontSize: 14,
+                    density: quality.density,
+                    color: "#4FA8FF",
+                    gradient: null,
+                    background: "transparent",
+                    backdrop: null,
+                    speed: 1,
+                    direction: "horizontal",
+                    revealDirection: "center",
+                    align: "center",
+                    minOpacity: 0.05,
+                    maxOpacity: 0.85,
+                    boldOnPeak: true,
+                    loop: true,
+                    image: null,
+                    imageChars: asciiam.CHARACTER_SETS.asciiExtended,
+                    imageScale: 1,
+                    imageScaleX: 1,
+                    imageScaleY: 1,
+                    imageFov: 1,
+                    fit: "cover",
+                    imageLuminance: "auto",
+                    colorFromImage: false,
+                    animateImageMask: true,
+                    imageMaskMode: "waveSweep",
+                    imageAnimationRange: null, // { min:'#000000', max:'#ffffff' }; null animates every sampled color
+                    animateImageFrames: true,
+                    imageFrameRate: 12,
+                    edgeFade: 0,
+                    maxDPR: quality.maxDPR,
+                    targetFPS: quality.targetFPS,
+                    showStats: false,
+                    fontLevels: quality.fontLevels || 6,
+                    alphaLevels: quality.alphaLevels || 32,
+                    useGlyphAtlas: !!quality.useGlyphAtlas,
+                    cacheStaticWave: !!quality.cacheStaticWave,
+                    preferGPU: this._gpuPreferred,
+                    desynchronized: this._desynchronized,
+                    renderer: this._rendererRequested,
+                    powerPreference: opts.powerPreference || "high-performance",
+                    respectReducedMotion: true,
+                    onReady: null,
+                    onImageError: null,
+                    onModelError: null,
+                    sequence: null,
+                    sequenceOptions: null,
+
+                    // --- wave tuning (previously hardcoded) ---
+                    ambient: 0.35, // 0..1, base noise level between wave passes
+                    bandWidth: 0.14, // fraction of extent the bright band spans
+
+                    // --- free / near-free additions ---
+                    trail: 0, // 0..1, afterglow strength (0 = classic full clear)
+                    trailColor: "#070809",
+                    pulse: null, // { amplitude, speed } — global opacity breathing, ~free
+                    colorAnimation: null, // { type:'hueRotate'|'breathe', speed, ... } — one calc/frame
+
+                    // --- opt-in, small added cost ---
+                    cursor: null, // { enabled, radius, strength, mode:'boost' }
+                    interactionRadius: 180,
+                    interactionDuration: 1.1,
+
+                    // --- sparse mode density ---
+                    snowDensity: 0.02,
+                    sparkleDensity: 0.05,
+                    fireDensity: 0.035,
+                    starfieldDensity: 0.018,
+                    orbitDensity: 0.014,
+
+                    // --- dense mode timing / strength ---
+                    glitchIntensity: 0.32,
+                    typewriterDuration: 4.5,
+
+                    // --- dependency-free 3D-to-ASCII source ---
+                    mesh: null,
+                    meshPrimitive: null,
+                    meshStyle: "wireframe",
+                    meshProjection: "perspective",
+                    meshCamera: null,
+                    meshTransform: null,
+                    meshLight: null,
+                    meshAutoRotate: true,
+                    meshRotationSpeed: [0.2, 0.45, 0.1],
+                    meshMaxVertices: 100000,
+                    meshMaxPrimitives: 100000,
+                    model: null,
+
+                    // --- extensibility ---
+                    customCell: null, // (api) => ({char,opacity,intensity,bold,color}) | null
+                },
+                opts,
+            );
+
+            this._time = 0;
+            this._raf = null;
+            this._running = false;
+            this._visible = true;
+            this._lastT = null;
+            this._acc = 0;
+            this._resizePending = false;
+            this._resizeRaf = null;
+            this._lastFillStyle = null;
+            this._lastFont = null;
+            this._lastAlpha = -1;
+            this._activeGlyphAtlas = null;
+            this._waveBaseLayer = null;
+            this._gradientKey = null;
+            this._gradientObj = null;
+            this._gradientSource = null;
+            this._backdropGradientKey = null;
+            this._backdropGradientObj = null;
+            this._edgeFadeCache = null;
+            this._cell = { char: " ", opacity: 0, level: 0, bold: false, color: null };
+            this._frames = 0;
+            this._fpsAccum = 0;
+            this._fps = 0;
+            this._statsEl = null;
+            this._warnedZeroSize = false;
+            this._pulseFactor = 1;
+            this._animatedColor = null;
+            this._cursor = null;
+            this._interaction = null;
+            this._canvasRect = null;
+            this._sequence = null;
+            this._applyingSequence = false;
+            this._events = new Map();
+            this._morph = null;
+            this._destroyed = false;
+            this._animatedImage = false;
+            this._imageFrameAccumulator = 0;
+            this._capturedImageFrames = null;
+            this._imageFrameIndex = 0;
+            this._imageLoadToken = 0;
+            this._imageCaptureToken = 0;
+            this._animatedImageData = null;
+            this._imageRecaptureTimer = null;
+            this._imageSampleCanvas = null;
+            this._imageSampleContext = null;
+            this._loadedImageSource = null;
+            this._loadedImageOptionsKey = null;
+            this._mesh = null;
+            this._meshRasterizer = null;
+            this._meshBaseRotation = new Float64Array(3);
+            this._meshRotation = new Float64Array(3);
+            this._meshPosition = new Float64Array(3);
+            this._meshScale = new Float64Array([1, 1, 1]);
+            this._meshRasterOptions = {
+                style: this.opts.meshStyle,
+                projection: this.opts.meshProjection,
+                camera: this.opts.meshCamera,
+                transform: { position: this._meshPosition, rotation: this._meshRotation, scale: this._meshScale },
+                light: this.opts.meshLight,
+            };
+            this._modelLoadToken = 0;
+            this._modelAbortController = null;
+            this._loadedModelSource = null;
+            this._api = {
+                col: 0,
+                row: 0,
+                x: 0,
+                y: 0,
+                time: 0,
+                cols: 0,
+                rows: 0,
+                w: 0,
+                h: 0,
+                charSet: "",
+                seed: (c, r) => this._seed(c, r),
+                set: (ch, o, i, b) => this._setCell(ch, o, i, b),
+            };
+
+            this._mq = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+            this._reduced = !!(this._mq && this._mq.matches && this.opts.respectReducedMotion);
+            this._onMqChange = (e) => {
+                this._reduced = e.matches && this.opts.respectReducedMotion;
+                if (this._reduced) {
+                    this.stop();
+                    this._draw(16.7);
+                } else this.start();
+            };
+            if (this._mq) this._mq.addEventListener ? this._mq.addEventListener("change", this._onMqChange) : this._mq.addListener(this._onMqChange);
+
+            this._bindLifecycle();
+            this._bindCursor();
+            this._buildFontCache();
+            this._resize();
+
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready
+                    .then(() => {
+                        this._buildFontCache();
+                        this._resize();
+                    })
+                    .catch(() => {});
+            }
+
+            if (this.opts.image) this.setImage(this.opts.image);
+            if (this.opts.mesh) this.setMesh(this.opts.mesh);
+            else if (this.opts.meshPrimitive) {
+                const primitiveName = this.opts.meshPrimitive;
+                this.setMesh(asciiam.createMeshPrimitive(primitiveName));
+                this.opts.meshPrimitive = primitiveName;
+            }
+            if (this.opts.model) this.setModel(this.opts.model).catch(() => {});
+            if (Array.isArray(this.opts.sequence) && this.opts.sequence.length) {
+                const sequenceOptions = this.opts.sequenceOptions || {};
+                this.setSequence(this.opts.sequence, sequenceOptions);
+                if (sequenceOptions.autoplay) this.playSequence();
+            }
+            Promise.resolve().then(() => {
+                if (this._destroyed) return;
+                const detail = { width: this.w, height: this.h, cols: this.cols, rows: this.rows };
+                this._emit("ready", detail);
+                if (typeof this.opts.onReady === "function") this.opts.onReady(this);
+            });
+        }
+
+        // ---- public API ----
+        /** Starts or resumes this instance on the shared frame scheduler. */
+        start() {
+            if (this._disabled || this._running) return;
+            if (this._reduced) {
+                this._draw(16.7);
+                return;
+            }
+            this._running = true;
+            this._raf = true;
+            asciiam._activeInstances.add(this);
+            asciiam._scheduleFrame();
+        }
+        /** Stops frame scheduling while retaining renderer and animation state. */
+        stop() {
+            if (!this._running) return;
+            this._running = false;
+            this._raf = null;
+            asciiam._activeInstances.delete(this);
+            if (!asciiam._activeInstances.size && asciiam._schedulerRaf !== null) {
+                cancelAnimationFrame(asciiam._schedulerRaf);
+                asciiam._schedulerRaf = null;
+            }
+        }
+        /** Releases observers, listeners, renderer resources, and owned DOM. */
+        destroy() {
+            this._destroyed = true;
+            this.stop();
+            this._clearMorph();
+            if (this._io) this._io.disconnect();
+            if (this._ro) this._ro.disconnect();
+            if (this._resizeRaf) cancelAnimationFrame(this._resizeRaf);
+            document.removeEventListener("visibilitychange", this._onVisChange);
+            if (this._onResize) window.removeEventListener("resize", this._onResize);
+            if (this._mq)
+                this._mq.removeEventListener ? this._mq.removeEventListener("change", this._onMqChange) : this._mq.removeListener(this._onMqChange);
+            this._unbindCursor();
+            if (this._onWebGLContextLost) this.canvas.removeEventListener("webglcontextlost", this._onWebGLContextLost);
+            if (this._webgl) this._webgl.destroy();
+            this._sourceImage = null;
+            this._imageGrid = null;
+            this._capturedImageFrames = null;
+            this._animatedImageData = null;
+            this._imageLoadToken++;
+            this._imageCaptureToken++;
+            if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
+            this._imageRecaptureTimer = null;
+            this._imageSampleCanvas = null;
+            this._imageSampleContext = null;
+            this._mesh = null;
+            this._meshRasterizer = null;
+            this._modelLoadToken++;
+            this._modelAbortController?.abort();
+            this._modelAbortController = null;
+            this._loadedModelSource = null;
+            if (this.canvas.parentElement) this.canvas.parentElement.removeChild(this.canvas);
+            this._events.clear();
+        }
+
+        /** Advances time-dependent state in a fixed order before presenting a frame. */
+        _runFrame(t) {
+            if (!this._running) return;
+            if (document.hidden || !this._visible) {
+                this._lastT = null;
+                return;
+            }
+            const dt = this._lastT === null ? 16.7 : t - this._lastT;
+            this._lastT = t;
+
+            if (this.opts.targetFPS) {
+                this._acc += dt;
+                const frameDur = 1000 / this.opts.targetFPS;
+                if (this._acc < frameDur) return;
+                this._acc %= frameDur;
+            }
+
+            this._advanceMorph(dt);
+            if (this._sequence?.running) this._advanceSequence(dt);
+            this._time += dt * 0.001 * this.opts.speed;
+            if (this._interaction) {
+                // Interaction duration is wall-clock based; changing animation speed
+                // must not make a click gesture feel shorter or longer.
+                this._interaction.elapsed += dt * 0.001;
+                const duration = Math.max(0.05, Number(this.opts.interactionDuration) || 1.1);
+                if (this._interaction.elapsed >= duration) this._interaction = null;
+            }
+            this._advanceImageFrames(dt);
+            this._draw(dt);
+            if (this._events.get("frame")?.size) {
+                this._emit("frame", { time: this._time, delta: dt, drawn: this._lastDrawnCount });
+            }
+            if (this.opts.showStats) this._updateStats(dt);
+        }
+        /** Subscribe to a lifecycle event. Returns an unsubscribe function. */
+        on(event, listener) {
+            if (typeof listener !== "function") throw new TypeError("asciiam: event listener must be a function");
+            let listeners = this._events.get(event);
+            if (!listeners) {
+                listeners = new Set();
+                this._events.set(event, listeners);
+            }
+            listeners.add(listener);
+            return () => this.off(event, listener);
+        }
+        /** Removes a previously registered lifecycle listener. */
+        off(event, listener) {
+            const listeners = this._events.get(event);
+            if (!listeners) return;
+            listeners.delete(listener);
+            if (!listeners.size) this._events.delete(event);
+        }
+        /** Changes the algorithm and restarts its mode-local timeline. */
+        setMode(mode, fromSequence = false) {
+            if (!fromSequence && this._sequence?.running) {
+                if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("mode-change");
+                this.pauseSequence("mode-change");
+                this._sequence.elapsed = 0;
+                this._sequence.delayElapsed = 0;
+                this._emit("sequenceInterrupt", this._sequenceDetail({ reason: "mode-change" }));
+            }
+            this.opts.mode = mode;
+            if (mode === "clickZone") this._interaction = null;
+            // Mode-local timelines are expected to begin when a mode is selected.
+            // Without this reset, one-shot modes can be complete before their first
+            // visible frame when selected on a long-running instance.
+            this._time = 0;
+            this._lastT = null;
+            if (mode === "matrix") this._initMatrix();
+            if (mode === "snow") this._initSnow();
+            if (mode === "sparkle") this._initSparkle();
+            if (mode === "fire") this._initFire();
+            if (mode === "starfield") this._initStarfield();
+            if (mode === "orbit") this._initOrbit();
+        }
+        /** Updates one option and rebuilds only its dependent state or caches. */
+        setOption(key, value) {
+            if (key === "mode") {
+                this.setMode(value);
+                return;
+            }
+            if (key === "quality") {
+                const quality = asciiam.QUALITY[value];
+                if (!quality) return;
+                this.opts.quality = value;
+                Object.assign(this.opts, quality);
+                this._buildFontCache();
+                this._resize();
+                return;
+            }
+            this.opts[key] = value;
+            if (key === "fontSize" || key === "density") {
+                this._buildFontCache();
+                this._resize();
+            }
+            if (key === "fontFamily") {
+                this._buildFontCache();
+                this._resize();
+            }
+            if (key === "fontLevels") {
+                this._buildFontCache();
+            }
+            if (key === "color" || key === "charSet" || key === "useGlyphAtlas") {
+                this._activeGlyphAtlas = null;
+                this._waveBaseLayer = null;
+            }
+            if (key === "maxDPR") {
+                this._resize();
+            }
+            if (key === "gradient") {
+                this._gradientKey = null;
+                this._gradientSource = null;
+            }
+            if (key === "backdrop") {
+                this._backdropGradientKey = null;
+                this._backdropGradientObj = null;
+            }
+            if (key === "edgeFade") {
+                this._buildEdgeFadeCache();
+                this._waveBaseLayer = null;
+            }
+            if (key === "align") {
+                this._buildSpatialCache();
+                this._buildCurrentCache();
+            }
+            if (key === "revealDirection" && ["fadeIn", "fadeOut", "irisIn", "irisOut", "dissolveIn", "dissolveOut"].includes(this.opts.mode)) {
+                this._time = 0;
+                this._lastT = null;
+            }
+            if (key === "imageScale" || key === "imageScaleX" || key === "imageScaleY" || key === "imageFov" || key === "fit" || key === "imageChars" || key === "imageLuminance" || key === "colorFromImage" || key === "imageAnimationRange") {
+                if (this._sourceImage) this._resampleImage();
+                this._scheduleAnimatedFrameCapture();
+            }
+            if (key === "animateImageFrames") {
+                this._imageFrameAccumulator = 0;
+            }
+            if (key === "snowDensity") {
+                this._initSnow();
+            }
+            if (key === "sparkleDensity") {
+                this._initSparkle();
+            }
+            if (key === "fireDensity") {
+                this._initFire();
+            }
+            if (key === "starfieldDensity") {
+                this._initStarfield();
+            }
+            if (key === "orbitDensity") {
+                this._initOrbit();
+            }
+            if (key === "mesh") {
+                if (value) this.setMesh(value);
+                else this.clearMesh();
+            }
+            if (key === "meshPrimitive") {
+                if (value) {
+                    this.setMesh(asciiam.createMeshPrimitive(value));
+                    this.opts.meshPrimitive = value;
+                }
+                else if (!this.opts.model) this.clearMesh();
+            }
+            if (key === "model") {
+                if (value) this.setModel(value).catch(() => {});
+                else this.clearModel();
+            }
+            if (key === "meshStyle" || key === "meshProjection" || key === "meshCamera" || key === "meshLight") {
+                this._syncMeshOptions();
+            }
+            if (key === "meshTransform" || key === "meshRotationSpeed") {
+                this._syncMeshOptions();
+            }
+            if (key === "respectReducedMotion") {
+                this._reduced = !!(this._mq && this._mq.matches && value);
+                if (this._reduced) {
+                    this.stop();
+                    this._draw(16.7);
+                }
+            }
+        }
+
+        /** Validate and retain typed-array geometry for the mesh animation mode. */
+        setMesh(mesh) {
+            this._mesh = normalizeMeshData(mesh, {
+                maxVertices: this.opts.meshMaxVertices,
+                maxPrimitives: this.opts.meshMaxPrimitives,
+            });
+            this.opts.mesh = mesh;
+            this.opts.meshPrimitive = null;
+            if (!this._meshRasterizer) this._meshRasterizer = new MeshCellRasterizer(this.cols || 1, this.rows || 1);
+            else this._meshRasterizer.resize(this.cols || 1, this.rows || 1);
+            this._syncMeshOptions();
+            this._emit("meshReady", this.getMeshInfo());
+            return this;
+        }
+
+        /** Release retained geometry and raster buffers. */
+        clearMesh() {
+            this._mesh = null;
+            this.opts.mesh = null;
+            this.opts.meshPrimitive = null;
+            this._meshRasterizer = null;
+            this._emit("meshClear", this.getMeshInfo());
+            return this;
+        }
+
+        /** Report normalized topology without exposing mutable internal buffers. */
+        getMeshInfo() {
+            return {
+                loaded: !!this._mesh,
+                vertexCount: this._mesh?.vertexCount || 0,
+                primitiveCount: this._mesh?.primitiveCount || 0,
+                primitive: this._mesh?.primitive || null,
+                style: this.opts.meshStyle,
+                projection: this.opts.meshProjection,
+            };
+        }
+
+        /** Decode and retain a glTF 2.0 or GLB v2 model with cancellation and progress events. */
+        async setModel(source, options = {}) {
+            if (source === null || source === undefined || source === "") {
+                this.clearModel();
+                return null;
+            }
+            const token = ++this._modelLoadToken;
+            this._modelAbortController?.abort();
+            const controller = new AbortController();
+            this._modelAbortController = controller;
+            const abortFromCaller = () => controller.abort();
+            options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+            this.opts.model = source;
+            this._emit("modelLoadStart", { source });
+            try {
+                const mesh = await loadGltf(source, {
+                    ...options,
+                    signal: controller.signal,
+                    limits: {
+                        maxVertices: this.opts.meshMaxVertices,
+                        maxPrimitives: this.opts.meshMaxPrimitives,
+                        ...options.limits,
+                    },
+                    onProgress: (progress) => {
+                        options.onProgress?.(progress);
+                        if (token === this._modelLoadToken) this._emit("modelProgress", progress);
+                    },
+                });
+                if (token !== this._modelLoadToken || this._destroyed) return null;
+                this._loadedModelSource = source;
+                this.setMesh(mesh);
+                this.opts.model = source;
+                this._emit("modelReady", { source, ...this.getMeshInfo() });
+                return mesh;
+            } catch (error) {
+                if (token !== this._modelLoadToken || error?.name === "AbortError") return null;
+                this._emit("modelError", { source, error });
+                if (typeof this.opts.onModelError === "function") this.opts.onModelError(error);
+                throw error;
+            } finally {
+                options.signal?.removeEventListener("abort", abortFromCaller);
+                if (token === this._modelLoadToken) this._modelAbortController = null;
+            }
+        }
+
+        /** Cancel model loading and release its retained geometry. */
+        clearModel() {
+            this._modelLoadToken++;
+            this._modelAbortController?.abort();
+            this._modelAbortController = null;
+            this._loadedModelSource = null;
+            this.opts.model = null;
+            this.clearMesh();
+            this._emit("modelClear", {});
+            return this;
+        }
+
+        /** Copy public mesh options into stable arrays consumed by the hot raster loop. */
+        _syncMeshOptions() {
+            const copyVector = (value, output, fallback) => {
+                for (let index = 0; index < 3; index++) {
+                    const candidate = Number(value?.[index]);
+                    output[index] = Number.isFinite(candidate) ? candidate : fallback[index];
+                }
+            };
+            const transform = this.opts.meshTransform;
+            copyVector(transform?.position, this._meshPosition, [0, 0, 0]);
+            copyVector(transform?.rotation, this._meshBaseRotation, [0, 0, 0]);
+            copyVector(transform?.scale, this._meshScale, [1, 1, 1]);
+            this._meshRotation.set(this._meshBaseRotation);
+            this._meshRasterOptions.style = this.opts.meshStyle;
+            this._meshRasterOptions.projection = this.opts.meshProjection;
+            this._meshRasterOptions.camera = this.opts.meshCamera;
+            this._meshRasterOptions.light = this.opts.meshLight;
+        }
+
+        /** Move the existing renderer to another container without creating a second animation loop. */
+        setTarget(target) {
+            const next = typeof target === "string" ? document.querySelector(target) : target;
+            if (!next) throw new Error("asciiam: target not found");
+            if (next === this.container) {
+                this._scheduleResize();
+                return;
+            }
+
+            this._unbindCursor();
+            if (this._ro) this._ro.disconnect();
+            if (getComputedStyle(next).position === "static") next.style.position = "relative";
+            next.style.isolation = "isolate";
+            next.insertBefore(this.canvas, next.firstChild);
+            this.container = next;
+            this._bindCursor();
+
+            if (this._ro && "ResizeObserver" in window) {
+                this._ro = new ResizeObserver(() => this._scheduleResize());
+                this._ro.observe(next);
+            }
+            this._resize();
+        }
+
+        /** Configure an ordered set of mode steps without starting it. */
+        setSequence(steps, options = {}) {
+            if (!Array.isArray(steps)) throw new TypeError("asciiam: sequence steps must be an array");
+            if (this._sequence?.running) {
+                if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("reconfigure");
+                this.pauseSequence("reconfigure");
+            }
+            const normalized = steps.map((step, index) => {
+                if (!step || typeof step !== "object") throw new TypeError(`asciiam: sequence step ${index} must be an object`);
+                if (typeof step.mode !== "string" || !step.mode) throw new TypeError(`asciiam: sequence step ${index} requires a mode`);
+                const duration = Number(step.duration);
+                const delay = Number(step.delay);
+                const transitionDuration = Number(step.transition?.duration);
+                const transition = step.transition?.type === "morph" ? {
+                    type: "morph",
+                    duration: Number.isFinite(transitionDuration) && transitionDuration > 0 ? transitionDuration : 0.8,
+                    easing: ["linear", "easeIn", "easeOut", "easeInOut"].includes(step.transition.easing)
+                        ? step.transition.easing
+                        : "easeInOut",
+                } : { type: "cut", duration: 0, easing: "linear" };
+                return {
+                    id: step.id || `step-${index + 1}`,
+                    label: step.label || step.mode,
+                    mode: step.mode,
+                    duration: Number.isFinite(duration) && duration > 0 ? duration : 5,
+                    delay: Number.isFinite(delay) && delay > 0 ? delay : 0,
+                    // `repeat` controls a mode's finite timeline within this step.
+                    // Preserve configurations that previously used options.loop,
+                    // while keeping one-shot sequence steps as the default.
+                    repeat: step.repeat === true || (step.repeat === undefined && step.options?.loop === true),
+                    // `undefined` retains the current image, `null` clears it, and a
+                    // string loads a new source before this step's duration begins.
+                    image: Object.prototype.hasOwnProperty.call(step, "image")
+                        ? (step.image === null ? null : String(step.image))
+                        : undefined,
+                    imageOptions: step.imageOptions && typeof step.imageOptions === "object" ? { ...step.imageOptions } : {},
+                    options: step.options && typeof step.options === "object" ? { ...step.options } : {},
+                    transition,
+                    onStart: typeof step.onStart === "function" ? step.onStart : null,
+                    onComplete: typeof step.onComplete === "function" ? step.onComplete : null,
+                    onInterrupt: typeof step.onInterrupt === "function" ? step.onInterrupt : null,
+                    onError: typeof step.onError === "function" ? step.onError : null,
+                };
+            });
+            this._sequence = {
+                steps: normalized,
+                index: -1,
+                elapsed: 0,
+                delayElapsed: 0,
+                stepStarted: false,
+                stepLoading: false,
+                activationToken: 0,
+                startedOnce: false,
+                completed: false,
+                running: false,
+                loop: options.loop !== false,
+                onStepStart: typeof options.onStepStart === "function" ? options.onStepStart : null,
+                onStepComplete: typeof options.onStepComplete === "function" ? options.onStepComplete : null,
+                onStepInterrupt: typeof options.onStepInterrupt === "function" ? options.onStepInterrupt : null,
+                onComplete: typeof options.onComplete === "function" ? options.onComplete : null,
+            };
+            this.opts.sequence = normalized;
+            this.opts.sequenceOptions = { ...options, loop: options.loop !== false, autoplay: !!options.autoplay };
+            return this;
+        }
+
+        /** Start or resume the configured sequence. Also starts the renderer if needed. */
+        playSequence(startIndex) {
+            const sequence = this._sequence;
+            if (!sequence || !sequence.steps.length) return this;
+            const shouldRestart = sequence.index < 0 || sequence.completed;
+            sequence.running = true;
+            if (startIndex !== undefined || shouldRestart) {
+                const index = startIndex === undefined ? 0 : this._normalizeSequenceIndex(startIndex);
+                this._activateSequenceStep(index);
+            }
+            this._emit(shouldRestart ? "sequenceStart" : "sequenceResume", this._sequenceDetail());
+            this.start();
+            return this;
+        }
+
+        /** Pauses sequence time without stopping the renderer. */
+        pauseSequence(reason = "pause") {
+            if (!this._sequence?.running) return this;
+            this._sequence.running = false;
+            this._emit("sequencePause", this._sequenceDetail({ reason }));
+            return this;
+        }
+
+        /** Stops sequence playback and resets its position. */
+        stopSequence() {
+            if (!this._sequence) return this;
+            if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("stop");
+            this._sequence.running = false;
+            this._sequence.index = -1;
+            this._sequence.elapsed = 0;
+            this._sequence.delayElapsed = 0;
+            this._sequence.stepStarted = false;
+            this._sequence.stepLoading = false;
+            this._sequence.activationToken++;
+            this._sequence.startedOnce = false;
+            this._sequence.completed = false;
+            this._clearMorph();
+            this._emit("sequenceStop", this._sequenceDetail({ reason: "stop" }));
+            return this;
+        }
+
+        /** Removes the configured sequence and transient morph state. */
+        clearSequence() {
+            this.stopSequence();
+            this._sequence = null;
+            this.opts.sequence = null;
+            this.opts.sequenceOptions = null;
+            return this;
+        }
+
+        /** Selects a step using normalized wraparound indexing. */
+        seekSequence(index) {
+            if (!this._sequence?.steps.length) return this;
+            if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("seek");
+            this._activateSequenceStep(this._normalizeSequenceIndex(index));
+            return this;
+        }
+
+        /** Interrupts the active step and advances according to loop policy. */
+        nextSequenceStep() {
+            const sequence = this._sequence;
+            if (!sequence?.steps.length) return this;
+            if (sequence.stepStarted || sequence.stepLoading) this._interruptSequenceStep("skip");
+            const next = sequence.index + 1;
+            if (next < sequence.steps.length) this._activateSequenceStep(next);
+            else if (sequence.loop) {
+                this._emit("sequenceLoop", this._sequenceDetail());
+                this._activateSequenceStep(0);
+            } else this._completeSequence();
+            return this;
+        }
+
+        /** Returns a serializable snapshot of sequence playback state. */
+        getSequenceState() {
+            const sequence = this._sequence;
+            return {
+                configured: !!sequence?.steps.length,
+                running: !!sequence?.running,
+                completed: !!sequence?.completed,
+                index: sequence?.index ?? -1,
+                length: sequence?.steps.length ?? 0,
+                loop: sequence?.loop ?? false,
+                elapsed: sequence?.elapsed ?? 0,
+                waiting: !!sequence && sequence.index >= 0 && !sequence.stepStarted,
+                loading: !!sequence?.stepLoading,
+                morphing: !!this._morph,
+                morphProgress: this._morph ? Math.min(1, this._morph.elapsed / this._morph.duration) : 0,
+            };
+        }
+
+        /** Reports requested policy and the resolved presentation backend. */
+        getRendererInfo() {
+            const context = this._webgl?.gl || this.ctx;
+            const attributes = typeof context?.getContextAttributes === "function" ? context.getContextAttributes() : null;
+            return {
+                requested: this._rendererRequested,
+                backend: this._renderer,
+                gpuPreferred: this._gpuPreferred,
+                acceleration: this._renderer === "webgl2" ? "gpu-api-preferred" : this._gpuPreferred ? "browser-managed" : "not-requested",
+                desynchronized: attributes?.desynchronized ?? this._desynchronized,
+                willReadFrequently: attributes?.willReadFrequently ?? false,
+            };
+        }
+
+        /** Replaces presentation resources while retaining instance-level state. */
+        setRenderer(renderer, requestedRenderer = renderer) {
+            if (!["auto", "webgl2", "canvas2d"].includes(renderer)) {
+                throw new TypeError('asciiam: renderer must be "auto", "webgl2", or "canvas2d"');
+            }
+            const wantsWebGL = renderer !== "canvas2d";
+            if ((wantsWebGL && this._renderer === "webgl2") || (!wantsWebGL && this._renderer === "canvas2d")) {
+                const requestChanged = this._rendererRequested !== requestedRenderer;
+                this._rendererRequested = requestedRenderer;
+                this.opts.renderer = requestedRenderer;
+                if (requestChanged) this._emit("rendererChange", this.getRendererInfo());
+                return this._renderer;
+            }
+
+            const oldCanvas = this.canvas;
+            const nextCanvas = document.createElement("canvas");
+            nextCanvas.style.cssText = oldCanvas.style.cssText;
+            nextCanvas.setAttribute("aria-hidden", "true");
+            nextCanvas.setAttribute("role", "presentation");
+            oldCanvas.replaceWith(nextCanvas);
+            if (this._io) {
+                this._io.disconnect();
+                this._io.observe(nextCanvas);
+            }
+            if (this._webgl) this._webgl.destroy();
+            if (this._onWebGLContextLost) oldCanvas.removeEventListener("webglcontextlost", this._onWebGLContextLost);
+            this.canvas = nextCanvas;
+            this._ownsCanvas = true;
+            this._webgl = null;
+            if (wantsWebGL) {
+                try {
+                    this._webgl = new WebGL2GlyphRenderer(nextCanvas, {
+                        desynchronized: this._desynchronized,
+                        powerPreference: this.opts.powerPreference,
+                    });
+                } catch (error) {
+                    if (renderer === "webgl2") console.warn("asciiam: WebGL2 initialization failed; using Canvas 2D.", error);
+                }
+            }
+            this._renderer = this._webgl ? "webgl2" : "canvas2d";
+            if (this._webgl) this._bindWebGLFallback();
+            if (this._webgl) {
+                const measureCanvas = document.createElement("canvas");
+                this.ctx = measureCanvas.getContext("2d", { alpha: true, willReadFrequently: false });
+            } else {
+                this.ctx = nextCanvas.getContext("2d", {
+                    alpha: true,
+                    desynchronized: this._desynchronized,
+                    willReadFrequently: false,
+                });
+                if (!this.ctx && wantsWebGL) {
+                    this._replacePresentationCanvas();
+                    if (this._io) {
+                        this._io.disconnect();
+                        this._io.observe(this.canvas);
+                    }
+                    this.ctx = this.canvas.getContext("2d", {
+                        alpha: true,
+                        desynchronized: this._desynchronized,
+                        willReadFrequently: false,
+                    }) || this.canvas.getContext("2d", { alpha: true });
+                }
+            }
+            if (!this.ctx) throw new Error("asciiam: failed to initialize renderer fallback");
+            this._rendererRequested = requestedRenderer;
+            this.opts.renderer = requestedRenderer;
+            this._webglAtlas = null;
+            this._activeGlyphAtlas = null;
+            this._waveBaseLayer = null;
+            this._buildFontCache();
+            this._resize();
+            this._emit("rendererChange", this.getRendererInfo());
+            return this._renderer;
+        }
+
+        _replacePresentationCanvas() {
+            const oldCanvas = this.canvas;
+            const replacement = document.createElement("canvas");
+            replacement.style.cssText = oldCanvas.style.cssText;
+            replacement.setAttribute("aria-hidden", oldCanvas.getAttribute("aria-hidden") || "true");
+            replacement.setAttribute("role", oldCanvas.getAttribute("role") || "presentation");
+            if (oldCanvas.parentNode) oldCanvas.replaceWith(replacement);
+            this.canvas = replacement;
+            this._ownsCanvas = true;
+            return replacement;
+        }
+
+        _bindWebGLFallback() {
+            this._onWebGLContextLost = (event) => {
+                event.preventDefault();
+                const requestedRenderer = this._rendererRequested;
+                this.setRenderer("canvas2d", requestedRenderer);
+                this._emit("rendererFallback", { reason: "context-lost", ...this.getRendererInfo() });
+            };
+            this.canvas.addEventListener("webglcontextlost", this._onWebGLContextLost, false);
+        }
+
+        _normalizeSequenceIndex(index) {
+            const last = Math.max(0, this._sequence.steps.length - 1);
+            return Math.max(0, Math.min(last, Math.round(Number(index) || 0)));
+        }
+
+        _activateSequenceStep(index) {
+            const sequence = this._sequence;
+            if (sequence.stepLoading) {
+                this._imageLoadToken++;
+                this._imageCaptureToken++;
+            }
+            sequence.index = index;
+            sequence.elapsed = 0;
+            sequence.delayElapsed = 0;
+            sequence.stepStarted = false;
+            sequence.stepLoading = false;
+            sequence.activationToken++;
+            sequence.completed = false;
+            if (sequence.steps[index].delay === 0) this._startSequenceStep();
+        }
+
+        _startSequenceStep() {
+            const sequence = this._sequence;
+            const step = sequence.steps[sequence.index];
+            if (sequence.stepStarted || sequence.stepLoading) return;
+            const activationToken = sequence.activationToken;
+            if (step.image === null) this.clearImage();
+            const imageOptionsKey = step.imageOptions.animated === undefined ? "" : String(!!step.imageOptions.animated);
+            if (typeof step.image === "string" &&
+                (step.image !== this._loadedImageSource || imageOptionsKey !== this._loadedImageOptionsKey)) {
+                sequence.stepLoading = true;
+                this.setImage(step.image, step.imageOptions).then((image) => {
+                    if (!image || sequence.activationToken !== activationToken) return;
+                    sequence.stepLoading = false;
+                    if (sequence.running) this._commitSequenceStep(step);
+                }).catch((error) => {
+                    if (sequence.activationToken !== activationToken) return;
+                    sequence.stepLoading = false;
+                    sequence.running = false;
+                    const detail = this._sequenceDetail({ step, reason: "image-error", error });
+                    this._callSequenceCallback(step.onError, detail);
+                    this._emit("sequenceStepError", detail);
+                });
+                return;
+            }
+            this._commitSequenceStep(step);
+        }
+
+        /** Applies a decoded sequence step and starts its timed lifecycle. */
+        _commitSequenceStep(step) {
+            const sequence = this._sequence;
+            if (sequence.startedOnce) this._beginMorph(step.transition);
+            this._applyingSequence = true;
+            try {
+                for (const [key, value] of Object.entries(step.options)) {
+                    if (key !== "mode" && key !== "image" && key !== "loop" && key !== "sequence" && key !== "sequenceOptions") this.setOption(key, value);
+                }
+                // Sequence repetition and mode repetition are separate controls.
+                // Apply this for every step so a prior step cannot leak its mode
+                // cycle policy into the next one.
+                this.setOption("loop", step.repeat);
+                this.setMode(step.mode, true);
+            } finally {
+                this._applyingSequence = false;
+            }
+            sequence.stepStarted = true;
+            sequence.startedOnce = true;
+            const detail = this._sequenceDetail({ step });
+            this._callSequenceCallback(step.onStart, detail);
+            this._callSequenceCallback(sequence.onStepStart, detail);
+            this._emit("sequenceStepStart", detail);
+        }
+
+        _completeSequenceStep() {
+            const sequence = this._sequence;
+            const step = sequence.steps[sequence.index];
+            const detail = this._sequenceDetail({ step, reason: "complete" });
+            this._callSequenceCallback(step.onComplete, detail);
+            this._callSequenceCallback(sequence.onStepComplete, detail);
+            this._emit("sequenceStepComplete", detail);
+            sequence.stepStarted = false;
+        }
+
+        _interruptSequenceStep(reason) {
+            const sequence = this._sequence;
+            const step = sequence.steps[sequence.index];
+            if (sequence.stepLoading) {
+                this._imageLoadToken++;
+                this._imageCaptureToken++;
+            }
+            const detail = this._sequenceDetail({ step, reason });
+            this._callSequenceCallback(step?.onInterrupt, detail);
+            this._callSequenceCallback(sequence.onStepInterrupt, detail);
+            this._emit("sequenceStepInterrupt", detail);
+            sequence.stepStarted = false;
+            sequence.stepLoading = false;
+            sequence.activationToken++;
+        }
+
+        _completeSequence() {
+            const sequence = this._sequence;
+            sequence.running = false;
+            sequence.completed = true;
+            const detail = this._sequenceDetail({ reason: "complete" });
+            this._callSequenceCallback(sequence.onComplete, detail);
+            this._emit("sequenceComplete", detail);
+        }
+
+        _sequenceDetail(extra = {}) {
+            const sequence = this._sequence;
+            return {
+                index: sequence?.index ?? -1,
+                length: sequence?.steps.length ?? 0,
+                loop: sequence?.loop ?? false,
+                elapsed: sequence?.elapsed ?? 0,
+                step: sequence && sequence.index >= 0 ? sequence.steps[sequence.index] : null,
+                ...extra,
+            };
+        }
+
+        _callSequenceCallback(callback, detail) {
+            if (!callback) return;
+            try {
+                callback(detail, this);
+            } catch (error) {
+                console.error("asciiam: sequence callback failed", error);
+            }
+        }
+
+        _beginMorph(transition) {
+            this._clearMorph();
+            if (this._reduced || transition?.type !== "morph" || !this.canvas.parentElement) return;
+            const duration = Math.max(0.05, Number(transition.duration) || 0.8) * 1000;
+            const snapshot = document.createElement("canvas");
+            snapshot.width = this.canvas.width;
+            snapshot.height = this.canvas.height;
+            snapshot.className = "asciiam-morph-layer";
+            snapshot.setAttribute("aria-hidden", "true");
+            snapshot.style.cssText = this.canvas.style.cssText;
+            snapshot.style.pointerEvents = "none";
+            snapshot.style.opacity = "1";
+            snapshot.style.willChange = "opacity";
+            try {
+                const context = snapshot.getContext("2d", { alpha: true });
+                if (!context) return;
+                context.drawImage(this.canvas, 0, 0);
+            } catch {
+                return;
+            }
+            this.canvas.after(snapshot);
+            this._morph = { canvas: snapshot, elapsed: 0, duration, easing: transition.easing || "easeInOut" };
+            this._emit("sequenceMorphStart", this._sequenceDetail({ transition }));
+        }
+
+        _advanceMorph(dt) {
+            const morph = this._morph;
+            if (!morph) return;
+            morph.elapsed = Math.min(morph.duration, morph.elapsed + Math.max(0, dt));
+            const progress = morph.elapsed / morph.duration;
+            let eased = progress;
+            if (morph.easing === "easeIn") eased = progress * progress;
+            else if (morph.easing === "easeOut") eased = 1 - (1 - progress) * (1 - progress);
+            else if (morph.easing === "easeInOut") eased = progress < 0.5
+                ? 2 * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            morph.canvas.style.opacity = String(1 - eased);
+            if (progress >= 1) {
+                const detail = this._sequenceDetail({ transition: { type: "morph", duration: morph.duration / 1000, easing: morph.easing } });
+                this._clearMorph();
+                this._emit("sequenceMorphComplete", detail);
+            }
+        }
+
+        _clearMorph() {
+            if (this._morph?.canvas.parentElement) this._morph.canvas.remove();
+            this._morph = null;
+        }
+
+        _advanceSequence(dt) {
+            const sequence = this._sequence;
+            if (!sequence?.running || !sequence.steps.length) return;
+            let remaining = Math.max(0, dt) / 1000;
+            while (remaining > 0 && sequence.running) {
+                const step = sequence.steps[sequence.index];
+                if (!sequence.stepStarted) {
+                    const delayLeft = Math.max(0, step.delay - sequence.delayElapsed);
+                    const consumed = Math.min(remaining, delayLeft);
+                    sequence.delayElapsed += consumed;
+                    remaining -= consumed;
+                    if (sequence.delayElapsed + Number.EPSILON < step.delay) return;
+                    this._startSequenceStep();
+                    if (!sequence.stepStarted) return;
+                    if (remaining <= 0) return;
+                }
+
+                const durationLeft = Math.max(0, step.duration - sequence.elapsed);
+                const consumed = Math.min(remaining, durationLeft);
+                sequence.elapsed += consumed;
+                remaining -= consumed;
+                if (sequence.elapsed + Number.EPSILON < step.duration) return;
+
+                this._completeSequenceStep();
+                const next = sequence.index + 1;
+                if (next < sequence.steps.length) this._activateSequenceStep(next);
+                else if (sequence.loop) {
+                    this._emit("sequenceLoop", this._sequenceDetail());
+                    this._activateSequenceStep(0);
+                } else this._completeSequence();
+            }
+        }
+        /** Returns a Promise that resolves once the image is sampled into the ASCII grid. */
+        setImage(src, options = {}) {
+            if (src === null || src === undefined || src === "") {
+                this.clearImage();
+                return Promise.resolve(null);
+            }
+            this.opts.image = String(src);
+            const token = ++this._imageLoadToken;
+            const captureToken = ++this._imageCaptureToken;
+            if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
+            this._imageRecaptureTimer = null;
+            this._capturedImageFrames = null;
+            this._animatedImageData = null;
+            this._imageFrameIndex = 0;
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = async () => {
+                    if (token !== this._imageLoadToken || this._destroyed) {
+                        resolve(null);
+                        return;
+                    }
+                    this._sourceImage = img;
+                    this._loadedImageSource = String(src);
+                    this._loadedImageOptionsKey = options.animated === undefined ? "" : String(!!options.animated);
+                    this._animatedImage = options.animated ?? /^(?:data:image\/gif)|\.gif(?:$|[?#])/i.test(String(src));
+                    this._imageFrameAccumulator = 0;
+                    this._resampleImage();
+                    if (this._animatedImage) {
+                        try {
+                            await this._captureAnimatedImageFrames(src, token, captureToken);
+                        } catch (error) {
+                            // Browser-timed <img> sampling remains the compatibility
+                            // path when WebCodecs or a fetchable response is unavailable.
+                            console.warn("asciiam: exact GIF frame capture unavailable; using browser frame sampling.", error);
+                        }
+                    }
+                    if (token !== this._imageLoadToken || this._destroyed) {
+                        resolve(null);
+                        return;
+                    }
+                    resolve(img);
+                };
+                img.onerror = (err) => {
+                    if (token !== this._imageLoadToken || this._destroyed) {
+                        resolve(null);
+                        return;
+                    }
+                    console.warn("asciiam: failed to load image:", src);
+                    if (this.opts.onImageError) this.opts.onImageError(err);
+                    reject(err);
+                };
+                img.src = src;
+            });
+        }
+
+        /** Clears the sampled image while retaining the active procedural mode. */
+        clearImage() {
+            this._imageLoadToken++;
+            this._imageCaptureToken++;
+            if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
+            this._imageRecaptureTimer = null;
+            this._sourceImage = null;
+            this._loadedImageSource = null;
+            this._loadedImageOptionsKey = null;
+            this._imageGrid = null;
+            this._capturedImageFrames = null;
+            this._animatedImageData = null;
+            this._animatedImage = false;
+            this._imageFrameIndex = 0;
+            this._imageFrameAccumulator = 0;
+            this._activeGlyphAtlas = null;
+            this.opts.image = null;
+            return this;
+        }
+
+        /** Decodes a GIF once and stores per-frame ASCII grids instead of bitmaps. */
+        async _captureAnimatedImageFrames(src, token = this._imageLoadToken, captureToken = this._imageCaptureToken) {
+            const Decoder = globalThis.ImageDecoder;
+            if (typeof Decoder !== "function") return false;
+            if (typeof Decoder.isTypeSupported === "function" && !await Decoder.isTypeSupported("image/gif")) return false;
+            let data = this._animatedImageData;
+            if (!data) {
+                const response = await fetch(src);
+                if (!response.ok) throw new Error(`GIF fetch failed with ${response.status}`);
+                data = await response.arrayBuffer();
+                if (token !== this._imageLoadToken || captureToken !== this._imageCaptureToken || this._destroyed) return false;
+                this._animatedImageData = data;
+            }
+            const decoder = new Decoder({ data, type: "image/gif", preferAnimation: true });
+            try {
+                await decoder.tracks.ready;
+                const track = decoder.tracks.selectedTrack;
+                const frameCount = track?.frameCount || 0;
+                if (frameCount < 2) return false;
+                const originalSource = this._sourceImage;
+                const frames = new Array(frameCount);
+                let totalDuration = 0;
+                for (let index = 0; index < frameCount; index++) {
+                    if (token !== this._imageLoadToken || captureToken !== this._imageCaptureToken || this._destroyed) return false;
+                    const result = await decoder.decode({ frameIndex: index, completeFramesOnly: true });
+                    const image = result.image;
+                    try {
+                        this._sourceImage = image;
+                        this._resampleImage();
+                        const duration = Math.max(10, Number(image.duration) > 0 ? Number(image.duration) / 1000 : 100);
+                        totalDuration += duration;
+                        // _resampleImage creates a fresh grid, so retaining it avoids
+                        // a second full-grid allocation for every decoded frame.
+                        frames[index] = { grid: this._imageGrid, duration };
+                    } finally {
+                        if (this._sourceImage === image) this._sourceImage = originalSource;
+                        if (typeof image.close === "function") image.close();
+                    }
+                    // Long GIFs should not monopolize the main thread while their
+                    // frames are converted to the current ASCII grid.
+                    if (index % 8 === 7) await new Promise((resume) => setTimeout(resume, 0));
+                }
+                if (token !== this._imageLoadToken || captureToken !== this._imageCaptureToken || this._destroyed) return false;
+                this._capturedImageFrames = frames;
+                this._imageFrameIndex = 0;
+                this._imageFrameAccumulator = 0;
+                this._imageGrid = frames[0].grid;
+                this._emit("imageFramesReady", { frameCount, duration: totalDuration / 1000 });
+                return true;
+            } finally {
+                if (typeof decoder.close === "function") decoder.close();
+            }
+        }
+
+        /** Debounces GIF recapture after geometry or sampling options change. */
+        _scheduleAnimatedFrameCapture() {
+            if (!this._animatedImage || !this._animatedImageData || this._destroyed) return;
+            this._capturedImageFrames = null;
+            this._imageFrameIndex = 0;
+            this._imageFrameAccumulator = 0;
+            const token = this._imageLoadToken;
+            const captureToken = ++this._imageCaptureToken;
+            if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
+            this._imageRecaptureTimer = setTimeout(() => {
+                this._imageRecaptureTimer = null;
+                this._captureAnimatedImageFrames(null, token, captureToken).catch((error) => {
+                    console.warn("asciiam: GIF frame recapture unavailable; using browser frame sampling.", error);
+                });
+            }, 180);
+        }
+
+        /** Advances captured frames or the browser-timed compatibility sampler. */
+        _advanceImageFrames(dt) {
+            if (!this._animatedImage || !this.opts.animateImageFrames || !this._sourceImage) return;
+            if (this._capturedImageFrames?.length) {
+                this._imageFrameAccumulator += Math.max(0, dt);
+                let frame = this._capturedImageFrames[this._imageFrameIndex];
+                let advanced = false;
+                while (this._imageFrameAccumulator >= frame.duration) {
+                    this._imageFrameAccumulator -= frame.duration;
+                    this._imageFrameIndex = (this._imageFrameIndex + 1) % this._capturedImageFrames.length;
+                    frame = this._capturedImageFrames[this._imageFrameIndex];
+                    advanced = true;
+                }
+                if (advanced) {
+                    this._imageGrid = frame.grid;
+                    this._activeGlyphAtlas = null;
+                }
+                return;
+            }
+            const frameRate = Math.max(1, Math.min(60, Number(this.opts.imageFrameRate) || 12));
+            const interval = 1000 / frameRate;
+            this._imageFrameAccumulator += Math.max(0, dt);
+            if (this._imageFrameAccumulator < interval) return;
+            this._imageFrameAccumulator %= interval;
+            this._resampleImage();
+        }
+        /** Programmatically drive the cursor-reactive modifier (e.g. for touch, audio-sync, demos). Pass null to clear. */
+        setCursor(x, y) {
+            this._cursor = x === null || x === undefined ? null : { x, y };
+        }
+
+        /** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */
+        triggerInteraction(x = this._originX, y = this._originY) {
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+            this._interaction = { x, y, elapsed: 0 };
+        }
+
+        _emit(event, detail) {
+            const listeners = this._events.get(event);
+            if (!listeners) return;
+            [...listeners].forEach((listener) => listener(detail, this));
+        }
+
+        // ---- lifecycle ----
+        _bindLifecycle() {
+            if ("IntersectionObserver" in window) {
+                this._io = new IntersectionObserver(
+                    (entries) => {
+                        this._visible = entries[0].isIntersecting;
+                        if (this._visible) this._lastT = null;
+                    },
+                    { threshold: 0 },
+                );
+                this._io.observe(this.canvas);
+            }
+            this._onVisChange = () => {
+                if (!document.hidden) this._lastT = null;
+            };
+            document.addEventListener("visibilitychange", this._onVisChange);
+
+            const target = this.container || this.canvas.parentElement;
+            if ("ResizeObserver" in window && target) {
+                this._ro = new ResizeObserver(() => this._scheduleResize());
+                this._ro.observe(target);
+            } else {
+                this._onResize = () => this._scheduleResize();
+                window.addEventListener("resize", this._onResize);
+            }
+        }
+        _scheduleResize() {
+            if (this._resizePending) return;
+            this._resizePending = true;
+            this._resizeRaf = requestAnimationFrame(() => {
+                this._resizeRaf = null;
+                this._resizePending = false;
+                this._resize();
+            });
+        }
+
+        // Pointer tracking supplies cursor modifiers and interactive modes. The
+        // presentation canvas remains pointer-transparent; listeners belong to target.
+        _bindCursor() {
+            const target = this.container || this.canvas.parentElement;
+            if (!target) return;
+            this._onPointerMove = (e) => {
+                if (!this._canvasRect) this._canvasRect = this.canvas.getBoundingClientRect();
+                this._cursor = { x: e.clientX - this._canvasRect.left, y: e.clientY - this._canvasRect.top };
+            };
+            this._onPointerLeave = () => {
+                this._cursor = null;
+            };
+            this._onPointerDown = (e) => {
+                if (!this._canvasRect) this._canvasRect = this.canvas.getBoundingClientRect();
+                this.triggerInteraction(e.clientX - this._canvasRect.left, e.clientY - this._canvasRect.top);
+            };
+            target.addEventListener("pointermove", this._onPointerMove, { passive: true });
+            target.addEventListener("pointerleave", this._onPointerLeave, { passive: true });
+            target.addEventListener("pointerdown", this._onPointerDown, { passive: true });
+        }
+        _unbindCursor() {
+            const target = this.container || this.canvas.parentElement;
+            if (target && this._onPointerMove) {
+                target.removeEventListener("pointermove", this._onPointerMove);
+                target.removeEventListener("pointerleave", this._onPointerLeave);
+                target.removeEventListener("pointerdown", this._onPointerDown);
+            }
+        }
+
+        // ---- sizing / measurement ----
+        _buildFontCache() {
+            this.ctx.font = `${this.opts.fontSize}px ${this.opts.fontFamily}`;
+            const m = this.ctx.measureText("M");
+            this.charW = Math.max(4, m.width * this.opts.density);
+            this.charH = Math.max(6, this.opts.fontSize * 1.2 * this.opts.density);
+
+            const steps = Math.max(2, Math.round(this.opts.fontLevels || 2));
+            this.opts.fontLevels = steps;
+            this._fontRegular = [];
+            this._fontBold = [];
+            for (let i = 0; i < steps; i++) {
+                const scale = 1 + (i / (steps - 1)) * 0.5;
+                const size = Math.round(this.opts.fontSize * scale * 10) / 10;
+                this._fontRegular.push(`400 ${size}px ${this.opts.fontFamily}`);
+                this._fontBold.push(`700 ${size}px ${this.opts.fontFamily}`);
+            }
+            this._activeGlyphAtlas = null;
+            this._waveBaseLayer = null;
+        }
+
+        _getGlyphAtlas() {
+            if (!this.opts.useGlyphAtlas || this.opts.gradient || this.opts.colorAnimation || this.opts.colorFromImage) return null;
+            const imageCharacters = this._imageGrid ? (this.opts.imageChars || "") : "";
+            const atlasCharacterSet = [...new Set(this.opts.charSet + imageCharacters)].join("");
+            if (
+                this._glyphAtlas
+                && this._glyphAtlasCharSet === atlasCharacterSet
+                && this._glyphAtlasColor === this.opts.color
+                && this._glyphAtlasRegular === this._fontRegular
+                && this._glyphAtlasBold === this._fontBold
+                && this._glyphAtlasCharHeight === this.charH
+            ) return this._glyphAtlas;
+            const characters = [...atlasCharacterSet];
+            const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.opts.color, this.charH]);
+            const cached = asciiam._glyphAtlases.get(key);
+            if (cached) {
+                asciiam._glyphAtlases.delete(key);
+                asciiam._glyphAtlases.set(key, cached);
+                this._cacheGlyphAtlas(cached, atlasCharacterSet);
+                return cached;
+            }
+
+            const padding = 2;
+            const maxFontSize = this.opts.fontSize * 1.5;
+            const tileWidth = Math.max(4, Math.ceil(maxFontSize + padding * 2));
+            const tileHeight = Math.max(6, Math.ceil(this.charH + padding * 2));
+            const columns = Math.max(1, Math.floor(2048 / tileWidth));
+            const variants = this._fontRegular.length * 2;
+            const tileCount = characters.length * variants;
+            const rows = Math.ceil(tileCount / columns);
+            const canvas = document.createElement("canvas");
+            canvas.width = columns * tileWidth;
+            canvas.height = rows * tileHeight;
+            const context = canvas.getContext("2d", { alpha: true, willReadFrequently: false });
+            if (!context) return null;
+            context.textBaseline = "alphabetic";
+            context.fillStyle = this.opts.color;
+            const baseline = tileHeight - padding;
+            const characterIndex = new Map(characters.map((character, index) => [character, index]));
+            const sourceX = new Uint16Array(tileCount);
+            const sourceY = new Uint16Array(tileCount);
+
+            for (let bold = 0; bold < 2; bold++) {
+                const fonts = bold ? this._fontBold : this._fontRegular;
+                for (let level = 0; level < fonts.length; level++) {
+                    context.font = fonts[level];
+                    const variant = bold * fonts.length + level;
+                    for (let index = 0; index < characters.length; index++) {
+                        const tile = variant * characters.length + index;
+                        const tileX = (tile % columns) * tileWidth;
+                        const tileY = Math.floor(tile / columns) * tileHeight;
+                        sourceX[tile] = tileX;
+                        sourceY[tile] = tileY;
+                        context.fillText(characters[index], tileX + padding, tileY + baseline);
+                    }
+                }
+            }
+
+            const atlas = { canvas, characterIndex, characters: characters.length, sourceX, sourceY, tileWidth, tileHeight, baseline, padding };
+            asciiam._glyphAtlases.set(key, atlas);
+            if (asciiam._glyphAtlases.size > asciiam._glyphAtlasLimit) {
+                asciiam._glyphAtlases.delete(asciiam._glyphAtlases.keys().next().value);
+            }
+            this._cacheGlyphAtlas(atlas, atlasCharacterSet);
+            return atlas;
+        }
+
+        _cacheGlyphAtlas(atlas, characterSet = this.opts.charSet) {
+            this._glyphAtlas = atlas;
+            this._glyphAtlasCharSet = characterSet;
+            this._glyphAtlasColor = this.opts.color;
+            this._glyphAtlasRegular = this._fontRegular;
+            this._glyphAtlasBold = this._fontBold;
+            this._glyphAtlasCharHeight = this.charH;
+        }
+
+        /** Re-measures the grid and invalidates geometry-dependent state and caches. */
+        _resize() {
+            const dpr = Math.min(window.devicePixelRatio || 1, this.opts.maxDPR);
+            this._dpr = dpr;
+            const parent = this.canvas.parentElement || this.canvas;
+            const w = parent.clientWidth,
+                h = parent.clientHeight;
+
+            if ((w < 2 || h < 2) && !this._warnedZeroSize) {
+                console.warn(
+                    "asciiam: container has zero (or near-zero) size — give it an explicit width/height. Nothing will render until it does.",
+                );
+                this._warnedZeroSize = true;
+            }
+
+            this.w = w;
+            this.h = h;
+            this.canvas.width = Math.max(1, Math.round(w * dpr));
+            this.canvas.height = Math.max(1, Math.round(h * dpr));
+            this.canvas.style.width = w + "px";
+            this.canvas.style.height = h + "px";
+            if (this._webgl) this._webgl.resize(this.canvas.width, this.canvas.height);
+            else this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            this.cols = Math.max(1, Math.ceil(w / this.charW));
+            this.rows = Math.max(1, Math.ceil(h / this.charH));
+            if (this._meshRasterizer) this._meshRasterizer.resize(this.cols, this.rows);
+            this._columnX = new Float32Array(this.cols);
+            this._rowY = new Float32Array(this.rows);
+            this._rowBaseline = new Float32Array(this.rows);
+            const baselineOffset = this.charH * 0.78;
+            for (let col = 0; col < this.cols; col++) this._columnX[col] = col * this.charW;
+            for (let row = 0; row < this.rows; row++) {
+                const y = row * this.charH;
+                this._rowY[row] = y;
+                this._rowBaseline[row] = y + baselineOffset;
+            }
+            this._buildSeedCache();
+            this._buildSpatialCache();
+            this._buildCurrentCache();
+            this._buildEdgeFadeCache();
+            this._gradientKey = null;
+            this._gradientSource = null;
+            this._backdropGradientKey = null;
+            this._backdropGradientObj = null;
+            this._waveBaseLayer = null;
+            this._canvasRect = this.canvas.getBoundingClientRect();
+            if (this._sourceImage) this._resampleImage();
+            this._scheduleAnimatedFrameCapture();
+            if (this.opts.mode === "matrix") this._initMatrix();
+            if (this.opts.mode === "snow") this._initSnow();
+            if (this.opts.mode === "sparkle") this._initSparkle();
+            if (this.opts.mode === "fire") this._initFire();
+            if (this.opts.mode === "starfield") this._initStarfield();
+            if (this.opts.mode === "orbit") this._initOrbit();
+            if (this._reduced) this._draw(16.7);
+            if (this._events.get("resize")?.size) {
+                this._emit("resize", { width: this.w, height: this.h, cols: this.cols, rows: this.rows });
+            }
+        }
+
+        _buildEdgeFadeCache() {
+            if (!this.opts.edgeFade || !this.cols || !this.rows || !this.w || !this.h) {
+                this._edgeFadeCache = null;
+                return;
+            }
+            const fade = this.opts.edgeFade;
+            this._edgeFadeCache = new Float32Array(this.cols * this.rows);
+            for (let row = 0; row < this.rows; row++) {
+                for (let col = 0; col < this.cols; col++) {
+                    const nx = ((col * this.charW) / this.w) * 2 - 1;
+                    const ny = ((row * this.charH) / this.h) * 2 - 1;
+                    const distance = Math.min(1.4, Math.sqrt(nx * nx + ny * ny));
+                    const edge = Math.max(0, (distance - (1 - fade)) / fade);
+                    this._edgeFadeCache[row * this.cols + col] = 1 - Math.min(1, edge);
+                }
+            }
+        }
+
+        _buildSeedCache() {
+            const count = this.cols * this.rows;
+            this._seedCache = new Float32Array(count);
+            this._seedNextRowCache = new Float32Array(count);
+            for (let row = 0; row < this.rows; row++) {
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    this._seedCache[offset + col] = this._seed(col, row);
+                    this._seedNextRowCache[offset + col] = this._seed(col, row + 1);
+                }
+            }
+        }
+
+        _buildCurrentCache() {
+            const count = this.cols * this.rows;
+            this._currentSinX = new Float32Array(count);
+            this._currentCosX = new Float32Array(count);
+            this._currentSinY = new Float32Array(count);
+            this._currentCosY = new Float32Array(count);
+            this._currentSinXY = new Float32Array(count);
+            this._currentCosXY = new Float32Array(count);
+            for (let row = 0; row < this.rows; row++) {
+                const y = row * this.charH;
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    const index = offset + col;
+                    const x = col * this.charW;
+                    const rx = x - this._originX;
+                    const ry = y - this._originY;
+                    const phaseX = rx * 0.02;
+                    const phaseY = ry * 0.035;
+                    const phaseXY = (rx + ry) * 0.015;
+                    this._currentSinX[index] = Math.sin(phaseX);
+                    this._currentCosX[index] = Math.cos(phaseX);
+                    this._currentSinY[index] = Math.sin(phaseY);
+                    this._currentCosY[index] = Math.cos(phaseY);
+                    this._currentSinXY[index] = Math.sin(phaseXY);
+                    this._currentCosXY[index] = Math.cos(phaseXY);
+                }
+            }
+        }
+
+        _buildSpatialCache() {
+            if (!this.cols || !this.rows) return;
+            switch (this.opts.align) {
+                case "top-left": this._originX = 0; this._originY = 0; break;
+                case "top": this._originX = this.w * 0.5; this._originY = 0; break;
+                case "top-right": this._originX = this.w; this._originY = 0; break;
+                case "left": this._originX = 0; this._originY = this.h * 0.5; break;
+                case "right": this._originX = this.w; this._originY = this.h * 0.5; break;
+                case "bottom-left": this._originX = 0; this._originY = this.h; break;
+                case "bottom": this._originX = this.w * 0.5; this._originY = this.h; break;
+                case "bottom-right": this._originX = this.w; this._originY = this.h; break;
+                default: this._originX = this.w * 0.5; this._originY = this.h * 0.5;
+            }
+
+            const count = this.cols * this.rows;
+            this._rippleSin = new Float32Array(count);
+            this._rippleCos = new Float32Array(count);
+            this._imageRippleSin = new Float32Array(count);
+            this._imageRippleCos = new Float32Array(count);
+            this._rippleFalloff = new Float32Array(count);
+            this._vortexSin = new Float32Array(count);
+            this._vortexCos = new Float32Array(count);
+            this._plasmaSinA = new Float32Array(count);
+            this._plasmaCosA = new Float32Array(count);
+            this._plasmaSinB = new Float32Array(count);
+            this._plasmaCosB = new Float32Array(count);
+            this._plasmaSinC = new Float32Array(count);
+            this._plasmaCosC = new Float32Array(count);
+            for (let row = 0; row < this.rows; row++) {
+                const y = row * this.charH;
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    const index = offset + col;
+                    const x = col * this.charW;
+                    const dx = x - this._originX;
+                    const dy = y - this._originY;
+                    const distance = Math.hypot(dx, dy);
+                    const vortexPhase = Math.atan2(dy, dx) * 3 + distance * 0.045;
+                    const plasmaPhaseA = x * 0.018 + y * 0.011;
+                    const plasmaPhaseB = distance * 0.028;
+                    const plasmaPhaseC = x * 0.009 - y * 0.021;
+                    this._rippleSin[index] = Math.sin(distance * 0.06);
+                    this._rippleCos[index] = Math.cos(distance * 0.06);
+                    this._imageRippleSin[index] = Math.sin(distance * 0.05);
+                    this._imageRippleCos[index] = Math.cos(distance * 0.05);
+                    this._rippleFalloff[index] = Math.max(0, 1 - distance / (Math.max(this.w, this.h) * 0.85));
+                    this._vortexSin[index] = Math.sin(vortexPhase);
+                    this._vortexCos[index] = Math.cos(vortexPhase);
+                    this._plasmaSinA[index] = Math.sin(plasmaPhaseA);
+                    this._plasmaCosA[index] = Math.cos(plasmaPhaseA);
+                    this._plasmaSinB[index] = Math.sin(plasmaPhaseB);
+                    this._plasmaCosB[index] = Math.cos(plasmaPhaseB);
+                    this._plasmaSinC[index] = Math.sin(plasmaPhaseC);
+                    this._plasmaCosC[index] = Math.cos(plasmaPhaseC);
+                }
+            }
+        }
+
+        _seed(col, row) {
+            const n = Math.sin(col * 12.9898 + row * 78.233) * 43758.5453;
+            return n - Math.floor(n);
+        }
+
+        // ---- gradient (built once per frame at most, never per cell) ----
+        _getGradient() {
+            const g = this.opts.gradient;
+            if (!g) return null;
+            if (!g.animate && g === this._gradientSource && this._gradientObj) return this._gradientObj;
+            const key = JSON.stringify(g) + (g.animate ? Math.floor(this._time * 20) : "");
+            if (!g.animate && key === this._gradientKey) return this._gradientObj;
+
+            const stops = this._expandGradientStops(g);
+
+            let grad;
+            if (g.type === "radial") {
+                const cx = this.w * (g.center ? g.center[0] : 0.5);
+                const cy = this.h * (g.center ? g.center[1] : 0.5);
+                const r = Math.max(this.w, this.h) * (g.radius || 0.75);
+                grad = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            } else {
+                const angle = (((g.angle || 0) + (g.animate ? this._time * 20 : 0)) * Math.PI) / 180;
+                const dx = Math.cos(angle),
+                    dy = Math.sin(angle);
+                const cx = this.w / 2,
+                    cy = this.h / 2;
+                const len = (Math.abs(dx) * this.w + Math.abs(dy) * this.h) / 2;
+                grad = this.ctx.createLinearGradient(cx - dx * len, cy - dy * len, cx + dx * len, cy + dy * len);
+            }
+            stops.forEach((s) => grad.addColorStop(Math.min(1, Math.max(0, s.offset)), s.color));
+            this._gradientKey = key;
+            this._gradientObj = grad;
+            this._gradientSource = g;
+            return grad;
+        }
+
+        _getBackdropGradient(g) {
+            if (!g || !g.stops) return null;
+            const key = JSON.stringify(g) + `:${this.w}x${this.h}` + (g.animate ? `:${Math.floor(this._time * 20)}` : "");
+            if (key === this._backdropGradientKey) return this._backdropGradientObj;
+            const stops = this._expandGradientStops(g);
+            let grad;
+            if (g.type === "radial") {
+                const cx = this.w * (g.center ? g.center[0] : 0.5);
+                const cy = this.h * (g.center ? g.center[1] : 0.5);
+                const r = Math.max(this.w, this.h) * (g.radius || 0.75);
+                grad = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            } else {
+                const angle = (((g.angle || 0) + (g.animate ? this._time * 20 : 0)) * Math.PI) / 180;
+                const dx = Math.cos(angle), dy = Math.sin(angle);
+                const cx = this.w / 2, cy = this.h / 2;
+                const len = (Math.abs(dx) * this.w + Math.abs(dy) * this.h) / 2;
+                grad = this.ctx.createLinearGradient(cx - dx * len, cy - dy * len, cx + dx * len, cy + dy * len);
+            }
+            stops.forEach((s) => grad.addColorStop(Math.min(1, Math.max(0, s.offset)), s.color));
+            this._backdropGradientKey = key;
+            this._backdropGradientObj = grad;
+            return grad;
+        }
+
+        _expandGradientStops(gradient) {
+            const raw = gradient.stops || ["#4FA8FF", "#C04FFF"];
+            if (raw.some((stop) => typeof stop === "object" && stop !== null)) {
+                const last = Math.max(1, raw.length - 1);
+                return raw
+                    .map((stop, index) => ({
+                        offset: Math.min(1, Math.max(0, typeof stop === "object" && stop.offset !== undefined ? stop.offset : index / last)),
+                        color: typeof stop === "string" ? stop : stop.color,
+                    }))
+                    .sort((a, b) => a.offset - b.offset);
+            }
+            const colors = raw.map((stop) => (typeof stop === "string" ? stop : stop.color));
+            const steps = Math.max(1, Math.min(6, Math.round(gradient.steps || 2)));
+            const stops = [];
+            for (let i = 0; i < steps; i++) {
+                const position = steps === 1 ? 0 : i / (steps - 1);
+                const scaled = position * Math.max(0, colors.length - 1);
+                const left = Math.min(colors.length - 1, Math.floor(scaled));
+                const right = Math.min(colors.length - 1, left + 1);
+                const local = scaled - left;
+                const eased = gradient.type === "cubic" ? local * local * (3 - 2 * local) : local;
+                stops.push({
+                    offset: position,
+                    color: this._lerpColor(colors[left], colors[right], eased),
+                });
+            }
+            return stops;
+        }
+
+        // ---- animated color: one calculation per frame, never per cell ----
+        _updateAnimatedColor() {
+            const ca = this.opts.colorAnimation;
+            if (!ca) {
+                this._animatedColor = null;
+                return;
+            }
+            if (ca.type === "hueRotate") {
+                const hue = ((ca.baseHue ?? 200) + this._time * (ca.speed ?? 30)) % 360;
+                const saturation = ca.saturation === null || ca.saturation === undefined ? 80 : ca.saturation;
+                const lightness = ca.lightness === null || ca.lightness === undefined ? 60 : ca.lightness;
+                this._animatedColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            } else if (ca.type === "breathe") {
+                const t = (Math.sin(this._time * (ca.speed ?? 1)) + 1) / 2;
+                this._animatedColor = this._lerpColor(ca.colorA || "#4FA8FF", ca.colorB || "#C04FFF", t);
+            } else {
+                this._animatedColor = null;
+            }
+        }
+        _lerpColor(a, b, t) {
+            const pa = this._hexToRgb(a),
+                pb = this._hexToRgb(b);
+            if (!pa || !pb) return a;
+            const r = Math.round(pa[0] + (pb[0] - pa[0]) * t);
+            const g = Math.round(pa[1] + (pb[1] - pa[1]) * t);
+            const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t);
+            return `rgb(${r},${g},${bl})`;
+        }
+        _hexToRgb(hex) {
+            const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
+        }
+
+        // ---- image sampling ----
+        /** Converts the current image source into glyph, color, and range-mask arrays. */
+        _resampleImage() {
+            const img = this._sourceImage;
+            if (!img || !this.cols || !this.rows) return;
+            const cols = this.cols,
+                rows = this.rows;
+            if (!this._imageSampleCanvas) {
+                this._imageSampleCanvas = document.createElement("canvas");
+                this._imageSampleContext = this._imageSampleCanvas.getContext("2d", { alpha: true, willReadFrequently: true });
+            }
+            const off = this._imageSampleCanvas;
+            if (off.width !== cols) off.width = cols;
+            if (off.height !== rows) off.height = rows;
+            const octx = this._imageSampleContext;
+            if (!octx) return;
+            octx.clearRect(0, 0, cols, rows);
+            const sourceWidth = img.naturalWidth || img.videoWidth || img.displayWidth || img.codedWidth || img.width;
+            const sourceHeight = img.naturalHeight || img.videoHeight || img.displayHeight || img.codedHeight || img.height;
+            if (!sourceWidth || !sourceHeight) return;
+            const srcRatio = sourceWidth / sourceHeight;
+            // A sampled pixel becomes a rectangular glyph cell. Use the final
+            // display geometry for fitting or the source appears compressed.
+            const cellWidth = this.charW || (this.w / cols) || 1;
+            const cellHeight = this.charH || (this.h / rows) || 1;
+            const dstRatio = (cols * cellWidth) / (rows * cellHeight);
+            let sx, sy, sw, sh;
+            let dx = 0,
+                dy = 0,
+                dw = cols,
+                dh = rows;
+            if (this.opts.fit === "cover") {
+                if (srcRatio > dstRatio) {
+                    sh = sourceHeight;
+                    sw = sh * dstRatio;
+                    sy = 0;
+                    sx = (sourceWidth - sw) / 2;
+                } else {
+                    sw = sourceWidth;
+                    sh = sw / dstRatio;
+                    sx = 0;
+                    sy = (sourceHeight - sh) / 2;
+                }
+            } else {
+                sx = 0;
+                sy = 0;
+                sw = sourceWidth;
+                sh = sourceHeight;
+                if (srcRatio > dstRatio) {
+                    dh = (cols * cellWidth) / (srcRatio * cellHeight);
+                    dy = (rows - dh) / 2;
+                } else {
+                    dw = (rows * cellHeight * srcRatio) / cellWidth;
+                    dx = (cols - dw) / 2;
+                }
+            }
+            const baseZoom = Math.max(0.1, this.opts.imageScale || 1) / Math.max(0.1, this.opts.imageFov || 1);
+            if (baseZoom !== 1) {
+                const zoomedW = sw / baseZoom;
+                const zoomedH = sh / baseZoom;
+                sx += (sw - zoomedW) / 2;
+                sy += (sh - zoomedH) / 2;
+                sw = zoomedW;
+                sh = zoomedH;
+            }
+            const scaleX = Math.max(0.1, Number(this.opts.imageScaleX) || 1);
+            const scaleY = Math.max(0.1, Number(this.opts.imageScaleY) || 1);
+            if (scaleX !== 1 || scaleY !== 1) {
+                const scaledW = dw * scaleX;
+                const scaledH = dh * scaleY;
+                dx += (dw - scaledW) / 2;
+                dy += (dh - scaledH) / 2;
+                dw = scaledW;
+                dh = scaledH;
+            }
+            octx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+            const data = octx.getImageData(0, 0, cols, rows).data;
+
+            const chars = new Array(cols * rows),
+                colors = new Array(cols * rows);
+            const ramp = this.opts.imageChars || this.opts.charSet || asciiam.CHARACTER_SETS.density;
+            const range = this.opts.imageAnimationRange;
+            const rangeMin = range && this._hexToRgb(range.min);
+            const rangeMax = range && this._hexToRgb(range.max);
+            const animationMask = rangeMin && rangeMax ? new Uint8Array(cols * rows) : null;
+            const minR = animationMask ? Math.min(rangeMin[0], rangeMax[0]) : 0;
+            const maxR = animationMask ? Math.max(rangeMin[0], rangeMax[0]) : 255;
+            const minG = animationMask ? Math.min(rangeMin[1], rangeMax[1]) : 0;
+            const maxG = animationMask ? Math.max(rangeMin[1], rangeMax[1]) : 255;
+            const minB = animationMask ? Math.min(rangeMin[2], rangeMax[2]) : 0;
+            const maxB = animationMask ? Math.max(rangeMin[2], rangeMax[2]) : 255;
+            let opaqueCount = 0;
+            let transparentCount = 0;
+            let opaqueBrightness = 0;
+            for (let i = 0; i < cols * rows; i++) {
+                const alpha = data[i * 4 + 3];
+                if (alpha < 20) {
+                    transparentCount++;
+                    continue;
+                }
+                opaqueCount++;
+                opaqueBrightness += (0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]) / 255;
+            }
+            const luminanceMode = this.opts.imageLuminance || "auto";
+            const invertLuminance = luminanceMode === "invert"
+                || (luminanceMode === "auto" && transparentCount > 0 && opaqueCount > 0 && opaqueBrightness / opaqueCount < 0.45);
+            for (let i = 0; i < cols * rows; i++) {
+                const r = data[i * 4],
+                    gC = data[i * 4 + 1],
+                    b = data[i * 4 + 2],
+                    a = data[i * 4 + 3];
+                const sampledBrightness = (0.299 * r + 0.587 * gC + 0.114 * b) / 255;
+                const brightness = invertLuminance ? 1 - sampledBrightness : sampledBrightness;
+                const idx = a < 20 ? 0 : Math.min(ramp.length - 1, Math.floor(brightness * (ramp.length - 1)));
+                chars[i] = ramp[idx];
+                // Auto-inverted silhouettes should remain visible on dark UI
+                // surfaces even when colorFromImage is enabled by the utility.
+                colors[i] = a < 20 || invertLuminance ? null : `rgb(${r},${gC},${b})`;
+                if (animationMask) {
+                    animationMask[i] = a >= 20 && r >= minR && r <= maxR && gC >= minG && gC <= maxG && b >= minB && b <= maxB ? 1 : 0;
+                }
+            }
+            const atlasRampChanged = this._imageAtlasRamp !== ramp;
+            this._imageAtlasRamp = ramp;
+            this._imageGrid = { cols, rows, chars, colors, animationMask, invertedLuminance: invertLuminance };
+            this._activeGlyphAtlas = null;
+            if (atlasRampChanged) {
+                this._glyphAtlas = null;
+                this._webglAtlas = null;
+            }
+            this._waveBaseLayer = null;
+        }
+
+        // ---- sparse mode state ----
+        _initMatrix() {
+            this._matrix = [];
+            for (let c = 0; c < this.cols; c++) {
+                this._matrix.push({
+                    y: -Math.random() * this.rows,
+                    speed: 8 + Math.random() * 14,
+                    length: 6 + Math.floor(Math.random() * 10),
+                });
+            }
+        }
+        _initSnow() {
+            const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.snowDensity));
+            this._snow = [];
+            for (let i = 0; i < count; i++) {
+                this._snow.push({
+                    col: Math.floor(Math.random() * this.cols),
+                    y: Math.random() * this.rows,
+                    speed: 2 + Math.random() * 5,
+                    phase: Math.random() * Math.PI * 2,
+                    drift: 0.3 + Math.random() * 0.6,
+                });
+            }
+        }
+        _initSparkle() {
+            const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.sparkleDensity));
+            this._sparkle = [];
+            for (let i = 0; i < count; i++) {
+                this._sparkle.push({
+                    col: Math.floor(Math.random() * this.cols),
+                    row: Math.floor(Math.random() * this.rows),
+                    phase: Math.random() * Math.PI * 2,
+                    speed: 0.6 + Math.random() * 1.4,
+                });
+            }
+        }
+        _initFire() {
+            const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.fireDensity));
+            this._fire = [];
+            for (let i = 0; i < count; i++) this._resetFireParticle({}, true);
+        }
+        _resetFireParticle(particle, distribute = false) {
+            particle.col = Math.random() * this.cols;
+            particle.y = distribute ? this.rows * (0.58 + Math.random() * 0.48) : this.rows + Math.random() * 2;
+            particle.speed = 5 + Math.random() * 9;
+            particle.phase = Math.random() * Math.PI * 2;
+            particle.drift = 0.7 + Math.random() * 1.4;
+            particle.life = 0.45 + Math.random() * 0.55;
+            if (!this._fire.includes(particle)) this._fire.push(particle);
+        }
+        _initStarfield() {
+            const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.starfieldDensity));
+            this._starfield = [];
+            for (let i = 0; i < count; i++) this._resetStar({}, true);
+        }
+        _resetStar(star, distribute = false) {
+            star.x = Math.random() * 2 - 1;
+            star.y = Math.random() * 2 - 1;
+            star.z = distribute ? 0.08 + Math.random() * 0.92 : 1;
+            star.speed = 0.22 + Math.random() * 0.42;
+            if (!this._starfield.includes(star)) this._starfield.push(star);
+        }
+        _initOrbit() {
+            const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.orbitDensity));
+            const radiusLimit = Math.max(this.charW, Math.min(this.w, this.h) * 0.5);
+            this._orbit = [];
+            for (let i = 0; i < count; i++) {
+                this._orbit.push({
+                    angle: Math.random() * Math.PI * 2,
+                    radius: radiusLimit * (0.12 + Math.random() * 0.82),
+                    speed: (0.28 + Math.random() * 0.7) * (Math.random() > 0.2 ? 1 : -1),
+                    phase: Math.random() * Math.PI * 2,
+                });
+            }
+        }
+
+        // ---- main draw loop ----
+        /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
+        _draw(dt) {
+            if (this._webgl) {
+                this._drawWebGL(dt);
+                return;
+            }
+            const ctx = this.ctx;
+
+            if (this.opts.mode === "wave") {
+                const extent = this.opts.direction === "diagonal" ? this.w + this.h : this.opts.direction === "vertical" ? this.h : this.w;
+                const travel = this.opts.direction === "diagonal" ? 160 : 140;
+                this._wavePosition = ((this._time * travel) % (extent + 300)) - 150;
+                this._waveBand = extent * this.opts.bandWidth;
+            } else if (this.opts.mode === "current") {
+                this._currentTimeSinX = Math.sin(this._time * 1.1);
+                this._currentTimeCosX = Math.cos(this._time * 1.1);
+                this._currentTimeSinY = Math.sin(-this._time * 0.8);
+                this._currentTimeCosY = Math.cos(-this._time * 0.8);
+                this._currentTimeSinXY = Math.sin(this._time * 1.6);
+                this._currentTimeCosXY = Math.cos(this._time * 1.6);
+            } else if (this.opts.mode === "ripple") {
+                this._rippleTimeSin = Math.sin(-this._time * 2.4);
+                this._rippleTimeCos = Math.cos(-this._time * 2.4);
+            } else if (this.opts.mode === "vortex") {
+                this._vortexTimeSin = Math.sin(-this._time * 2);
+                this._vortexTimeCos = Math.cos(-this._time * 2);
+            } else if (this.opts.mode === "plasma") {
+                this._plasmaTimeSinA = Math.sin(this._time * 0.9);
+                this._plasmaTimeCosA = Math.cos(this._time * 0.9);
+                this._plasmaTimeSinB = Math.sin(-this._time * 1.3);
+                this._plasmaTimeCosB = Math.cos(-this._time * 1.3);
+                this._plasmaTimeSinC = Math.sin(this._time * 0.55);
+                this._plasmaTimeCosC = Math.cos(this._time * 0.55);
+            } else if (this.opts.mode === "image") {
+                const imageRippleTime = -this._time * 2.2;
+                this._imageRippleTimeSin = Math.sin(imageRippleTime);
+                this._imageRippleTimeCos = Math.cos(imageRippleTime);
+            }
+
+            if (this.opts.trail > 0) {
+                ctx.save();
+                ctx.globalAlpha = this.opts.trail;
+                ctx.fillStyle = this.opts.trailColor;
+                ctx.fillRect(0, 0, this.w, this.h);
+                ctx.restore();
+            } else {
+                ctx.clearRect(0, 0, this.w, this.h);
+                if (this.opts.background && this.opts.background !== "transparent") {
+                    ctx.fillStyle = this.opts.background;
+                    ctx.fillRect(0, 0, this.w, this.h);
+                }
+            }
+
+            if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawCanvasBackdrop();
+            ctx.textBaseline = "alphabetic";
+            this._lastFillStyle = null;
+            this._lastFont = null;
+            this._lastAlpha = -1;
+
+            this._pulseFactor = this.opts.pulse
+                ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                : 1;
+            this._updateAnimatedColor();
+
+            const globalGradient = this.opts.gradient && !this.opts.colorFromImage ? this._getGradient() : null;
+            this._activeGlyphAtlas = this._getGlyphAtlas();
+            const waveBase = this._getWaveBaseLayer();
+            if (waveBase) {
+                ctx.drawImage(waveBase.canvas, 0, 0, waveBase.canvas.width, waveBase.canvas.height, 0, 0, this.w, this.h);
+            }
+            this._drawFillStyle = globalGradient; // gradient takes precedence over animated color
+            let drawn = 0;
+
+            if (this.opts.mode === "mesh") {
+                drawn = this._drawMesh(globalGradient);
+            } else if (waveBase) {
+                drawn = this._drawCachedHorizontalWave(waveBase, globalGradient);
+            } else if (SPARSE_MODES.has(this.opts.mode)) {
+                if (this._imageGrid) drawn += this._drawImageSourceBase(globalGradient);
+                drawn += this._drawSparse(dt, globalGradient);
+            } else {
+                drawn = this._drawDense(globalGradient);
+            }
+
+            if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawCanvasBackdrop();
+            ctx.globalAlpha = 1;
+            this._lastDrawnCount = drawn;
+        }
+
+        /** Draws the configured Canvas backdrop at its exact clamped alpha. */
+        _drawCanvasBackdrop() {
+            const backdrop = this.opts.backdrop;
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, backdrop.opacity ?? 0.5));
+            if (backdrop.gradient?.stops?.length) {
+                ctx.fillStyle = this._getBackdropGradient(backdrop.gradient) || backdrop.color || "#0a0c10";
+            } else {
+                ctx.fillStyle = backdrop.color || "#0a0c10";
+            }
+            ctx.fillRect(0, 0, this.w, this.h);
+            ctx.restore();
+        }
+
+        _prepareModeFrame() {
+            if (this.opts.mode === "wave") {
+                const extent = this.opts.direction === "diagonal" ? this.w + this.h : this.opts.direction === "vertical" ? this.h : this.w;
+                const travel = this.opts.direction === "diagonal" ? 160 : 140;
+                this._wavePosition = ((this._time * travel) % (extent + 300)) - 150;
+                this._waveBand = extent * this.opts.bandWidth;
+            } else if (this.opts.mode === "current") {
+                this._currentTimeSinX = Math.sin(this._time * 1.1);
+                this._currentTimeCosX = Math.cos(this._time * 1.1);
+                this._currentTimeSinY = Math.sin(-this._time * 0.8);
+                this._currentTimeCosY = Math.cos(-this._time * 0.8);
+                this._currentTimeSinXY = Math.sin(this._time * 1.6);
+                this._currentTimeCosXY = Math.cos(this._time * 1.6);
+            } else if (this.opts.mode === "ripple") {
+                this._rippleTimeSin = Math.sin(-this._time * 2.4);
+                this._rippleTimeCos = Math.cos(-this._time * 2.4);
+            } else if (this.opts.mode === "vortex") {
+                this._vortexTimeSin = Math.sin(-this._time * 2);
+                this._vortexTimeCos = Math.cos(-this._time * 2);
+            } else if (this.opts.mode === "plasma") {
+                this._plasmaTimeSinA = Math.sin(this._time * 0.9);
+                this._plasmaTimeCosA = Math.cos(this._time * 0.9);
+                this._plasmaTimeSinB = Math.sin(-this._time * 1.3);
+                this._plasmaTimeCosB = Math.cos(-this._time * 1.3);
+                this._plasmaTimeSinC = Math.sin(this._time * 0.55);
+                this._plasmaTimeCosC = Math.cos(this._time * 0.55);
+            } else if (this.opts.mode === "image") {
+                const imageRippleTime = -this._time * 2.2;
+                this._imageRippleTimeSin = Math.sin(imageRippleTime);
+                this._imageRippleTimeCos = Math.cos(imageRippleTime);
+            }
+        }
+
+        _drawWebGL(dt) {
+            this._prepareModeFrame();
+            this._pulseFactor = this.opts.pulse
+                ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                : 1;
+            this._updateAnimatedColor();
+            const atlas = this._getWebGLAtlas();
+            this._webgl.setAtlas(atlas.canvas, atlas.key);
+            this._activeWebGLAtlas = atlas;
+
+            const background = this._colorToRgba(this.opts.background === "transparent" ? "transparent" : this.opts.background);
+            const preserve = this.opts.trail > 0;
+            this._webgl.begin(background, preserve);
+            if (preserve) {
+                const base = this._colorToRgba(this.opts.trailColor);
+                const trail = [base[0], base[1], base[2], this.opts.trail];
+                this._webgl.surface(trail);
+            }
+            if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawWebGLBackdrop();
+            this._webglGradient = this.opts.gradient && !this.opts.colorFromImage ? this._prepareWebGLGradient(this.opts.gradient) : null;
+            let drawn = 0;
+            if (this.opts.mode === "mesh") {
+                drawn = this._drawMesh(null);
+            } else if (SPARSE_MODES.has(this.opts.mode)) {
+                if (this._imageGrid) drawn += this._drawImageSourceBase(null);
+                drawn += this._drawSparse(dt, null);
+            } else {
+                drawn = this._drawDense(null);
+            }
+            this._webgl.flush(this.w, this.h, this._webglGradient);
+            if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawWebGLBackdrop();
+            this._lastDrawnCount = drawn;
+            this._activeWebGLAtlas = null;
+            this._webglGradient = null;
+        }
+
+        /** Draws the configured WebGL backdrop before or after glyph instances. */
+        _drawWebGLBackdrop() {
+            const backdrop = this.opts.backdrop;
+            const base = this._colorToRgba(backdrop.color || "#0a0c10");
+            const alpha = Math.max(0, Math.min(1, backdrop.opacity ?? 0.5));
+            const color = [base[0], base[1], base[2], alpha];
+            const gradient = backdrop.gradient ? this._prepareWebGLGradient(backdrop.gradient) : null;
+            this._webgl.surface(color, gradient);
+        }
+
+        _getWebGLAtlas() {
+            const imageCharacters = this._imageGrid ? (this.opts.imageChars || "") : "";
+            const characters = [...new Set(this.opts.charSet + imageCharacters)];
+            const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.charH]);
+            if (this._webglAtlas?.key === key) return this._webglAtlas;
+            const padding = 2;
+            const tileWidth = Math.max(4, Math.ceil(this.opts.fontSize * 1.5 + padding * 2));
+            const tileHeight = Math.max(6, Math.ceil(this.charH + padding * 2));
+            const columns = Math.max(1, Math.floor(2048 / tileWidth));
+            const tileCount = characters.length * this._fontRegular.length * 2;
+            const canvas = document.createElement("canvas");
+            canvas.width = columns * tileWidth;
+            canvas.height = Math.ceil(tileCount / columns) * tileHeight;
+            const context = canvas.getContext("2d", { alpha: true, willReadFrequently: false });
+            context.textBaseline = "alphabetic";
+            context.fillStyle = "#ffffff";
+            const baseline = tileHeight - padding;
+            const characterIndex = new Map(characters.map((character, index) => [character, index]));
+            const uv = new Float32Array(tileCount * 4);
+            for (let bold = 0; bold < 2; bold++) {
+                const fonts = bold ? this._fontBold : this._fontRegular;
+                for (let level = 0; level < fonts.length; level++) {
+                    context.font = fonts[level];
+                    const variant = bold * fonts.length + level;
+                    for (let index = 0; index < characters.length; index++) {
+                        const tile = variant * characters.length + index;
+                        const x = (tile % columns) * tileWidth;
+                        const y = Math.floor(tile / columns) * tileHeight;
+                        context.fillText(characters[index], x + padding, y + baseline);
+                        uv.set([x / canvas.width, y / canvas.height, (x + tileWidth) / canvas.width, (y + tileHeight) / canvas.height], tile * 4);
+                    }
+                }
+            }
+            this._webglAtlas = { canvas, key, characterIndex, characters: characters.length, uv, tileWidth, tileHeight, padding, baseline };
+            return this._webglAtlas;
+        }
+
+        _prepareWebGLGradient(gradient) {
+            const stops = this._expandGradientStops(gradient);
+            const key = JSON.stringify(stops) + (gradient.animate ? Math.floor(this._time * 20) : "");
+            if (!this._webgl.hasGradient(key)) {
+                const canvas = document.createElement("canvas");
+                canvas.width = 256;
+                canvas.height = 1;
+                const context = canvas.getContext("2d");
+                const line = context.createLinearGradient(0, 0, 256, 0);
+                stops.forEach((stop) => line.addColorStop(Math.min(1, Math.max(0, stop.offset)), stop.color));
+                context.fillStyle = line;
+                context.fillRect(0, 0, 256, 1);
+                this._webgl.setGradient(canvas, key);
+            }
+            return { ...gradient, textureKey: key, angle: (gradient.angle || 0) + (gradient.animate ? this._time * 20 : 0) };
+        }
+
+        _colorToRgba(color) {
+            if (!this._rgbaCache) this._rgbaCache = new Map();
+            const cached = this._rgbaCache.get(color);
+            if (cached) return cached;
+            let result;
+            if (!color || color === "transparent") result = [0, 0, 0, 0];
+            const hex = this._hexToRgb(color);
+            if (!result && hex) result = [hex[0] / 255, hex[1] / 255, hex[2] / 255, 1];
+            const rgb = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i.exec(color);
+            if (!result && rgb) result = [Number(rgb[1]) / 255, Number(rgb[2]) / 255, Number(rgb[3]) / 255, rgb[4] === undefined ? 1 : Number(rgb[4])];
+            if (!result && !this._colorParser) this._colorParser = document.createElement("canvas").getContext("2d");
+            if (!result && this._colorParser) {
+                this._colorParser.fillStyle = "#000000";
+                this._colorParser.fillStyle = color;
+                const parsed = this._colorParser.fillStyle;
+                const parsedHex = this._hexToRgb(parsed);
+                if (parsedHex) result = [parsedHex[0] / 255, parsedHex[1] / 255, parsedHex[2] / 255, 1];
+            }
+            if (!result) result = [0.31, 0.66, 1, 1];
+            if (this._rgbaCache.size > 512) this._rgbaCache.clear();
+            this._rgbaCache.set(color, result);
+            return result;
+        }
+
+        _getWaveBaseLayer() {
+            if (
+                this.opts.mode !== "wave"
+                || this._imageGrid
+                || !this.opts.cacheStaticWave
+                || this.opts.direction !== "horizontal"
+                || this.opts.trail > 0
+                || (this.opts.background && this.opts.background !== "transparent")
+                || this.opts.backdrop
+                || this.opts.gradient
+                || this.opts.colorAnimation
+                || this.opts.pulse
+                || (this.opts.cursor?.enabled && this._cursor)
+            ) return null;
+            if (
+                this._waveBaseLayer
+                && this._waveBaseCharSet === this.opts.charSet
+                && this._waveBaseColor === this.opts.color
+                && this._waveBaseAmbient === this.opts.ambient
+                && this._waveBaseMinOpacity === this.opts.minOpacity
+                && this._waveBaseMaxOpacity === this.opts.maxOpacity
+                && this._waveBaseBold === this.opts.boldOnPeak
+                && this._waveBaseAlphaLevels === this.opts.alphaLevels
+                && this._waveBaseSeedCache === this._seedCache
+                && this._waveBaseEdgeCache === this._edgeFadeCache
+                && this._waveBaseAtlas === this._activeGlyphAtlas
+            ) return this._waveBaseLayer;
+
+            const sharedKey = JSON.stringify([
+                this.canvas.width,
+                this.canvas.height,
+                this.opts.charSet,
+                this.opts.color,
+                this.opts.ambient,
+                this.opts.minOpacity,
+                this.opts.maxOpacity,
+                this.opts.boldOnPeak,
+                this.opts.alphaLevels,
+                this.opts.edgeFade,
+                this._fontRegular,
+                this._fontBold,
+            ]);
+            const shared = asciiam._waveBaseLayers.get(sharedKey);
+            if (shared) {
+                asciiam._waveBaseLayers.delete(sharedKey);
+                asciiam._waveBaseLayers.set(sharedKey, shared);
+                this._setWaveBaseLayer(shared);
+                return shared;
+            }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = this.canvas.width;
+            canvas.height = this.canvas.height;
+            const context = canvas.getContext("2d", { alpha: true, willReadFrequently: false });
+            if (!context) return null;
+            context.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
+            context.textBaseline = "alphabetic";
+            context.fillStyle = this.opts.color;
+            let lastAlpha = -1;
+            let lastFont = null;
+            let drawn = 0;
+            const atlas = this._activeGlyphAtlas;
+            const fontLevels = this.opts.fontLevels - 1;
+            const charSet = this.opts.charSet;
+
+            for (let row = 0; row < this.rows; row++) {
+                const baseline = this._rowBaseline[row];
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    const index = offset + col;
+                    const intensity = Math.min(1, this._seedCache[index] * this.opts.ambient);
+                    const character = charSet[Math.floor(intensity * (charSet.length - 1))] || " ";
+                    if (character === " ") continue;
+                    let opacity = this.opts.minOpacity + (this.opts.maxOpacity - this.opts.minOpacity) * intensity;
+                    if (this._edgeFadeCache) opacity *= this._edgeFadeCache[index];
+                    opacity = Math.round(opacity * this.opts.alphaLevels) / this.opts.alphaLevels;
+                    if (opacity <= 0) continue;
+                    if (opacity !== lastAlpha) {
+                        context.globalAlpha = opacity;
+                        lastAlpha = opacity;
+                    }
+                    const level = Math.max(0, Math.min(fontLevels, Math.round(intensity * fontLevels)));
+                    const bold = this.opts.boldOnPeak && intensity > 0.55;
+                    const atlasCharacter = atlas?.characterIndex.get(character);
+                    if (atlasCharacter !== undefined) {
+                        const variant = (bold ? this._fontRegular.length : 0) + level;
+                        const tile = variant * atlas.characters + atlasCharacter;
+                        context.drawImage(
+                            atlas.canvas,
+                            atlas.sourceX[tile],
+                            atlas.sourceY[tile],
+                            atlas.tileWidth,
+                            atlas.tileHeight,
+                            this._columnX[col] - atlas.padding,
+                            baseline - atlas.baseline,
+                            atlas.tileWidth,
+                            atlas.tileHeight,
+                        );
+                    } else {
+                        const font = (bold ? this._fontBold : this._fontRegular)[level];
+                        if (font !== lastFont) {
+                            context.font = font;
+                            lastFont = font;
+                        }
+                        context.fillText(character, this._columnX[col], baseline);
+                    }
+                    drawn++;
+                }
+            }
+
+            this._waveBaseLayer = { canvas, drawn };
+            asciiam._waveBaseLayers.set(sharedKey, this._waveBaseLayer);
+            if (asciiam._waveBaseLayers.size > asciiam._waveBaseLayerLimit) {
+                asciiam._waveBaseLayers.delete(asciiam._waveBaseLayers.keys().next().value);
+            }
+            this._setWaveBaseLayer(this._waveBaseLayer);
+            return this._waveBaseLayer;
+        }
+
+        _setWaveBaseLayer(layer) {
+            this._waveBaseLayer = layer;
+            this._waveBaseCharSet = this.opts.charSet;
+            this._waveBaseColor = this.opts.color;
+            this._waveBaseAmbient = this.opts.ambient;
+            this._waveBaseMinOpacity = this.opts.minOpacity;
+            this._waveBaseMaxOpacity = this.opts.maxOpacity;
+            this._waveBaseBold = this.opts.boldOnPeak;
+            this._waveBaseAlphaLevels = this.opts.alphaLevels;
+            this._waveBaseSeedCache = this._seedCache;
+            this._waveBaseEdgeCache = this._edgeFadeCache;
+            this._waveBaseAtlas = this._activeGlyphAtlas;
+        }
+
+        _drawCachedHorizontalWave(base, globalGradient) {
+            const margin = this.charW * 2;
+            const start = Math.max(0, this._wavePosition - this._waveBand - margin);
+            const end = Math.min(this.w, this._wavePosition + this._waveBand + margin);
+            if (end <= start) return base.drawn;
+            this.ctx.clearRect(start, 0, end - start, this.h);
+            const firstColumn = Math.max(0, Math.floor(start / this.charW));
+            const lastColumn = Math.min(this.cols - 1, Math.ceil(end / this.charW));
+            let dynamicDrawn = 0;
+            for (let row = 0; row < this.rows; row++) {
+                const y = this._rowY[row];
+                for (let col = firstColumn; col <= lastColumn; col++) {
+                    const x = this._columnX[col];
+                    const cell = this._waveCell(col, row, x, y);
+                    if (this._paintCell(cell, col, row, x, y, globalGradient, this._rowBaseline[row])) dynamicDrawn++;
+                }
+            }
+            return dynamicDrawn + 1;
+        }
+
+        _drawDense(globalGradient) {
+            let drawn = 0;
+            const columnX = this._columnX;
+            const rowY = this._rowY;
+            for (let row = 0; row < this.rows; row++) {
+                const y = rowY[row];
+                for (let col = 0; col < this.cols; col++) {
+                    const x = columnX[col];
+                    const cell = this._computeCell(col, row, x, y);
+                    if (this._paintCell(cell, col, row, x, y, globalGradient, this._rowBaseline[row])) drawn++;
+                }
+            }
+            return drawn;
+        }
+
+        /** Rasterize the retained mesh once, then paint only occupied ASCII cells. */
+        _drawMesh(globalGradient) {
+            if (!this._mesh || !this._meshRasterizer) return 0;
+            this._meshRasterOptions.style = this.opts.meshStyle;
+            this._meshRasterOptions.projection = this.opts.meshProjection;
+            this._meshRasterOptions.camera = this.opts.meshCamera;
+            this._meshRasterOptions.light = this.opts.meshLight;
+            for (let axis = 0; axis < 3; axis++) {
+                const speed = Number(this.opts.meshRotationSpeed?.[axis]);
+                this._meshRotation[axis] = this._meshBaseRotation[axis]
+                    + (this.opts.meshAutoRotate && Number.isFinite(speed) ? this._time * speed : 0);
+            }
+            const grid = this._meshRasterizer.rasterize(this._mesh, this._meshRasterOptions);
+            const charSet = this.opts.charSet;
+            const maxCharacter = Math.max(0, charSet.length - 1);
+            let drawn = 0;
+            for (let row = 0; row < this.rows; row++) {
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    const index = offset + col;
+                    if (!grid.occupied[index]) continue;
+                    const intensity = grid.intensity[index];
+                    const character = charSet[Math.round(intensity * maxCharacter)] || charSet[maxCharacter] || "#";
+                    const opacity = this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity);
+                    const cell = this._setCell(character, opacity, intensity, this.opts.boldOnPeak && intensity > 0.72);
+                    if (this._paintCell(
+                        cell,
+                        col,
+                        row,
+                        this._columnX[col],
+                        this._rowY[row],
+                        globalGradient,
+                        this._rowBaseline[row],
+                        false,
+                    )) drawn++;
+                }
+            }
+            return drawn;
+        }
+
+        _drawImageSourceBase(globalGradient) {
+            const grid = this._imageGrid;
+            let drawn = 0;
+            for (let row = 0; row < this.rows; row++) {
+                const y = this._rowY[row];
+                for (let col = 0; col < this.cols; col++) {
+                    const index = row * grid.cols + col;
+                    const character = grid.chars[index];
+                    if (!character || character === " ") continue;
+                    const animateCell = !grid.animationMask || grid.animationMask[index] === 1;
+                    const opacity = animateCell && this.opts.animateImageMask ? this.opts.minOpacity : this.opts.maxOpacity;
+                    const cell = this._setCell(character, opacity, 0.5, false);
+                    cell.color = this.opts.colorFromImage ? grid.colors[index] : null;
+                    if (this._paintCell(cell, col, row, this._columnX[col], y, globalGradient, this._rowBaseline[row], false)) drawn++;
+                }
+            }
+            return drawn;
+        }
+
+        /** Advances and paints sparse particles without scanning the complete grid. */
+        _drawSparse(dt, globalGradient) {
+            let drawn = 0;
+            const mode = this.opts.mode;
+            if (mode === "matrix") {
+                if (!this._matrix) this._initMatrix();
+                this._advanceMatrix(dt);
+                for (let c = 0; c < this._matrix.length; c++) {
+                    const d = this._matrix[c];
+                    const rowStart = Math.max(0, Math.floor(d.y - d.length));
+                    const rowEnd = Math.min(this.rows - 1, Math.floor(d.y));
+                    for (let row = rowStart; row <= rowEnd; row++) {
+                        const cell = this._matrixCellAt(c, row, d);
+                        const x = c * this.charW,
+                            y = row * this.charH;
+                        if (this._paintCell(cell, c, row, x, y, globalGradient)) drawn++;
+                    }
+                }
+            } else if (mode === "snow") {
+                if (!this._snow) this._initSnow();
+                this._advanceSnow(dt);
+                for (let i = 0; i < this._snow.length; i++) {
+                    const p = this._snow[i];
+                    const row = Math.floor(p.y);
+                    if (row < 0 || row >= this.rows) continue;
+                    const xOff = Math.sin(this._time * p.drift + p.phase) * this.charW * 1.5;
+                    const x = p.col * this.charW + xOff,
+                        y = row * this.charH;
+                    const cell = this._setCell("*", this.opts.maxOpacity * 0.8, 0.15, false);
+                    if (this._paintCell(cell, p.col, row, x, y, globalGradient)) drawn++;
+                }
+            } else if (mode === "sparkle") {
+                if (!this._sparkle) this._initSparkle();
+                for (let i = 0; i < this._sparkle.length; i++) {
+                    const p = this._sparkle[i];
+                    const n = Math.max(0, Math.sin(this._time * p.speed + p.phase));
+                    if (n <= 0.02) continue;
+                    const charIdx = Math.floor(n * (this.opts.charSet.length - 1));
+                    const x = p.col * this.charW,
+                        y = p.row * this.charH;
+                    const cell = this._setCell(this.opts.charSet[charIdx] || "*", n * this.opts.maxOpacity, n, n > 0.85);
+                    if (this._paintCell(cell, p.col, p.row, x, y, globalGradient)) drawn++;
+                }
+            } else if (mode === "fire") {
+                if (!this._fire) this._initFire();
+                this._advanceFire(dt);
+                const bedRows = Math.max(1, Math.ceil(this.rows * 0.26));
+                const bedStart = this.rows - bedRows;
+                const fireFrame = Math.floor(this._time * 9);
+                for (let row = bedStart; row < this.rows; row++) {
+                    const heat = (row - bedStart + 1) / bedRows;
+                    for (let col = 0; col < this.cols; col++) {
+                        const flicker = this._seed(col + fireFrame, row - fireFrame);
+                        const intensity = heat * (0.34 + flicker * 0.66);
+                        if (intensity < 0.24) continue;
+                        const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+                        const cell = this._setCell(
+                            this.opts.charSet[charIdx] || "·",
+                            intensity * this.opts.maxOpacity,
+                            intensity,
+                            intensity > 0.76,
+                        );
+                        if (this._paintCell(cell, col, row, col * this.charW, row * this.charH, globalGradient)) drawn++;
+                    }
+                }
+                for (let i = 0; i < this._fire.length; i++) {
+                    const p = this._fire[i];
+                    const row = Math.floor(p.y);
+                    const col = Math.max(0, Math.min(this.cols - 1, Math.floor(p.col)));
+                    if (row < 0 || row >= this.rows) continue;
+                    const rise = 1 - row / Math.max(1, this.rows - 1);
+                    const intensity = Math.max(0.08, p.life * (1 - rise * 0.72));
+                    const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+                    const x = p.col * this.charW + Math.sin(this._time * p.drift + p.phase) * this.charW * 1.4;
+                    const cell = this._setCell(this.opts.charSet[charIdx] || "·", intensity * this.opts.maxOpacity, intensity, intensity > 0.72);
+                    if (this._paintCell(cell, col, row, x, row * this.charH, globalGradient)) drawn++;
+                }
+            } else if (mode === "starfield") {
+                if (!this._starfield) this._initStarfield();
+                this._advanceStarfield(dt);
+                for (let i = 0; i < this._starfield.length; i++) {
+                    const p = this._starfield[i];
+                    const x = this._originX + (p.x / p.z) * this.w * 0.42;
+                    const y = this._originY + (p.y / p.z) * this.h * 0.42;
+                    if (x < 0 || x >= this.w || y < 0 || y >= this.h) continue;
+                    const col = Math.max(0, Math.min(this.cols - 1, Math.floor(x / this.charW)));
+                    const row = Math.max(0, Math.min(this.rows - 1, Math.floor(y / this.charH)));
+                    const intensity = Math.max(0.12, Math.min(1, 1 - p.z));
+                    const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+                    const cell = this._setCell(this.opts.charSet[charIdx] || "·", intensity * this.opts.maxOpacity, intensity, intensity > 0.78);
+                    if (this._paintCell(cell, col, row, x, y, globalGradient)) drawn++;
+                }
+            } else if (mode === "orbit") {
+                if (!this._orbit) this._initOrbit();
+                this._advanceOrbit(dt);
+                for (let i = 0; i < this._orbit.length; i++) {
+                    const p = this._orbit[i];
+                    const x = this._originX + Math.cos(p.angle) * p.radius;
+                    const y = this._originY + Math.sin(p.angle) * p.radius * 0.58;
+                    if (x < 0 || x >= this.w || y < 0 || y >= this.h) continue;
+                    const col = Math.max(0, Math.min(this.cols - 1, Math.floor(x / this.charW)));
+                    const row = Math.max(0, Math.min(this.rows - 1, Math.floor(y / this.charH)));
+                    const intensity = 0.45 + Math.sin(p.angle + p.phase) * 0.35;
+                    const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+                    const cell = this._setCell(this.opts.charSet[charIdx] || "·", intensity * this.opts.maxOpacity, intensity, intensity > 0.68);
+                    if (this._paintCell(cell, col, row, x, y, globalGradient)) drawn++;
+                }
+            }
+            return drawn;
+        }
+
+        /**
+         * Applies shared opacity and cursor modifiers, then emits one glyph through
+         * the active backend while minimizing repeated Canvas state changes.
+         */
+        _paintCell(cell, col, row, x, y, globalGradient, baselineY, applyImageSource = true) {
+            if (applyImageSource && this._imageGrid && this.opts.mode !== "image") {
+                cell = this._applyImageSource(cell, col, row);
+            }
+            if (!cell || cell.char === " ") return false;
+            const ctx = this.ctx;
+            let opacity = cell.opacity * this._pulseFactor;
+
+            if (this._edgeFadeCache) {
+                opacity *= this._edgeFadeCache[row * this.cols + col];
+            }
+
+            const cur = this.opts.cursor;
+            if (cur && cur.enabled && this._cursor) {
+                const dx = x - this._cursor.x,
+                    dy = y - this._cursor.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const radius = cur.radius || 140;
+                if (dist < radius) {
+                    const falloff = 1 - dist / radius;
+                    opacity = Math.min(1, opacity + (cur.strength || 0.6) * falloff);
+                }
+            }
+
+            if (opacity <= 0.01) return false;
+
+            const alphaLevels = this.opts.alphaLevels;
+            if (alphaLevels > 1) opacity = Math.round(opacity * alphaLevels) / alphaLevels;
+            if (opacity <= 0) return false;
+
+            if (this._webgl && this._activeWebGLAtlas) {
+                const atlas = this._activeWebGLAtlas;
+                const character = atlas.characterIndex.get(cell.char);
+                if (character === undefined) return false;
+                const variant = (cell.bold ? this._fontRegular.length : 0) + cell.level;
+                const tile = variant * atlas.characters + character;
+                let color = cell.color;
+                if (!color && this.opts.colorFromImage && this._imageGrid) color = this._imageGrid.colors[row * this.cols + col];
+                if (!color) color = this._animatedColor || this.opts.color;
+                const rgba = this._colorToRgba(color);
+                const uvOffset = tile * 4;
+                this._webgl.push(
+                    x - atlas.padding,
+                    (baselineY ?? y + this.charH * 0.78) - atlas.baseline,
+                    atlas.tileWidth,
+                    atlas.tileHeight,
+                    atlas.uv,
+                    uvOffset,
+                    rgba,
+                    opacity,
+                );
+                return true;
+            }
+
+            const atlas = this._activeGlyphAtlas;
+            const character = atlas?.characterIndex.get(cell.char);
+            if (character !== undefined) {
+                if (opacity !== this._lastAlpha) {
+                    ctx.globalAlpha = opacity;
+                    this._lastAlpha = opacity;
+                }
+                const variant = (cell.bold ? this._fontRegular.length : 0) + cell.level;
+                const tile = variant * atlas.characters + character;
+                const destinationY = (baselineY ?? y + this.charH * 0.78) - atlas.baseline;
+                ctx.drawImage(
+                    atlas.canvas,
+                    atlas.sourceX[tile],
+                    atlas.sourceY[tile],
+                    atlas.tileWidth,
+                    atlas.tileHeight,
+                    x - atlas.padding,
+                    destinationY,
+                    atlas.tileWidth,
+                    atlas.tileHeight,
+                );
+                return true;
+            }
+
+            let fillStyle = cell.color;
+            if (!fillStyle && this.opts.colorFromImage && this._imageGrid) {
+                const imgColor = this._imageGrid.colors[row * this.cols + col];
+                if (imgColor) fillStyle = imgColor;
+            }
+            if (!fillStyle) fillStyle = globalGradient || this._animatedColor || this.opts.color;
+
+            if (fillStyle !== this._lastFillStyle) {
+                ctx.fillStyle = fillStyle;
+                this._lastFillStyle = fillStyle;
+            }
+
+            if (opacity !== this._lastAlpha) {
+                ctx.globalAlpha = opacity;
+                this._lastAlpha = opacity;
+            }
+            const font = (cell.bold ? this._fontBold : this._fontRegular)[cell.level];
+            if (font !== this._lastFont) {
+                ctx.font = font;
+                this._lastFont = font;
+            }
+            ctx.fillText(cell.char, x, baselineY ?? y + this.charH * 0.78);
+            return true;
+        }
+
+        _advanceMatrix(dt) {
+            const dtS = Math.min(0.1, dt / 1000);
+            for (let c = 0; c < this._matrix.length; c++) {
+                const d = this._matrix[c];
+                d.y += d.speed * dtS;
+                if (d.y - d.length > this.rows) {
+                    d.y = -Math.random() * 10;
+                    d.speed = 8 + Math.random() * 14;
+                    d.length = 6 + Math.floor(Math.random() * 10);
+                }
+            }
+        }
+        _advanceSnow(dt) {
+            const dtS = Math.min(0.1, dt / 1000);
+            for (let i = 0; i < this._snow.length; i++) {
+                const p = this._snow[i];
+                p.y += p.speed * dtS;
+                if (p.y > this.rows + 1) {
+                    p.y = -1;
+                    p.col = Math.floor(Math.random() * this.cols);
+                    p.speed = 2 + Math.random() * 5;
+                }
+            }
+        }
+        _advanceFire(dt) {
+            const dtS = Math.min(0.1, dt / 1000);
+            for (let i = 0; i < this._fire.length; i++) {
+                const p = this._fire[i];
+                p.y -= p.speed * dtS;
+                p.life -= dtS * 0.22;
+                if (p.y < -1 || p.life <= 0) this._resetFireParticle(p);
+            }
+        }
+        _advanceStarfield(dt) {
+            const dtS = Math.min(0.1, dt / 1000);
+            for (let i = 0; i < this._starfield.length; i++) {
+                const p = this._starfield[i];
+                p.z -= p.speed * dtS;
+                if (p.z <= 0.035) this._resetStar(p);
+            }
+        }
+        _advanceOrbit(dt) {
+            const dtS = Math.min(0.1, dt / 1000);
+            for (let i = 0; i < this._orbit.length; i++) this._orbit[i].angle += this._orbit[i].speed * dtS;
+        }
+
+        _computeCell(col, row, x, y) {
+            const mode = this.opts.mode;
+            if (mode === "custom" && typeof this.opts.customCell === "function") {
+                return this._callCustom(this.opts.customCell, col, row, x, y);
+            }
+            if (asciiam._registry[mode]) {
+                return this._callCustom(asciiam._registry[mode], col, row, x, y);
+            }
+            switch (mode) {
+                case "wave":
+                    return this._waveCell(col, row, x, y);
+                case "current":
+                    return this._currentCell(col, row, x, y);
+                case "ripple":
+                    return this._rippleCell(col, row, x, y);
+                case "vortex":
+                    return this._vortexCell(col, row, x, y);
+                case "plasma":
+                    return this._plasmaCell(col, row, x, y);
+                case "glitch":
+                    return this._glitchCell(col, row, x, y);
+                case "typewriter":
+                    return this._typewriterCell(col, row, x, y);
+                case "fadeIn":
+                    return this._fadeInCell(col, row, x, y);
+                case "fadeOut":
+                    return this._fadeOutCell(col, row, x, y);
+                case "irisIn":
+                    return this._irisCell(col, row, x, y, false);
+                case "irisOut":
+                    return this._irisCell(col, row, x, y, true);
+                case "dissolveIn":
+                    return this._dissolveCell(col, row, false);
+                case "dissolveOut":
+                    return this._dissolveCell(col, row, true);
+                case "lumaFold":
+                    return this._lumaFoldCell(col, row, x, y);
+                case "riftLace":
+                    return this._riftLaceCell(col, row, x, y);
+                case "echoBloom":
+                    return this._echoBloomCell(col, row, x, y);
+                case "hoverZone":
+                    return this._hoverZoneCell(col, row, x, y);
+                case "clickZone":
+                    return this._clickZoneCell(col, row, x, y);
+                case "image":
+                    return this._imageCell(col, row, x, y);
+                default:
+                    return this._waveCell(col, row, x, y);
+            }
+        }
+
+        _callCustom(fn, col, row, x, y) {
+            const api = this._api;
+            api.col = col;
+            api.row = row;
+            api.x = x;
+            api.y = y;
+            api.time = this._time;
+            api.cols = this.cols;
+            api.rows = this.rows;
+            api.w = this.w;
+            api.h = this.h;
+            api.charSet = this.opts.charSet;
+            const result = fn.call(this, api);
+            if (!result) return null;
+            // allow either the pooled-cell pattern (api.set(...)) or a plain object return
+            if (result === this._cell) return result;
+            return this._setCell(result.char, result.opacity, result.intensity || 0, !!result.bold);
+        }
+
+        _setCell(char, opacity, intensity, bold) {
+            const c = this._cell;
+            c.char = char;
+            c.opacity = opacity;
+            c.bold = bold;
+            c.color = null;
+            c.level = Math.max(0, Math.min(this.opts.fontLevels - 1, Math.round(intensity * (this.opts.fontLevels - 1))));
+            return c;
+        }
+
+        _waveCell(col, row, x, y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak, direction, ambient, bandWidth } = this.opts;
+            let coord, extent;
+            if (direction === "vertical") {
+                coord = y;
+                extent = this.h;
+            } else if (direction === "diagonal") {
+                coord = x + y;
+                extent = this.w + this.h;
+            } else {
+                coord = x;
+                extent = this.w;
+            }
+
+            const dist = Math.abs(coord - this._wavePosition);
+            const band = this._waveBand || extent * bandWidth;
+            let intensity = Math.max(0, 1 - dist / band);
+            intensity = intensity * intensity * (3 - 2 * intensity);
+
+            const base = this._seedCache[row * this.cols + col] * ambient;
+            const combined = Math.min(1, base + intensity);
+            const charIdx = Math.floor(combined * (charSet.length - 1));
+            return this._setCell(
+                charSet[charIdx] || " ",
+                minOpacity + (maxOpacity - minOpacity) * combined,
+                intensity,
+                boldOnPeak && intensity > 0.55,
+            );
+        }
+
+        _currentCell(col, row, _x, _y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
+            const index = row * this.cols + col;
+            const v = (this._currentSinX[index] * this._currentTimeCosX + this._currentCosX[index] * this._currentTimeSinX) * 0.5
+                + (this._currentSinY[index] * this._currentTimeCosY + this._currentCosY[index] * this._currentTimeSinY) * 0.3
+                + (this._currentSinXY[index] * this._currentTimeCosXY + this._currentCosXY[index] * this._currentTimeSinXY) * 0.2;
+            const n = (v + 1) / 2;
+            const charIdx = Math.floor(n * (charSet.length - 1));
+            return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * n, n, boldOnPeak && n > 0.72);
+        }
+
+        _rippleCell(col, row, _x, _y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
+            const index = row * this.cols + col;
+            const wave = this._rippleSin[index] * this._rippleTimeCos + this._rippleCos[index] * this._rippleTimeSin;
+            const n = (wave + 1) / 2;
+            const combined = n * this._rippleFalloff[index];
+            const charIdx = Math.floor(combined * (charSet.length - 1));
+            return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * combined, combined, boldOnPeak && combined > 0.6);
+        }
+
+        _vortexCell(col, row, _x, _y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
+            const index = row * this.cols + col;
+            const wave = this._vortexSin[index] * this._vortexTimeCos + this._vortexCos[index] * this._vortexTimeSin;
+            const arm = (wave + 1) * 0.5;
+            const falloff = 0.25 + this._rippleFalloff[index] * 0.75;
+            const combined = Math.min(1, arm * falloff + this._seedCache[index] * 0.08);
+            const charIdx = Math.floor(combined * (charSet.length - 1));
+            return this._setCell(
+                charSet[charIdx] || " ",
+                minOpacity + (maxOpacity - minOpacity) * combined,
+                combined,
+                boldOnPeak && combined > 0.7,
+            );
+        }
+
+        _plasmaCell(col, row, _x, _y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
+            const index = row * this.cols + col;
+            const layerA = this._plasmaSinA[index] * this._plasmaTimeCosA + this._plasmaCosA[index] * this._plasmaTimeSinA;
+            const layerB = this._plasmaSinB[index] * this._plasmaTimeCosB + this._plasmaCosB[index] * this._plasmaTimeSinB;
+            const layerC = this._plasmaSinC[index] * this._plasmaTimeCosC + this._plasmaCosC[index] * this._plasmaTimeSinC;
+            const combined = Math.max(0, Math.min(1, (layerA + layerB + layerC + 3) / 6));
+            const charIdx = Math.floor(combined * (charSet.length - 1));
+            return this._setCell(
+                charSet[charIdx] || " ",
+                minOpacity + (maxOpacity - minOpacity) * combined,
+                combined,
+                boldOnPeak && combined > 0.72,
+            );
+        }
+
+        _glitchCell(col, row, _x, _y) {
+            const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
+            const frame = Math.floor(this._time * 12);
+            const rowSeed = this._seed(row, frame);
+            const scanRow = frame % Math.max(1, this.rows);
+            const scanDistance = Math.abs(row - scanRow);
+            const activeBand = scanDistance <= 1 || rowSeed > 1 - this.opts.glitchIntensity;
+            const displacement = activeBand ? Math.floor((rowSeed - 0.5) * this.cols * 0.18) : 0;
+            const sourceCol = (col + displacement + this.cols) % this.cols;
+            const index = row * this.cols + sourceCol;
+            const noise = this._seedCache[index];
+            const pulse = activeBand ? Math.max(0.35, this._seed(col + frame, row)) : noise * 0.42;
+            const charIdx = Math.floor(pulse * (charSet.length - 1));
+            return this._setCell(
+                charSet[charIdx] || " ",
+                minOpacity + (maxOpacity - minOpacity) * pulse,
+                pulse,
+                boldOnPeak && activeBand && pulse > 0.7,
+            );
+        }
+
+        _typewriterCell(col, row, _x, _y) {
+            const { charSet, maxOpacity } = this.opts;
+            const count = Math.max(1, this.cols * this.rows);
+            const duration = Math.max(0.1, this.opts.typewriterDuration);
+            const cycle = this.opts.loop ? this._time % (duration + 1.2) : Math.min(this._time, duration);
+            const progress = Math.min(1, cycle / duration);
+            const index = row * this.cols + col;
+            const cursorIndex = Math.min(count - 1, Math.floor(progress * count));
+            if (index > cursorIndex) return null;
+            const seed = this._seedCache[index];
+            const charIdx = 1 + Math.floor(seed * Math.max(1, charSet.length - 1));
+            const isCursor = index === cursorIndex && progress < 1;
+            return this._setCell(isCursor ? "_" : charSet[charIdx] || "0", isCursor ? 1 : maxOpacity, isCursor ? 1 : seed, isCursor);
+        }
+
+        _fadeInCell(col, row, _x, _y) {
+            const { charSet, maxOpacity } = this.opts;
+            const totalDuration = 2.2;
+            const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
+            const index = row * this.cols + col;
+            const delay = this._revealProgress(col, row) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
+            const local = Math.max(0, Math.min(1, (cycle - delay) / 0.6));
+            const eased = local * local * (3 - 2 * local);
+            const shimmer = 0.85 + this._seedNextRowCache[index] * 0.15;
+            const charIdx = Math.floor(eased * (charSet.length - 1));
+            return this._setCell(charSet[charIdx] || " ", eased * maxOpacity * shimmer, 0, false);
+        }
+
+        _fadeOutCell(col, row, _x, _y) {
+            const { charSet, maxOpacity } = this.opts;
+            const totalDuration = 2.2;
+            const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
+            const index = row * this.cols + col;
+            const delay = this._revealProgress(col, row) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
+            const local = Math.max(0, Math.min(1, (cycle - delay) / 0.6));
+            const eased = local * local * (3 - 2 * local);
+            const remaining = 1 - eased;
+            const shimmer = 0.85 + this._seedNextRowCache[index] * 0.15;
+            const charIdx = Math.floor(remaining * (charSet.length - 1));
+            return this._setCell(charSet[charIdx] || " ", remaining * maxOpacity * shimmer, 0, false);
+        }
+
+        _revealProgress(col, row = 0) {
+            const position = col / Math.max(1, this.cols - 1);
+            const vertical = row / Math.max(1, this.rows - 1);
+            if (this.opts.revealDirection === "left-to-right") return position;
+            if (this.opts.revealDirection === "right-to-left") return 1 - position;
+            if (this.opts.revealDirection === "top-to-bottom") return vertical;
+            if (this.opts.revealDirection === "bottom-to-top") return 1 - vertical;
+            if (this.opts.revealDirection === "diagonal") return (position + vertical) * 0.5;
+            if (this.opts.revealDirection === "edges") return 1 - Math.min(1, Math.abs(position - 0.5) * 2);
+            return Math.min(1, Math.abs(position - 0.5) * 2);
+        }
+
+        _irisCell(col, row, x, y, reverse) {
+            const duration = 2.2;
+            const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
+            const progress = Math.min(1, cycle / duration);
+            const maxDistance = Math.max(1, Math.hypot(this.w, this.h));
+            const distance = Math.hypot(x - this._originX, y - this._originY) / maxDistance;
+            const feather = 0.14;
+            let visible = Math.max(0, Math.min(1, (progress - distance + feather) / feather));
+            if (reverse) visible = 1 - visible;
+            const index = row * this.cols + col;
+            const intensity = visible * (0.82 + this._seedCache[index] * 0.18);
+            const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.74);
+        }
+
+        _dissolveCell(col, row, reverse) {
+            const duration = 2.1;
+            const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
+            const progress = Math.min(1, cycle / duration);
+            const index = row * this.cols + col;
+            const threshold = this._seedCache[index] * 0.72 + this._revealProgress(col, row) * 0.28;
+            let visible = Math.max(0, Math.min(1, (progress - threshold + 0.12) / 0.12));
+            if (reverse) visible = 1 - visible;
+            const charIdx = Math.floor((0.25 + this._seedNextRowCache[index] * 0.75) * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", visible * this.opts.maxOpacity, visible, visible > 0.82);
+        }
+
+        _lumaFoldCell(col, row, x, y) {
+            const nx = x / Math.max(1, this.w);
+            const ny = y / Math.max(1, this.h);
+            const fold = Math.abs(Math.sin((nx * 3.2 + ny * 1.4) * Math.PI + this._time * 1.7));
+            const ridge = Math.pow(1 - fold, 2.4);
+            const intensity = Math.min(1, 0.12 + fold * 0.42 + ridge * 0.78);
+            const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, ridge > 0.58);
+        }
+
+        _riftLaceCell(col, row, x, y) {
+            const a = Math.sin(x * 0.037 + y * 0.018 + this._time * 2.1);
+            const b = Math.sin(y * 0.052 - x * 0.013 - this._time * 1.45);
+            const seam = Math.pow(Math.max(0, 1 - Math.abs(a - b)), 3);
+            const index = row * this.cols + col;
+            const intensity = Math.min(1, seam * 0.9 + this._seedCache[index] * 0.16);
+            const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, seam > 0.72);
+        }
+
+        _echoBloomCell(col, row, x, y) {
+            const distance = Math.hypot(x - this._originX, y - this._originY) * 0.055;
+            const phase = distance - this._time * 3.1;
+            const echoA = Math.max(0, Math.cos(phase));
+            const echoB = Math.max(0, Math.cos(phase * 0.67 - 2.1)) * 0.62;
+            const echoC = Math.max(0, Math.cos(phase * 0.43 - 4.2)) * 0.38;
+            const intensity = Math.min(1, Math.pow(Math.max(echoA, echoB, echoC), 3));
+            const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, intensity > 0.76);
+        }
+
+        _hoverZoneCell(col, row, x, y) {
+            const index = row * this.cols + col;
+            const origin = this._cursor;
+            if (!origin) {
+                const ambient = this._seedCache[index] * 0.18;
+                const charIdx = Math.floor(ambient * (this.opts.charSet.length - 1));
+                return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity, ambient, false);
+            }
+            const radius = Math.max(1, Number(this.opts.interactionRadius) || 180);
+            const distance = Math.hypot(x - origin.x, y - origin.y);
+            const falloff = Math.max(0, 1 - distance / radius);
+            const eased = falloff * falloff * (3 - 2 * falloff);
+            const ripple = 0.72 + Math.sin(distance * 0.085 - this._time * 4.2) * 0.28;
+            const intensity = Math.max(0, Math.min(1, eased * ripple));
+            const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+            const opacity = this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity);
+            return this._setCell(this.opts.charSet[charIdx] || " ", opacity, intensity, intensity > 0.72);
+        }
+
+        _clickZoneCell(col, row, x, y) {
+            const index = row * this.cols + col;
+            const interaction = this._interaction;
+            if (!interaction) {
+                const ambient = this._seedCache[index] * 0.16;
+                const charIdx = Math.floor(ambient * (this.opts.charSet.length - 1));
+                return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity, ambient, false);
+            }
+            const duration = Math.max(0.05, Number(this.opts.interactionDuration) || 1.1);
+            const progress = Math.max(0, Math.min(1, interaction.elapsed / duration));
+            const radius = Math.max(1, Number(this.opts.interactionRadius) || 180);
+            const distance = Math.hypot(x - interaction.x, y - interaction.y);
+            const ringPosition = progress * radius;
+            const ringWidth = Math.max(this.charW * 2, radius * 0.16);
+            const ring = Math.max(0, 1 - Math.abs(distance - ringPosition) / ringWidth);
+            const centre = Math.max(0, 1 - distance / radius) * (1 - progress);
+            const intensity = Math.max(0, Math.min(1, Math.max(ring, centre) * (1 - progress * 0.25)));
+            const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+            const opacity = this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity);
+            return this._setCell(this.opts.charSet[charIdx] || " ", opacity, intensity, intensity > 0.72);
+        }
+
+        _imageCell(col, row, x, y) {
+            if (!this._imageGrid) return null;
+            const g = this._imageGrid;
+            const i = row * g.cols + col;
+            const char = g.chars[i];
+            if (!char || char === " ") return null;
+
+            let opacity = this.opts.maxOpacity,
+                bold = false,
+                intensity = 0.5;
+
+            const animateCell = !g.animationMask || g.animationMask[i] === 1;
+            if (this.opts.animateImageMask && animateCell) {
+                const maskMode = this.opts.imageMaskMode || "waveSweep";
+                const t = this._time;
+
+                if (maskMode === "fullStatic" || maskMode === "static") {
+                    opacity = this.opts.maxOpacity;
+                    bold = false;
+                    intensity = 0.5;
+                } else if (maskMode === "scanlinePass" || maskMode === "scanline") {
+                    const scanY = ((t * 180) % (this.h + 200)) - 100;
+                    const dist = Math.abs(y - scanY);
+                    const line = Math.max(0, 1 - dist / (this.h * 0.12));
+                    const shimmer = 0.35 + 0.65 * (line * line);
+                    opacity = this.opts.minOpacity + (this.opts.maxOpacity - this.opts.minOpacity) * shimmer;
+                    bold = line > 0.6;
+                    intensity = line;
+                } else if (maskMode === "radialRipple" || maskMode === "ripple") {
+                    const wave = this._imageRippleSin[i] * this._imageRippleTimeCos + this._imageRippleCos[i] * this._imageRippleTimeSin;
+                    const n = (wave + 1) / 2;
+                    opacity = Math.max(this.opts.minOpacity, n * this.opts.maxOpacity);
+                    intensity = n;
+                    bold = n > 0.7;
+                } else if (maskMode === "thermalNoise" || maskMode === "noise") {
+                    const seed = this._seed(col, row + Math.floor(t * 8));
+                    const noise = 0.55 + seed * 0.45;
+                    opacity = this.opts.maxOpacity * noise;
+                    intensity = seed;
+                } else if (maskMode === "halftonePulse" || maskMode === "halftone") {
+                    const pulse = 0.65 + 0.35 * Math.sin(t * 1.6 + (x + y) * 0.02);
+                    opacity = this.opts.maxOpacity * pulse;
+                    intensity = pulse;
+                    bold = pulse > 0.85;
+                } else {
+                    // Default "waveSweep"
+                    const wave = this._waveCell(col, row, x, y);
+                    opacity = Math.max(0.18, wave.opacity);
+                    bold = wave.bold;
+                    intensity = wave.level / (this.opts.fontLevels - 1);
+                }
+            }
+
+            const cell = this._setCell(char, opacity, intensity, bold);
+            cell.color = this.opts.colorFromImage ? g.colors[i] : null;
+            return cell;
+        }
+
+        /**
+         * Overlays sampled glyph and color data without replacing the selected
+         * mode's opacity, timing, or particle geometry.
+         */
+        _applyImageSource(effectCell, col, row) {
+            const grid = this._imageGrid;
+            if (!grid || col < 0 || row < 0 || col >= grid.cols || row >= grid.rows) return null;
+            const index = row * grid.cols + col;
+            const character = grid.chars[index];
+            if (!character || character === " ") return null;
+
+            const animateCell = !grid.animationMask || grid.animationMask[index] === 1;
+            // Global modes always animate the image source. animateImageMask is
+            // retained only for legacy `mode: "image"` mask behavior.
+            const cell = !animateCell
+                ? this._setCell(character, this.opts.maxOpacity, 0.5, false)
+                : effectCell;
+            if (!cell) return null;
+            cell.char = character;
+            cell.color = this.opts.colorFromImage ? grid.colors[index] : null;
+            return cell;
+        }
+
+        // Sparse matrix cell: called only for rows within a column's active trail
+        // range (see _drawSparse), never scanned across the full grid.
+        _matrixCellAt(col, row, d) {
+            const dist = d.y - row;
+            const intensity = Math.max(0, 1 - dist / d.length);
+            const { charSet, maxOpacity } = this.opts;
+            const flicker = this._seed(col, row + Math.floor(this._time * 6));
+            const charIdx = Math.floor(flicker * (charSet.length - 1));
+            const isHead = dist < 1;
+            return this._setCell(charSet[charIdx] || "0", intensity * maxOpacity, intensity, isHead);
+        }
+
+        _updateStats(dt) {
+            this._frames++;
+            this._fpsAccum += dt;
+            if (this._fpsAccum >= 500) {
+                this._fps = Math.round((this._frames * 1000) / this._fpsAccum);
+                this._frames = 0;
+                this._fpsAccum = 0;
+                if (this._statsEl) {
+                    this._statsEl.textContent = `${this._fps} fps · ${this.cols}×${this.rows} cells · ${this._lastDrawnCount} drawn`;
+                }
+            }
+        }
+        /** Selects the text element updated by the optional diagnostics counter. */
+        attachStats(el) {
+            this._statsEl = el;
+        }
+    }
+
+export default asciiam;

@@ -1,22 +1,22 @@
-/assets/images/*
+/webutil/assets/images/*
   Cache-Control: public, max-age=31536000, immutable
 
-/assets/thumbnails/*
+/webutil/assets/thumbnails/*
   Cache-Control: public, max-age=31536000, immutable
 
-/libs/*
+/webutil/libs/*
   Cache-Control: public, max-age=300, must-revalidate
 
-/assets/backgrounds.json
+/webutil/assets/backgrounds.json
   Cache-Control: no-cache
 
-/docs/css/*
+/css/*
   Cache-Control: public, max-age=300, must-revalidate
 
-/docs/js/*
+/js/*
   Cache-Control: public, max-age=300, must-revalidate
 
-/docs/libs/*
+/libs/*
   Cache-Control: public, max-age=300, must-revalidate
 
 /*

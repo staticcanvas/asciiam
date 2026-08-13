@@ -73,7 +73,7 @@ The [Usage examples]({{< relref "/examples" >}}) workbench provides a second aut
 | Named presets | Stored locally in the current browser. |
 | Undo and redo history | Retained for the current page session. |
 | Uploaded images | Browser-local object URLs; not restored on the next visit. |
-| Included image manifest | Generated from `public/assets/images` by `npm run prepare:bg`. |
+| Included image manifest | Generated from `docs/static/webutil/assets/images` by `npm run prepare:bg`. |
 | Generated code | Derived from current state and not stored separately. |
 
 ## Documentation routes

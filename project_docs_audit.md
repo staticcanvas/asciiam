@@ -9,7 +9,7 @@ This audit records the 2026-08-13 review of repository documentation, Hugo docum
 | Repository entry point | `README.md`, `package.json`, `vite.config.js`, CI configuration, root reference files |
 | Public runtime contract | `src/asciiam.js`, `src/asciiam.d.ts`, runtime tests |
 | Documentation content | All files below `docs/content` |
-| Documentation structure | `docs/hugo.toml`, layouts, partials, CSS, JavaScript, generated `public/docs` |
+| Documentation structure | `docs/hugo.toml`, layouts, partials, CSS, JavaScript, generated `public` site |
 | Generation workflow | Documentation, preset-data, asset-manifest, build, and benchmark scripts |
 | Maintainability | Ownership boundaries, generated files, source comments, licensing, verification paths |
 
@@ -52,6 +52,7 @@ The repository had pre-existing uncommitted changes when this audit began. Audit
 | ARC-02 | High | The web utility kept its complete application script inline in `public/index.html`, obscuring source ownership and making focused tests difficult. | Extracted a native-module entry point plus pure sequence-data and code-formatting modules; documented their boundaries in `architecture/web-utility.md`. The docs site already had site-wide, splash, gallery, and examples modules, so its existing split was audited and made explicit instead of mechanically fragmented. |
 | API-06 | High | Sequence steps could change modes and options but could not move between image sources without application callback code. | Added tri-state step images (retain, clear, load), decode-aware timing, stale-load cancellation, error callbacks/events, state reporting, declarations, tests, and consumer documentation. |
 | UI-03 | Medium | The sequence editor presented a vertical form stack and could not express image-source changes. Reset required opening Advanced, while Documentation was reachable only through secondary content. | Reworked the editor as a horizontal node flow with image actions, kept Reset in the primary dock, and aligned direct Documentation, About, and FPS actions at stage level. |
+| ARC-03 | High | Deployment made the web utility the root site and nested the primary documentation under `/docs/`; `public` also mixed authored utility files with generated Hugo output. | Made Hugo documentation the root site, moved the authored application to `docs/static/webutil`, published it at `/webutil/`, made links project-path-safe, and gave Hugo sole ownership of generated `public`. |
 
 ## Navigation result
 
@@ -114,7 +115,7 @@ Future comments should explain at least one of these concerns:
 | --- | --- | --- |
 | P1 | README and API reference retain intentional overlapping tables, so runtime changes can still drift. | Extend tests to compare selected defaults and names against runtime exports when each new public option is added. |
 | P1 | Canvas and WebGL presentation cannot be validated by JSDOM. | Run a current Chrome, Firefox, and Safari visual pass before a public release. |
-| P1 | CI runs tests, lint, and the library build but does not currently build Hugo documentation. | Add a pinned Hugo CI job or a container-capable docs check that fails on stale `public/docs`. |
+| P1 | CI runs tests, lint, and the library build but does not currently build Hugo documentation. | Add a pinned Hugo CI job or a container-capable docs check that fails on stale generated `public` output. |
 | P2 | `pending-tasks copy.md` duplicates a planning document and may confuse future maintainers. | Review both task files and remove or archive the copy in a separate cleanup change. |
 | P2 | `docs/static-sot-template.html` is a large prototype retained for provenance. | Remove it after confirming no design comparisons still depend on it, or move it to a clearly named archive directory. |
 
@@ -124,12 +125,12 @@ Future comments should explain at least one of these concerns:
 | --- | --- | --- |
 | Documentation source inventory | Complete | All README, Hugo content, layout, static, and generated documentation paths reviewed. |
 | Runtime/API inventory | Complete | Public methods, options, events, mode inventory, declarations, and focused guides compared. |
-| Hugo build | Passed | Hugo 0.164.0 reported 19 pages/outputs, including 16 HTML destinations and the JSON search index. |
-| Automated tests | Passed | 5 suites and 80 tests passed, including image-aware sequence timing, node editing, and live search interaction coverage. |
+| Hugo build | Passed | Hugo 0.164.0 reported 20 pages and 67 static files; documentation is rooted at `public/` and the application is present at `public/webutil/`. |
+| Automated tests | Passed | 7 suites and 98 tests passed, including route ownership, image-aware sequence timing, node editing, and live search interaction coverage. |
 | ESLint | Passed | `npm run lint` completed without diagnostics. |
 | Package build | Passed | Vite generated canonical `.mjs`/`.cjs` entries plus readable and minified UMD/ESM browser bundles; both entry formats load successfully. |
 | Local Markdown links | Passed | 23 authored documentation and maintainer Markdown files checked; no missing local targets. |
-| Real-browser visual review | Partial | Firefox headless rendered the 1440×1100 documentation splash and the 1440×1000 web utility with its direct Documentation/About/FPS row and complete primary dock. Chrome and Safari remain release checks. |
+| Real-browser visual review | Partial | Firefox headless loaded the generated root documentation and `/webutil/` application at 1440×1000, including every local script, runtime bundle, image manifest, and brand asset. Chrome and Safari remain release checks. |
 
 ## Audit reference
 

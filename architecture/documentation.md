@@ -1,6 +1,8 @@
 # Documentation architecture
 
-The documentation site is authored in Hugo source, enriched with generated runtime data, and committed as deployable output under `public/docs`.
+The documentation site is authored in Hugo source, enriched with generated runtime data,
+and committed as the deployable root under `public`. The static web utility is authored
+under `docs/static/webutil` and published by the same Hugo build at `/webutil/`.
 
 ## Source and output
 
@@ -8,18 +10,33 @@ The documentation site is authored in Hugo source, enriched with generated runti
 flowchart TD
   Package[package.json] --> Generator[scripts/generate-docs-data.js]
   Runtime[src/asciiam.js] --> Generator
-  Assets[branding and selected public image] --> Generator
+  Assets[branding and selected utility image] --> Generator
   Generator --> Data[docs/data/presets.json]
   Generator --> Static[docs/static copied assets]
   Content[docs/content] --> Hugo
   Layouts[docs/layouts] --> Hugo
   Data --> Hugo
   Examples[docs/data/examples.json] --> Hugo
+  Utility[docs/static/webutil] --> Hugo
   Static --> Hugo
-  Hugo --> Output[public/docs]
+  Hugo --> Output[public root docs and webutil]
 ```
 
-Run `npm run docs:build` to regenerate documentation data and Hugo output. The script uses local Hugo when present and otherwise the pinned Hugo container. `public/docs` is generated; do not repair built HTML directly.
+Run `npm run docs:build` to build the runtime, stage utility bundles, regenerate
+documentation data, and create the Hugo output. The script uses local Hugo when present
+and otherwise the pinned Hugo container. `public` is generated; do not repair its files
+directly.
+
+## Route ownership
+
+| Route | Source | Purpose |
+| --- | --- | --- |
+| `/` and documentation routes | Hugo content, layouts, and documentation static assets | Primary project site and technical reference |
+| `/webutil/` | `docs/static/webutil/` | Interactive configuration application |
+
+Keep cross-surface links relative. Documentation templates use
+`web-utility-url.html`; the utility links one level upward to documentation routes. This
+preserves both root deployments and project-path deployments.
 
 ## Information architecture
 
@@ -83,8 +100,11 @@ The examples page and web utility use version-aligned local bundles. Registry an
 | `docs/static/libs/asciiam.esm.js` | No | `npm run prepare:docs` |
 | `docs/static/branding/asciiam-logo.svg` | No | `npm run prepare:docs` |
 | `docs/static/images/domitian-tunnel-5122424_1920.jpg` | No | `npm run prepare:docs` |
-| `public/docs/**` | No | `npm run docs:build` |
-| `public/docs/index.json` | No | `npm run docs:build` |
+| `docs/static/webutil/index.html` and `docs/static/webutil/js/**` | Yes | Not applicable |
+| `docs/static/webutil/assets/images/**` | Yes | Not applicable |
+| `docs/static/webutil/assets/backgrounds.json` and thumbnails | No | `npm run prepare:bg` |
+| `docs/static/webutil/libs/**` | No | `npm run build` |
+| `public/**` | No | `npm run docs:build` |
 
 ## Content rules
 
@@ -105,6 +125,6 @@ The examples page and web utility use version-aligned local bundles. Registry an
 | Command | Input | Output |
 | --- | --- | --- |
 | `npm run prepare:docs` | package metadata, runtime presets, selected assets | Hugo data and copied static assets |
-| `npm run docs:build` | authored Hugo source plus prepared data | `public/docs` |
+| `npm run docs:build` | runtime and utility source plus authored Hugo source | complete `public` site |
 | `npm run docs:serve` | authored Hugo source plus prepared data | Hugo development server |
-| `npm run site:build` | docs source, runtime source, utility source | deployable `public` tree and package bundles |
+| `npm run site:build` | alias of the complete documentation/site build | deployable `public` tree and package bundles |

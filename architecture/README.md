@@ -15,9 +15,10 @@ flowchart LR
   API --> Types[src/asciiam.d.ts]
   API --> Data[scripts/generate-docs-data.js]
   Data --> Hugo[docs source and generated data]
-  Hugo --> Site[public/docs generated output]
+  Hugo --> Site[public root documentation]
+  Utility[docs/static/webutil authored app] --> Hugo
   API --> Build[Vite package builds]
-  Build --> Dist[dist and public/libs generated output]
+  Build --> Dist[dist and staged webutil/libs output]
 ```
 
 ## Documents
@@ -41,12 +42,13 @@ flowchart LR
 | `tests/` | Runtime, documentation-source, and utility regression checks. | Authored |
 | `docs/content/` | Consumer documentation. | Authored |
 | `docs/layouts/` | Hugo structure and navigation. | Authored |
-| `docs/static/` | Documentation CSS, scripts, and copied runtime assets. | Mixed; see documentation architecture |
-| `public/docs/` | Deployable Hugo output. | Generated and tracked |
-| `dist/` and `public/libs/` | Package and browser bundles. | Generated and tracked in the current repository workflow |
+| `docs/static/` | Documentation assets plus the authored `/webutil/` application. | Mixed; see documentation architecture |
+| `docs/static/webutil/` | Web utility markup, modules, images, and staged runtime bundles. | Mixed; markup/modules/images authored, bundles generated |
+| `public/` | Deployable Hugo output: docs at `/`, utility at `/webutil/`. | Generated and tracked |
+| `dist/` | Package bundles. | Generated and tracked in the current repository workflow |
 | `scripts/` | Data, asset, documentation, and benchmark automation. | Authored |
-| `public/index.html` | Web utility structure and styling. | Authored |
-| `public/js/webutil*.js` | Web utility orchestration and focused browser modules. | Authored |
+| `docs/static/webutil/index.html` | Web utility structure and styling. | Authored |
+| `docs/static/webutil/js/webutil*.js` | Web utility orchestration and focused browser modules. | Authored |
 
 ## Architecture reference
 

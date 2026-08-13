@@ -13,10 +13,11 @@ This document maps common changes to their source files, derived outputs, and re
 | Type contract | `src/asciiam.d.ts` | runtime implementation and API reference |
 | Preset data | `asciiam.presets` | generated Hugo data and gallery output |
 | Documentation navigation | `docs/hugo.toml` | Hugo layouts and generated site |
-| Documentation layout | `docs/layouts` and `docs/static` | `public/docs` generated output |
+| Documentation layout | `docs/layouts` and `docs/static` | `public` generated output |
 | Live example inventory | `docs/data/examples.json` | examples layout, examples script, web-utility config handoff, tests |
 | Attribution inventory | `resources.md` | `THIRD_PARTY_NOTICES.md`, attribution page, README |
-| Image-library manifest | `public/assets/images` | generated manifest and thumbnails |
+| Web utility | `docs/static/webutil/index.html` and `docs/static/webutil/js` | staged bundles, tests, `/webutil/` output |
+| Image-library manifest | `docs/static/webutil/assets/images` | generated manifest and thumbnails |
 
 ## Change paths
 
@@ -50,7 +51,7 @@ This document maps common changes to their source files, derived outputs, and re
 2. Add the page to the Hugo menu when it is a primary guide.
 3. Add the corresponding local Lucide icon mapping if required.
 4. Add the page to documentation tests and README map when it is a primary destination.
-5. Rebuild `public/docs`.
+5. Rebuild `public`.
 
 ### Live usage example
 
@@ -89,7 +90,7 @@ This document maps common changes to their source files, derived outputs, and re
 ## Review checks
 
 - Confirm new comments explain ownership, invalidation, asynchronous races, or performance constraints rather than restating syntax.
-- Confirm no authored change was made only in `public/docs`, `public/libs`, or `dist`.
+- Confirm no authored change was made only in `public` or `dist`.
 - Confirm examples use public API and can run after replacing only documented paths or selectors.
 - Confirm teardown examples call `destroy()` for removed views.
 - Confirm renderer and image claims distinguish required APIs from optional accelerated paths.

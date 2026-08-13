@@ -52,6 +52,10 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
+- [x] 🟠🌟✅1️⃣ **Critical** - **Documentation-first site routes.** Made Hugo documentation the
+      deployment root, moved the authored application to `docs/static/webutil`, published
+      it at `/webutil/`, and aligned build ownership, relative links, tests, README, and
+      maintainer architecture.
 - [x] 🟠🌟✅1️⃣ **Critical** - **Local image library simplification.** Renamed the default asset source to
       `public/assets/images`, added three selectable defaults and an explicit empty
       state, and removed the remote search API, credentials, and tracking layer.

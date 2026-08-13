@@ -5,13 +5,13 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import { JSDOM, VirtualConsole } from 'jsdom';
-import { highlightJavaScript } from '../public/js/webutil-code.js';
-import { normalizeSequenceDraft, serializeSequenceDraft } from '../public/js/webutil-sequence.js';
+import { highlightJavaScript } from '../docs/static/webutil/js/webutil-code.js';
+import { normalizeSequenceDraft, serializeSequenceDraft } from '../docs/static/webutil/js/webutil-sequence.js';
 
 const projectFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-function createDemo(includedImages = [], url = 'https://demo.test/') {
-  const dom = new JSDOM(projectFile('public/index.html'), {
+function createDemo(includedImages = [], url = 'https://demo.test/webutil/') {
+  const dom = new JSDOM(projectFile('docs/static/webutil/index.html'), {
     runScripts: 'outside-only',
     url,
     virtualConsole: new VirtualConsole(),
@@ -49,10 +49,10 @@ function createDemo(includedImages = [], url = 'https://demo.test/') {
     getImageData: () => ({ data: new Uint8ClampedArray(4) }),
   });
   window.fetch = async (resource) =>
-    Response.json(String(resource) === '/assets/backgrounds.json' ? includedImages : []);
-  window.eval(projectFile('public/libs/asciiam.js'));
+    Response.json(String(resource) === './assets/backgrounds.json' ? includedImages : []);
+  window.eval(projectFile('docs/static/webutil/libs/asciiam.js'));
   window.__webutilModules = { highlightJavaScript, normalizeSequenceDraft, serializeSequenceDraft };
-  const utilityScript = projectFile('public/js/webutil.js')
+  const utilityScript = projectFile('docs/static/webutil/js/webutil.js')
     .replace(/import \{ highlightJavaScript \}[^\n]+\n/, 'const { highlightJavaScript } = window.__webutilModules;\n')
     .replace(/import \{ normalizeSequenceDraft, serializeSequenceDraft \}[^\n]+\n/, 'const { normalizeSequenceDraft, serializeSequenceDraft } = window.__webutilModules;\n');
   window.eval(`(() => {\n${utilityScript}\n})();`);
@@ -69,7 +69,7 @@ describe('demo toolbar quality-of-life controls', () => {
   it('loads JSON-safe configurations transferred from documentation examples', () => {
     const options = { mode: 'clickZone', color: '#C04FFF', interactionRadius: 260 };
     const encoded = Buffer.from(JSON.stringify(options), 'utf8').toString('base64url');
-    activeDom = createDemo([], `https://demo.test/?config=${encodeURIComponent(encoded)}`);
+    activeDom = createDemo([], `https://demo.test/webutil/?config=${encodeURIComponent(encoded)}`);
     const { document } = activeDom.window;
 
     expect(document.getElementById('modeToolbarStatus').textContent).toBe('clickZone');
@@ -80,8 +80,8 @@ describe('demo toolbar quality-of-life controls', () => {
 
   it('renders included image manifest entries as selectable defaults', async () => {
     activeDom = createDemo([
-      { name: 'Bird Silhouette', src: '/assets/images/bird-silhouette.svg', thumbnail: '/assets/thumbnails/bird.webp' },
-      { name: 'Hawk Silhouette', src: '/assets/images/hawk-silhouette.svg', thumbnail: '/assets/thumbnails/hawk.webp' },
+      { name: 'Bird Silhouette', src: './assets/images/bird-silhouette.svg', thumbnail: './assets/thumbnails/bird.webp' },
+      { name: 'Hawk Silhouette', src: './assets/images/hawk-silhouette.svg', thumbnail: './assets/thumbnails/hawk.webp' },
     ]);
     await new Promise((resolve) => setImmediate(resolve));
     const { document } = activeDom.window;
@@ -92,13 +92,13 @@ describe('demo toolbar quality-of-life controls', () => {
       '2 included images ready. Select one to apply it.'
     );
     expect([...document.querySelectorAll('#localImages img')].map((image) => image.src)).toEqual([
-      'https://demo.test/assets/thumbnails/bird.webp',
-      'https://demo.test/assets/thumbnails/hawk.webp',
+      'https://demo.test/webutil/assets/thumbnails/bird.webp',
+      'https://demo.test/webutil/assets/thumbnails/hawk.webp',
     ]);
   });
 
   it('does not decode original media when a gallery thumbnail is unavailable', async () => {
-    activeDom = createDemo([{ name: 'Large GIF', src: '/assets/images/large.gif' }]);
+    activeDom = createDemo([{ name: 'Large GIF', src: './assets/images/large.gif' }]);
     await new Promise((resolve) => setImmediate(resolve));
     const { document } = activeDom.window;
 
@@ -550,8 +550,8 @@ describe('demo toolbar quality-of-life controls', () => {
 
   it('edits image changes as ordered sequence nodes', async () => {
     activeDom = createDemo([
-      { name: 'Bird', src: '/assets/images/bird.svg', thumbnail: '/assets/thumbnails/bird.webp' },
-      { name: 'Hawk', src: '/assets/images/hawk.svg', thumbnail: '/assets/thumbnails/hawk.webp' },
+      { name: 'Bird', src: './assets/images/bird.svg', thumbnail: './assets/thumbnails/bird.webp' },
+      { name: 'Hawk', src: './assets/images/hawk.svg', thumbnail: './assets/thumbnails/hawk.webp' },
     ]);
     await new Promise((resolve) => setImmediate(resolve));
     const { document, Event } = activeDom.window;
@@ -563,12 +563,12 @@ describe('demo toolbar quality-of-life controls', () => {
     expect([...sourceSelect.options].map((option) => option.textContent)).toEqual([
       'Retain current image', 'Clear image', 'Bird', 'Hawk'
     ]);
-    sourceSelect.value = '/assets/images/hawk.svg';
+    sourceSelect.value = './assets/images/hawk.svg';
     sourceSelect.dispatchEvent(new Event('change', { bubbles: true }));
 
     expect(node.dataset.source).toBe('image');
     expect(document.getElementById('usageCodePopover').textContent).toContain(
-      '"image": "/assets/images/hawk.svg"'
+      '"image": "./assets/images/hawk.svg"'
     );
 
     sourceSelect.value = '__clear__';
@@ -595,12 +595,12 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(document.querySelector('.about-hero-title').textContent).toBe(
       'Efficient ASCII Background Animator'
     );
-    expect(document.querySelector('#pop-about a[href="./docs/"]')).not.toBeNull();
+    expect(document.querySelector('#pop-about a[href="../"]')).not.toBeNull();
     expect(
-      document.querySelector('#pop-about a[href="./docs/guides/web-utility/"]')
+      document.querySelector('#pop-about a[href="../guides/web-utility/"]')
     ).not.toBeNull();
-    expect(document.querySelector('#pop-about a[href="./docs/gallery/"]')).not.toBeNull();
-    expect(document.querySelector('#pop-about a[href="./docs/api/"]')).not.toBeNull();
+    expect(document.querySelector('#pop-about a[href="../gallery/"]')).not.toBeNull();
+    expect(document.querySelector('#pop-about a[href="../api/"]')).not.toBeNull();
   });
 
   it('opens About with Ctrl or Command+A without overriding editable fields', () => {

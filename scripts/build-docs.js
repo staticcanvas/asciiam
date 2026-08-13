@@ -7,7 +7,7 @@ const hugoArguments = [
   '--source',
   'docs',
   '--destination',
-  '../public/docs',
+  '../public',
   '--cleanDestinationDir',
   '--minify',
 ];
@@ -35,7 +35,7 @@ const containerBuild = spawnSync(
     '--source',
     '/src/docs',
     '--destination',
-    '/src/public/docs',
+    '/src/public',
     '--cleanDestinationDir',
     '--minify',
   ],

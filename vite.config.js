@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import copy from 'rollup-plugin-copy';
 import { resolve } from 'node:path';
-import { cpSync, mkdirSync, readFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import terser from '@rollup/plugin-terser';
 
 const pkg = JSON.parse(readFileSync(resolve('package.json'), 'utf8'));
@@ -11,15 +11,15 @@ const bundleDist = `${packageDist}/dist`;
 
 const banner = `/*! ${packageName} v${pkg.version} | ${pkg.homepage} | ${pkg.license} */`;
 
-function copyPublicLibraries() {
+function stageWebUtilityAssets() {
   return {
-    name: 'copy-public-libraries',
+    name: 'stage-web-utility-assets',
     closeBundle() {
-      const destination = resolve('public/libs');
+      const destination = resolve('docs/static/webutil/libs');
+      rmSync(destination, { recursive: true, force: true });
       mkdirSync(destination, { recursive: true });
       cpSync(resolve(bundleDist), destination, { recursive: true });
-      cpSync(resolve('public/index.html'), resolve(destination, 'index.html'));
-      const brandingDestination = resolve('public/assets/branding');
+      const brandingDestination = resolve('docs/static/webutil/assets/branding');
       mkdirSync(brandingDestination, { recursive: true });
       cpSync(resolve('branding/asciiam-logo.svg'), resolve(brandingDestination, 'asciiam-logo.svg'));
     },
@@ -108,6 +108,6 @@ export default defineConfig({
       ],
       hook: 'writeBundle',
     }),
-    copyPublicLibraries(),
+    stageWebUtilityAssets(),
   ],
 });

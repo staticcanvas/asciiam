@@ -18,11 +18,11 @@ Icons are embedded locally so documentation navigation does not depend on a clie
 
 ## Bundled SVG demonstration asset
 
-`public/assets/images/bird-silhouette.svg` is the [Bird Shape vector from SVG Repo](https://www.svgrepo.com/svg/23736/bird-shape). SVG Repo identifies that asset as CC0. The file remains a demonstration input for silhouette-aware image-to-ASCII conversion.
+`docs/static/webutil/assets/images/bird-silhouette.svg` is the [Bird Shape vector from SVG Repo](https://www.svgrepo.com/svg/23736/bird-shape). SVG Repo identifies that asset as CC0. The file remains a demonstration input for silhouette-aware image-to-ASCII conversion.
 
 ## Map reference
 
-`public/assets/images/earth-landmask-256-slow.gif` uses a globe land-mask source associated with [PAT, the free, open-source portable atlas](https://ian.macky.net/pat/map/globe.html). PAT states that its maps and generating scripts are public domain.
+`docs/static/webutil/assets/images/earth-landmask-256-slow.gif` uses a globe land-mask source associated with [PAT, the free, open-source portable atlas](https://ian.macky.net/pat/map/globe.html). PAT states that its maps and generating scripts are public domain.
 
 ## Demonstration photographs
 
