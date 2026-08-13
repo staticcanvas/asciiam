@@ -20,6 +20,7 @@ const demoDefaults = Object.assign({}, asciiam.presets.heroWave, {
     pulse: null,
     cursor: null,
     showStats: false,
+    extendedStats: false,
     colorAnimation: null,
     image: null,
     imageScale: 1,
@@ -917,6 +918,20 @@ document.getElementById("statsToggle").onchange = (e) => {
     e.target.setAttribute('aria-checked', String(e.target.checked));
     renderUsage();
 };
+document.getElementById("extendedStatsToggle").onchange = (event) => {
+    const enabled = event.target.checked;
+    anim.setOption("extendedStats", enabled);
+    event.target.setAttribute("aria-checked", String(enabled));
+    statsEl.dataset.extended = String(enabled);
+    if (enabled && !anim.opts.showStats) {
+        anim.opts.showStats = true;
+        const statsToggle = document.getElementById("statsToggle");
+        statsToggle.checked = true;
+        statsToggle.setAttribute("aria-checked", "true");
+        statsEl.style.display = "block";
+    }
+    renderUsage();
+};
 
 const colorFromImgEl = document.getElementById("colorFromImageToggle");
 if (colorFromImgEl) {
@@ -1201,6 +1216,10 @@ function syncControlsFromOpts() {
     statsToggle.checked = !!anim.opts.showStats;
     statsToggle.setAttribute("aria-checked", String(statsToggle.checked));
     statsEl.style.display = statsToggle.checked ? "block" : "none";
+    const extendedStatsToggle = document.getElementById("extendedStatsToggle");
+    extendedStatsToggle.checked = !!anim.opts.extendedStats;
+    extendedStatsToggle.setAttribute("aria-checked", String(extendedStatsToggle.checked));
+    statsEl.dataset.extended = String(extendedStatsToggle.checked);
     const backdropToggle = document.getElementById("backdropEnable");
     const backdrop = anim.opts.backdrop && anim.opts.backdrop.enabled ? anim.opts.backdrop : null;
     backdropToggle.checked = !!backdrop;
@@ -1285,6 +1304,7 @@ function usageSource() {
         edgeFade: anim.opts.edgeFade,
         trail: anim.opts.trail,
         showStats: anim.opts.showStats,
+        extendedStats: anim.opts.extendedStats,
         pulse: anim.opts.pulse,
         cursor: anim.opts.cursor,
     };
@@ -1340,7 +1360,7 @@ function usageSource() {
 function getPersistableOptions() {
     const keys = [
         "mode", "quality", "renderer", "charSet", "align", "color", "gradient", "backdrop",
-        "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "colorAnimation",
+        "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "extendedStats", "colorAnimation",
         "interactionRadius", "interactionDuration",
         "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
         "fireDensity", "starfieldDensity", "orbitDensity", "glitchIntensity", "typewriterDuration",

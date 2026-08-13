@@ -461,6 +461,28 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(document.getElementById('imageFrameRateVal').textContent).toBe('18 fps');
   });
 
+  it('keeps compact stats by default and explicitly enables extended diagnostics', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const stats = document.getElementById('stats');
+    const fpsToggle = document.getElementById('statsToggle');
+    const extendedToggle = document.getElementById('extendedStatsToggle');
+
+    expect(fpsToggle.checked).toBe(false);
+    expect(extendedToggle.checked).toBe(false);
+    expect(stats.dataset.extended).toBe('false');
+
+    extendedToggle.checked = true;
+    extendedToggle.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(fpsToggle.checked).toBe(true);
+    expect(fpsToggle.getAttribute('aria-checked')).toBe('true');
+    expect(extendedToggle.getAttribute('aria-checked')).toBe('true');
+    expect(stats.dataset.extended).toBe('true');
+    expect(stats.style.display).toBe('block');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"extendedStats": true');
+  });
+
   it('exposes silhouette-aware SVG luminance mapping', () => {
     activeDom = createDemo();
     const { document, Event } = activeDom.window;

@@ -39,6 +39,11 @@ workspace controls. Reset remains direct because recovery should take one action
 Documentation, About, and FPS are stage-level information actions rather than
 configuration inputs.
 
+FPS preserves the compact default output. Extended diagnostics belongs to Quality because
+it changes measurement detail rather than animation state. Enabling it also enables FPS;
+disabling FPS hides output without creating a second sampling loop. Text sparklines are
+rendered by the runtime at its existing reporting interval rather than by a chart library.
+
 The toolbar uses one tab stop with roving arrow-key focus. Moving controls between
 groups requires updating the structural assertions in `tests/demo-toolbar.test.js`.
 

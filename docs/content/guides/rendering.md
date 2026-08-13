@@ -51,6 +51,34 @@ The `rendererFallback` event reports context-loss fallback. `rendererChange` rep
 
 Higher density values produce fewer cells because they increase cell spacing. `targetFPS: null` does not impose a library frame cap; the browser display and scheduler remain the physical limit.
 
+## Diagnostics
+
+`showStats: true` retains the compact FPS, grid, and drawn-cell line. Add
+`extendedStats: true` to measure and display:
+
+- estimated active display cadence from raw `requestAnimationFrame` intervals;
+- resolved renderer, quality tier, and effective DPR;
+- mean CPU-side asciiam frame work with a 24-sample text sparkline;
+- drawn-cell occupancy with a 24-sample text sparkline;
+- WebGL adapter text when the browser permits `WEBGL_debug_renderer_info`;
+- vertex, primitive, topology, raster style, and model state for active 3D input.
+
+`requestAnimationFrame` generally follows display refresh, but browsers do not expose a
+portable hardware refresh-rate property. The reported Hz value is therefore an estimate
+and is reset after visibility suspension. WebGL adapter strings can be unavailable under
+browser privacy controls. The fill chart reports submitted or drawn ASCII-cell occupancy;
+it is not GPU utilization. CPU utilization and GPU utilization percentages are not
+reported because the required portable browser APIs do not exist.
+
+Extended diagnostics allocate their fixed history lazily and sample `performance.now()`
+only while both statistics flags are active. Output changes at most every 500 ms. They do
+not install a polling timer, `PerformanceObserver`, GPU timer query, or dependency. Run
+`npm run benchmark:stats` after changing this path.
+
+Browser references: [requestAnimationFrame cadence](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame),
+[WEBGL_debug_renderer_info privacy behavior](https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_debug_renderer_info),
+and the limited-availability [WebGL timer-query extension](https://developer.mozilla.org/en-US/docs/Web/API/EXT_disjoint_timer_query).
+
 ## Multiple instances
 
 All running instances share one `requestAnimationFrame` scheduler. Each instance retains independent timing, visibility, renderer, and target state. For galleries or grids, construct only visible previews and destroy off-screen instances after a short delay. Browsers limit the number of simultaneous WebGL contexts.
@@ -79,7 +107,10 @@ extensions will fail with a format diagnostic.
 | `quality` | quality name | `balanced` | Applies tier values. |
 | `maxDPR` | number | tier value | Caps backing-store pixel ratio. |
 | `targetFPS` | number or `null` | `null` | Adds a per-instance frame cap when numeric. |
+| `showStats` | boolean | `false` | Enables the compact attached output. |
+| `extendedStats` | boolean | `false` | Enables opt-in sampling and extended attached output. |
 | `setRenderer(value)` | method | — | Replaces the presentation canvas while retaining instance state. |
 | `getRendererInfo()` | method | — | Returns requested and resolved renderer information. |
+| `getStats()` | method | — | Returns a structured diagnostics snapshot. |
 | `mesh` mode | built in | — | Projects points, wireframes, or solid triangles into ASCII cells. |
 | `setModel(source)` | async method | — | Loads core glTF 2.0 or GLB v2; required compression extensions are rejected. |

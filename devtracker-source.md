@@ -52,12 +52,16 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
+- [x] 🟠🌟✅1️⃣ **Critical** - **Opt-in extended diagnostics.** Preserved compact FPS output
+      by default and added estimated display cadence, renderer and adapter detail, CPU-side
+      frame-work and fill-history text charts, structured snapshots, and retained 3D counts
+      behind `extendedStats`. Fixed-size history and timing are allocated only while active.
 - [x] 🟠🌟✅1️⃣ **Critical** - **Documentation-first site routes.** Made Hugo documentation the
       deployment root, moved the authored application to `docs/static/webutil`, published
       it at `/webutil/`, and aligned build ownership, relative links, tests, README, and
       maintainer architecture.
 - [x] 🟠🌟✅1️⃣ **Critical** - **Local image library simplification.** Renamed the default asset source to
-      `public/assets/images`, added three selectable defaults and an explicit empty
+      `docs/static/webutil/assets/images`, added three selectable defaults and an explicit empty
       state, and removed the remote search API, credentials, and tracking layer.
 - [x] 🟠🌟✅1️⃣ **Critical** - **About access and export guidance.** Moved About into the stage information
       area before the FPS switch, added Ctrl/Cmd+A access outside editable fields,

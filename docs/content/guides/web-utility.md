@@ -40,7 +40,13 @@ Hero and Splash can use an uploaded or included image as the ASCII source. The i
 
 ## Validate performance
 
-Choose `auto` to request WebGL2 first and retain Canvas 2D fallback. Enable the FPS panel to inspect the resolved backend, frame rate, cell count, and quality tier. Test the composition at the actual target size because density, DPR, glyph count, and image sampling work change with dimensions.
+Choose `auto` to request WebGL2 first and retain Canvas 2D fallback. Enable FPS for the
+existing compact frame-rate, grid, and drawn-cell line. Enable Extended diagnostics in
+Quality for estimated display cadence, CPU-side frame work, fill-history text charts,
+renderer details, and active 3D geometry counts. The extended path is off by default and
+automatically enables FPS because it owns no independent update loop. Test the composition
+at the actual target size because density, DPR, glyph count, and image sampling work change
+with dimensions.
 
 For grids and galleries, construct only visible previews and destroy instances that leave the working set. All running instances share a frame scheduler, but each WebGL2 context and glyph buffer still consumes browser resources.
 
@@ -91,6 +97,7 @@ The [Usage examples]({{< relref "/examples" >}}) workbench provides a second aut
 | --- | --- | --- |
 | Renderer | `renderer`, `setRenderer()` | `auto`; WebGL2 first, Canvas 2D fallback. |
 | Quality | `quality`, `maxDPR`, `targetFPS` | Uses the selected quality tier. |
+| Extended diagnostics | `showStats`, `extendedStats`, `getStats()` | Disabled; samples only when explicitly enabled. |
 | Mode | `mode`, `setMode()` | Selects the active cell algorithm. |
 | Motion and Align | `speed`, `edgeFade`, `trail`, `pulse`, `align` | Updates animation and spatial state. |
 | Color and Backdrop | `color`, `gradient`, `backdrop` | Configures glyph and independent backdrop presentation. |

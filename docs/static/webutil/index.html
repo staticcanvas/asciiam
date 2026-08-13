@@ -274,6 +274,14 @@
                 backdrop-filter: blur(12px) saturate(160%);
                 -webkit-backdrop-filter: blur(12px) saturate(160%);
                 border: 1px solid oklch(from var(--clr-primary) l c h / 0.18);
+                white-space: pre;
+                font-variant-numeric: tabular-nums;
+            }
+            .stats[data-extended="true"] {
+                min-inline-size: min(34rem, calc(100vw - 2 * var(--space-md)));
+                max-inline-size: calc(100vw - 2 * var(--space-md));
+                text-align: left;
+                overflow: hidden;
             }
 
             .stage-top-actions {
@@ -2122,7 +2130,7 @@
                     <span class="ui-switch__label">FPS</span>
                 </label>
             </div>
-            <div class="stats" id="stats"></div>
+            <div class="stats" id="stats" data-extended="false" aria-label="Animation performance statistics"></div>
         <div class="ctrl-bar" role="toolbar" aria-label="Animation controls">
 
             <!-- Preset -->
@@ -2205,6 +2213,14 @@
                         <option value="canvas2d">CPU — Canvas 2D</option>
                     </select>
                     <p class="sequence-status" id="rendererStatus" role="status" aria-live="polite">WebGL2 preferred with Canvas 2D fallback.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="extendedStatsToggle">
+                        <input class="ui-switch__control" type="checkbox" id="extendedStatsToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Extended diagnostics</span>
+                    </label>
+                    <p class="sequence-status">Adds estimated display cadence, CPU frame work, batch fill history, renderer details, and active 3D geometry counts. Sampling runs only while FPS and extended diagnostics are enabled.</p>
                 </div>
             </div>
 

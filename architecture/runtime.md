@@ -12,6 +12,17 @@ A container target receives a canvas owned by the instance. An existing canvas r
 
 All running instances belong to `asciiam._activeInstances`. One static `requestAnimationFrame` callback advances the set and reschedules itself while at least one instance remains active. Per-instance frame-rate caps, visibility state, mode time, and statistics remain independent.
 
+Extended diagnostics are an explicit opt-in path. The disabled path retains no history
+buffer and reads no high-resolution timer. The enabled path measures the existing frame,
+stores two fixed 24-value rings, and formats output on the existing 500 ms statistics
+interval. Display cadence is derived from scheduler timestamps before an instance-level
+FPS cap; visibility suspension clears the estimate window. The occupancy chart represents
+drawn cells, not GPU load.
+
+The implementation deliberately excludes WebGL timer queries. Their extension support is
+not portable, asynchronous query lifecycle would add renderer coupling, and GPU elapsed
+time is not equivalent to GPU utilization.
+
 ```mermaid
 sequenceDiagram
   participant Browser
@@ -105,3 +116,4 @@ Morph transitions capture one outgoing frame and draw the incoming live state be
 | Public behavior tables | `docs/content/api/_index.md` | Consumer reference; must match runtime and declarations |
 | Regression behavior | `tests/asciiam.test.js` | Lifecycle, modes, sequencing, renderers, and images |
 | Performance model | `scripts/benchmark-renderer.js` | JavaScript-side renderer benchmark, not browser raster proof |
+| Diagnostics overhead | `scripts/benchmark-stats.js` | Disabled, compact, and extended frame-path comparison under mocked Canvas 2D |

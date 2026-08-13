@@ -86,6 +86,7 @@ This document maps common changes to their source files, derived outputs, and re
 | `npm run docs:build` | Generated data, Hugo templates, links, and output | Documentation or public API changes |
 | `npm run site:build` | Combined deployable site | Release and deployment changes |
 | `npm run benchmark` | JavaScript-side frame cost under mocked canvas | Performance-sensitive renderer changes |
+| `npm run benchmark:stats` | Disabled, compact, and extended diagnostics frame paths | Statistics or diagnostics changes |
 
 ## Review checks
 

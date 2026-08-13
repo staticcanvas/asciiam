@@ -188,6 +188,52 @@ describe("asciiam lifecycle", () => {
         expect(animationFrames.size).toBe(0);
     });
 
+    it("keeps compact stats allocation-free and gates extended diagnostics", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const output = document.createElement("output");
+        const animation = new asciiam(host, {
+            renderer: "canvas2d",
+            showStats: true,
+            respectReducedMotion: false,
+        });
+        animation.attachStats(output);
+        animation._lastDrawnCount = 12;
+        animation._updateStats(0, 0);
+        animation._updateStats(501, 0);
+
+        expect(animation._extendedStats).toBeNull();
+        expect(output.textContent).toMatch(/^\d+ fps · \d+×\d+ cells · 12 drawn$/);
+
+        animation.setOption("extendedStats", true);
+        animation._sampleDisplayRefresh(16.67);
+        animation.setMesh(asciiam.createMeshPrimitive("cube"));
+        animation._updateStats(750, 2);
+        animation._updateStats(1002, 4);
+
+        const stats = animation.getStats();
+        expect(stats).toEqual(expect.objectContaining({
+            estimatedRefreshRate: expect.any(Number),
+            frameWorkMs: 3,
+            cells: animation.cols * animation.rows,
+            drawn: 12,
+            quality: "balanced",
+            mesh: expect.objectContaining({ loaded: true, vertexCount: 8, primitiveCount: 12 }),
+        }));
+        expect(output.textContent).toContain("display ~60 Hz · Canvas 2D");
+        expect(output.textContent).toContain("CPU frame 3.00 ms");
+        expect(output.textContent).toContain("Canvas fill");
+        expect(output.textContent).toContain("3D mesh · 8 vertices · 12 triangles · wireframe");
+        expect(output.textContent).toMatch(/[▁▂▃▄▅▆▇█]/);
+
+        animation.setOption("extendedStats", false);
+        expect(animation._extendedStats).toBeNull();
+        animation.destroy();
+    });
+
     it("exposes complete ASCII presets and rebuilds spatial caches when alignment changes", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {

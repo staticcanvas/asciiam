@@ -18,6 +18,9 @@ This file records external sources and services referenced by asciiam developmen
 | Resource | Maintained use |
 | --- | --- |
 | [WebGL 2 specification](https://registry.khronos.org/webgl/specs/latest/2.0/) | Renderer behavior and compatibility reference. |
+| [requestAnimationFrame](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame) | Display-cadence estimation constraints for opt-in diagnostics. |
+| [WEBGL_debug_renderer_info](https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_debug_renderer_info) | Optional adapter strings and privacy-related unavailability. |
+| [EXT_disjoint_timer_query](https://developer.mozilla.org/en-US/docs/Web/API/EXT_disjoint_timer_query) | Reviewed and excluded from diagnostics because support is limited and elapsed GPU time is not utilization. |
 | [GitLab](https://gitlab.com/) | Primary source host and CI surface. |
 | [GitHub](https://github.com/) | Source mirror and alternate page-edit surface. |
 | [npm](https://www.npmjs.com/) | JavaScript package registry. |
@@ -45,7 +48,7 @@ not bundle third-party models or compression codecs.
 ## Maintenance rules
 
 - Do not treat a provider homepage as an asset license record.
-- Store an exact asset URL and creator identifier when new media enters `public/assets/images`.
+- Store an exact asset URL and creator identifier when new media enters `docs/static/webutil/assets/images`.
 - Record embedded code or icon licenses in `THIRD_PARTY_NOTICES.md`.
 - Record each selected mesh's exact URL, author, license, triangle count, original size,
   optimized size, and repository role before copying it into the project.
@@ -63,5 +66,5 @@ not bundle third-party models or compression codecs.
 | `resources.md` | Maintainer source and service inventory. |
 | `THIRD_PARTY_NOTICES.md` | Redistributed license and public-domain notices. |
 | `docs/content/attributions.md` | Consumer-facing attribution page. |
-| `public/assets/images` | Bundled demonstration inputs whose provenance must remain traceable. |
+| `docs/static/webutil/assets/images` | Bundled demonstration inputs whose provenance must remain traceable. |
 | `architecture/webgl2-3d-feasibility.md` | Proposed 3D-to-ASCII boundary, performance budgets, and asset controls. |

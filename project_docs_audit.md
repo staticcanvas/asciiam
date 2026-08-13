@@ -53,6 +53,7 @@ The repository had pre-existing uncommitted changes when this audit began. Audit
 | API-06 | High | Sequence steps could change modes and options but could not move between image sources without application callback code. | Added tri-state step images (retain, clear, load), decode-aware timing, stale-load cancellation, error callbacks/events, state reporting, declarations, tests, and consumer documentation. |
 | UI-03 | Medium | The sequence editor presented a vertical form stack and could not express image-source changes. Reset required opening Advanced, while Documentation was reachable only through secondary content. | Reworked the editor as a horizontal node flow with image actions, kept Reset in the primary dock, and aligned direct Documentation, About, and FPS actions at stage level. |
 | ARC-03 | High | Deployment made the web utility the root site and nested the primary documentation under `/docs/`; `public` also mixed authored utility files with generated Hugo output. | Made Hugo documentation the root site, moved the authored application to `docs/static/webutil`, published it at `/webutil/`, made links project-path-safe, and gave Hugo sole ownership of generated `public`. |
+| API-07 | Medium | The compact FPS output did not expose cadence, renderer detail, frame-work history, fill history, or retained 3D geometry, while browser APIs cannot truthfully provide portable CPU/GPU utilization. | Added opt-in `extendedStats` and `getStats()` with fixed text sparklines, estimated animation-frame cadence, CPU-side asciiam frame work, drawn-cell occupancy, optional adapter text, and retained mesh/model counts. The compact path remains the default. |
 
 ## Navigation result
 
@@ -129,6 +130,7 @@ Future comments should explain at least one of these concerns:
 | Automated tests | Passed | 7 suites and 98 tests passed, including route ownership, image-aware sequence timing, node editing, and live search interaction coverage. |
 | ESLint | Passed | `npm run lint` completed without diagnostics. |
 | Package build | Passed | Vite generated canonical `.mjs`/`.cjs` entries plus readable and minified UMD/ESM browser bundles; both entry formats load successfully. |
+| Diagnostics benchmark | Passed | At 1280×720 across 3,000 mocked Canvas frames and 11 rounds, disabled measured 0.1097 ms/frame and extended measured 0.1135 ms/frame: 0.0038 ms absolute opt-in overhead. |
 | Local Markdown links | Passed | 23 authored documentation and maintainer Markdown files checked; no missing local targets. |
 | Real-browser visual review | Partial | Firefox headless loaded the generated root documentation and `/webutil/` application at 1440×1000, including every local script, runtime bundle, image manifest, and brand asset. Chrome and Safari remain release checks. |
 

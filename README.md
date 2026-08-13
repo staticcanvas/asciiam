@@ -427,6 +427,7 @@ new asciiam(target, {
   maxDPR: 2, // cap device pixel ratio (set via `quality`, or override directly)
   targetFPS: null, // null = uncapped (vsync); e.g. 30 to throttle
   showStats: false, // pair with anim.attachStats(el) for a live fps/cell readout
+  extendedStats: false, // opt-in cadence, CPU-frame, fill-history, renderer, and 3D details
   respectReducedMotion: true, // honor prefers-reduced-motion: reduce
   onReady: null, // (animation) => {}
   image: null, // URL, for image mode
@@ -738,6 +739,7 @@ anim.clearModel(); // aborts pending model work and releases geometry
 anim.setCursor(x, y); // drives cursor and hover-zone coordinates; pass null to clear
 anim.triggerInteraction(x, y); // starts clickZone; omit coordinates to use align
 anim.attachStats(el); // el.textContent gets "N fps · WxH cells · N drawn" every ~500ms
+anim.getStats(); // structured snapshot; extended measurements are populated only when enabled
 asciiam.isSupported(); // static: feature-detect before constructing
 asciiam.presets; // static: named preset configs
 asciiam.QUALITY; // static: quality tier definitions
@@ -905,6 +907,7 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | `typewriterDuration`                                      | seconds                                    | `4.5`                       | Sets full-grid reveal duration.                                           |
 | `maxDPR` / `targetFPS`                                    | `number` / `number \| null`                | tier values                 | Caps backing resolution and optional frame rate.                          |
 | `showStats`                                               | `boolean`                                  | `false`                     | Updates an attached stats element.                                        |
+| `extendedStats`                                           | `boolean`                                  | `false`                     | Adds opt-in cadence, CPU frame-work, fill-history, renderer, and 3D diagnostics. |
 | `respectReducedMotion`                                    | `boolean`                                  | `true`                      | Draws a static frame when requested by the OS.                            |
 | `onReady` / `onImageError`                                | `function \| null`                         | `null`                      | Handles initial readiness or image failure.                               |
 | `customCell`                                              | `function \| null`                         | `null`                      | Supplies cells for `custom` mode.                                         |
@@ -923,6 +926,7 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | `stopSequence()` / `clearSequence()`                      | method                                     | —                           | Stops playback or removes sequence configuration.                         |
 | `setRenderer(renderer)`                                   | method                                     | —                           | Replaces the presentation backend while retaining instance state.         |
 | `getRendererInfo()`                                       | method                                     | —                           | Reports requested and resolved renderer information.                      |
+| `getStats()`                                              | method                                     | —                           | Returns the current compact and extended diagnostic snapshot.             |
 | `setCursor(x, y)`                                         | method                                     | —                           | Sets or clears cursor-reactive coordinates.                               |
 | `triggerInteraction(x?, y?)`                              | method                                     | aligned origin              | Starts a click-zone pulse.                                                |
 | `attachStats(element)`                                    | method                                     | —                           | Selects the statistics output element.                                    |

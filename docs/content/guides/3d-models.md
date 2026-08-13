@@ -71,8 +71,22 @@ Required extensions are rejected with their names before scene mesh allocation. 
 
 Model loading emits `modelLoadStart`, `modelProgress`, `modelReady`, `modelError`, and `modelClear`. Geometry changes emit `meshReady` and `meshClear`.
 
+When extended diagnostics are enabled, the attached status output adds the current source
+kind, vertex count, primitive count, topology, and raster style. `getStats().mesh` exposes
+the same normalized geometry summary and `getStats().modelLoaded` distinguishes model
+input from directly supplied or procedural mesh input. These values are retained metadata;
+collecting them does not traverse vertex or index buffers per frame.
+
 ## Asset and delivery policy
 
 [Poly Haven](https://polyhaven.com/models) publishes CC0 models. [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) provides format examples, but each model's license must be checked individually. glTF/GLB is the supported import format; no third-party model is bundled with the package. See [Attributions]({{< relref "/attributions" >}}) before adding a demonstration asset.
 
 Run `npm run benchmark:mesh` after changing projection or rasterization code. The development reference scene contains 960 vertices and 1,920 triangles at a 60×45 cell grid; the enforced desktop gate is 4 ms median and 8 ms p95.
+
+## API reference
+
+| Diagnostic | Type | Meaning |
+| --- | --- | --- |
+| `getStats().mesh` | mesh summary | Retained vertex, primitive, topology, style, and projection metadata. |
+| `getStats().modelLoaded` | boolean | Indicates that the active geometry originated from `setModel()`. |
+| Extended 3D line | attached text | Source kind, counts, topology, and raster style; updated at the statistics interval. |

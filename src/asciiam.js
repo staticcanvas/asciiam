@@ -19,6 +19,21 @@ import { loadGltf } from "./gltf.js";
     // given moment (rain, snow, twinkling) — cost scales with active particle
     // count, not grid size.
     const SPARSE_MODES = new Set(["matrix", "snow", "sparkle", "fire", "starfield", "orbit"]);
+    const STATS_HISTORY_LENGTH = 24;
+    const SPARKLINE_LEVELS = "▁▂▃▄▅▆▇█";
+
+    /** Formats a fixed-size numeric ring without retaining DOM or chart objects. */
+    function formatSparkline(values, count, cursor, ceiling) {
+        if (!count || !(ceiling > 0)) return "";
+        let chart = "";
+        const start = count < values.length ? 0 : cursor;
+        for (let offset = 0; offset < count; offset++) {
+            const value = values[(start + offset) % values.length];
+            const level = Math.min(SPARKLINE_LEVELS.length - 1, Math.max(0, Math.round((value / ceiling) * (SPARKLINE_LEVELS.length - 1))));
+            chart += SPARKLINE_LEVELS[level];
+        }
+        return chart;
+    }
 
     /**
      * Private WebGL2 presentation backend.
@@ -272,6 +287,28 @@ import { loadGltf } from "./gltf.js";
             gl.uniform1i(gl.getUniformLocation(this.program, "u_atlas"), 0);
             this._gradientUniforms(this.program, gradient);
             gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
+        }
+
+        /** Reads adapter strings once, only for explicitly enabled diagnostics. */
+        getAdapterInfo() {
+            if (this._adapterInfo) return this._adapterInfo;
+            const gl = this.gl;
+            let vendor = "unavailable";
+            let renderer = "WebGL2";
+            try {
+                const extension = gl.getExtension?.("WEBGL_debug_renderer_info");
+                if (extension) {
+                    vendor = String(gl.getParameter(extension.UNMASKED_VENDOR_WEBGL) || vendor);
+                    renderer = String(gl.getParameter(extension.UNMASKED_RENDERER_WEBGL) || renderer);
+                } else if (typeof gl.getParameter === "function") {
+                    vendor = String(gl.getParameter(gl.VENDOR) || vendor);
+                    renderer = String(gl.getParameter(gl.RENDERER) || renderer);
+                }
+            } catch {
+                // Privacy controls and context loss may reject adapter queries.
+            }
+            this._adapterInfo = { vendor, renderer };
+            return this._adapterInfo;
         }
 
         destroy() {
@@ -547,6 +584,7 @@ import { loadGltf } from "./gltf.js";
                     this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
                 this.getSequenceState = () => ({ configured: false, running: false, completed: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false, loading: false, morphing: false, morphProgress: 0 });
                 this.getRendererInfo = () => ({ requested: "canvas2d", backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
+                this.getStats = () => ({ fps: 0, estimatedRefreshRate: null, frameWorkMs: null, cells: 0, drawn: 0, occupancy: 0, renderer: this.getRendererInfo(), quality: null, dpr: 1, mesh: this.getMeshInfo() });
                 this.on = () => () => {};
                 this.off = () => {};
                 this.setImage = () => Promise.resolve(null);
@@ -624,6 +662,7 @@ import { loadGltf } from "./gltf.js";
                     this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
                 this.getSequenceState = () => ({ configured: false, running: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false });
                 this.getRendererInfo = () => ({ requested: this._rendererRequested, backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
+                this.getStats = () => ({ fps: 0, estimatedRefreshRate: null, frameWorkMs: null, cells: 0, drawn: 0, occupancy: 0, renderer: this.getRendererInfo(), quality: null, dpr: 1, mesh: this.getMeshInfo() });
                 this.on = () => () => {};
                 this.off = () => {};
                 this.setImage = () => Promise.resolve(null);
@@ -672,6 +711,7 @@ import { loadGltf } from "./gltf.js";
                     maxDPR: quality.maxDPR,
                     targetFPS: quality.targetFPS,
                     showStats: false,
+                    extendedStats: false,
                     fontLevels: quality.fontLevels || 6,
                     alphaLevels: quality.alphaLevels || 32,
                     useGlyphAtlas: !!quality.useGlyphAtlas,
@@ -754,9 +794,10 @@ import { loadGltf } from "./gltf.js";
             this._edgeFadeCache = null;
             this._cell = { char: " ", opacity: 0, level: 0, bold: false, color: null };
             this._frames = 0;
-            this._fpsAccum = 0;
             this._fps = 0;
             this._statsEl = null;
+            this._statsWindowStart = null;
+            this._extendedStats = null;
             this._warnedZeroSize = false;
             this._pulseFactor = 1;
             this._animatedColor = null;
@@ -921,10 +962,15 @@ import { loadGltf } from "./gltf.js";
             if (!this._running) return;
             if (document.hidden || !this._visible) {
                 this._lastT = null;
+                this._statsWindowStart = null;
                 return;
             }
-            const dt = this._lastT === null ? 16.7 : t - this._lastT;
+            const hasPreviousFrame = this._lastT !== null;
+            const dt = hasPreviousFrame ? t - this._lastT : 16.7;
             this._lastT = t;
+
+            const measureExtendedStats = !!(this.opts.showStats && this.opts.extendedStats);
+            if (measureExtendedStats && hasPreviousFrame) this._sampleDisplayRefresh(dt);
 
             if (this.opts.targetFPS) {
                 this._acc += dt;
@@ -932,6 +978,10 @@ import { loadGltf } from "./gltf.js";
                 if (this._acc < frameDur) return;
                 this._acc %= frameDur;
             }
+
+            const frameWorkStart = measureExtendedStats && globalThis.performance?.now
+                ? globalThis.performance.now()
+                : null;
 
             this._advanceMorph(dt);
             if (this._sequence?.running) this._advanceSequence(dt);
@@ -948,7 +998,10 @@ import { loadGltf } from "./gltf.js";
             if (this._events.get("frame")?.size) {
                 this._emit("frame", { time: this._time, delta: dt, drawn: this._lastDrawnCount });
             }
-            if (this.opts.showStats) this._updateStats(dt);
+            if (this.opts.showStats) {
+                const frameWorkMs = frameWorkStart === null ? 0 : Math.max(0, globalThis.performance.now() - frameWorkStart);
+                this._updateStats(t, frameWorkMs);
+            }
         }
         /** Subscribe to a lifecycle event. Returns an unsubscribe function. */
         on(event, listener) {
@@ -1007,6 +1060,7 @@ import { loadGltf } from "./gltf.js";
                 return;
             }
             this.opts[key] = value;
+            if (key === "extendedStats" && !value) this._extendedStats = null;
             if (key === "fontSize" || key === "density") {
                 this._buildFontCache();
                 this._resize();
@@ -3757,15 +3811,115 @@ import { loadGltf } from "./gltf.js";
             return this._setCell(charSet[charIdx] || "0", intensity * maxOpacity, intensity, isHead);
         }
 
-        _updateStats(dt) {
+        /** Lazily allocates diagnostic history only while extended output is enabled. */
+        _ensureExtendedStats() {
+            if (!this._extendedStats) {
+                this._extendedStats = {
+                    refreshInterval: 0,
+                    frameWorkAccum: 0,
+                    frameWorkSamples: 0,
+                    frameWorkMs: 0,
+                    frameHistory: new Float32Array(STATS_HISTORY_LENGTH),
+                    occupancyHistory: new Float32Array(STATS_HISTORY_LENGTH),
+                    historyCount: 0,
+                    historyCursor: 0,
+                };
+            }
+            return this._extendedStats;
+        }
+
+        /** Estimates active display cadence from raw animation-frame intervals. */
+        _sampleDisplayRefresh(dt) {
+            if (!(dt >= 4 && dt <= 50)) return;
+            const stats = this._ensureExtendedStats();
+            stats.refreshInterval = stats.refreshInterval
+                ? stats.refreshInterval * 0.9 + dt * 0.1
+                : dt;
+        }
+
+        _pushExtendedStats(occupancy) {
+            const stats = this._ensureExtendedStats();
+            stats.frameWorkMs = stats.frameWorkAccum / stats.frameWorkSamples;
+            stats.frameWorkAccum = 0;
+            stats.frameWorkSamples = 0;
+            stats.frameHistory[stats.historyCursor] = stats.frameWorkMs;
+            stats.occupancyHistory[stats.historyCursor] = occupancy;
+            stats.historyCursor = (stats.historyCursor + 1) % STATS_HISTORY_LENGTH;
+            stats.historyCount = Math.min(STATS_HISTORY_LENGTH, stats.historyCount + 1);
+        }
+
+        /** Returns a read-only diagnostic snapshot without starting any observers. */
+        getStats() {
+            const cells = this.cols * this.rows;
+            const occupancy = cells ? Math.min(1, this._lastDrawnCount / cells) : 0;
+            const stats = this._extendedStats;
+            const renderer = this.getRendererInfo();
+            const adapter = renderer.backend === "webgl2" ? this._webgl?.getAdapterInfo() || null : null;
+            return {
+                fps: this._fps,
+                estimatedRefreshRate: stats?.refreshInterval ? 1000 / stats.refreshInterval : null,
+                frameWorkMs: stats?.frameWorkMs ?? null,
+                cells,
+                drawn: this._lastDrawnCount,
+                occupancy,
+                renderer: { ...renderer, adapter },
+                quality: this.opts.quality,
+                dpr: this._dpr || 1,
+                targetFPS: this.opts.targetFPS,
+                reducedMotion: this._reduced,
+                mesh: this.getMeshInfo(),
+                modelLoaded: !!this.opts.model,
+            };
+        }
+
+        _formatExtendedStats(snapshot) {
+            const stats = this._extendedStats;
+            const refresh = snapshot.estimatedRefreshRate ? `~${Math.round(snapshot.estimatedRefreshRate)} Hz` : "measuring";
+            const frameWork = snapshot.frameWorkMs === null ? "measuring" : `${snapshot.frameWorkMs.toFixed(2)} ms`;
+            const frameCeiling = Math.max(1, 1000 / (snapshot.estimatedRefreshRate || snapshot.targetFPS || 60));
+            const frameChart = formatSparkline(stats.frameHistory, stats.historyCount, stats.historyCursor, frameCeiling);
+            const occupancyChart = formatSparkline(stats.occupancyHistory, stats.historyCount, stats.historyCursor, 1);
+            const backendLabel = snapshot.renderer.backend === "webgl2" ? "WebGL2" : "Canvas 2D";
+            const fillLabel = snapshot.renderer.backend === "webgl2" ? "GPU batch fill" : "Canvas fill";
+            const lines = [
+                `${snapshot.fps} fps · ${this.cols}×${this.rows} cells · ${snapshot.drawn} drawn`,
+                `display ${refresh} · ${backendLabel} · ${snapshot.quality} · DPR ${snapshot.dpr.toFixed(2)}`,
+                `CPU frame ${frameWork}${frameChart ? `  ${frameChart}` : ""}`,
+                `${fillLabel} ${(snapshot.occupancy * 100).toFixed(1)}%${occupancyChart ? `  ${occupancyChart}` : ""}`,
+            ];
+            if (snapshot.renderer.adapter) {
+                const adapter = snapshot.renderer.adapter.renderer.replace(/\s+/g, " ").slice(0, 80);
+                lines.push(`GPU ${adapter}`);
+            }
+            if (snapshot.mesh.loaded) {
+                const source = snapshot.modelLoaded ? "model" : this.opts.meshPrimitive || "mesh";
+                lines.push(`3D ${source} · ${snapshot.mesh.vertexCount} vertices · ${snapshot.mesh.primitiveCount} ${snapshot.mesh.primitive} · ${snapshot.mesh.style}`);
+            }
+            return lines.join("\n");
+        }
+
+        _updateStats(timestamp, frameWorkMs) {
             this._frames++;
-            this._fpsAccum += dt;
-            if (this._fpsAccum >= 500) {
-                this._fps = Math.round((this._frames * 1000) / this._fpsAccum);
+            if (this.opts.extendedStats) {
+                const stats = this._ensureExtendedStats();
+                stats.frameWorkAccum += frameWorkMs;
+                stats.frameWorkSamples++;
+            }
+            if (this._statsWindowStart === null) this._statsWindowStart = timestamp;
+            const elapsed = timestamp - this._statsWindowStart;
+            if (elapsed >= 500) {
+                this._fps = Math.round((this._frames * 1000) / elapsed);
                 this._frames = 0;
-                this._fpsAccum = 0;
+                this._statsWindowStart = timestamp;
                 if (this._statsEl) {
-                    this._statsEl.textContent = `${this._fps} fps · ${this.cols}×${this.rows} cells · ${this._lastDrawnCount} drawn`;
+                    const cells = this.cols * this.rows;
+                    const occupancy = cells ? Math.min(1, this._lastDrawnCount / cells) : 0;
+                    if (this.opts.extendedStats) {
+                        this._pushExtendedStats(occupancy);
+                        this._statsEl.textContent = this._formatExtendedStats(this.getStats());
+                    } else {
+                        this._statsEl.textContent = `${this._fps} fps · ${this.cols}×${this.rows} cells · ${this._lastDrawnCount} drawn`;
+                    }
                 }
             }
         }

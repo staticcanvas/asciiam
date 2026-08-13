@@ -107,6 +107,33 @@ export interface asciiamMeshInfo {
   projection?: 'perspective' | 'orthographic';
 }
 
+export interface asciiamStats {
+  fps: number;
+  /** Estimated from active requestAnimationFrame cadence; not a hardware guarantee. */
+  estimatedRefreshRate: number | null;
+  /** Mean CPU-side asciiam frame work for the latest reporting interval. */
+  frameWorkMs: number | null;
+  cells: number;
+  drawn: number;
+  /** Drawn cells divided by total cells; not GPU utilization. */
+  occupancy: number;
+  renderer: {
+    requested: 'auto' | 'webgl2' | 'canvas2d';
+    backend: 'webgl2' | 'canvas2d';
+    gpuPreferred: boolean;
+    acceleration: 'gpu-api-preferred' | 'browser-managed' | 'not-requested';
+    desynchronized: boolean;
+    willReadFrequently: boolean;
+    adapter: { vendor: string; renderer: string } | null;
+  };
+  quality: 'high' | 'balanced' | 'performance' | 'ultra' | null;
+  dpr: number;
+  targetFPS: number | null;
+  reducedMotion: boolean;
+  mesh: asciiamMeshInfo;
+  modelLoaded: boolean;
+}
+
 export interface asciiamSequenceDetail {
   index: number;
   length: number;
@@ -240,6 +267,8 @@ export interface asciiamOptions {
   maxDPR?: number;
   targetFPS?: number | null;
   showStats?: boolean;
+  /** Enables opt-in diagnostic sampling and text sparklines when showStats is active. */
+  extendedStats?: boolean;
   fontLevels?: number;
   alphaLevels?: number;
   useGlyphAtlas?: boolean;
@@ -333,5 +362,6 @@ export default class asciiam {
   setCursor(x: number | null, y?: number): void;
   /** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */
   triggerInteraction(x?: number, y?: number): void;
+  getStats(): asciiamStats;
   attachStats(element: HTMLElement): void;
 }

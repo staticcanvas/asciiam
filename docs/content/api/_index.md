@@ -117,6 +117,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `useGlyphAtlas` | boolean | quality-tier value | Enables the Canvas 2D solid glyph atlas. |
 | `cacheStaticWave` | boolean | quality-tier value | Enables Ultra's static horizontal wave cache when compatible. |
 | `showStats` | boolean | `false` | Enables attached stats output. |
+| `extendedStats` | boolean | `false` | Adds estimated display cadence, CPU-side frame work, fixed-history fill charts, renderer details, and active mesh counts. |
 | `respectReducedMotion` | boolean | `true` | Draws a static frame when reduced motion is requested. |
 
 ## Color and backdrop options
@@ -209,6 +210,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `setCursor(x, y?)` | `void` | Sets cursor coordinates or clears them when `x` is `null`. |
 | `triggerInteraction(x?, y?)` | `void` | Starts a click-zone pulse; omitted coordinates use the aligned origin. |
 | `attachStats(element)` | `void` | Selects the element that receives FPS and grid output. |
+| `getStats()` | stats snapshot | Returns current FPS, cadence estimate, CPU frame work, cells, fill ratio, renderer, quality, DPR, reduced-motion, and mesh/model state. |
 
 ### Live configuration
 
@@ -230,6 +232,24 @@ Returns the resolved backend: `webgl2` or `canvas2d`. The method replaces the pr
 | `acceleration` | status string | Reports GPU API preference, browser-managed Canvas, or no request. |
 | `desynchronized` | boolean | Resolved or requested low-latency context flag. |
 | `willReadFrequently` | boolean | Readback hint for the presentation context. |
+
+### `getStats()`
+
+Extended timing fields remain `null` until `showStats` and `extendedStats` are active and
+the first reporting interval completes. Calling this method does not start sampling.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `fps` | number | Rendered instance frames per reporting interval. |
+| `estimatedRefreshRate` | number or `null` | Active animation-frame cadence estimate in Hz. |
+| `frameWorkMs` | number or `null` | Mean CPU-side asciiam frame work in milliseconds. |
+| `cells` / `drawn` | number | Total grid cells and cells submitted or drawn in the latest frame. |
+| `occupancy` | number | `drawn / cells`; not CPU or GPU utilization. |
+| `renderer` | object | Backend policy, resolved context flags, and optional adapter strings. |
+| `quality` / `dpr` / `targetFPS` | mixed | Current quality and presentation limits. |
+| `reducedMotion` | boolean | Resolved reduced-motion state. |
+| `mesh` | mesh summary | Retained topology and raster controls. |
+| `modelLoaded` | boolean | Whether active geometry originated from model input. |
 
 ## Sequence objects
 
