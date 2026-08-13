@@ -63,6 +63,14 @@ This contract permits applications to generate geometry directly or adapt output
 
 The prototype is accepted only if the mesh stage stays within a 4 ms median and 8 ms 95th-percentile CPU budget at the balanced grid on a representative desktop, and remains usable at 30 frames per second on a representative mobile device. These are acceptance targets, not claims about the current implementation.
 
+The implemented mesh and dependency-free glTF/GLB modules increased the minified ESM gzip artifact from 24.23 KiB at the pre-feature checkpoint to 33.15 KiB, a combined 8.92 KiB increase. This is below the combined 25 KiB budget. An isolated Rollup/Terser build of `src/gltf.js`, including the imported normalization code, is 4,578 bytes gzip and remains below the loader's 10 KiB ceiling. `npm run benchmark:mesh` remains the repeatable raster gate; real-browser mobile verification is still required before release claims are made.
+
+The dependency-free prototype passed the JavaScript-side desktop gate on 13 August 2026.
+A 960-vertex, 1,920-triangle torus rasterized into a 60×45 cell grid over 1,200 measured
+frames at 0.399 ms median and 0.479 ms 95th percentile on the development machine. This
+measurement excludes browser glyph rasterization and does not replace the required mobile
+or real-browser verification.
+
 ### Phase 1: dependency-free public feature
 
 1. Add `mesh` to the built-in mode inventory.

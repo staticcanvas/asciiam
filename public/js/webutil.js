@@ -46,6 +46,8 @@ const demoDefaults = Object.assign({}, asciiam.presets.heroWave, {
     orbitDensity: 0.014,
     glitchIntensity: 0.32,
     typewriterDuration: 4.5,
+    meshPrimitive: null,
+    meshStyle: "wireframe",
     interactionRadius: 180,
     interactionDuration: 1.1,
     sequence: null,
@@ -130,7 +132,7 @@ const modes = [
     "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
     "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom",
     "matrix", "snow", "sparkle", "fire", "starfield", "glitch", "typewriter", "orbit",
-    "hoverZone", "clickZone",
+    "hoverZone", "clickZone", "mesh",
 ];
 let sequenceImageLibrary = [];
 const modeButtonsEl = document.getElementById("modeButtons");
@@ -1027,6 +1029,48 @@ async function loadLocalImages() {
 
 loadLocalImages();
 
+const modelStatus = document.getElementById("modelStatus");
+const meshPrimitive = document.getElementById("meshPrimitive");
+const meshStyle = document.getElementById("meshStyle");
+function setModelStatus(message, isError = false) {
+    modelStatus.textContent = message;
+    modelStatus.dataset.error = String(isError);
+}
+meshPrimitive.onchange = () => {
+    const name = meshPrimitive.value;
+    if (!name) {
+        anim.opts.meshPrimitive = null;
+        anim.clearModel();
+        setModelStatus("No model loaded.");
+    } else {
+        anim.setOption("meshPrimitive", name);
+        anim.setMode("mesh");
+        setActiveModeButton("mesh");
+        setModelStatus(`${name} primitive active.`);
+    }
+    renderUsage();
+};
+meshStyle.onchange = () => {
+    anim.setOption("meshStyle", meshStyle.value);
+    renderUsage();
+};
+document.getElementById("modelInput").onchange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    meshPrimitive.value = "";
+    anim.opts.meshPrimitive = null;
+    setModelStatus(`Loading ${file.name}…`);
+    try {
+        await anim.setModel(file);
+        anim.setMode("mesh");
+        setActiveModeButton("mesh");
+        setModelStatus(`${file.name} loaded · ${anim.getMeshInfo().vertexCount} vertices.`);
+        renderUsage();
+    } catch (error) {
+        setModelStatus(error instanceof Error ? error.message : "The model could not be loaded.", true);
+    }
+};
+
 document.getElementById("imageInput").onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1118,6 +1162,8 @@ function syncControlsFromOpts() {
     setAlignment(anim.opts.align || "center");
     document.getElementById("quality").value = anim.opts.quality || "ultra";
     document.getElementById("renderer").value = anim.opts.renderer || "auto";
+    meshPrimitive.value = anim.opts.meshPrimitive || "";
+    meshStyle.value = anim.opts.meshStyle || "wireframe";
     const rendererInfo = anim.getRendererInfo();
     document.getElementById("rendererStatus").textContent = rendererInfo.backend === "webgl2"
         ? "WebGL2 GPU renderer active."
@@ -1242,6 +1288,14 @@ function usageSource() {
         pulse: anim.opts.pulse,
         cursor: anim.opts.cursor,
     };
+    if (anim.opts.mode === "mesh" || anim.opts.meshPrimitive) {
+        options.mode = "mesh";
+        options.meshPrimitive = anim.opts.meshPrimitive || "cube";
+        options.meshStyle = anim.opts.meshStyle;
+        options.meshProjection = anim.opts.meshProjection;
+        options.meshAutoRotate = anim.opts.meshAutoRotate;
+        options.meshRotationSpeed = anim.opts.meshRotationSpeed;
+    }
     if (["hoverZone", "clickZone"].includes(anim.opts.mode)) {
         options.interactionRadius = anim.opts.interactionRadius;
         options.interactionDuration = anim.opts.interactionDuration;
@@ -1290,6 +1344,7 @@ function getPersistableOptions() {
         "interactionRadius", "interactionDuration",
         "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
         "fireDensity", "starfieldDensity", "orbitDensity", "glitchIntensity", "typewriterDuration",
+        "meshPrimitive", "meshStyle", "meshProjection", "meshAutoRotate", "meshRotationSpeed",
         "sequence", "sequenceOptions",
     ];
     const options = {};

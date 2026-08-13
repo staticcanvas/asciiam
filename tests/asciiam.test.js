@@ -656,6 +656,102 @@ describe("asciiam lifecycle", () => {
         animation.destroy();
     });
 
+    it("renders procedural meshes through the public Canvas 2D lifecycle", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const context = makeContext();
+        HTMLCanvasElement.prototype.getContext.mockReturnValue(context);
+        const animation = new asciiam(host, {
+            renderer: "canvas2d",
+            mode: "mesh",
+            charSet: " .:-=+*#%@",
+            meshStyle: "solid",
+            respectReducedMotion: false,
+        });
+        const onReady = jest.fn();
+        const onClear = jest.fn();
+        animation.on("meshReady", onReady);
+        animation.on("meshClear", onClear);
+        const cube = asciiam.createMeshPrimitive("cube");
+        expect(animation.setMesh(cube)).toBe(animation);
+        expect(animation.getMeshInfo()).toEqual(expect.objectContaining({
+            loaded: true,
+            vertexCount: 8,
+            primitiveCount: 12,
+            primitive: "triangles",
+            style: "solid",
+        }));
+        animation._draw(16.7);
+        expect(animation._lastDrawnCount).toBeGreaterThan(0);
+        expect(context.fillText).toHaveBeenCalled();
+        expect(onReady).toHaveBeenCalledWith(expect.objectContaining({ loaded: true }), animation);
+        expect(animation.clearMesh()).toBe(animation);
+        expect(animation.getMeshInfo().loaded).toBe(false);
+        expect(onClear).toHaveBeenCalledWith(expect.objectContaining({ loaded: false }), animation);
+        animation.destroy();
+    });
+
+    it("batches mesh glyphs through WebGL2 and retains mesh state on renderer switch", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const gl = makeWebGL2();
+        HTMLCanvasElement.prototype.getContext.mockImplementation((type) => type === "webgl2" ? gl : makeContext());
+        const animation = new asciiam(host, {
+            renderer: "webgl2",
+            mode: "mesh",
+            mesh: asciiam.createMeshPrimitive("torus", { majorSegments: 12, minorSegments: 8 }),
+            meshStyle: "wireframe",
+            respectReducedMotion: false,
+        });
+        animation._draw(16.7);
+        expect(animation._lastDrawnCount).toBeGreaterThan(0);
+        expect(gl.drawArraysInstanced).toHaveBeenCalledWith(gl.TRIANGLE_STRIP, 0, 4, expect.any(Number));
+        animation.setRenderer("canvas2d");
+        expect(animation.getMeshInfo()).toEqual(expect.objectContaining({ loaded: true, vertexCount: 96 }));
+        animation.destroy();
+    });
+
+    it("loads a core glTF document through the public model lifecycle", async () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+        let binary = "";
+        for (const byte of new Uint8Array(positions.buffer)) binary += String.fromCharCode(byte);
+        const modelDocument = {
+            asset: { version: "2.0" },
+            buffers: [{ byteLength: positions.byteLength, uri: `data:application/octet-stream;base64,${btoa(binary)}` }],
+            bufferViews: [{ buffer: 0, byteLength: positions.byteLength }],
+            accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }],
+            meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+            nodes: [{ mesh: 0 }],
+            scenes: [{ nodes: [0] }],
+        };
+        const animation = new asciiam(host, { renderer: "canvas2d", mode: "mesh", respectReducedMotion: false });
+        const onStart = jest.fn();
+        const onReady = jest.fn();
+        animation.on("modelLoadStart", onStart);
+        animation.on("modelReady", onReady);
+
+        const mesh = await animation.setModel(modelDocument);
+
+        expect(mesh).toEqual(expect.objectContaining({ vertexCount: 3, primitiveCount: 1 }));
+        expect(animation.getMeshInfo().loaded).toBe(true);
+        expect(onStart).toHaveBeenCalledWith({ source: modelDocument }, animation);
+        expect(onReady).toHaveBeenCalledWith(expect.objectContaining({ loaded: true, vertexCount: 3 }), animation);
+        expect(animation.clearModel()).toBe(animation);
+        expect(animation.getMeshInfo().loaded).toBe(false);
+        animation.destroy();
+    });
+
     it("switches renderers live and falls back after WebGL context loss", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {

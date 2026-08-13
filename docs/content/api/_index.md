@@ -18,6 +18,7 @@ The package exports the `asciiam` class as its default export and provides TypeS
 | Prefer GPU with a safe fallback | `renderer: 'auto'` | `getRendererInfo()`, `rendererFallback` |
 | Play an ordered animation story | `setSequence(steps, options)` | sequence events and callbacks |
 | Turn an image into animated ASCII | `setImage(source)` | image mask and RGB range options |
+| Render geometry or a model | `meshPrimitive`, `setMesh()`, or `setModel()` | mesh controls and model events |
 | Own application cleanup | instance lifecycle | `stop()` or `destroy()` |
 
 All durations are expressed in seconds, dimensions and font sizes use CSS pixels unless noted, and normalized coordinates use the inclusive `0`–`1` range. Mutating methods apply to the live instance; sequence methods return the instance for chaining.
@@ -59,6 +60,8 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `asciiam.presets` | record | Included option objects keyed by preset name. |
 | `asciiam.isSupported()` | method | Returns whether WebGL2 or Canvas 2D context creation succeeds. |
 | `asciiam.registerMode(name, fn)` | method | Registers a named custom cell callback. |
+| `asciiam.createMeshPrimitive(name, options?)` | method | Creates a cube, plane, icosphere, or torus `MeshData`. |
+| `asciiam.loadModel(source, options?)` | async method | Decodes glTF 2.0 or GLB v2 without constructing a renderer. |
 
 ## Core options
 
@@ -82,6 +85,23 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `boldOnPeak` | boolean | `true` | Uses bold font variants for high-intensity cells. |
 | `loop` | boolean | `true` | Loops mode-local reveal timelines. |
 | `edgeFade` | number | `0` | Applies cached edge attenuation. |
+
+## Mesh and model options
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `meshPrimitive` | `cube \| plane \| icosphere \| torus \| null` | `null` | Creates dependency-free geometry during construction. |
+| `meshStyle` | `points \| wireframe \| solid` | `wireframe` | Selects cell rasterization. |
+| `meshProjection` | `perspective \| orthographic` | `perspective` | Selects projection. |
+| `meshCamera` | camera object or `null` | `null` | Overrides position, target, up, FOV, clipping, and orthographic scale. |
+| `meshTransform` | transform object or `null` | `null` | Sets position, Euler rotation, and scale. |
+| `meshLight` | light object or `null` | `null` | Sets directional-light direction, ambient, and intensity. |
+| `meshAutoRotate` | boolean | `true` | Applies elapsed-time rotation. |
+| `meshRotationSpeed` | three-number array | `[0.2, 0.45, 0.1]` | Sets radians per second on X, Y, and Z. |
+| `meshMaxVertices` | positive integer | `100000` | Rejects larger normalized geometry. |
+| `meshMaxPrimitives` | positive integer | `100000` | Rejects larger normalized geometry. |
+
+`setMesh(mesh)`, `clearMesh()`, and `getMeshInfo()` manage typed-array geometry. `setModel(source, options?)` and `clearModel()` manage abortable glTF/GLB loading. Model sources may be URLs, blobs, byte buffers, or parsed glTF objects. See [3D meshes and models]({{< relref "/guides/3d-models" >}}) for supported format features and explicit exclusions.
 
 ## Renderer and performance options
 
@@ -181,6 +201,11 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `setTarget(target)` | `void` | Moves the presentation canvas and target bindings. |
 | `setImage(source, options?)` | `Promise<HTMLImageElement \| null>` | Decodes an image; supported browsers capture every GIF frame and its delay. |
 | `clearImage()` | instance | Cancels pending image work and clears sampled image state without changing the active mode. |
+| `setMesh(mesh)` | instance | Validates and retains typed-array point, line, or triangle geometry. |
+| `clearMesh()` | instance | Releases retained geometry and raster buffers. |
+| `getMeshInfo()` | mesh summary | Reports loaded topology and current raster controls. |
+| `setModel(source, options?)` | `Promise<MeshData \| null>` | Loads abortable glTF 2.0 or GLB v2 input and retains its normalized mesh. |
+| `clearModel()` | instance | Cancels model loading and releases model geometry. |
 | `setCursor(x, y?)` | `void` | Sets cursor coordinates or clears them when `x` is `null`. |
 | `triggerInteraction(x?, y?)` | `void` | Starts a click-zone pulse; omitted coordinates use the aligned origin. |
 | `attachStats(element)` | `void` | Selects the element that receives FPS and grid output. |
@@ -291,6 +316,9 @@ Keep the returned unsubscribe function when a listener belongs to a component li
 | `rendererChange` | Requested or resolved renderer changes. |
 | `rendererFallback` | WebGL context loss switches presentation to Canvas 2D. |
 | `imageFramesReady` | Exact GIF capture completes; detail includes `frameCount` and total `duration` in seconds. |
+| `meshReady`, `meshClear` | Retained geometry is installed or released. |
+| `modelLoadStart`, `modelProgress` | Model loading starts or reports transferred bytes. |
+| `modelReady`, `modelError`, `modelClear` | Model normalization succeeds, fails, or is cleared. |
 | `sequenceStart`, `sequenceResume` | Sequence playback starts or resumes. |
 | `sequencePause`, `sequenceStop` | Playback pauses or stops. |
 | `sequenceLoop`, `sequenceComplete` | Sequence loops or finishes. |

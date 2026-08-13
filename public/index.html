@@ -2635,6 +2635,27 @@
             </button>
             <div class="ctrl-popover ctrl-popover--wide" id="pop-image" popover>
                 <div class="cpop-group">
+                    <span class="cpop-label">3D mesh source</span>
+                    <label class="cpop-label" for="meshPrimitive">Procedural primitive</label>
+                    <select id="meshPrimitive">
+                        <option value="">None</option>
+                        <option value="cube">Cube</option>
+                        <option value="plane">Plane</option>
+                        <option value="icosphere">Icosphere</option>
+                        <option value="torus">Torus</option>
+                    </select>
+                    <label class="cpop-label" for="modelInput" style="margin-block-start:var(--space-xs)">Upload glTF 2.0 or GLB v2</label>
+                    <input type="file" id="modelInput" accept=".gltf,.glb,model/gltf+json,model/gltf-binary" />
+                    <label class="cpop-label" for="meshStyle" style="margin-block-start:var(--space-xs)">Raster style</label>
+                    <select id="meshStyle">
+                        <option value="points">Points</option>
+                        <option value="wireframe" selected>Wireframe</option>
+                        <option value="solid">Solid</option>
+                    </select>
+                    <p class="image-status" id="modelStatus" role="status" aria-live="polite">No model loaded.</p>
+                    <p class="image-library-help">GLB is self-contained. Local glTF files work when their buffers are embedded; external sibling files cannot be resolved from a browser file picker.</p>
+                </div>
+                <div class="cpop-group">
                     <label class="cpop-label" for="imageInput">Upload image</label>
                     <input type="file" id="imageInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/avif" />
                 </div>

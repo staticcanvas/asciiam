@@ -38,6 +38,8 @@ await Promise.all([
     writeFile(new URL("presets.json", docsData), `${JSON.stringify({ version: packageMetadata.version, builtInModeCount: asciiam.BUILT_IN_MODES.length, presets }, null, 2)}\n`),
     cp(new URL("../src/asciiam.js", import.meta.url), new URL("asciiam.esm.js", docsLibrary)),
     cp(new URL("../src/asciiam.js", import.meta.url), new URL("asciiam.mjs", docsLibrary)),
+    cp(new URL("../src/mesh.js", import.meta.url), new URL("mesh.js", docsLibrary)),
+    cp(new URL("../src/gltf.js", import.meta.url), new URL("gltf.js", docsLibrary)),
     cp(new URL("../public/assets/branding/asciiam-logo.svg", import.meta.url), new URL("asciiam-logo.svg", docsBranding)),
     cp(new URL("../public/assets/images/domitian-tunnel-5122424_1920.jpg", import.meta.url), new URL("domitian-tunnel-5122424_1920.jpg", docsImages)),
 ]);

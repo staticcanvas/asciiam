@@ -1,0 +1,78 @@
+---
+title: 3D meshes and models
+description: Render typed-array meshes, procedural primitives, and dependency-free glTF 2.0 or GLB v2 files as ASCII.
+weight: 45
+date: 2026-08-13
+lastmod: 2026-08-13
+tags: [3D, mesh, glTF, GLB, WebGL2, Canvas 2D, models]
+keywords: [3D ASCII renderer, glTF loader, GLB loader, procedural mesh, wireframe ASCII, dependency free glTF]
+---
+
+The `mesh` mode projects geometry into a cell-resolution depth and luminance buffer. The normal asciiam glyph pipeline then presents those cells through WebGL2 or Canvas 2D. It is a bounded ASCII source, not a general scene engine: materials, textures, animation clips, skins, cameras, and lights from glTF are not rendered.
+
+## Procedural geometry
+
+```js
+const animation = new asciiam('#target', {
+  mode: 'mesh',
+  meshPrimitive: 'torus',
+  meshStyle: 'wireframe',
+  meshAutoRotate: true
+});
+animation.start();
+```
+
+`cube`, `plane`, `icosphere`, and `torus` are generated at construction time without bundled model assets. For explicit control, call `asciiam.createMeshPrimitive(name, options)` and pass the result to `setMesh()`.
+
+## Application geometry
+
+```js
+animation.setMesh({
+  positions: new Float32Array([
+    0, 1, 0,
+    -1, -1, 0,
+    1, -1, 0
+  ]),
+  indices: new Uint16Array([0, 1, 2]),
+  primitive: 'triangles'
+});
+animation.setMode('mesh');
+```
+
+Positions are XYZ triples. Optional normals must be a matching `Float32Array`; optional colours contain one RGBA `Float32` tuple per vertex. Indices may be unsigned 8-, 16-, or 32-bit arrays. Invalid lengths, non-finite positions, out-of-range indices, incomplete primitives, and configured complexity-limit violations are rejected before rendering.
+
+## glTF and GLB
+
+```js
+await animation.setModel('/models/product.glb', {
+  onProgress({ loaded, total }) {
+    console.log(total ? loaded / total : loaded);
+  }
+});
+animation.setMode('mesh');
+```
+
+`setModel()` accepts a URL, `Blob`, `ArrayBuffer`, typed-array view, or parsed glTF object. It supports glTF 2.0 JSON, GLB v2, data URIs, relative external buffers, interleaved accessors, sparse accessors, node hierarchies and transforms, vertex normals and colours, scene selection, and all core point/line/triangle primitive modes. A new load cancels the previous load. `clearModel()` cancels pending work and releases the retained geometry.
+
+Required extensions are rejected with their names before scene mesh allocation. In particular, Draco and Meshopt decoders are not bundled, downloaded, or injectable. This keeps model behavior deterministic and the runtime dependency-free.
+
+## Controls and events
+
+| API | Default | Purpose |
+| --- | --- | --- |
+| `meshStyle` | `wireframe` | `points`, `wireframe`, or `solid` cell rasterization. |
+| `meshProjection` | `perspective` | Perspective or orthographic projection. |
+| `meshCamera` | internal camera | Position, target, up vector, field of view, clipping planes, and orthographic scale. |
+| `meshTransform` | identity | Position, Euler rotation in radians, and scale. |
+| `meshLight` | one directional light | Direction, ambient contribution, and intensity. |
+| `meshAutoRotate` | `true` | Applies `meshRotationSpeed` against elapsed time. |
+| `meshMaxVertices` | `100000` | Rejects larger normalized geometry. |
+| `meshMaxPrimitives` | `100000` | Rejects larger point, line, or triangle counts. |
+
+Model loading emits `modelLoadStart`, `modelProgress`, `modelReady`, `modelError`, and `modelClear`. Geometry changes emit `meshReady` and `meshClear`.
+
+## Asset and delivery policy
+
+[Poly Haven](https://polyhaven.com/models) publishes CC0 models. [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) provides format examples, but each model's license must be checked individually. glTF/GLB is the supported import format; no third-party model is bundled with the package. See [Attributions]({{< relref "/attributions" >}}) before adding a demonstration asset.
+
+Run `npm run benchmark:mesh` after changing projection or rasterization code. The development reference scene contains 960 vertices and 1,920 triangles at a 60×45 cell grid; the enforced desktop gate is 4 ms median and 8 ms p95.

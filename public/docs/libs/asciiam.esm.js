@@ -2,6 +2,16 @@
  * asciiam — dependency-free canvas engine for animated ASCII backgrounds.
  */
 
+import {
+    createCubeMesh,
+    createIcosphereMesh,
+    createPlaneMesh,
+    createTorusMesh,
+    MeshCellRasterizer,
+    normalizeMeshData,
+} from "./mesh.js";
+import { loadGltf } from "./gltf.js";
+
 "use strict";
 
     // Modes rendered via their own particle/column list instead of a full
@@ -292,6 +302,7 @@
             "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace",
             "echoBloom", "matrix", "snow", "sparkle", "fire", "starfield", "glitch",
             "typewriter", "orbit", "hoverZone", "clickZone", "image", "custom",
+            "mesh",
         ]);
 
         static CHARACTER_SETS = {
@@ -494,6 +505,20 @@
             asciiam._registry[name] = fn;
         }
 
+        /** Create dependency-free geometry suitable for setMesh(). */
+        static createMeshPrimitive(name, options) {
+            if (name === "cube") return createCubeMesh(options?.size);
+            if (name === "plane") return createPlaneMesh(options);
+            if (name === "icosphere") return createIcosphereMesh(options);
+            if (name === "torus") return createTorusMesh(options);
+            throw new TypeError(`asciiam: unknown mesh primitive "${name}"`);
+        }
+
+        /** Decode a glTF 2.0 or GLB v2 source without constructing a renderer. */
+        static loadModel(source, options) {
+            return loadGltf(source, options);
+        }
+
         /** Feature-detect before constructing, for graceful fallback in older browsers. */
         static isSupported() {
             try {
@@ -517,7 +542,7 @@
             if (!asciiam.isSupported()) {
                 console.warn("asciiam: canvas 2D not supported in this browser — instance is a no-op.");
                 this._disabled = true;
-                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.clearImage =
+                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.clearImage = this.setMesh = this.clearMesh = this.clearModel =
                     this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
                     this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
                 this.getSequenceState = () => ({ configured: false, running: false, completed: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false, loading: false, morphing: false, morphProgress: 0 });
@@ -525,6 +550,8 @@
                 this.on = () => () => {};
                 this.off = () => {};
                 this.setImage = () => Promise.resolve(null);
+                this.setModel = () => Promise.resolve(null);
+                this.getMeshInfo = () => ({ loaded: false, vertexCount: 0, primitiveCount: 0, primitive: null });
                 return;
             }
 
@@ -592,7 +619,7 @@
             if (!this.ctx) {
                 console.warn("asciiam: failed to acquire 2D context — instance is a no-op.");
                 this._disabled = true;
-                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction =
+                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.setMesh = this.clearMesh = this.clearModel =
                     this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
                     this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
                 this.getSequenceState = () => ({ configured: false, running: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false });
@@ -600,6 +627,8 @@
                 this.on = () => () => {};
                 this.off = () => {};
                 this.setImage = () => Promise.resolve(null);
+                this.setModel = () => Promise.resolve(null);
+                this.getMeshInfo = () => ({ loaded: false, vertexCount: 0, primitiveCount: 0, primitive: null });
                 return;
             }
 
@@ -654,6 +683,7 @@
                     respectReducedMotion: true,
                     onReady: null,
                     onImageError: null,
+                    onModelError: null,
                     sequence: null,
                     sequenceOptions: null,
 
@@ -682,6 +712,20 @@
                     // --- dense mode timing / strength ---
                     glitchIntensity: 0.32,
                     typewriterDuration: 4.5,
+
+                    // --- dependency-free 3D-to-ASCII source ---
+                    mesh: null,
+                    meshPrimitive: null,
+                    meshStyle: "wireframe",
+                    meshProjection: "perspective",
+                    meshCamera: null,
+                    meshTransform: null,
+                    meshLight: null,
+                    meshAutoRotate: true,
+                    meshRotationSpeed: [0.2, 0.45, 0.1],
+                    meshMaxVertices: 100000,
+                    meshMaxPrimitives: 100000,
+                    model: null,
 
                     // --- extensibility ---
                     customCell: null, // (api) => ({char,opacity,intensity,bold,color}) | null
@@ -736,6 +780,22 @@
             this._imageSampleContext = null;
             this._loadedImageSource = null;
             this._loadedImageOptionsKey = null;
+            this._mesh = null;
+            this._meshRasterizer = null;
+            this._meshBaseRotation = new Float64Array(3);
+            this._meshRotation = new Float64Array(3);
+            this._meshPosition = new Float64Array(3);
+            this._meshScale = new Float64Array([1, 1, 1]);
+            this._meshRasterOptions = {
+                style: this.opts.meshStyle,
+                projection: this.opts.meshProjection,
+                camera: this.opts.meshCamera,
+                transform: { position: this._meshPosition, rotation: this._meshRotation, scale: this._meshScale },
+                light: this.opts.meshLight,
+            };
+            this._modelLoadToken = 0;
+            this._modelAbortController = null;
+            this._loadedModelSource = null;
             this._api = {
                 col: 0,
                 row: 0,
@@ -777,6 +837,13 @@
             }
 
             if (this.opts.image) this.setImage(this.opts.image);
+            if (this.opts.mesh) this.setMesh(this.opts.mesh);
+            else if (this.opts.meshPrimitive) {
+                const primitiveName = this.opts.meshPrimitive;
+                this.setMesh(asciiam.createMeshPrimitive(primitiveName));
+                this.opts.meshPrimitive = primitiveName;
+            }
+            if (this.opts.model) this.setModel(this.opts.model).catch(() => {});
             if (Array.isArray(this.opts.sequence) && this.opts.sequence.length) {
                 const sequenceOptions = this.opts.sequenceOptions || {};
                 this.setSequence(this.opts.sequence, sequenceOptions);
@@ -839,6 +906,12 @@
             this._imageRecaptureTimer = null;
             this._imageSampleCanvas = null;
             this._imageSampleContext = null;
+            this._mesh = null;
+            this._meshRasterizer = null;
+            this._modelLoadToken++;
+            this._modelAbortController?.abort();
+            this._modelAbortController = null;
+            this._loadedModelSource = null;
             if (this.canvas.parentElement) this.canvas.parentElement.removeChild(this.canvas);
             this._events.clear();
         }
@@ -994,6 +1067,27 @@
             if (key === "orbitDensity") {
                 this._initOrbit();
             }
+            if (key === "mesh") {
+                if (value) this.setMesh(value);
+                else this.clearMesh();
+            }
+            if (key === "meshPrimitive") {
+                if (value) {
+                    this.setMesh(asciiam.createMeshPrimitive(value));
+                    this.opts.meshPrimitive = value;
+                }
+                else if (!this.opts.model) this.clearMesh();
+            }
+            if (key === "model") {
+                if (value) this.setModel(value).catch(() => {});
+                else this.clearModel();
+            }
+            if (key === "meshStyle" || key === "meshProjection" || key === "meshCamera" || key === "meshLight") {
+                this._syncMeshOptions();
+            }
+            if (key === "meshTransform" || key === "meshRotationSpeed") {
+                this._syncMeshOptions();
+            }
             if (key === "respectReducedMotion") {
                 this._reduced = !!(this._mq && this._mq.matches && value);
                 if (this._reduced) {
@@ -1001,6 +1095,119 @@
                     this._draw(16.7);
                 }
             }
+        }
+
+        /** Validate and retain typed-array geometry for the mesh animation mode. */
+        setMesh(mesh) {
+            this._mesh = normalizeMeshData(mesh, {
+                maxVertices: this.opts.meshMaxVertices,
+                maxPrimitives: this.opts.meshMaxPrimitives,
+            });
+            this.opts.mesh = mesh;
+            this.opts.meshPrimitive = null;
+            if (!this._meshRasterizer) this._meshRasterizer = new MeshCellRasterizer(this.cols || 1, this.rows || 1);
+            else this._meshRasterizer.resize(this.cols || 1, this.rows || 1);
+            this._syncMeshOptions();
+            this._emit("meshReady", this.getMeshInfo());
+            return this;
+        }
+
+        /** Release retained geometry and raster buffers. */
+        clearMesh() {
+            this._mesh = null;
+            this.opts.mesh = null;
+            this.opts.meshPrimitive = null;
+            this._meshRasterizer = null;
+            this._emit("meshClear", this.getMeshInfo());
+            return this;
+        }
+
+        /** Report normalized topology without exposing mutable internal buffers. */
+        getMeshInfo() {
+            return {
+                loaded: !!this._mesh,
+                vertexCount: this._mesh?.vertexCount || 0,
+                primitiveCount: this._mesh?.primitiveCount || 0,
+                primitive: this._mesh?.primitive || null,
+                style: this.opts.meshStyle,
+                projection: this.opts.meshProjection,
+            };
+        }
+
+        /** Decode and retain a glTF 2.0 or GLB v2 model with cancellation and progress events. */
+        async setModel(source, options = {}) {
+            if (source === null || source === undefined || source === "") {
+                this.clearModel();
+                return null;
+            }
+            const token = ++this._modelLoadToken;
+            this._modelAbortController?.abort();
+            const controller = new AbortController();
+            this._modelAbortController = controller;
+            const abortFromCaller = () => controller.abort();
+            options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+            this.opts.model = source;
+            this._emit("modelLoadStart", { source });
+            try {
+                const mesh = await loadGltf(source, {
+                    ...options,
+                    signal: controller.signal,
+                    limits: {
+                        maxVertices: this.opts.meshMaxVertices,
+                        maxPrimitives: this.opts.meshMaxPrimitives,
+                        ...options.limits,
+                    },
+                    onProgress: (progress) => {
+                        options.onProgress?.(progress);
+                        if (token === this._modelLoadToken) this._emit("modelProgress", progress);
+                    },
+                });
+                if (token !== this._modelLoadToken || this._destroyed) return null;
+                this._loadedModelSource = source;
+                this.setMesh(mesh);
+                this.opts.model = source;
+                this._emit("modelReady", { source, ...this.getMeshInfo() });
+                return mesh;
+            } catch (error) {
+                if (token !== this._modelLoadToken || error?.name === "AbortError") return null;
+                this._emit("modelError", { source, error });
+                if (typeof this.opts.onModelError === "function") this.opts.onModelError(error);
+                throw error;
+            } finally {
+                options.signal?.removeEventListener("abort", abortFromCaller);
+                if (token === this._modelLoadToken) this._modelAbortController = null;
+            }
+        }
+
+        /** Cancel model loading and release its retained geometry. */
+        clearModel() {
+            this._modelLoadToken++;
+            this._modelAbortController?.abort();
+            this._modelAbortController = null;
+            this._loadedModelSource = null;
+            this.opts.model = null;
+            this.clearMesh();
+            this._emit("modelClear", {});
+            return this;
+        }
+
+        /** Copy public mesh options into stable arrays consumed by the hot raster loop. */
+        _syncMeshOptions() {
+            const copyVector = (value, output, fallback) => {
+                for (let index = 0; index < 3; index++) {
+                    const candidate = Number(value?.[index]);
+                    output[index] = Number.isFinite(candidate) ? candidate : fallback[index];
+                }
+            };
+            const transform = this.opts.meshTransform;
+            copyVector(transform?.position, this._meshPosition, [0, 0, 0]);
+            copyVector(transform?.rotation, this._meshBaseRotation, [0, 0, 0]);
+            copyVector(transform?.scale, this._meshScale, [1, 1, 1]);
+            this._meshRotation.set(this._meshBaseRotation);
+            this._meshRasterOptions.style = this.opts.meshStyle;
+            this._meshRasterOptions.projection = this.opts.meshProjection;
+            this._meshRasterOptions.camera = this.opts.meshCamera;
+            this._meshRasterOptions.light = this.opts.meshLight;
         }
 
         /** Move the existing renderer to another container without creating a second animation loop. */
@@ -1881,6 +2088,7 @@
             else this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             this.cols = Math.max(1, Math.ceil(w / this.charW));
             this.rows = Math.max(1, Math.ceil(h / this.charH));
+            if (this._meshRasterizer) this._meshRasterizer.resize(this.cols, this.rows);
             this._columnX = new Float32Array(this.cols);
             this._rowY = new Float32Array(this.rows);
             this._rowBaseline = new Float32Array(this.rows);
@@ -2439,7 +2647,9 @@
             this._drawFillStyle = globalGradient; // gradient takes precedence over animated color
             let drawn = 0;
 
-            if (waveBase) {
+            if (this.opts.mode === "mesh") {
+                drawn = this._drawMesh(globalGradient);
+            } else if (waveBase) {
                 drawn = this._drawCachedHorizontalWave(waveBase, globalGradient);
             } else if (SPARSE_MODES.has(this.opts.mode)) {
                 if (this._imageGrid) drawn += this._drawImageSourceBase(globalGradient);
@@ -2522,7 +2732,9 @@
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawWebGLBackdrop();
             this._webglGradient = this.opts.gradient && !this.opts.colorFromImage ? this._prepareWebGLGradient(this.opts.gradient) : null;
             let drawn = 0;
-            if (SPARSE_MODES.has(this.opts.mode)) {
+            if (this.opts.mode === "mesh") {
+                drawn = this._drawMesh(null);
+            } else if (SPARSE_MODES.has(this.opts.mode)) {
                 if (this._imageGrid) drawn += this._drawImageSourceBase(null);
                 drawn += this._drawSparse(dt, null);
             } else {
@@ -2786,6 +2998,46 @@
                     const x = columnX[col];
                     const cell = this._computeCell(col, row, x, y);
                     if (this._paintCell(cell, col, row, x, y, globalGradient, this._rowBaseline[row])) drawn++;
+                }
+            }
+            return drawn;
+        }
+
+        /** Rasterize the retained mesh once, then paint only occupied ASCII cells. */
+        _drawMesh(globalGradient) {
+            if (!this._mesh || !this._meshRasterizer) return 0;
+            this._meshRasterOptions.style = this.opts.meshStyle;
+            this._meshRasterOptions.projection = this.opts.meshProjection;
+            this._meshRasterOptions.camera = this.opts.meshCamera;
+            this._meshRasterOptions.light = this.opts.meshLight;
+            for (let axis = 0; axis < 3; axis++) {
+                const speed = Number(this.opts.meshRotationSpeed?.[axis]);
+                this._meshRotation[axis] = this._meshBaseRotation[axis]
+                    + (this.opts.meshAutoRotate && Number.isFinite(speed) ? this._time * speed : 0);
+            }
+            const grid = this._meshRasterizer.rasterize(this._mesh, this._meshRasterOptions);
+            const charSet = this.opts.charSet;
+            const maxCharacter = Math.max(0, charSet.length - 1);
+            let drawn = 0;
+            for (let row = 0; row < this.rows; row++) {
+                const offset = row * this.cols;
+                for (let col = 0; col < this.cols; col++) {
+                    const index = offset + col;
+                    if (!grid.occupied[index]) continue;
+                    const intensity = grid.intensity[index];
+                    const character = charSet[Math.round(intensity * maxCharacter)] || charSet[maxCharacter] || "#";
+                    const opacity = this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity);
+                    const cell = this._setCell(character, opacity, intensity, this.opts.boldOnPeak && intensity > 0.72);
+                    if (this._paintCell(
+                        cell,
+                        col,
+                        row,
+                        this._columnX[col],
+                        this._rowY[row],
+                        globalGradient,
+                        this._rowBaseline[row],
+                        false,
+                    )) drawn++;
                 }
             }
             return drawn;

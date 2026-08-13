@@ -55,20 +55,19 @@ Higher density values produce fewer cells because they increase cell spacing. `t
 
 All running instances share one `requestAnimationFrame` scheduler. Each instance retains independent timing, visibility, renderer, and target state. For galleries or grids, construct only visible previews and destroy off-screen instances after a short delay. Browsers limit the number of simultaneous WebGL contexts.
 
-## 3D rendering status
+## 3D rendering boundary
 
-The current WebGL2 backend renders glyph instances; it is not a general 3D scene renderer.
-A 3D-to-ASCII mesh source is under feasibility review. The proposed path projects small
-meshes into cell-resolution depth and luminance buffers, then uses the existing WebGL2 or
-Canvas 2D glyph presentation path.
+The `mesh` mode projects bounded geometry into cell-resolution depth and luminance buffers,
+then uses the existing WebGL2 or Canvas 2D glyph presentation path. It does not turn the
+WebGL2 backend into a general scene renderer. See [3D meshes and models]({{< relref "/guides/3d-models" >}})
+for geometry contracts, glTF/GLB input, controls, and limits.
 
 [Poly Haven models](https://polyhaven.com/models) are recorded as a CC0 candidate source
 for optional demonstrations. [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)
 are recorded for format fixtures, with per-model license verification required. The
 [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) is the
-format reference for planned core `.gltf` and `.glb` input. No mesh API or importer is
-available in the current release. Base-format parsing will be dependency-free; codecs for
-compressed extensions will not be bundled, loaded, or injectable. Files requiring those
+format reference for core `.gltf` and `.glb` input. Base-format parsing is dependency-free;
+codecs for compressed extensions are not bundled, loaded, or injectable. Files requiring those
 extensions will fail with a format diagnostic.
 
 ## API reference
@@ -82,5 +81,5 @@ extensions will fail with a format diagnostic.
 | `targetFPS` | number or `null` | `null` | Adds a per-instance frame cap when numeric. |
 | `setRenderer(value)` | method | — | Replaces the presentation canvas while retaining instance state. |
 | `getRendererInfo()` | method | — | Returns requested and resolved renderer information. |
-| 3D mesh input | not implemented | — | Planned work remains behind a benchmark and bundle-size gate. |
-| glTF/GLB import | not implemented | — | Planned as dependency-free core input; compression extensions will be rejected. |
+| `mesh` mode | built in | — | Projects points, wireframes, or solid triangles into ASCII cells. |
+| `setModel(source)` | async method | — | Loads core glTF 2.0 or GLB v2; required compression extensions are rejected. |

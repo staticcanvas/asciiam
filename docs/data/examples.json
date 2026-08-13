@@ -127,9 +127,25 @@
       }
     },
     {
+      "id": "mesh",
+      "title": "Procedural 3D mesh",
+      "level": "08",
+      "description": "Rasterize a dependency-free torus into the same ASCII cell pipeline used by 2D modes.",
+      "options": {
+        "mode": "mesh",
+        "meshPrimitive": "torus",
+        "meshStyle": "wireframe",
+        "meshProjection": "perspective",
+        "meshAutoRotate": true,
+        "meshRotationSpeed": [0.2, 0.45, 0.1],
+        "charSet": " .:-=+*#%@",
+        "color": "#72F1B8"
+      }
+    },
+    {
       "id": "complete",
       "title": "Complete serializable config",
-      "level": "08",
+      "level": "09",
       "description": "Inspect the complete JSON-safe option surface with explicit defaults and representative optional values.",
       "options": {
         "mode": "current",
@@ -185,6 +201,18 @@
         "orbitDensity": 0.014,
         "glitchIntensity": 0.32,
         "typewriterDuration": 4.5,
+        "mesh": null,
+        "meshPrimitive": null,
+        "meshStyle": "wireframe",
+        "meshProjection": "perspective",
+        "meshCamera": null,
+        "meshTransform": null,
+        "meshLight": null,
+        "meshAutoRotate": true,
+        "meshRotationSpeed": [0.2, 0.45, 0.1],
+        "meshMaxVertices": 100000,
+        "meshMaxPrimitives": 100000,
+        "model": null,
         "image": null,
         "imageChars": " .:-=+*#%@",
         "fit": "cover",

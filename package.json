@@ -60,6 +60,8 @@
     "site:build": "npm run docs:build && npm run build",
     "site:serve": "npm run site:build && http-server public -p 8085",
     "benchmark": "node scripts/benchmark-renderer.js",
+    "benchmark:mesh": "node scripts/benchmark-mesh.js",
+    "benchmark:model": "node scripts/benchmark-model-loading.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "lint": "eslint src/**/*.js tests/**/*.js",

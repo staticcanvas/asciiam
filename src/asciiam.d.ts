@@ -24,6 +24,7 @@ export type asciiamMode =
   | 'hoverZone'
   | 'clickZone'
   | 'image'
+  | 'mesh'
   | 'custom'
   | (string & {});
 
@@ -47,7 +48,64 @@ export type asciiamEvent =
   | 'rendererChange'
   | 'rendererFallback'
   | 'imageFramesReady'
+  | 'meshReady'
+  | 'meshClear'
+  | 'modelLoadStart'
+  | 'modelProgress'
+  | 'modelReady'
+  | 'modelError'
+  | 'modelClear'
   | (string & {});
+
+export interface asciiamMeshData {
+  positions: Float32Array | Float64Array;
+  indices?: Uint8Array | Uint16Array | Uint32Array | null;
+  normals?: Float32Array | null;
+  colors?: Float32Array | null;
+  primitive?: 'points' | 'lines' | 'triangles';
+}
+
+export type asciiamModelSource = string | Blob | ArrayBuffer | ArrayBufferView | Record<string, unknown>;
+
+export interface asciiamModelLoadOptions {
+  baseUrl?: string;
+  scene?: number;
+  signal?: AbortSignal;
+  limits?: { maxVertices?: number; maxPrimitives?: number };
+  onProgress?: (progress: { loaded: number; total: number | null; buffer?: number }) => void;
+}
+
+export interface asciiamMeshCamera {
+  position?: [number, number, number] | readonly number[];
+  target?: [number, number, number] | readonly number[];
+  up?: [number, number, number] | readonly number[];
+  fov?: number;
+  near?: number;
+  far?: number;
+  orthographicScale?: number;
+}
+
+export interface asciiamMeshTransform {
+  position?: [number, number, number] | readonly number[];
+  /** Euler rotation in radians, ordered X, Y, then Z. */
+  rotation?: [number, number, number] | readonly number[];
+  scale?: [number, number, number] | readonly number[];
+}
+
+export interface asciiamMeshLight {
+  direction?: [number, number, number] | readonly number[];
+  ambient?: number;
+  intensity?: number;
+}
+
+export interface asciiamMeshInfo {
+  loaded: boolean;
+  vertexCount: number;
+  primitiveCount: number;
+  primitive: 'points' | 'lines' | 'triangles' | null;
+  style?: 'points' | 'wireframe' | 'solid';
+  projection?: 'perspective' | 'orthographic';
+}
 
 export interface asciiamSequenceDetail {
   index: number;
@@ -63,6 +121,11 @@ export type asciiamSequenceCallback = (detail: asciiamSequenceDetail, animation:
 export interface asciiamSequenceTransition {
   type?: 'cut' | 'morph';
   duration?: number;
+  source?: unknown;
+  loaded?: number;
+  total?: number | null;
+  buffer?: number;
+  error?: unknown;
   easing?: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut';
 }
 
@@ -188,6 +251,7 @@ export interface asciiamOptions {
   respectReducedMotion?: boolean;
   onReady?: ((animation: asciiam) => void) | null;
   onImageError?: ((error: Event) => void) | null;
+  onModelError?: ((error: unknown) => void) | null;
   sequence?: asciiamSequenceStep[] | null;
   sequenceOptions?: asciiamSequenceOptions | null;
   ambient?: number;
@@ -206,6 +270,18 @@ export interface asciiamOptions {
   orbitDensity?: number;
   glitchIntensity?: number;
   typewriterDuration?: number;
+  mesh?: asciiamMeshData | null;
+  meshPrimitive?: 'cube' | 'plane' | 'icosphere' | 'torus' | null;
+  meshStyle?: 'points' | 'wireframe' | 'solid';
+  meshProjection?: 'perspective' | 'orthographic';
+  meshCamera?: asciiamMeshCamera | null;
+  meshTransform?: asciiamMeshTransform | null;
+  meshLight?: asciiamMeshLight | null;
+  meshAutoRotate?: boolean;
+  meshRotationSpeed?: [number, number, number] | readonly number[];
+  meshMaxVertices?: number;
+  meshMaxPrimitives?: number;
+  model?: asciiamModelSource | null;
   customCell?: ((api: Record<string, unknown>) => unknown) | null;
   [key: string]: unknown;
 }
@@ -218,6 +294,8 @@ export default class asciiam {
   static readonly presets: Record<string, asciiamOptions>;
   static isSupported(): boolean;
   static registerMode(name: string, fn: (api: Record<string, unknown>) => unknown): void;
+  static createMeshPrimitive(name: 'cube' | 'plane' | 'icosphere' | 'torus', options?: Record<string, number>): asciiamMeshData;
+  static loadModel(source: asciiamModelSource, options?: asciiamModelLoadOptions): Promise<asciiamMeshData>;
   constructor(target: string | HTMLCanvasElement | HTMLElement, options?: asciiamOptions);
   start(): void;
   stop(): void;
@@ -247,6 +325,11 @@ export default class asciiam {
   /** Decodes and samples an image. Animated GIFs capture every frame when ImageDecoder is available. */
   setImage(source: string, options?: { animated?: boolean }): Promise<HTMLImageElement | null>;
   clearImage(): this;
+  setMesh(mesh: asciiamMeshData): this;
+  clearMesh(): this;
+  getMeshInfo(): asciiamMeshInfo;
+  setModel(source: asciiamModelSource | null, options?: asciiamModelLoadOptions): Promise<asciiamMeshData | null>;
+  clearModel(): this;
   setCursor(x: number | null, y?: number): void;
   /** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */
   triggerInteraction(x?: number, y?: number): void;

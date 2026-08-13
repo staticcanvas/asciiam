@@ -28,10 +28,10 @@ Icons are embedded locally so documentation navigation does not depend on a clie
 
 The image library contains development and rendering-test media sourced from [Pexels](https://www.pexels.com/), [Pixabay](https://pixabay.com/), and local repository contributions. Provider and creator identifiers are retained in filenames where available. Provider references are not blanket license claims: verify an individual source record before redistributing an asset outside this repository.
 
-## 3D research and future mesh sources
+## 3D model sources and format references
 
-asciiam does not currently bundle 3D models or provide a glTF/GLB loader. The following
-sources are recorded for the planned, performance-gated 3D-to-ASCII investigation:
+asciiam bundles no third-party 3D models. Its dependency-free glTF/GLB loader uses the
+following format and candidate asset sources:
 
 - [Poly Haven models](https://polyhaven.com/models) are published under
   [Poly Haven's CC0 asset license](https://polyhaven.com/license). Record the exact model
@@ -40,13 +40,12 @@ sources are recorded for the planned, performance-gated 3D-to-ASCII investigatio
   provide format test cases and example models. Each model carries its own license and
   credit record; check the selected model directory before use or redistribution.
 - The [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)
-  defines the planned core glTF/GLB input boundary. Base-format parsing will ship in the
-  main package without external dependencies. Assets requiring Draco, Meshopt, or another
+  defines the core glTF/GLB input boundary. Base-format parsing ships in the main package
+  without external dependencies. Assets requiring Draco, Meshopt, or another
   compression extension will be rejected. Codec evaluation is deferred research and no
   decoder or decoder hook is planned for the released runtime.
 
-These references do not grant a blanket license for assets obtained elsewhere and do not
-indicate that a mesh importer is available in the current release.
+These references do not grant a blanket license for assets obtained elsewhere.
 
 ## External project services
 
@@ -62,7 +61,7 @@ GitLab and GitHub host source mirrors and page editing. npm and JSR are package 
 | Pexels and Pixabay | Demonstration photographs | Per-asset source verification required for reuse. |
 | Poly Haven | Candidate 3D demonstration models | CC0; retain exact source metadata. |
 | Khronos glTF Sample Assets | Candidate format fixtures and example geometry | Verify the selected model's license and credits. |
-| glTF 2.0 specification | Planned core glTF/GLB input reference | No importer in the current runtime; compressed extensions will be rejected. |
+| glTF 2.0 specification | Implemented core glTF/GLB input reference | Compressed required extensions are rejected. |
 | GitLab and GitHub | Source hosting and page editing | External project services. |
 | npm, JSR, jsDelivr, unpkg | Package publication and delivery | External release services. |
 | Shields.io | Repository badges | External documentation service. |

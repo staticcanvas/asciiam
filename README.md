@@ -156,13 +156,14 @@ descriptions highlight literal query words, while metadata tags identify matched
 
 | Destination                                                     | Owns                                                                                 |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [Getting started](docs/content/getting-started.md)              | Installation, initialization, renderer selection, and lifecycle.                     |
+| [Start](docs/content/getting-started.md)                        | Installation, initialization, renderer selection, and lifecycle.                     |
 | [Integration and lifecycle](docs/content/guides/integration.md) | Target ownership, application teardown, accessibility, and custom-mode boundaries.   |
 | [Web utility workflow](docs/content/guides/web-utility.md)      | Controls, previews, validation, persistence, and generated configuration.            |
 | [Rendering](docs/content/guides/rendering.md)                   | WebGL2, Canvas 2D, quality tiers, frame rate, and multi-instance behavior.           |
 | [Animation modes](docs/content/guides/animations.md)            | Built-in algorithms, mode changes, image-backed behavior, and custom modes.          |
 | [Character sets](docs/content/guides/character-sets.md)         | Default glyph inventory, ordered ramps, symbolic sets, and custom strings.           |
 | [Images](docs/content/guides/images.md)                         | Image-to-ASCII sampling, fitting, masks, and RGB animation ranges.                   |
+| [3D meshes and models](docs/content/guides/3d-models.md)        | Typed-array geometry, primitives, glTF/GLB loading, limits, and events.               |
 | [Sequences](docs/content/guides/sequences.md)                   | Ordered steps, staggering, interruption, callbacks, and events.                      |
 | [Usage examples](docs/content/examples/_index.md)               | Live minimum-to-complete configurations with reset and web-utility transfer.         |
 | [API reference](docs/content/api/_index.md)                     | Constructor, options, methods, events, renderer information, and callback contracts. |
@@ -236,6 +237,29 @@ Source maps are emitted beside each generated bundle for debugging.
 For CDN delivery, replace the local browser path with a versioned jsDelivr URL such
 as `https://cdn.jsdelivr.net/npm/@staticcanvas/asciiam@0.10.0/dist/asciiam.min.js` or
 the matching `asciiam.esm.min.js` path for a module script.
+
+### 3D mesh and model input
+
+Procedural meshes keep examples asset-free:
+
+```js
+const model = new asciiam('#hero', {
+  mode: 'mesh',
+  meshPrimitive: 'torus',
+  meshStyle: 'wireframe'
+});
+model.start();
+```
+
+Load uncompressed glTF 2.0 or GLB v2 directly from the core package:
+
+```js
+await model.setModel('/models/object.glb', {
+  onProgress: ({ loaded, total }) => console.log(loaded, total)
+});
+```
+
+The dependency-free loader accepts URLs, blobs, byte buffers, and parsed glTF objects. It supports embedded and external buffers, sparse and interleaved accessors, node transforms, vertex normals and colours, and core point/line/triangle topologies. Required Draco, Meshopt, or other compression extensions are rejected explicitly; no decoder or extension hook is included. See [3D meshes and models](docs/content/guides/3d-models.md) for the complete contract and safety limits.
 
 ## Quick start: background
 
@@ -707,6 +731,9 @@ anim.setRenderer('webgl2'); // live backend switch; returns the resolved backend
 anim.getRendererInfo(); // requested and resolved backend
 anim.setImage(url); // returns a Promise, resolves with the loaded Image
 anim.clearImage(); // cancels pending image work and returns to procedural source data
+anim.setMesh(mesh); // retains validated typed-array geometry
+await anim.setModel('/models/object.glb'); // dependency-free glTF 2.0 / GLB v2 input
+anim.clearModel(); // aborts pending model work and releases geometry
 anim.setCursor(x, y); // drives cursor and hover-zone coordinates; pass null to clear
 anim.triggerInteraction(x, y); // starts clickZone; omit coordinates to use align
 anim.attachStats(el); // el.textContent gets "N fps · WxH cells · N drawn" every ~500ms
@@ -717,7 +744,7 @@ asciiam.BUILT_IN_MODES; // static: canonical built-in mode names
 ```
 
 Lifecycle events are `ready` (emitted on the microtask after construction), `resize`,
-`frame`, `imageFramesReady`, and the `sequence*` events described above. The GIF event
+`frame`, `imageFramesReady`, `mesh*`, `model*`, and the `sequence*` events described above. The GIF event
 reports `frameCount` and total `duration` in seconds. `frame` payloads are only allocated when that event has subscribers.
 The `onReady` option is available when a constructor callback is more convenient.
 
@@ -761,8 +788,8 @@ See `pending-tasks.md` for the current gap list and rough priority.
   provide format tests and example models. Licenses and required credits vary by model
   and must be checked in the selected model directory.
 - The [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)
-  is the reference for planned core `.gltf` and `.glb` input. Import is not implemented
-  in the current release. Base-format parsing will ship in asciiam without dependencies.
+  defines the implemented core `.gltf` and `.glb` input. Base-format parsing ships in
+  asciiam without dependencies.
   Assets requiring Draco, Meshopt, or another compression extension will be rejected;
   codecs are reserved for a future performance study and are not part of the runtime plan.
 - [npm documentation](https://docs.npmjs.com/)
@@ -886,6 +913,8 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | `setMode(mode)`                                           | method                                     | —                           | Selects a mode and restarts its timeline.                                 |
 | `setOption(key, value)`                                   | method                                     | —                           | Updates an option and dependent cached state.                             |
 | `setImage(url, options?)`                                 | async method                               | —                           | Decodes an image; animated GIFs capture every frame when supported.       |
+| `setMesh(mesh)` / `clearMesh()`                           | method                                     | —                           | Installs or releases validated typed-array geometry.                      |
+| `setModel(source, options?)` / `clearModel()`              | async method / method                      | —                           | Loads or releases core glTF 2.0 and GLB v2 geometry.                      |
 | `setTarget(target)`                                       | method                                     | —                           | Moves the existing canvas and bindings to another container.              |
 | `setSequence(steps, options)`                             | method                                     | —                           | Sets ordered modes, durations, staggers, overrides, and callbacks.        |
 | `playSequence()` / `pauseSequence()`                      | method                                     | —                           | Starts, resumes, or pauses the configured sequence.                       |

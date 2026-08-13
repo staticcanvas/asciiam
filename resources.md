@@ -29,15 +29,15 @@ This file records external sources and services referenced by asciiam developmen
 
 ## 3D research and mesh sources
 
-These sources support the planned 3D-to-ASCII feasibility work. asciiam does not currently
-bundle a mesh, parse glTF/GLB, or expose a public mesh API.
+These sources support the implemented dependency-free mesh and glTF/GLB path. asciiam does
+not bundle third-party models or compression codecs.
 
 | Resource | Maintained use | License or integration note |
 | --- | --- | --- |
 | [Poly Haven models](https://polyhaven.com/models) | Candidate CC0 models for optional demonstrations and visual verification. | Poly Haven publishes its models under CC0. Retain the exact model URL and source metadata even though attribution is not required. |
 | [Poly Haven license](https://polyhaven.com/license) | License authority for selected Poly Haven assets. | Recheck before adding or redistributing an asset. |
 | [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) | Parser fixtures, compatibility cases, and example geometry. | License and attribution requirements vary by model. Read the selected model directory's README before use. |
-| [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) | Format reference for planned core glTF and GLB input. | Base-format loading will be dependency-free. Assets requiring compression extensions will be rejected; no codec or decoder hook is planned for the released runtime. |
+| [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) | Format reference for implemented core glTF and GLB input. | Base-format loading is dependency-free. Assets requiring compression extensions are rejected; no codec or decoder hook is present in the released runtime. |
 | [meshoptimizer](https://github.com/zeux/meshoptimizer) | Future research reference only. | Do not add its code or dependency to released artifacts. Compare measured transfer, startup, decode, and memory costs only after the uncompressed loader is established. |
 | [Draco](https://github.com/google/draco) | Future research reference only. | Do not add its code or dependency to released artifacts. Any review must include decoder payload and WebAssembly initialization costs. |
 | [WebGL2 3D feasibility assessment](architecture/webgl2-3d-feasibility.md) | Project decision, performance gates, mesh contract, and bundle policy. | Internal source of truth for evaluating implementation work. |

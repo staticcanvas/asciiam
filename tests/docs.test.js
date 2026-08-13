@@ -63,7 +63,7 @@ describe('Hugo documentation source', () => {
     const base = projectFile('docs/layouts/_default/baseof.html');
     const icons = projectFile('docs/layouts/partials/lucide-icon.html');
 
-    expect(config).toContain('name = "Getting started"');
+    expect(config).toContain('name = "Start"');
     expect(config).toContain('name = "API reference"');
     expect(config).toContain('name = "Version and compatibility"');
     expect(config).toContain('name = "Usage examples"');
@@ -176,8 +176,8 @@ describe('Hugo documentation source', () => {
       expect(source).toContain('Khronos glTF Sample Assets');
       expect(source).toContain('glTF 2.0 specification');
     });
-    expect(attributions).toContain('planned core glTF/GLB input boundary');
-    expect(resources).toContain('Assets requiring compression extensions will be rejected');
+    expect(attributions).toContain('core glTF/GLB input boundary');
+    expect(resources).toContain('Assets requiring compression extensions are rejected');
     expect(resources).toContain('Do not expose a decoder injection or loading hook');
     expect(resources).toContain('License and attribution requirements vary by model');
   });

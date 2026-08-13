@@ -26,6 +26,7 @@ flowchart LR
 | --- | --- |
 | [Runtime architecture](runtime.md) | Renderer separation, scheduling, image sampling, sequences, caches, and lifecycle invariants. |
 | [WebGL2 3D feasibility](webgl2-3d-feasibility.md) | Bounded mesh-to-ASCII design, performance gates, asset policy, risks, and proposed API. |
+| [Mesh compression evaluation](mesh-compression-evaluation.md) | Deferred Draco/Meshopt corpus, measurements, isolation rules, and decision gate. |
 | [Documentation architecture](documentation.md) | Hugo sources, generated data, navigation, icon ownership, and deployable output. |
 | [Web utility architecture](web-utility.md) | Browser module boundaries, state ownership, control grouping, and sequence editing. |
 | [Maintenance workflow](maintenance.md) | Source-of-truth map, change paths, verification, releases, and generated artifacts. |
