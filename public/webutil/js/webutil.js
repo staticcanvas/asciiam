@@ -1,5 +1,5 @@
-import { highlightJavaScript } from "./webutil-code.js?v=70dc653c2077";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=70dc653c2077";
+import { highlightJavaScript } from "./webutil-code.js?v=260fd3348eb2";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=260fd3348eb2";
 
 const asciiam = window.asciiam;
 
@@ -1862,8 +1862,8 @@ if (mainCopyBtn) mainCopyBtn.onclick = function() { handleCopy(this, "usageCode"
 const popCopyBtn = document.getElementById("copyUsagePopover");
 if (popCopyBtn) popCopyBtn.onclick = function() { handleCopy(this, "usageCodePopover"); };
 
-async function copyNpmCmd(btn) {
-    const cmd = "npm install @staticcanvas/asciiam";
+async function copySourceCommand(btn) {
+    const cmd = "git clone https://gitlab.com/staticcanvas/asciiam.git";
     const label = btn.querySelector("span");
     const flash = () => {
         if (label) label.textContent = "✓ copied";
@@ -1886,9 +1886,10 @@ async function copyNpmCmd(btn) {
         flash();
     }
 }
-["copyNpmInstallAbout", "copyNpmInstallCode"].forEach((id) => {
+// Registry publication is pending, so the utility copies a command that works now.
+["copySourceCommandAbout", "copySourceCommandCode"].forEach((id) => {
     const btn = document.getElementById(id);
-    if (btn) btn.onclick = function() { copyNpmCmd(this); };
+    if (btn) btn.onclick = function() { copySourceCommand(this); };
 });
 
 document.querySelectorAll("select, input").forEach((control) => {

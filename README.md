@@ -1,6 +1,6 @@
 ![asciiam — ASCII Background Animator](branding/asciiam-banner.svg)
 
-[![gitlab-license](https://img.shields.io/gitlab/license/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![gitlab-pipeline](https://img.shields.io/gitlab/pipeline-status/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![gitlab-issues](https://img.shields.io/gitlab/issues/open/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![jsr-version](https://img.shields.io/jsr/v/%40staticcanvas/asciiam?style=flat-square&logo=jsr&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://jsr.io/%40staticcanvas/asciiam) [![jsdelivr-hitsperweek](https://img.shields.io/jsdelivr/npm/hw/asciiam?style=flat-square&logo=jsdelivr&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://cdn.jsdelivr.net/package/npm/asciiam) [![npm-sizeMin](https://img.shields.io/bundlephobia/min/@staticcanvas/asciiam?style=flat-square&logo=npm&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://www.npmjs.com/package/asciiam) [![npm-sizeZipped](https://img.shields.io/bundlephobia/minzip/@staticcanvas/asciiam?style=flat-square&logo=npm&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://www.npmjs.com/package/asciiam)
+[![GitLab license](https://img.shields.io/gitlab/license/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![GitLab pipeline](https://img.shields.io/gitlab/pipeline-status/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam/-/pipelines) [![GitLab issues](https://img.shields.io/gitlab/issues/open/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam/-/issues)
 
 ## Purpose
 
@@ -12,7 +12,8 @@ default, with Canvas 2D available as an automatic fallback or explicit CPU rende
 
 - WebGL2 glyph rendering with instanced quad batching and Canvas 2D fallback.
 - Developer-selectable `auto`, `webgl2`, and `canvas2d` rendering policies.
-- Twenty-six built-in animation modes plus registered and per-instance custom cells.
+- Twenty-seven built-in modes, including image and mesh rendering, plus registered and
+  per-instance custom cell callbacks.
 - Ordered animation sequences with delays, durations, looping, interruption, callbacks,
   and lifecycle events.
 - Image-to-ASCII sampling with cover/contain fitting, field-of-view controls, sampled
@@ -23,8 +24,8 @@ default, with Canvas 2D available as an automatic fallback or explicit CPU rende
   glyph caches, spatial caches, and a static-wave cache.
 - Browser utility with presets, live controls, renderer selection, code generation,
   history, image upload, hero/splash previews, and ordered sequence editing.
-- Hugo documentation with guides, full API reference, release information, and a live,
-  visibility-bounded preset gallery.
+- Hugo documentation with guides, API reference, release information, and a preset
+  gallery that limits concurrent renderers.
 
 ## Releases
 
@@ -43,33 +44,42 @@ Version sources that must remain aligned:
 
 ## Install
 
-Install the package from npm:
+The package is not yet published to npm or JSR. For a source checkout, install
+development dependencies and build the package:
 
 ```bash
 # shell
-npm install @staticcanvas/asciiam
+git clone https://gitlab.com/staticcanvas/asciiam.git
+cd asciiam
+npm ci
+npm run build
 ```
 
-Use a pinned browser bundle from jsDelivr when a package manager is not used:
+Generated package files are written to `dist/asciiam`. Until publication, serve a local
+bundle with the application rather than requesting the package from a registry CDN:
 
 ```html
 <!-- index.html -->
-<script src="https://cdn.jsdelivr.net/npm/@staticcanvas/asciiam@0.10.0/dist/asciiam.min.js"></script>
+<script src="./vendor/asciiam.min.js"></script>
 ```
 
-| Location                                                   | Purpose                                                      |
-| ---------------------------------------------------------- | ------------------------------------------------------------ |
-| [npm](https://www.npmjs.com/package/@staticcanvas/asciiam) | Versioned package distribution.                              |
-| [GitLab](https://gitlab.com/staticcanvas/asciiam)          | Primary source repository and issue tracking.                |
-| [GitHub](https://github.com/staticcanvas/asciiam)          | Source mirror.                                               |
-| jsDelivr / unpkg                                           | Versioned ESM and UMD browser delivery from the npm package. |
+After publication, the package name will be `@staticcanvas/asciiam`. npm, JSR,
+jsDelivr, and unpkg references elsewhere in this repository describe the planned
+release channels, not current package availability.
+
+| Location | Current role |
+| --- | --- |
+| [GitLab](https://gitlab.com/staticcanvas/asciiam) | Primary source repository and issue tracking. |
+| [GitHub](https://github.com/staticcanvas/asciiam) | Source mirror. |
+| npm / JSR | Planned package publication; no release is available at the documented name yet. |
+| jsDelivr / unpkg | Available after npm publication. |
 
 ## Files
 
 - `src/asciiam.js` — the source module.
 - `src/asciiam.d.ts` — TypeScript declarations for options, events, and methods.
 - `docs/static/webutil/` — authored static web utility, published at `/webutil/`, with
-  live controls for every mode and option.
+  controls for modes and commonly edited options.
 - `docs/` — Hugo source for the homepage, guides, gallery, API reference, changelog,
   and version pages.
 - `docs/static-sot-template.html` — visual-design provenance retained from the original
@@ -166,7 +176,7 @@ descriptions highlight literal query words, while metadata tags identify matched
 | [Images](docs/content/guides/images.md)                         | Image-to-ASCII sampling, fitting, masks, and RGB animation ranges.                   |
 | [3D meshes and models](docs/content/guides/3d-models.md)        | Typed-array geometry, primitives, glTF/GLB loading, limits, and events.               |
 | [Sequences](docs/content/guides/sequences.md)                   | Ordered steps, staggering, interruption, callbacks, and events.                      |
-| [Usage examples](docs/content/examples/_index.md)               | Live minimum-to-complete configurations with reset and web-utility transfer.         |
+| [Usage examples](docs/content/examples/_index.md)               | Editable configurations with reset and web-utility transfer.                        |
 | [API reference](docs/content/api/_index.md)                     | Constructor, options, methods, events, renderer information, and callback contracts. |
 | [Attributions](docs/content/attributions.md)                    | Icon, SVG, map, media-provider, registry, and delivery references.                   |
 
@@ -179,15 +189,16 @@ the viewport, retains no more than six concurrent preview instances, destroys of
 instances after a delay, and supports copying a configuration or opening it in the web
 utility through `?preset=<name>`.
 
-The usage playground keeps one renderer active. It accepts JSON-safe options, replaces the
-instance only after valid input, and transfers edited configurations to the web utility
+The usage playground keeps one renderer active. It accepts options representable as JSON,
+replaces the instance only after valid input, and transfers edited configurations to the web utility
 through a URL-safe `config` value. It imports the documentation bundle, so local examples do
 not depend on npm publication or CDN availability.
 
 ## Usage and export formats
 
 The package provides ESM and UMD builds in readable and minified forms. Import the
-package root when using a bundler or an ESM-aware runtime:
+package root after registry publication. In a source checkout, import the generated
+`dist/asciiam/asciiam.mjs` file or copy a browser bundle into the application:
 
 ```js
 // app.js
@@ -232,12 +243,11 @@ constructor:
 | Browser ESM, minified | `dist/asciiam.esm.min.js` | Native module script for deployment.                                      |
 | CommonJS              | `dist/asciiam.cjs`        | Node/CommonJS entry used by `require('@staticcanvas/asciiam')`.           |
 | UMD                   | `dist/asciiam.js`         | Classic script with readable source and the global `asciiam` constructor. |
-| UMD, minified         | `dist/asciiam.min.js`     | Classic script for deployment and the default jsDelivr/unpkg entry.       |
+| UMD, minified         | `dist/asciiam.min.js`     | Classic script for deployment; configured as the future jsDelivr/unpkg entry. |
 
 Source maps are emitted beside each generated bundle for debugging.
-For CDN delivery, replace the local browser path with a versioned jsDelivr URL such
-as `https://cdn.jsdelivr.net/npm/@staticcanvas/asciiam@0.10.0/dist/asciiam.min.js` or
-the matching `asciiam.esm.min.js` path for a module script.
+After npm publication, use a version-pinned CDN URL. Before publication, copy a generated
+bundle from `dist/asciiam` into the application's own static assets.
 
 ### 3D mesh and model input
 
@@ -260,7 +270,7 @@ await model.setModel('/models/object.glb', {
 });
 ```
 
-The dependency-free loader accepts URLs, blobs, byte buffers, and parsed glTF objects. It supports embedded and external buffers, sparse and interleaved accessors, node transforms, vertex normals and colours, and core point/line/triangle topologies. Required Draco, Meshopt, or other compression extensions are rejected explicitly; no decoder or extension hook is included. See [3D meshes and models](docs/content/guides/3d-models.md) for the complete contract and safety limits.
+The dependency-free loader accepts URLs, blobs, byte buffers, and parsed glTF objects. It supports embedded and external buffers, sparse and interleaved accessors, node transforms, vertex normals and colours, and core point/line/triangle topologies. Required Draco, Meshopt, or other compression extensions are rejected explicitly; no decoder or extension hook is included. See [3D meshes and models](docs/content/guides/3d-models.md) for supported input and safety limits.
 
 The web utility accepts self-contained `.glb` files for local upload. Load a `.gltf`
 URL through the remote field or `setModel()` when its JSON references sibling `.bin`
@@ -422,6 +432,7 @@ new asciiam('#hero', { ...asciiam.presets.heroWave, color: '#C04FFF' });
 | `hoverZone`                  | Dense local field that follows pointer movement or coordinates supplied through `setCursor()`.                                 |
 | `clickZone`                  | Timed expanding field triggered by pointer/touch press or `triggerInteraction()`.                                              |
 | `image`                      | Converts a supplied image into an ASCII grid (brightness → character ramp), with the `wave` reveal optionally animated on top. |
+| `mesh`                       | Projects procedural, application-supplied, or glTF/GLB geometry into an ASCII grid.                                           |
 
 Switch modes live: `anim.setMode('ripple')`.
 
@@ -429,7 +440,7 @@ Switch modes live: `anim.setMode('ripple')`.
 
 ```js
 new asciiam(target, {
-  mode: 'wave', // includes fields, reveals, transitions, coined modes, and sparse particles
+  mode: 'wave', // selects a built-in or registered mode
   quality: 'balanced', // ultra | high | balanced | performance — sets maxDPR/density/targetFPS
   charSet: ' .:-=+*#%@', // light -> heavy character ramp; see CHARACTER_SETS
   fontFamily: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
@@ -531,7 +542,7 @@ arrows, mathematics, blocks, binary, Braille, Katakana, and punctuation. Font co
 determines whether non-ASCII glyphs render correctly. You can provide any string as
 `charSet` or `imageChars`; the first character maps to the lowest intensity.
 
-See the [character-set guide](docs/content/guides/character-sets.md) for the complete
+See the [character-set guide](docs/content/guides/character-sets.md) for the included
 inventory and ordering rules.
 
 ### Image support
@@ -565,9 +576,9 @@ await anim.setImage(objectUrl, { animated: file.type === 'image/gif' });
 anim.setOption('imageFrameRate', 12);
 ```
 
-The web utility loads its runtime bundle with a versioned URL and serves local library
-artifacts with revalidation. This prevents a newly deployed Mode menu from running
-against an older cached renderer that does not contain the corresponding algorithms.
+The documentation build assigns one content-derived revision to the web utility runtime
+and JavaScript modules. This prevents current controls from loading with code from an
+earlier deployment.
 
 To animate only part of an uploaded image, set `imageAnimationRange`. The `min` and
 `max` colors define inclusive bounds for each RGB channel. The match mask is generated
@@ -794,7 +805,7 @@ The `onReady` option is available when a constructor callback is more convenient
 ## Behavior you should know about
 
 - Pauses when the element scrolls off-screen (`IntersectionObserver`) or the
-  tab is hidden (`visibilitychange`) — no manual wiring needed.
+  tab is hidden (`visibilitychange`).
 - Respects `prefers-reduced-motion` by default: renders a single static frame
   instead of animating. Set `respectReducedMotion: false` to opt out.
 - If WebGL2 is unavailable, the renderer falls back to Canvas 2D. If
@@ -808,18 +819,18 @@ The `onReady` option is available when a constructor callback is more convenient
 
 Requires Canvas 2D and `requestAnimationFrame`; WebGL2 is optional and selected first by
 the default `auto` renderer. `IntersectionObserver` and `ResizeObserver` are used when
-available and degrade gracefully if not (falls back to `window.resize`, and assumes
-always-visible for pause detection).
+available. Without them, resizing uses `window.resize` and the instance is treated as
+visible for pause detection.
 
 ## Known limitations
 
-See `pending-tasks.md` for the current gap list and rough priority.
+See [`devtracker-pending.md`](devtracker-pending.md) for the current gap list and priority.
 
 ## Links
 
 - [GitLab repository](https://gitlab.com/staticcanvas/asciiam)
 - [Issue tracker](https://gitlab.com/staticcanvas/asciiam/-/issues)
-- [npm package](https://www.npmjs.com/package/@staticcanvas/asciiam)
+- Package publication: pending for `@staticcanvas/asciiam`
 
 ## Resources
 

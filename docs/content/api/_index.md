@@ -8,7 +8,9 @@ tags: [API, reference, JavaScript, TypeScript, options, methods, events]
 keywords: [asciiam API, configuration reference, animation options, renderer methods, sequence events, callbacks, TypeScript declarations]
 ---
 
-The package exports the `asciiam` class as its default export and provides TypeScript declarations in `src/asciiam.d.ts`.
+The package build exports the `asciiam` class as its default export and provides TypeScript
+declarations in `src/asciiam.d.ts`. Registry publication is pending; package import
+examples apply after publication or when the generated package is linked locally.
 
 ## Choose an integration path
 
@@ -16,7 +18,7 @@ The package exports the `asciiam` class as its default export and provides TypeS
 | --- | --- | --- |
 | Render one animation | `new asciiam(target, options)` | `setOption()`, `setMode()` |
 | Prefer GPU with a safe fallback | `renderer: 'auto'` | `getRendererInfo()`, `rendererFallback` |
-| Play an ordered animation story | `setSequence(steps, options)` | sequence events and callbacks |
+| Play an ordered animation sequence | `setSequence(steps, options)` | sequence events and callbacks |
 | Turn an image into animated ASCII | `setImage(source)` | image mask and RGB range options |
 | Render geometry or a model | `meshPrimitive`, `setMesh()`, or `setModel()` | mesh controls and model events |
 | Own application cleanup | instance lifecycle | `stop()` or `destroy()` |
@@ -141,7 +143,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | --- | --- | --- | --- |
 | `type` | `linear \| radial \| cubic` | `linear` behavior | Selects gradient geometry or interpolation. |
 | `stops` | CSS colors or `{ offset, color }[]` | blue and purple defaults | Sets colors and optional explicit offsets. |
-| `steps` | integer from 1 through 6 | `2` | Expands simple color arrays into output stops. |
+| `steps` | integer from 1 through 6 | `2` | Expands short color arrays into output stops. |
 | `angle` | number | `0` | Sets linear gradient degrees. |
 | `center` | `[x, y]` | `[0.5, 0.5]` | Sets radial center as normalized coordinates. |
 | `radius` | number | `0.75` | Sets radial radius relative to the largest dimension. |
@@ -204,7 +206,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `setMode(mode)` | `void` | Selects a mode, resets local time, and interrupts manual sequence playback. |
 | `setOption(key, value)` | `void` | Updates an option and rebuilds affected caches or state. |
 | `setTarget(target)` | `void` | Moves the presentation canvas and target bindings. |
-| `setImage(source, options?)` | `Promise<HTMLImageElement \| null>` | Decodes an image; supported browsers capture every GIF frame and its delay. |
+| `setImage(source, options?)` | `Promise<HTMLImageElement \| null>` | Decodes an image; `ImageDecoder` captures GIF frames and delays when available. |
 | `clearImage()` | instance | Cancels pending image work and clears sampled image state without changing the active mode. |
 | `setMesh(mesh)` | instance | Validates and retains typed-array point, line, or triangle geometry. |
 | `clearMesh()` | instance | Releases retained geometry and raster buffers. |

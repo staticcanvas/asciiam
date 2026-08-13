@@ -1,6 +1,6 @@
 # Project documentation audit
 
-This audit records the 2026-08-13 review of repository documentation, Hugo documentation, navigation, public API coverage, maintainer architecture, and explanatory source comments.
+This audit records the 2026-08-13 documentation review and the 2026-08-14 factual and editorial follow-up. It covers repository documentation, Hugo content, navigation, public API coverage, maintainer architecture, and explanatory source comments.
 
 ## Audit scope
 
@@ -19,12 +19,12 @@ The repository had pre-existing uncommitted changes when this audit began. Audit
 
 | ID | Severity | Finding | Correction |
 | --- | --- | --- | --- |
-| NAV-01 | Medium | The sidebar label `Start` differed from the page title and the requested standard wording. | Renamed the menu item to `Getting started`. |
+| NAV-01 | Medium | The sidebar label `Start` differed from the page title. | Kept the requested concise `Start` wording and aligned the page title. |
 | NAV-02 | High | The Guides parent exposed only the guide index; six guide pages required a second navigation step and were not visible in the sidebar. | Added all guide pages as ordered children under Guides. |
 | NAV-03 | Low | Labels mixed abbreviations and ambiguous nouns (`API`, `Version`, `Source`). | Changed them to `API reference`, `Version and compatibility`, and `Source repository`. |
 | NAV-04 | Medium | Sidebar markers did not communicate destination type. | Replaced dot markers with a local, current-colour Lucide SVG subset and added license notices. |
 | NAV-05 | Medium | Adding guide children could exceed short desktop viewports while the fixed sidebar suppressed overflow. | Enabled vertical sidebar scrolling while retaining horizontal clipping. |
-| DOC-01 | High | README and documentation homepage stated 17 built-in modes while the implementation exposed 24 including `custom`. | Added `asciiam.BUILT_IN_MODES`, generated the site count from it, and corrected README. The subsequent interaction-mode work now derives the current 26-mode count from that inventory. |
+| DOC-01 | High | README and documentation mode counts had drifted from the implementation. | Added `asciiam.BUILT_IN_MODES`, generated the site count from it, and aligned README with the current 27-mode inventory. |
 | DOC-02 | Medium | The README documentation map omitted Animation modes and did not cover integration ownership. | Added Animation modes and a new Integration and lifecycle guide to the map. |
 | DOC-03 | Medium | Lifecycle ownership, single-surface behavior, teardown, accessibility, and custom-callback cost were dispersed across README and API text. | Added a focused Integration and lifecycle guide with an API table and flow diagram. |
 | DOC-04 | Low | README repeated installation instructions and contained an orphaned performance claim in the image section. | Removed the duplicate installation section and the unsupported claim. |
@@ -40,7 +40,7 @@ The repository had pre-existing uncommitted changes when this audit began. Audit
 | API-03 | High | Backdrop opacity accepted `1`, but backdrops always rendered behind glyphs, so full opacity could not blanket an animation. | Added explicit `behind` and `over` placement in Canvas 2D, WebGL2, declarations, utility controls, and documentation. `over` at opacity `1` fully covers output. |
 | SEARCH-01 | Medium | Page search exposed only the `Ctrl+K` shortcut, searched only the current page, and did not use page metadata. | Added an on-demand Hugo JSON site index ranked across titles, descriptions, tags, keywords, and text, plus `Ctrl+K`, `Command+K`, and `/` focus behavior with keyboard result navigation and editable-control guards. |
 | META-01 | Medium | Pages had descriptions but no consistent dates, tags, keywords, machine-readable modified time, or direct edit path. | Added front-matter metadata to every page, emitted head metadata, and added update/tag/Edit-on-GitLab/Edit-on-GitHub controls. |
-| DOC-08 | High | Examples were static snippets or fixed preset previews; readers could not edit a progressive configuration and inspect output in place. | Added a single-instance, JSON-validated usage workbench spanning minimum, variants, image, sequence, and complete serializable configuration, with reset, copy, and web-utility transfer. |
+| DOC-08 | High | Examples were static snippets or fixed preset previews; readers could not edit a progressive configuration and inspect output in place. | Added a single-instance, JSON-validated usage editor spanning minimum, interaction, image, sequence, and broad serializable configurations, with reset, copy, and web-utility transfer. |
 | LEGAL-02 | High | `resources.md` was an unstructured URL list and the SVG Repo demonstration asset lacked a maintained consumer attribution. | Converted the resource list into a source inventory and documented Lucide, SVG Repo Bird Shape CC0, PAT public-domain map material, media providers, and external services in notices, docs, and README. |
 | API-04 | High | Sequence-level looping and finite-mode repetition shared the runtime `loop` option, so a reveal could unintentionally cycle or inherit a prior step's policy. | Added normalized `sequence[].repeat` with a `false` default, explicit web-utility controls, compatibility for legacy `options.loop`, types, tests, and documentation. |
 | API-05 | Medium | Replaying a completed non-looping sequence resumed its finished final step and could emit duplicate completion. | Added explicit completed state and restart-from-zero playback semantics while preserving pause/resume behavior. |
@@ -57,12 +57,15 @@ The repository had pre-existing uncommitted changes when this audit began. Audit
 | API-08 | High | GIF capture could expose each decode-time grid as a rapid visible pass, while sequence morph capture occurred after an asynchronous source had already replaced the outgoing state. Model sources were not sequence-aware. | Kept decode grids private until atomic frame-zero publication; moved retained-frame capture ahead of image/model preparation; added cancellable tri-state model steps, continuity tests, exact fallback-rate wording, and a dedicated 3D toolbar menu after Image. |
 | UI-04 | High | The web utility accepted local `.gltf` files even though a single-file picker could not resolve their external `.bin` buffers, and core mesh transforms had no utility controls. | Limited local upload to self-contained GLB, added remote glTF/GLB URL loading with explicit CORS guidance, and exposed mesh axis/uniform scale, camera FOV, auto-rotation, and Y rotation speed with generated-code persistence. |
 | API-09 | Medium | Image sources could scale but not rotate or mirror, and the utility did not make clear that procedural primitives share imported-model transforms. | Added sampling-time image rotation/mirroring, application-level external glTF URI resolution, and shared X/Y/Z mesh rotation and axis mirroring controls for primitives and imported models. |
+| DOC-09 | High | README and guides contained stale counts, an obsolete task-file link, a stale cache description, an incorrect sequence-loop description, and inaccurate blob-URL MIME wording. | Compared documentation with runtime and build sources, corrected each statement, and added regression assertions for selected facts. |
+| DOC-10 | Medium | Several pages used internal shorthand or inflated scope claims such as “coined modes,” “visibility-bounded,” “JSON-safe,” “complete control surface,” and “every mode and option.” | Replaced those phrases with direct descriptions of behavior and explicit limits. |
+| PKG-02 | High | README, Start, navigation, and the web utility presented npm, JSR, and CDN installation as available although the documented package currently returns 404 from those registries. | Marked publication as pending, removed unavailable registry badges and links, documented the working source-build path, and changed utility copy actions to the source command. |
 
 ## Navigation result
 
 The primary sidebar order is:
 
-1. Getting started
+1. Start
 2. Guides
    1. Renderers and performance
    2. Integration and lifecycle
@@ -70,7 +73,8 @@ The primary sidebar order is:
    4. Character sets
    5. Animation sequences
    6. Images
-   7. Web utility
+   7. 3D meshes and models
+   8. Web utility
 3. Usage examples
 4. Gallery
 5. API reference
@@ -78,13 +82,14 @@ The primary sidebar order is:
 7. Version and compatibility
 8. Attributions
 
-Resources remain separate from the documentation information architecture: Web utility, Source repository, and npm package.
+Resources remain separate from the documentation information architecture: Web utility,
+Source repository, and Package status.
 
 ## Documentation coverage result
 
 | Subject | README | Hugo docs | Maintainer architecture |
 | --- | --- | --- | --- |
-| Installation and bundle formats | Yes | Getting started and API | Build ownership |
+| Installation and bundle formats | Yes | Start and API | Build ownership |
 | Target sizing and ownership | Yes | Getting started and Integration | Runtime construction |
 | Renderers and fallback | Yes | Rendering and API | Renderer boundary |
 | Built-in and custom modes | Yes | Animation modes and API | Mode models |
@@ -119,8 +124,8 @@ Future comments should explain at least one of these concerns:
 | --- | --- | --- |
 | P1 | README and API reference retain intentional overlapping tables, so runtime changes can still drift. | Extend tests to compare selected defaults and names against runtime exports when each new public option is added. |
 | P1 | Canvas and WebGL presentation cannot be validated by JSDOM. | Run a current Chrome, Firefox, and Safari visual pass before a public release. |
-| P1 | CI runs tests, lint, and the library build but does not currently build Hugo documentation. | Add a pinned Hugo CI job or a container-capable docs check that fails on stale generated `public` output. |
-| P2 | `pending-tasks copy.md` duplicates a planning document and may confuse future maintainers. | Review both task files and remove or archive the copy in a separate cleanup change. |
+| P1 | Automated WebKit on Linux does not verify Safari font metrics or Apple GPU behavior. | Run Safari on Apple hardware before making Safari-specific release claims. |
+| P2 | Registry and CDN instructions can become stale when the first package is published. | Update package status, restore version-pinned install examples, and verify each public URL during release. |
 | P2 | `docs/static-sot-template.html` is a large prototype retained for provenance. | Remove it after confirming no design comparisons still depend on it, or move it to a clearly named archive directory. |
 
 ## Verification record
@@ -130,12 +135,12 @@ Future comments should explain at least one of these concerns:
 | Documentation source inventory | Complete | All README, Hugo content, layout, static, and generated documentation paths reviewed. |
 | Runtime/API inventory | Complete | Public methods, options, events, mode inventory, declarations, and focused guides compared. |
 | Hugo build | Passed | Hugo 0.164.0 reported 20 pages and 67 static files; documentation is rooted at `public/` and the application is present at `public/webutil/`. |
-| Automated tests | Passed | 7 suites and 98 tests passed, including route ownership, image-aware sequence timing, node editing, and live search interaction coverage. |
+| Automated tests | Passed | 7 suites and 110 tests passed, including runtime, documentation, search, image, sequence, mesh, and glTF coverage. |
 | ESLint | Passed | `npm run lint` completed without diagnostics. |
 | Package build | Passed | Vite generated canonical `.mjs`/`.cjs` entries plus readable and minified UMD/ESM browser bundles; both entry formats load successfully. |
 | Diagnostics benchmark | Passed | At 1280×720 across 3,000 mocked Canvas frames and 11 rounds, disabled measured 0.1097 ms/frame and extended measured 0.1135 ms/frame: 0.0038 ms absolute opt-in overhead. |
 | Local Markdown links | Passed | 23 authored documentation and maintainer Markdown files checked; no missing local targets. |
-| Real-browser visual review | Partial | Firefox headless loaded the generated root documentation and `/webutil/` application at 1440×1000, including every local script, runtime bundle, image manifest, and brand asset. Chrome and Safari remain release checks. |
+| Browser-engine verification | Partial | Headless Chromium, Firefox, and WebKit pass the built utility workflow, Canvas 2D pixel, 3D configuration, responsive-bound, and browser-error checks. Manual current-browser, Safari-on-Apple-hardware, and physical-mobile review remain release checks. |
 
 ## Audit reference
 

@@ -273,6 +273,12 @@ strangers with confidence."
 
 ### **Distribution Readiness (priority-2)**
 
+- [x] 🟠🌟✅2️⃣ **Distribution** - **README and documentation editorial audit.** Read the
+      complete repository README and every authored Hugo content page, then compared factual
+      claims with runtime, build, package, and task sources. Removed promotional and internal
+      shorthand, corrected the 27-mode inventory and mesh coverage, aligned the Start title,
+      fixed sequence, GIF, cache, and task-file wording, and documented that npm, JSR, and CDN
+      publication is pending. Added regression checks for selected wording and distribution facts.
 - [x] 🟠🌟✅2️⃣ **Distribution** - **Multi-instance frame scheduling.** Active renderers share one
       `requestAnimationFrame` callback while retaining independent time, visibility,
       throttling, and lifecycle state. All quality tiers are uncapped, and blank glyphs

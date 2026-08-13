@@ -741,7 +741,7 @@
             select:hover  { border-color: var(--clr-border-hi); }
             select:focus  { border-color: var(--clr-primary); outline: none; }
 
-            /* Color input — sleek dark mode swatch matching design system */
+            /* Keep the native color control aligned with adjacent form controls. */
             input[type="color"] {
                 appearance: none;
                 -webkit-appearance: none;
@@ -2581,22 +2581,22 @@
 
                 <div class="about-container">
                     <div class="about-hero">
-                        <h1 class="about-hero-title">Efficient ASCII Background Animator</h1>
+                        <h1 class="about-hero-title">ASCII media renderer</h1>
                         <p class="about-hero-subtitle">
-                            Zero-dependency ASCII media engine for application backgrounds, hero image regions, splash pages, and technical documentation. WebGL2 is selected first with Canvas 2D fallback, while shared frame scheduling and off-screen pausing bound multi-instance work.
+                            Dependency-free renderer for procedural ASCII animation, sampled images, and 3D meshes. The default renderer requests WebGL2 and falls back to Canvas 2D. Running instances share one frame scheduler and pause when off-screen where browser observers are available.
                         </p>
 
                         <div class="npm-install-bar" style="margin-block-start:var(--space-sm);max-inline-size:540px">
                             <div class="npm-install-cmd">
                                 <span class="npm-prompt">$</span>
-                                <code>npm install @staticcanvas/asciiam</code>
-                                <span class="npm-ver-badge" data-package-version>v0.10.0</span>
+                                <code>git clone https://gitlab.com/staticcanvas/asciiam.git</code>
+                                <span class="npm-ver-badge">source</span>
                             </div>
-                            <button class="npm-copy-btn" id="copyNpmInstallAbout" type="button" aria-label="Copy npm install command">
+                            <button class="npm-copy-btn" id="copySourceCommandAbout" type="button" aria-label="Copy source clone command">
                                 <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                                 <span>copy</span>
                             </button>
-                            <a href="https://www.npmjs.com/package/@staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View on npm">
+                            <a href="https://gitlab.com/staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View source repository">
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0H0zm19.2 19.2H12v-9.6H9.6v9.6H4.8V4.8h14.4v14.4z"/></svg>
                             </a>
                         </div>
@@ -2620,18 +2620,18 @@
                                 <p>Procedural fields and sampled images render as glyph grids for backgrounds, bounded hero cards, and splash compositions.</p>
                             </article>
                             <article class="about-reference-card">
-                                <h3>Efficient lifecycle</h3>
+                                <h3>Lifecycle</h3>
                                 <p>Instances share frame scheduling, pause when hidden or off-screen, and expose cleanup through <code>destroy()</code>.</p>
                             </article>
                         </div>
                     </section>
 
                     <section class="about-docs-callout" aria-labelledby="aboutDocsTitle">
-                        <p class="about-docs-kicker">Detailed reference lives in Hugo</p>
-                        <h2 id="aboutDocsTitle">Configure here. Validate here. Document there.</h2>
+                        <p class="about-docs-kicker">Documentation</p>
+                        <h2 id="aboutDocsTitle">Configuration and runtime reference</h2>
                         <p>
                             Use the web utility to create and preview a configuration. Use the documentation for installation,
-                            renderer behavior, image sampling, animation sequences, persistence, and the complete API contract.
+                            renderer behavior, image sampling, animation sequences, persistence, and the API reference.
                         </p>
                         <div class="about-docs-actions">
                             <a class="about-cta-btn" href="../">Open documentation</a>
@@ -2832,14 +2832,14 @@
                     <div class="npm-install-bar">
                         <div class="npm-install-cmd">
                             <span class="npm-prompt">$</span>
-                            <code>npm install @staticcanvas/asciiam</code>
-                            <span class="npm-ver-badge" data-package-version>v0.10.0</span>
+                            <code>git clone https://gitlab.com/staticcanvas/asciiam.git</code>
+                            <span class="npm-ver-badge">source</span>
                         </div>
-                        <button class="npm-copy-btn" id="copyNpmInstallCode" type="button" aria-label="Copy npm install command">
+                        <button class="npm-copy-btn" id="copySourceCommandCode" type="button" aria-label="Copy source clone command">
                             <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                             <span>copy</span>
                         </button>
-                        <a href="https://www.npmjs.com/package/@staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View on npm">
+                        <a href="https://gitlab.com/staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View source repository">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0H0zm19.2 19.2H12v-9.6H9.6v9.6H4.8V4.8h14.4v14.4z"/></svg>
                         </a>
                     </div>

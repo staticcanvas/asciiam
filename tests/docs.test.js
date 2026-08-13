@@ -81,9 +81,34 @@ describe('Hugo documentation source', () => {
     expect(base).toContain('class="nav-submenu"');
     expect(base).toContain('partial "lucide-icon.html"');
     expect(base).toContain('class="docs-splash"');
+    expect(base).toContain('<span>Package status</span>');
+    expect(base).not.toContain('<span>npm package</span>');
     expect(base).toContain('{{ if not .IsHome }}');
     expect(icons).toContain('Local Lucide icon subset');
     expect(icons).toContain('class="nav-icon lucide"');
+  });
+
+  it('keeps public documentation factual and free of promotional filler', () => {
+    const documentation = [
+      projectFile('README.md'),
+      projectFile('docs/content/getting-started.md'),
+      projectFile('docs/content/guides/animations.md'),
+      projectFile('docs/content/guides/images.md'),
+      projectFile('docs/content/guides/sequences.md'),
+      projectFile('docs/content/guides/web-utility.md'),
+      projectFile('docs/content/examples/_index.md'),
+      projectFile('docs/content/api/_index.md'),
+      projectFile('docs/content/version.md'),
+    ].join('\n');
+
+    expect(documentation).not.toMatch(/\b(seamless|powerful|robust|awesome|beautiful|cutting-edge|best-in-class|effortless|intuitive|world-class)\b/i);
+    expect(documentation).not.toContain('every mode and option');
+    expect(documentation).not.toContain('complete control surface');
+    expect(documentation).not.toContain('package-version query');
+    expect(documentation).not.toContain('pending-tasks.md');
+    expect(projectFile('README.md')).toContain('Twenty-seven built-in modes');
+    expect(projectFile('README.md')).toContain('| `mesh`');
+    expect(projectFile('docs/content/version.md')).toContain('not yet published to npm or JSR');
   });
 
   it('publishes documentation at the root and the application at a relative webutil route', () => {

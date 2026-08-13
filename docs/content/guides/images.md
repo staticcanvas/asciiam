@@ -3,7 +3,7 @@ title: Images and colour-range animation
 description: Sample local or remote images into ASCII and restrict animation to an inclusive RGB range.
 weight: 40
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [images, media, GIF, SVG, sampling, colour range]
 keywords: [image to ASCII, photo to ASCII, animated GIF ASCII, SVG silhouette, image sampling, RGB animation range, colour from image]
 ---
@@ -22,11 +22,16 @@ animation.setOption('colorFromImage', true);
 
 Uploaded files can be passed through an object URL. Revoke the URL after `setImage()` resolves.
 
-URL paths ending in `.gif` are detected automatically. Object URLs do not retain a filename, so pass `{ animated: true }` when loading an uploaded GIF. `setImage()` waits while each decoded frame is converted to the current ASCII grid, preserves the GIF's individual frame delays, and emits `imageFramesReady` with `frameCount` and total `duration`. The decoded bitmap for each frame is closed immediately; playback retains ASCII data, not full-resolution frames.
+URL paths ending in `.gif` and GIF data URLs are detected automatically. A blob URL does
+not contain the source filename or media type in its URL string, so pass
+`{ animated: true }` when loading an uploaded GIF. `setImage()` waits while each decoded
+frame is converted to the current ASCII grid, preserves individual frame delays, and emits
+`imageFramesReady` with `frameCount` and total `duration`. Each decoded bitmap is closed
+after conversion; playback retains ASCII cell data rather than full-resolution frames.
 
 Frame conversion is preparation, not playback. asciiam keeps the current grid visible
 through the decode pass and publishes the completed frame set atomically at frame zero.
-Decoded frames therefore cannot flash or fast-forward before normal animation begins.
+Decoded frames therefore cannot appear before scheduled playback begins.
 
 If `ImageDecoder` or fetch access is unavailable, asciiam falls back to sampling the browser-animated `<img>`. `imageFrameRate` limits only that compatibility path; it does not alter exact GIF frame delays or cap renderer FPS. Changing image sampling options or target dimensions re-captures the ASCII frames after a short debounce.
 
@@ -49,7 +54,11 @@ animation.setOption('imageAnimationRange', {
 animation.setMode('ripple');
 ```
 
-Every built-in mode can operate while an image source is loaded. Dense modes animate the sampled glyph cells directly. Sparse modes such as `matrix`, `snow`, `fire`, `starfield`, and `orbit` retain their particle geometry and are clipped to sampled image cells.
+Procedural, reveal, interaction, sparse-particle, and custom modes can operate while an
+image source is loaded. Dense modes animate sampled glyph cells directly. Sparse modes
+such as `matrix`, `snow`, `fire`, `starfield`, and `orbit` retain their particle geometry
+and are clipped to sampled image cells. `mesh` renders its geometry source instead of the
+loaded image grid.
 
 Transparent SVG silhouettes often use black fills. Normal luminance mapping sends black to the first density glyph, which is commonly a space. The default `imageLuminance: 'auto'` detects dark opaque artwork surrounded by transparency and inverts its density mapping. Set `normal` or `invert` when explicit control is required. This affects glyph density only; it does not rotate or transform the source SVG.
 
@@ -57,7 +66,7 @@ Image fitting compares the source aspect ratio with the rendered glyph area, inc
 
 `imageRotation` rotates the fitted source clockwise in degrees. `imageFlipX` and
 `imageFlipY` mirror it horizontally or vertically. These transforms run only while
-sampling or recapturing image grids; they do not add work to ordinary render frames.
+sampling or recapturing image grids; they do not add work to frames between sampling operations.
 
 ## ASCII text sources
 
@@ -80,7 +89,7 @@ The engine creates a byte mask during image sampling. Per-frame image animation 
 
 | Property or method | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `setImage(source, options?)` | URL string and optional `{ animated }` | — | Decodes an image and captures all GIF frames where supported. |
+| `setImage(source, options?)` | URL string and optional `{ animated }` | — | Decodes an image and captures GIF frames when `ImageDecoder` and fetch access are available. |
 | `fit` | `cover \| contain` | `cover` | Crops or letterboxes the source. |
 | `imageScale` | number | `1` | Applies centered source zoom. |
 | `imageScaleX` | number | `1` | Scales sampled output width around the centre. |

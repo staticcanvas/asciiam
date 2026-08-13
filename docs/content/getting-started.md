@@ -1,9 +1,9 @@
 ---
-title: Getting started
+title: Start
 description: Install asciiam, create a sized target, select a renderer, and start the animation lifecycle.
 weight: 10
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [installation, setup, quickstart, lifecycle, ESM, npm]
 keywords: [install asciiam, getting started, JavaScript ASCII animation, canvas quickstart, browser module, mjs import]
 ---
@@ -16,29 +16,23 @@ asciiam renders an animated glyph grid into a canvas owned by an HTML element or
 - WebGL2 when using the default GPU-first renderer; Canvas 2D is used when WebGL2 is unavailable.
 - A target element with non-zero width and height.
 
-## Install from npm
+## Build from source
+
+The package is not yet published to npm or JSR. Build the current source checkout before
+using it locally:
 
 `terminal`
 
 ```bash
-npm install @staticcanvas/asciiam
+git clone https://gitlab.com/staticcanvas/asciiam.git
+cd asciiam
+npm ci
+npm run build
 ```
 
-`app.js`
-
-```js
-import asciiam from '@staticcanvas/asciiam';
-
-const animation = new asciiam('#hero', {
-  ...asciiam.presets.heroWave,
-  renderer: 'auto'
-});
-
-animation.start();
-```
-
-The package export resolves to `dist/asciiam.mjs` in ESM-aware runtimes. A direct
-browser import can use the same module artifact without a bundler:
+The build writes ESM, CommonJS, and UMD files to `dist/asciiam`. The planned package name
+is `@staticcanvas/asciiam`; use the npm command only after that package is published.
+A source checkout can use the generated module without a bundler:
 
 `index.html`
 
@@ -115,7 +109,7 @@ stateDiagram-v2
 
 | API | Type | Default | Purpose |
 | --- | --- | --- | --- |
-| `new asciiam(target, options)` | constructor | — | Creates one renderer and animation state container. |
+| `new asciiam(target, options)` | constructor | — | Creates one renderer instance for the target. |
 | `renderer` | option | `auto` | Selects automatic, WebGL2, or Canvas 2D rendering. |
 | `dist/asciiam.mjs` | ESM artifact | — | Supports package resolution and direct browser module imports. |
 | `dist/asciiam.cjs` | CommonJS artifact | — | Supports `require('@staticcanvas/asciiam')`. |

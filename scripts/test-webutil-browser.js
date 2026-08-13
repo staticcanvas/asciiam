@@ -66,8 +66,21 @@ async function verifyBrowser(browserType, browserName) {
         await page.mouse.down();
         await page.mouse.move(bounds.x + bounds.width * 0.98, bounds.y + bounds.height / 2, { steps: 6 });
         await page.mouse.up();
+        // Native range dragging differs slightly between engines. A pointer click
+        // at the same destination makes the intended endpoint deterministic while
+        // still exercising the browser's native input interaction.
+        await page.mouse.click(bounds.x + bounds.width * 0.9, bounds.y + bounds.height / 2);
+        await page.waitForTimeout(100);
+        if (Number(await resolution.inputValue()) * 100 <= automatic.percent) {
+            await resolution.focus();
+            await page.keyboard.press("End");
+        }
+        await page.waitForFunction((initialPercent) => {
+            const value = Number(document.getElementById("resolutionScale")?.value || 0);
+            return Math.round(value * 100) > initialPercent;
+        }, automatic.percent);
         const detailed = parseGridStatus(await page.locator("#resolutionGridStatus").textContent());
-        assert(detailed.percent > automatic.percent);
+        assert(detailed.percent > automatic.percent, `${browserName} grid slider did not increase resolution`);
         assert(detailed.columns > automatic.columns);
         assert(detailed.rows > automatic.rows);
 

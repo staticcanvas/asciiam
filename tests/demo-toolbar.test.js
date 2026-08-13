@@ -713,7 +713,7 @@ describe('demo toolbar quality-of-life controls', () => {
     );
 
     expect(headings).toEqual(
-      expect.arrayContaining(['Product overview', 'Configure here. Validate here. Document there.'])
+      expect.arrayContaining(['Product overview', 'Configuration and runtime reference'])
     );
     expect(document.querySelectorAll('.about-reference-card')).toHaveLength(3);
     expect(document.querySelector('.about-export-table')).toBeNull();
@@ -721,7 +721,13 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(document.getElementById('pop-about').textContent).toContain('WebGL2');
     expect(document.getElementById('pop-about').textContent).toContain('Canvas 2D');
     expect(document.querySelector('.about-hero-title').textContent).toBe(
-      'Efficient ASCII Background Animator'
+      'ASCII media renderer'
+    );
+    expect(document.getElementById('pop-about').textContent).toContain(
+      'git clone https://gitlab.com/staticcanvas/asciiam.git'
+    );
+    expect(document.getElementById('pop-about').textContent).not.toContain(
+      'npm install @staticcanvas/asciiam'
     );
     expect(document.querySelector('#pop-about a[href="../"]')).not.toBeNull();
     expect(

@@ -3,12 +3,15 @@ title: Version and compatibility
 description: Current package version, artifacts, runtime requirements, and compatibility policy.
 weight: 60
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [version, compatibility, artifacts, package, ESM, CommonJS]
 keywords: [asciiam version, browser compatibility, package exports, ESM bundle, mjs module, CommonJS cjs, UMD bundle]
 ---
 
 The current documented package version is `0.10.0`.
+
+This version is built from the repository but is not yet published to npm or JSR. Registry
+and CDN installation becomes available only after publication of `@staticcanvas/asciiam`.
 
 ## Artifacts
 
@@ -29,7 +32,10 @@ The current documented package version is `0.10.0`.
 - WebGL2 when the GPU backend resolves successfully.
 - Browser image decoding for raster images, SVGs, and animated GIF frame advancement.
 
-The application HTML loads its local runtime bundle with a package-version query. Deployment headers require revalidation for application and documentation libraries so a current interface does not retain an older mode registry. Hashed or versioned third-party CDN URLs may use immutable caching.
+The documentation build assigns one content-derived revision to the web utility's HTML,
+runtime, and JavaScript module graph. This prevents a deployment from combining current
+controls with cached code from an earlier build. Version-pinned third-party CDN URLs may
+use immutable caching.
 
 ## Version sources
 

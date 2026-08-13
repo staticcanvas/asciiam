@@ -3,7 +3,7 @@ title: Animation sequences
 description: Run ordered media and mesh animation nodes with controlled timing, retained-frame transitions, callbacks, and looping.
 weight: 30
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [sequences, timeline, images, 3D, glTF, transitions, morph, repeat, events]
 keywords: [animation sequence, image sequence, mesh sequence, glTF sequence, animation playlist, sequence nodes, ASCII transitions, retained frame morph, snapshot transition, step repeat, callbacks]
 ---
@@ -21,7 +21,7 @@ whether playback returns to the first step after the final step.
 
 An incoming step can also declare a `morph` transition. asciiam captures and holds the outgoing presentation before it changes or begins source preparation. After the incoming image, media frame set, or mesh is ready, the incoming mode starts live beneath that retained frame and the outgoing frame eases away. This is a bounded retained-frame morph: it does not restart retained GIF playback, expose decode frames, or run two render engines concurrently. The default transition is `cut`; reduced-motion preference resolves morphs to cuts.
 
-## Configure the requested flow
+## Configure a sequence
 
 The following sequence runs ripple for five seconds, fades out, fades in, and repeats.
 
@@ -145,7 +145,7 @@ Step callbacks receive `(detail, animation)`. The same lifecycle is available th
 | `step.onError` | callback | Runs when the node's image or model cannot be decoded. |
 | `step.repeat` | boolean, default `false` | Repeats a finite mode timeline while the step remains active. |
 | `step.transition` | `{ type, duration, easing }` | Selects an incoming `cut` or snapshot `morph`; duration uses seconds. |
-| `options.loop` | boolean | Legacy per-mode repeat input; `step.repeat` is the explicit sequence form. |
+| `options.loop` | boolean, default `true` | Restarts the sequence after its final step. |
 | `sequenceMorphStart` | event | Emitted after incoming state is ready and the retained outgoing frame begins easing away. |
 | `sequenceMorphComplete` | event | Emitted after the outgoing snapshot reaches zero opacity. |
 | `sequenceStepError` | event | Emitted when a node image or model fails; playback pauses. |

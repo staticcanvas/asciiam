@@ -53,11 +53,12 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 
 ### Documentation
 
-- Hugo documentation source and visibility-bounded live preset gallery.
-- Full constructor, option, method, renderer, sequence, event, and callback reference.
+- Audited the README and authored documentation for direct language and factual alignment with the runtime, build, task tracker, and current unpublished package status.
+- Hugo documentation source and a live preset gallery limited to six concurrent renderers.
+- Constructor, option, method, renderer, sequence, event, and callback reference.
 - Web-utility workflow, preset gallery, version policy, GIF/SVG behavior, and integration guides.
 - Default and included character sets are documented in a focused guide and the repository README.
-- Added a single-instance live usage workbench with minimum-to-complete JSON-safe examples, reset/copy controls, and web-utility configuration transfer.
+- Added a single-instance usage editor with examples from minimum initialization through a broad serializable configuration, reset and copy controls, and web-utility configuration transfer.
 - Added page descriptions, dates, tags, keywords, modified-time metadata, and GitLab/GitHub edit links across the documentation set.
 - Added `/` alongside `Ctrl+K` and `Command+K` for current-page search focus.
 - Hardened site search with combobox semantics, deduplicated index loading, stale-query suppression, malformed-field tolerance, and deploy-path-safe result links.
@@ -77,5 +78,5 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 - This is the first documented API baseline; there are no earlier documented migrations.
 - Prefer `renderer: 'auto'` when the application should use WebGL2 where available and retain Canvas 2D fallback.
 - Call `destroy()` when removing an instance so observers, listeners, renderer resources, and scheduler membership are released.
-- Pass `{ animated: true }` to `setImage()` for uploaded GIF object URLs because blob URLs do not retain the original filename or MIME type.
+- Pass `{ animated: true }` to `setImage()` for uploaded GIF blob URLs because their URL strings contain neither a `.gif` suffix nor an `image/gif` data-URL prefix.
 - Use `imageLuminance: 'normal'` when automatic silhouette detection is not appropriate for a transparent source.

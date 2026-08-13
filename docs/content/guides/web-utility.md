@@ -57,7 +57,9 @@ For grids and galleries, construct only visible previews and destroy instances t
 
 ## Export and integrate
 
-Open Code to generate a constructor option object from the current controls. Install the package or select a browser bundle, create an instance after its target has measurable dimensions, then call `start()`.
+Open Code to generate a constructor option object from the current controls. Use a locally
+built browser bundle until registry publication. Create the instance after its target has
+measurable dimensions, then call `start()`.
 
 `app.js`
 
@@ -74,7 +76,11 @@ animation.start();
 
 Call `destroy()` when removing the target. This releases observers, subscriptions, presentation resources, and an owned canvas.
 
-The [Usage examples]({{< relref "/examples" >}}) workbench provides a second authoring path. Its **View in web utility** action sends the current JSON-safe options through a base64url-encoded `config` query value. The utility applies that configuration after defaults and locally restored settings, then exposes it as a custom composition. Invalid or non-object values are ignored.
+The [Usage examples]({{< relref "/examples" >}}) editor provides a second configuration
+path. Its **View in web utility** action sends options representable as JSON through a
+base64url-encoded `config` query value. The utility applies that configuration after
+defaults and locally restored settings, then labels it as a custom configuration. Invalid
+or non-object values are ignored.
 
 ## Persistence and local data
 
@@ -89,11 +95,11 @@ The [Usage examples]({{< relref "/examples" >}}) workbench provides a second aut
 
 ## Documentation routes
 
-- Use [Getting started]({{< relref "/getting-started" >}}) for package and browser initialization.
+- Use [Start]({{< relref "/getting-started" >}}) for source setup and browser initialization.
 - Use [Renderers and performance]({{< relref "/guides/rendering" >}}) for backend and quality behavior.
 - Use [Images and colour-range animation]({{< relref "/guides/images" >}}) for sampled media.
 - Use [Animation sequences]({{< relref "/guides/sequences" >}}) for staggered and interruptible flows.
-- Use [Usage examples]({{< relref "/examples" >}}) for editable minimum-to-complete configurations.
+- Use [Usage examples]({{< relref "/examples" >}}) for editable configurations.
 - Use the [API reference]({{< relref "/api" >}}) for option and method contracts.
 
 ## API reference
@@ -110,7 +116,7 @@ The [Usage examples]({{< relref "/examples" >}}) workbench provides a second aut
 | 3D | `setModel()`, `meshTransform`, `meshCamera`, rotation options | Uploads local GLB, loads remote glTF/GLB, and controls geometry scale, FOV, and rotation. |
 | Sequence | `setSequence()`, sequence methods | Configures ordered animation steps. |
 | Code | constructor options | Serializes the current supported configuration. |
-| `config` URL value | JSON-safe constructor options | Imports a documentation example without depending on npm or a CDN. |
+| `config` URL value | JSON-representable constructor options | Imports a documentation example without depending on npm or a CDN. |
 
 Backdrop placement is explicit. `behind` draws before glyphs. `over` composites after glyphs, so opacity `1` fully covers the animation. The range and exact numeric input both accept the inclusive interval from `0` through `1`.
 

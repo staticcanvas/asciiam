@@ -3,7 +3,7 @@ title: Animation modes
 description: Configure dense fields, spatial effects, reveals, sparse particles, images, and custom cells.
 weight: 20
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [animation, modes, interaction, hover, click, spatial effects, reveals]
 keywords: [ASCII animation modes, hover zone animation, click zone animation, reveal modes, particle modes, custom animation, spatial effects]
 ---
@@ -22,9 +22,9 @@ Modes determine how each frame selects glyph, intensity, opacity, weight, and op
 | `fadeIn`, `fadeOut` | timed reveal | `revealDirection`, `loop` |
 | `irisIn`, `irisOut` | radial transition reveal | `align`, `loop` |
 | `dissolveIn`, `dissolveOut` | seeded directional dissolve | `revealDirection`, `loop` |
-| `lumaFold` | coined folded-luminance ridges | `speed`, opacity bounds |
-| `riftLace` | coined intersecting seam lattice | `speed`, character set |
-| `echoBloom` | coined concentric echo blossoms | `align`, `speed` |
+| `lumaFold` | moving folded-luminance ridges | `speed`, opacity bounds |
+| `riftLace` | intersecting animated seam lattice | `speed`, character set |
+| `echoBloom` | concentric radial echoes | `align`, `speed` |
 | `glitch` | dense displacement | `glitchIntensity` |
 | `typewriter` | timed reveal | `typewriterDuration` |
 | `matrix`, `snow`, `sparkle` | sparse particles | matching density option |
@@ -32,6 +32,7 @@ Modes determine how each frame selects glyph, intensity, opacity, weight, and op
 | `hoverZone` | pointer-local dense field | `interactionRadius`, `setCursor()` |
 | `clickZone` | triggered expanding dense field | `interactionRadius`, `interactionDuration`, `triggerInteraction()` |
 | `image` | sampled image grid | image and mask options |
+| `mesh` | projected geometry grid | mesh source, camera, transform, and raster style |
 | `custom` | callback | `customCell` |
 
 ## Change mode
