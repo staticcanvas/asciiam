@@ -250,6 +250,12 @@ strangers with confidence."
 - [x] 🟠🪲✅1️⃣ **Critical** - **Sequence media continuity.** GIF decode grids remain private until complete;
       retained-frame morphs capture before asynchronous image/model preparation; sequence nodes support
       tri-state model sources; 3D controls have a dedicated toolbar menu after Image.
+- [x] 🟡🪲✅1️⃣ **Critical** - **Unambiguous 3D input workflow.** Limited browser-local model upload to
+      self-contained GLB, added remote glTF/GLB URL loading for sibling `.bin` resolution, and exposed
+      mesh scale, camera FOV, and rotation controls with generated-code persistence.
+- [x] 🟡🌟✅1️⃣ **Critical** - **Source transforms.** Added image rotation and horizontal/vertical mirroring,
+      application-managed glTF external-buffer resolution, and common rotation/mirroring controls for
+      procedural primitives and imported models.
 
 ### **Distribution Readiness (priority-2)**
 

@@ -464,6 +464,56 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(document.getElementById('imageFrameRateVal').textContent).toBe('18 fps');
   });
 
+  it('limits local models to GLB and exports dedicated 3D transform controls', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    expect(document.getElementById('modelInput').accept).toBe('.glb,model/gltf-binary');
+    expect(document.getElementById('modelUrl').type).toBe('url');
+
+    const primitive = document.getElementById('meshPrimitive');
+    primitive.value = 'torus';
+    primitive.dispatchEvent(new Event('change', { bubbles: true }));
+    const scale = document.getElementById('meshScale');
+    scale.value = '1.5';
+    scale.dispatchEvent(new Event('input', { bubbles: true }));
+    const fov = document.getElementById('meshFov');
+    fov.value = '75';
+    fov.dispatchEvent(new Event('input', { bubbles: true }));
+    const autoRotate = document.getElementById('meshAutoRotateToggle');
+    autoRotate.checked = false;
+    autoRotate.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const source = document.getElementById('usageCodePopover').textContent;
+    expect(document.getElementById('meshScaleVal').textContent).toBe('1.50×');
+    expect(document.getElementById('meshFovVal').textContent).toBe('75°');
+    expect(autoRotate.getAttribute('aria-checked')).toBe('false');
+    expect(source).toContain('"meshTransform"');
+    expect(source).toContain('"meshCamera"');
+    expect(source).toContain('"meshAutoRotate": false');
+
+    const rotation = document.getElementById('meshRotationY');
+    rotation.value = '45';
+    rotation.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('meshFlipXBtn').click();
+    expect(document.getElementById('meshRotationYVal').textContent).toBe('45°');
+    expect(document.getElementById('meshFlipXBtn').getAttribute('aria-pressed')).toBe('true');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"rotation"');
+  });
+
+  it('rotates and flips sampled images through source controls', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const rotation = document.getElementById('imageRotation');
+    rotation.value = '30';
+    rotation.dispatchEvent(new Event('input', { bubbles: true }));
+    const flip = document.getElementById('imageFlipXToggle');
+    flip.checked = true;
+    flip.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(document.getElementById('imageRotationVal').textContent).toBe('30°');
+    expect(flip.getAttribute('aria-checked')).toBe('true');
+  });
+
   it('keeps compact stats by default and explicitly enables extended diagnostics', () => {
     activeDom = createDemo();
     const { document, Event } = activeDom.window;

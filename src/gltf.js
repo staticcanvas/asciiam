@@ -75,6 +75,24 @@ async function fetchBytes(url, signal, onProgress) {
     return bytes.buffer;
 }
 
+/** Normalize a caller-resolved buffer resource without imposing a file-picker API. */
+async function readResolvedBytes(resource, baseUrl, options, index) {
+    throwIfAborted(options.signal);
+    let buffer;
+    if (typeof resource === "string") {
+        const url = new URL(resource, baseUrl || globalThis.document?.baseURI || globalThis.location?.href).href;
+        return fetchBytes(url, options.signal, (progress) => options.onProgress?.({ ...progress, buffer: index }));
+    }
+    if (typeof Blob !== "undefined" && resource instanceof Blob) buffer = await resource.arrayBuffer();
+    else if (resource instanceof ArrayBuffer || Object.prototype.toString.call(resource) === "[object ArrayBuffer]") buffer = resource;
+    else if (ArrayBuffer.isView(resource)) {
+        buffer = resource.buffer.slice(resource.byteOffset, resource.byteOffset + resource.byteLength);
+    } else throw new TypeError(`asciiam: resolveUri returned an unsupported resource for glTF buffer ${index}`);
+    throwIfAborted(options.signal);
+    options.onProgress?.({ loaded: buffer.byteLength, total: buffer.byteLength, buffer: index });
+    return buffer;
+}
+
 /** Parse a GLB v2 container and return its JSON plus optional first binary chunk. */
 export function parseGlb(buffer) {
     const view = new DataView(buffer);
@@ -120,9 +138,16 @@ async function loadBuffers(gltf, binary, baseUrl, options) {
         } else if (definition.uri.startsWith("data:")) {
             buffer = decodeDataUri(definition.uri);
         } else {
-            if (!baseUrl) throw new TypeError(`asciiam: glTF buffer ${index} requires a base URL`);
-            const url = new URL(definition.uri, baseUrl).href;
-            buffer = await fetchBytes(url, options.signal, (progress) => options.onProgress?.({ ...progress, buffer: index }));
+            const resolved = typeof options.resolveUri === "function"
+                ? await options.resolveUri(definition.uri, { kind: "buffer", index, baseUrl })
+                : null;
+            if (resolved !== null && resolved !== undefined) {
+                buffer = await readResolvedBytes(resolved, baseUrl, options, index);
+            } else {
+                if (!baseUrl) throw new TypeError(`asciiam: glTF buffer ${index} requires a base URL or resolveUri`);
+                const url = new URL(definition.uri, baseUrl).href;
+                buffer = await fetchBytes(url, options.signal, (progress) => options.onProgress?.({ ...progress, buffer: index }));
+            }
         }
         if (buffer.byteLength < definition.byteLength) throw new RangeError(`asciiam: glTF buffer ${index} is shorter than declared`);
         buffers[index] = buffer;

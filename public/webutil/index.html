@@ -875,7 +875,8 @@
             input[type="file"]:hover { border-color: var(--clr-primary); color: var(--clr-text-main); }
 
             /* Search input */
-            input[type="search"] {
+            input[type="search"],
+            input[type="url"] {
                 min-inline-size: 0;
                 flex: 1;
                 background: var(--clr-surface-2);
@@ -887,7 +888,9 @@
                 padding-inline: var(--space-sm);
                 transition: border-color var(--time-fast) var(--ease-fluid);
             }
-            input[type="search"]:focus { border-color: var(--clr-primary); outline: none; }
+            input[type="url"] { inline-size: 100%; }
+            input[type="search"]:focus,
+            input[type="url"]:focus { border-color: var(--clr-primary); outline: none; }
 
             /* Global focus ring */
             :focus-visible {
@@ -2669,6 +2672,22 @@
                         <option value="normal">Normal</option>
                         <option value="invert">Invert</option>
                     </select>
+                    <label class="cpop-label row" for="imageRotation" style="margin-top:var(--space-xs)">Rotation <span class="val" id="imageRotationVal">0°</span></label>
+                    <input type="range" id="imageRotation" min="-180" max="180" step="1" value="0" />
+                    <div class="btn-row">
+                        <button class="mode-btn" id="imageRotateLeftBtn" type="button">Rotate −90°</button>
+                        <button class="mode-btn" id="imageRotateRightBtn" type="button">Rotate +90°</button>
+                    </div>
+                    <label class="ui-switch" for="imageFlipXToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="imageFlipXToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Flip horizontally</span>
+                    </label>
+                    <label class="ui-switch" for="imageFlipYToggle">
+                        <input class="ui-switch__control" type="checkbox" id="imageFlipYToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Flip vertically</span>
+                    </label>
                 </div>
                 <div class="cpop-group">
                     <p class="image-library-help">The global Mode control animates the sampled image. Every animation mode remains available after an image is loaded.</p>
@@ -2739,8 +2758,11 @@
                         <option value="icosphere">Icosphere</option>
                         <option value="torus">Torus</option>
                     </select>
-                    <label class="cpop-label" for="modelInput" style="margin-block-start:var(--space-xs)">Upload glTF 2.0 or GLB v2</label>
-                    <input type="file" id="modelInput" accept=".gltf,.glb,model/gltf+json,model/gltf-binary" />
+                    <label class="cpop-label" for="modelInput" style="margin-block-start:var(--space-xs)">Upload self-contained GLB v2</label>
+                    <input type="file" id="modelInput" accept=".glb,model/gltf-binary" />
+                    <label class="cpop-label" for="modelUrl" style="margin-block-start:var(--space-xs)">Remote glTF or GLB URL</label>
+                    <input type="url" id="modelUrl" inputmode="url" autocomplete="url" placeholder="https://example.com/model.gltf" />
+                    <button class="mode-btn" id="loadModelUrlBtn" type="button" style="margin-block-start:var(--space-xs)">Load remote model</button>
                     <label class="cpop-label" for="meshStyle" style="margin-block-start:var(--space-xs)">Raster style</label>
                     <select id="meshStyle">
                         <option value="points">Points</option>
@@ -2748,7 +2770,47 @@
                         <option value="solid">Solid</option>
                     </select>
                     <p class="image-status" id="modelStatus" role="status" aria-live="polite">No model loaded.</p>
-                    <p class="image-library-help">GLB is self-contained. Local glTF files work when their buffers are embedded; external sibling files cannot be resolved from a browser file picker.</p>
+                    <p class="image-library-help">Local upload accepts GLB because it contains its buffers. A remote .gltf URL may reference sibling .bin files; the server must permit cross-origin requests.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="meshScale">Uniform scale <span class="val" id="meshScaleVal">1.00×</span></label>
+                    <input type="range" id="meshScale" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="meshScaleX" style="margin-block-start:var(--space-xs)">Width (X) <span class="val" id="meshScaleXVal">1.00×</span></label>
+                    <input type="range" id="meshScaleX" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="meshScaleY" style="margin-block-start:var(--space-xs)">Height (Y) <span class="val" id="meshScaleYVal">1.00×</span></label>
+                    <input type="range" id="meshScaleY" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="meshScaleZ" style="margin-block-start:var(--space-xs)">Depth (Z) <span class="val" id="meshScaleZVal">1.00×</span></label>
+                    <input type="range" id="meshScaleZ" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="meshFov" style="margin-block-start:var(--space-xs)">Camera FOV <span class="val" id="meshFovVal">60°</span></label>
+                    <input type="range" id="meshFov" min="20" max="120" step="1" value="60" />
+                </div>
+                <div class="cpop-group">
+                    <span class="cpop-label">Mesh rotation</span>
+                    <label class="cpop-label row" for="meshRotationX">X <span class="val" id="meshRotationXVal">0°</span></label>
+                    <input type="range" id="meshRotationX" min="-180" max="180" step="1" value="0" />
+                    <label class="cpop-label row" for="meshRotationY" style="margin-block-start:var(--space-xs)">Y <span class="val" id="meshRotationYVal">0°</span></label>
+                    <input type="range" id="meshRotationY" min="-180" max="180" step="1" value="0" />
+                    <label class="cpop-label row" for="meshRotationZ" style="margin-block-start:var(--space-xs)">Z <span class="val" id="meshRotationZVal">0°</span></label>
+                    <input type="range" id="meshRotationZ" min="-180" max="180" step="1" value="0" />
+                    <div class="btn-row">
+                        <button class="mode-btn" id="meshRotateLeftBtn" type="button">Y −90°</button>
+                        <button class="mode-btn" id="meshRotateRightBtn" type="button">Y +90°</button>
+                    </div>
+                    <span class="cpop-label" style="margin-block-start:var(--space-sm)">Mirror axes</span>
+                    <div class="btn-row">
+                        <button class="mode-btn" id="meshFlipXBtn" type="button" aria-pressed="false">Flip X</button>
+                        <button class="mode-btn" id="meshFlipYBtn" type="button" aria-pressed="false">Flip Y</button>
+                        <button class="mode-btn" id="meshFlipZBtn" type="button" aria-pressed="false">Flip Z</button>
+                    </div>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="meshAutoRotateToggle">
+                        <input class="ui-switch__control" type="checkbox" id="meshAutoRotateToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Auto rotate</span>
+                    </label>
+                    <label class="cpop-label row" for="meshRotationSpeed" style="margin-block-start:var(--space-xs)">Y rotation speed <span class="val" id="meshRotationSpeedVal">0.45 rad/s</span></label>
+                    <input type="range" id="meshRotationSpeed" min="0" max="1.5" step="0.05" value="0.45" />
                 </div>
             </div>
 

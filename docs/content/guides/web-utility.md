@@ -102,6 +102,7 @@ The [Usage examples]({{< relref "/examples" >}}) workbench provides a second aut
 | Motion and Align | `speed`, `edgeFade`, `trail`, `pulse`, `align` | Updates animation and spatial state. |
 | Color and Backdrop | `color`, `gradient`, `backdrop` | Configures glyph and independent backdrop presentation. |
 | Image | `setImage()`, image options | Samples a local or remote image into the glyph grid. |
+| 3D | `setModel()`, `meshTransform`, `meshCamera`, rotation options | Uploads local GLB, loads remote glTF/GLB, and controls geometry scale, FOV, and rotation. |
 | Sequence | `setSequence()`, sequence methods | Configures ordered animation steps. |
 | Code | constructor options | Serializes the current supported configuration. |
 | `config` URL value | JSON-safe constructor options | Imports a documentation example without depending on npm or a CDN. |
@@ -109,5 +110,13 @@ The [Usage examples]({{< relref "/examples" >}}) workbench provides a second aut
 Backdrop placement is explicit. `behind` draws before glyphs. `over` composites after glyphs, so opacity `1` fully covers the animation. The range and exact numeric input both accept the inclusive interval from `0` through `1`.
 
 The Image popover exposes centered uniform, horizontal, and vertical scaling; field of view; silhouette-aware luminance mapping; animated-image playback and sample rate; sampled color; and an optional RGB animation range. The global Mode popover remains the animation selector after an image is loaded.
+
+The 3D popover accepts local `.glb` files. Its remote URL field accepts `.gltf` or
+`.glb`; relative `.bin` references are resolved from a remote `.gltf` URL and require
+CORS access. Uniform and axis scale, camera FOV, auto-rotation, and Y rotation speed
+are exported in generated configuration.
+Rotation and flip controls follow the same ownership rule: image controls transform
+the sampled source, while the 3D controls transform both procedural primitives and
+imported models through `meshTransform`.
 
 `npm run prepare:bg` generates static 320×180 WebP menu previews when ImageMagick is available. GIF previews use the first frame and image orientation is normalized during generation. Opening the Image popover therefore decodes bounded static previews, not full-resolution sources or animated GIF streams. An original asset is loaded only after its card is selected.

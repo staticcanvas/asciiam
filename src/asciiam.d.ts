@@ -66,12 +66,18 @@ export interface asciiamMeshData {
 }
 
 export type asciiamModelSource = string | Blob | ArrayBuffer | ArrayBufferView | Record<string, unknown>;
+export type asciiamModelResource = string | Blob | ArrayBuffer | ArrayBufferView;
 
 export interface asciiamModelLoadOptions {
   baseUrl?: string;
   scene?: number;
   signal?: AbortSignal;
   limits?: { maxVertices?: number; maxPrimitives?: number };
+  /** Maps an external glTF URI to a selected File, byte buffer, or alternate URL. */
+  resolveUri?: (
+    uri: string,
+    context: { kind: 'buffer'; index: number; baseUrl: string | null }
+  ) => asciiamModelResource | null | undefined | Promise<asciiamModelResource | null | undefined>;
   onProgress?: (progress: { loaded: number; total: number | null; buffer?: number }) => void;
 }
 
@@ -257,6 +263,10 @@ export interface asciiamOptions {
   imageScaleX?: number;
   imageScaleY?: number;
   imageFov?: number;
+  /** Clockwise source rotation in degrees, applied during image sampling. */
+  imageRotation?: number;
+  imageFlipX?: boolean;
+  imageFlipY?: boolean;
   imageLuminance?: 'auto' | 'normal' | 'invert';
   colorFromImage?: boolean;
   animateImageMask?: boolean;

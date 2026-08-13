@@ -27,6 +27,9 @@ const demoDefaults = Object.assign({}, asciiam.presets.heroWave, {
     imageScaleX: 1,
     imageScaleY: 1,
     imageFov: 1,
+    imageRotation: 0,
+    imageFlipX: false,
+    imageFlipY: false,
     imageLuminance: "auto",
     fit: "cover",
     imageAnimationRange: null,
@@ -1072,6 +1075,10 @@ meshStyle.onchange = () => {
 document.getElementById("modelInput").onchange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".glb")) {
+        setModelStatus("Local model upload requires a self-contained .glb file.", true);
+        return;
+    }
     meshPrimitive.value = "";
     anim.opts.meshPrimitive = null;
     setModelStatus(`Loading ${file.name}…`);
@@ -1084,6 +1091,125 @@ document.getElementById("modelInput").onchange = async (event) => {
     } catch (error) {
         setModelStatus(error instanceof Error ? error.message : "The model could not be loaded.", true);
     }
+};
+const modelUrl = document.getElementById("modelUrl");
+document.getElementById("loadModelUrlBtn").onclick = async () => {
+    let url;
+    try {
+        url = new URL(modelUrl.value.trim(), document.baseURI);
+    } catch {
+        setModelStatus("Enter a valid glTF or GLB URL.", true);
+        return;
+    }
+    if (!/\.(?:gltf|glb)$/i.test(url.pathname)) {
+        setModelStatus("Remote model URLs must identify a .gltf or .glb file.", true);
+        return;
+    }
+    meshPrimitive.value = "";
+    anim.opts.meshPrimitive = null;
+    setModelStatus(`Loading ${url.pathname.split("/").pop()}…`);
+    try {
+        await anim.setModel(url.href);
+        anim.setMode("mesh");
+        setActiveModeButton("mesh");
+        setModelStatus(`${url.pathname.split("/").pop()} loaded · ${anim.getMeshInfo().vertexCount} vertices.`);
+        renderUsage();
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : "The remote model could not be loaded.";
+        setModelStatus(`${detail} Check the model URL, sibling .bin paths, and CORS headers.`, true);
+    }
+};
+
+const meshScaleControls = ["meshScaleX", "meshScaleY", "meshScaleZ"].map((id) => document.getElementById(id));
+const meshRotationControls = ["meshRotationX", "meshRotationY", "meshRotationZ"].map((id) => document.getElementById(id));
+function getMeshScale() {
+    const scale = anim.opts.meshTransform?.scale;
+    return [0, 1, 2].map((axis) => Number(scale?.[axis]) || 1);
+}
+function applyMeshScale(scale) {
+    anim.setOption("meshTransform", { ...(anim.opts.meshTransform || {}), scale });
+    scale.forEach((value, axis) => {
+        meshScaleControls[axis].value = String(Math.abs(value));
+        document.getElementById(`${meshScaleControls[axis].id}Val`).textContent = `${Math.abs(value).toFixed(2)}×`;
+        document.getElementById(["meshFlipXBtn", "meshFlipYBtn", "meshFlipZBtn"][axis]).setAttribute("aria-pressed", String(value < 0));
+        setRangeFill(meshScaleControls[axis]);
+    });
+    renderUsage();
+}
+function getMeshRotation() {
+    const rotation = anim.opts.meshTransform?.rotation;
+    return [0, 1, 2].map((axis) => Number(rotation?.[axis]) || 0);
+}
+function applyMeshRotation(rotation) {
+    const fullTurn = Math.PI * 2;
+    const normalized = rotation.map((radians) => ((radians + Math.PI) % fullTurn + fullTurn) % fullTurn - Math.PI);
+    anim.setOption("meshTransform", { ...(anim.opts.meshTransform || {}), rotation: normalized });
+    normalized.forEach((radians, axis) => {
+        const degrees = Math.round(radians * 180 / Math.PI);
+        meshRotationControls[axis].value = String(degrees);
+        document.getElementById(`${meshRotationControls[axis].id}Val`).textContent = `${degrees}°`;
+        setRangeFill(meshRotationControls[axis]);
+    });
+    renderUsage();
+}
+document.getElementById("meshScale").oninput = (event) => {
+    const value = Number(event.target.value);
+    document.getElementById("meshScaleVal").textContent = `${value.toFixed(2)}×`;
+    setRangeFill(event.target);
+    applyMeshScale(getMeshScale().map((current) => Math.sign(current) * value));
+};
+meshScaleControls.forEach((control, axis) => {
+    control.oninput = () => {
+        const scale = getMeshScale();
+        scale[axis] = Math.sign(scale[axis]) * Number(control.value);
+        applyMeshScale(scale);
+    };
+});
+meshRotationControls.forEach((control, axis) => {
+    control.oninput = () => {
+        const rotation = getMeshRotation();
+        rotation[axis] = Number(control.value) * Math.PI / 180;
+        applyMeshRotation(rotation);
+    };
+});
+document.getElementById("meshRotateLeftBtn").onclick = () => {
+    const rotation = getMeshRotation();
+    rotation[1] -= Math.PI / 2;
+    applyMeshRotation(rotation);
+};
+document.getElementById("meshRotateRightBtn").onclick = () => {
+    const rotation = getMeshRotation();
+    rotation[1] += Math.PI / 2;
+    applyMeshRotation(rotation);
+};
+["meshFlipXBtn", "meshFlipYBtn", "meshFlipZBtn"].forEach((id, axis) => {
+    const button = document.getElementById(id);
+    button.onclick = () => {
+        const scale = getMeshScale();
+        scale[axis] *= -1;
+        applyMeshScale(scale);
+    };
+});
+document.getElementById("meshFov").oninput = (event) => {
+    const degrees = Number(event.target.value);
+    anim.setOption("meshCamera", { ...(anim.opts.meshCamera || {}), fov: degrees * Math.PI / 180 });
+    document.getElementById("meshFovVal").textContent = `${degrees}°`;
+    setRangeFill(event.target);
+    renderUsage();
+};
+document.getElementById("meshAutoRotateToggle").onchange = (event) => {
+    anim.setOption("meshAutoRotate", event.target.checked);
+    event.target.setAttribute("aria-checked", String(event.target.checked));
+    renderUsage();
+};
+document.getElementById("meshRotationSpeed").oninput = (event) => {
+    const value = Number(event.target.value);
+    const speed = [...(anim.opts.meshRotationSpeed || [0.2, 0.45, 0.1])];
+    speed[1] = value;
+    anim.setOption("meshRotationSpeed", speed);
+    document.getElementById("meshRotationSpeedVal").textContent = `${value.toFixed(2)} rad/s`;
+    setRangeFill(event.target);
+    renderUsage();
 };
 
 document.getElementById("imageInput").onchange = async (e) => {
@@ -1169,6 +1295,29 @@ document.getElementById("imageLuminance").onchange = (event) => {
     anim.setOption("imageLuminance", event.target.value);
     renderUsage();
 };
+const imageRotation = document.getElementById("imageRotation");
+function setImageRotation(value) {
+    let degrees = Number(value) || 0;
+    while (degrees > 180) degrees -= 360;
+    while (degrees < -180) degrees += 360;
+    imageRotation.value = String(degrees);
+    anim.setOption("imageRotation", degrees);
+    document.getElementById("imageRotationVal").textContent = `${degrees}°`;
+    setRangeFill(imageRotation);
+    renderUsage();
+}
+imageRotation.oninput = (event) => setImageRotation(event.target.value);
+document.getElementById("imageRotateLeftBtn").onclick = () => setImageRotation(Number(imageRotation.value) - 90);
+document.getElementById("imageRotateRightBtn").onclick = () => setImageRotation(Number(imageRotation.value) + 90);
+["imageFlipXToggle", "imageFlipYToggle"].forEach((id) => {
+    const control = document.getElementById(id);
+    control.onchange = () => {
+        const option = id === "imageFlipXToggle" ? "imageFlipX" : "imageFlipY";
+        control.setAttribute("aria-checked", String(control.checked));
+        anim.setOption(option, control.checked);
+        renderUsage();
+    };
+});
 
 // Reflect anim.opts back onto the panel controls after a preset swap, so the
 // UI never shows stale values for options the preset just changed.
@@ -1179,6 +1328,31 @@ function syncControlsFromOpts() {
     document.getElementById("renderer").value = anim.opts.renderer || "auto";
     meshPrimitive.value = anim.opts.meshPrimitive || "";
     meshStyle.value = anim.opts.meshStyle || "wireframe";
+    const meshScale = getMeshScale();
+    meshScale.forEach((value, axis) => {
+        meshScaleControls[axis].value = String(Math.abs(value));
+        document.getElementById(`${meshScaleControls[axis].id}Val`).textContent = `${Math.abs(value).toFixed(2)}×`;
+        document.getElementById(["meshFlipXBtn", "meshFlipYBtn", "meshFlipZBtn"][axis]).setAttribute("aria-pressed", String(value < 0));
+    });
+    const uniformScale = meshScale.every((value) => value === meshScale[0]) ? meshScale[0] : 1;
+    document.getElementById("meshScale").value = String(uniformScale);
+    document.getElementById("meshScaleVal").textContent = meshScale.every((value) => value === meshScale[0])
+        ? `${uniformScale.toFixed(2)}×`
+        : "mixed";
+    const meshFovDegrees = Math.round((anim.opts.meshCamera?.fov || Math.PI / 3) * 180 / Math.PI);
+    document.getElementById("meshFov").value = String(meshFovDegrees);
+    document.getElementById("meshFovVal").textContent = `${meshFovDegrees}°`;
+    getMeshRotation().forEach((radians, axis) => {
+        const degrees = Math.round(radians * 180 / Math.PI);
+        meshRotationControls[axis].value = String(degrees);
+        document.getElementById(`${meshRotationControls[axis].id}Val`).textContent = `${degrees}°`;
+    });
+    const meshAutoRotate = document.getElementById("meshAutoRotateToggle");
+    meshAutoRotate.checked = anim.opts.meshAutoRotate !== false;
+    meshAutoRotate.setAttribute("aria-checked", String(meshAutoRotate.checked));
+    const meshRotationSpeed = Number(anim.opts.meshRotationSpeed?.[1]) || 0;
+    document.getElementById("meshRotationSpeed").value = String(meshRotationSpeed);
+    document.getElementById("meshRotationSpeedVal").textContent = `${meshRotationSpeed.toFixed(2)} rad/s`;
     const rendererInfo = anim.getRendererInfo();
     document.getElementById("rendererStatus").textContent = rendererInfo.backend === "webgl2"
         ? "WebGL2 GPU renderer active."
@@ -1204,7 +1378,7 @@ function syncControlsFromOpts() {
     document.getElementById("interactionDuration").value = String(anim.opts.interactionDuration || 1.1);
     document.getElementById("interactionDurationVal").textContent = `${Number(anim.opts.interactionDuration || 1.1).toFixed(2)}s`;
     // Sync range fills after value update
-    ['speed','edgeFade','trail','pulse','interactionRadius','interactionDuration','imageScale','imageScaleX','imageScaleY','imageFov','backdropOpacity','backdropAngle'].forEach((id) => {
+    ['speed','edgeFade','trail','pulse','interactionRadius','interactionDuration','imageScale','imageScaleX','imageScaleY','imageFov','imageRotation','meshScale','meshScaleX','meshScaleY','meshScaleZ','meshRotationX','meshRotationY','meshRotationZ','meshFov','meshRotationSpeed','backdropOpacity','backdropAngle'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) setRangeFill(el);
     });
@@ -1289,6 +1463,14 @@ function syncControlsFromOpts() {
     document.getElementById("imageFov").value = anim.opts.imageFov;
     document.getElementById("imageFovVal").textContent = Math.round(anim.opts.imageFov * 100) + "%";
     document.getElementById("imageLuminance").value = anim.opts.imageLuminance || "auto";
+    imageRotation.value = String(anim.opts.imageRotation || 0);
+    document.getElementById("imageRotationVal").textContent = `${anim.opts.imageRotation || 0}°`;
+    ["imageFlipXToggle", "imageFlipYToggle"].forEach((id) => {
+        const control = document.getElementById(id);
+        const option = id === "imageFlipXToggle" ? "imageFlipX" : "imageFlipY";
+        control.checked = !!anim.opts[option];
+        control.setAttribute("aria-checked", String(control.checked));
+    });
     syncSequenceEditorFromOpts();
 }
 function usageSource() {
@@ -1310,11 +1492,14 @@ function usageSource() {
     };
     if (anim.opts.mode === "mesh" || anim.opts.meshPrimitive) {
         options.mode = "mesh";
-        options.meshPrimitive = anim.opts.meshPrimitive || "cube";
+        if (anim.opts.meshPrimitive) options.meshPrimitive = anim.opts.meshPrimitive;
+        else if (typeof anim.opts.model === "string") options.model = anim.opts.model;
         options.meshStyle = anim.opts.meshStyle;
         options.meshProjection = anim.opts.meshProjection;
         options.meshAutoRotate = anim.opts.meshAutoRotate;
         options.meshRotationSpeed = anim.opts.meshRotationSpeed;
+        if (anim.opts.meshTransform) options.meshTransform = anim.opts.meshTransform;
+        if (anim.opts.meshCamera) options.meshCamera = anim.opts.meshCamera;
     }
     if (["hoverZone", "clickZone"].includes(anim.opts.mode)) {
         options.interactionRadius = anim.opts.interactionRadius;
@@ -1329,6 +1514,9 @@ function usageSource() {
         options.imageScaleX = anim.opts.imageScaleX;
         options.imageScaleY = anim.opts.imageScaleY;
         options.imageFov = anim.opts.imageFov;
+        options.imageRotation = anim.opts.imageRotation;
+        options.imageFlipX = anim.opts.imageFlipX;
+        options.imageFlipY = anim.opts.imageFlipY;
         options.imageLuminance = anim.opts.imageLuminance;
         options.animateImageFrames = anim.opts.animateImageFrames;
         options.imageFrameRate = anim.opts.imageFrameRate;
@@ -1362,9 +1550,9 @@ function getPersistableOptions() {
         "mode", "quality", "renderer", "charSet", "align", "color", "gradient", "backdrop",
         "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "extendedStats", "colorAnimation",
         "interactionRadius", "interactionDuration",
-        "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
+        "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
         "fireDensity", "starfieldDensity", "orbitDensity", "glitchIntensity", "typewriterDuration",
-        "meshPrimitive", "meshStyle", "meshProjection", "meshAutoRotate", "meshRotationSpeed",
+        "meshPrimitive", "meshStyle", "meshProjection", "meshCamera", "meshTransform", "meshAutoRotate", "meshRotationSpeed",
         "sequence", "sequenceOptions",
     ];
     const options = {};

@@ -38,6 +38,8 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 
 - Interactive web utility with preset editing, undo and redo, generated code, renderer selection, local image upload, animated-image controls, independent image-axis controls, and luminance mapping.
 - 3D primitives and glTF/GLB upload use a dedicated toolbar control immediately after Image.
+- Local 3D upload is limited to self-contained GLB. The 3D menu can load remote glTF/GLB URLs, including relative external `.bin` buffers, and exposes geometry scale, camera FOV, and rotation controls.
+- Added `resolveUri` for application-managed glTF plus external-buffer input, image rotation and mirroring, and shared rotation/mirroring controls for procedural and imported meshes.
 - Sequence steps expose a mode-repeat switch enabled by default for utility previews; exported configuration retains the explicit value.
 - Replaced the vertical sequence stack with an ordered node flow and per-node image-source controls.
 - Split web-utility behavior into a module entry point plus focused code-formatting and sequence-data modules; documentation scripts remain separated by site-wide and page-specific responsibility.

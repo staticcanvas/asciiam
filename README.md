@@ -262,6 +262,28 @@ await model.setModel('/models/object.glb', {
 
 The dependency-free loader accepts URLs, blobs, byte buffers, and parsed glTF objects. It supports embedded and external buffers, sparse and interleaved accessors, node transforms, vertex normals and colours, and core point/line/triangle topologies. Required Draco, Meshopt, or other compression extensions are rejected explicitly; no decoder or extension hook is included. See [3D meshes and models](docs/content/guides/3d-models.md) for the complete contract and safety limits.
 
+The web utility accepts self-contained `.glb` files for local upload. Load a `.gltf`
+URL through the remote field or `setModel()` when its JSON references sibling `.bin`
+files; relative buffer paths resolve from the `.gltf` URL. Every remote response must
+permit browser CORS access. The 3D utility controls expose model X/Y/Z scale, uniform
+scale, perspective field of view, auto-rotation, and Y-axis rotation speed.
+Images can be rotated in degrees and flipped horizontally or vertically during the
+bounded sampling pass. Procedural primitives and imported models use the same mesh
+transform controls for X/Y/Z rotation and axis mirroring.
+
+Application code can also pair a parsed/local `.gltf` source with separately selected
+buffers through `resolveUri`:
+
+```js
+// app.js
+const resources = new Map(selectedFiles.map((file) => [file.name, file]));
+await anim.setModel(gltfFile, {
+  resolveUri(uri) {
+    return resources.get(uri);
+  },
+});
+```
+
 ## Quick start: background
 
 ```html
@@ -903,6 +925,7 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | `image`                                                   | `string \| null`                           | `null`                      | Loads an initial image URL.                                               |
 | `fit`                                                     | `cover \| contain`                         | `cover`                     | Crops or letterboxes the sample without stretching.                       |
 | `imageScale` / `imageScaleX` / `imageScaleY` / `imageFov` | `number`                                   | `1`                         | Controls source zoom, centered output width/height, and visible fraction. |
+| `imageRotation` / `imageFlipX` / `imageFlipY`             | `number` / `boolean` / `boolean`           | `0` / `false` / `false`     | Rotates or mirrors the source during image sampling.                      |
 | `colorFromImage`                                          | `boolean`                                  | `false`                     | Uses cached sampled RGB colors per cell.                                  |
 | `imageLuminance`                                          | `auto \| normal \| invert`                 | `auto`                      | Controls silhouette-aware image brightness mapping.                       |
 | `animateImageMask`                                        | `boolean`                                  | `true`                      | Enables image-cell animation.                                             |

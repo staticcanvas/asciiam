@@ -167,6 +167,9 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `imageScaleX` | number | `1` | Scales sampled output width around its centre. |
 | `imageScaleY` | number | `1` | Scales sampled output height around its centre. |
 | `imageFov` | number | `1` | Controls visible source fraction. |
+| `imageRotation` | degrees | `0` | Rotates the fitted image clockwise during sampling. |
+| `imageFlipX` | boolean | `false` | Mirrors the sampled image horizontally. |
+| `imageFlipY` | boolean | `false` | Mirrors the sampled image vertically. |
 | `imageLuminance` | `auto \| normal \| invert` | `auto` | Controls silhouette-aware brightness mapping. |
 | `colorFromImage` | boolean | `false` | Uses sampled RGB values for glyphs. |
 | `animateImageMask` | boolean | `true` | Enables image mask animation. |

@@ -54,6 +54,38 @@ animation.setMode('mesh');
 
 `setModel()` accepts a URL, `Blob`, `ArrayBuffer`, typed-array view, or parsed glTF object. It supports glTF 2.0 JSON, GLB v2, data URIs, relative external buffers, interleaved accessors, sparse accessors, node hierarchies and transforms, vertex normals and colours, scene selection, and all core point/line/triangle primitive modes. A new load cancels the previous load. `clearModel()` cancels pending work and releases the retained geometry.
 
+The web utility restricts local file selection to `.glb`. A browser cannot infer the
+relationship between a separately selected `.gltf` document and arbitrary sibling
+`.bin` files through a single-file picker. For split assets, host the `.gltf` and its
+buffers together and enter the `.gltf` URL in the utility, or call `setModel()` with
+that URL. Relative buffer URIs resolve against the model URL. S3 and other remote
+hosts must return CORS headers for both the `.gltf` and every referenced `.bin` file.
+
+```js
+// app.js
+await animation.setModel('https://assets.example.com/models/object.gltf');
+```
+
+Application code that already has separately selected files can supply a resolver.
+`resolveUri` receives the URI stored in the glTF JSON and returns its matching `File`,
+byte buffer, or alternate URL.
+
+```js
+// app.js
+const resources = new Map(selectedFiles.map((file) => [file.name, file]));
+await animation.setModel(gltfFile, {
+  resolveUri(uri) {
+    return resources.get(uri);
+  }
+});
+```
+
+The utility’s scale and field-of-view controls are 3D equivalents of the image
+controls, but they update `meshTransform.scale` and `meshCamera.fov`. Image fitting,
+luminance, GIF timing, and sampled-colour controls do not apply to geometry.
+The same `meshTransform.rotation` and signed scale controls rotate or mirror procedural
+primitives and imported models because both use the same normalized mesh pipeline.
+
 Required extensions are rejected with their names before scene mesh allocation. In particular, Draco and Meshopt decoders are not bundled, downloaded, or injectable. This keeps model behavior deterministic and the runtime dependency-free.
 
 ## Controls and events

@@ -19,8 +19,11 @@ const makeContext = () => ({
     getImageData: jest.fn(() => ({ data: new Uint8ClampedArray(4) })),
     measureText: jest.fn(() => ({ width: 8 })),
     restore: jest.fn(),
+    rotate: jest.fn(),
     save: jest.fn(),
+    scale: jest.fn(),
     setTransform: jest.fn(),
+    translate: jest.fn(),
 });
 
 const makeWebGL2 = () => {
@@ -930,6 +933,36 @@ describe("asciiam lifecycle", () => {
         const draw = context.drawImage.mock.calls.at(-1);
         expect(draw[7]).toBeCloseTo(16);
         expect(draw[8]).toBeCloseTo(2);
+        animation.destroy();
+    });
+
+    it("rotates and flips images in the bounded sampling pass", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const contexts = [
+            { ...makeContext(), getImageData: jest.fn(() => ({ data: new Uint8ClampedArray(4 * 8 * 4) })) },
+            { ...makeContext(), getImageData: jest.fn(() => ({ data: new Uint8ClampedArray(4 * 8 * 4) })) },
+        ];
+        HTMLCanvasElement.prototype.getContext = jest.fn(() => contexts.shift() || makeContext());
+        const animation = new asciiam(host, {
+            imageRotation: 90,
+            imageFlipX: true,
+            imageFlipY: true,
+            respectReducedMotion: false,
+        });
+        animation.cols = 8;
+        animation.rows = 4;
+        animation._sourceImage = { width: 400, height: 200 };
+        animation._resampleImage();
+
+        const orient = animation._imageOrientContext;
+        expect(orient.translate).toHaveBeenCalledWith(4, 2);
+        expect(orient.scale).toHaveBeenCalledWith(expect.any(Number), expect.any(Number));
+        expect(orient.rotate).toHaveBeenCalledWith(Math.PI / 2);
+        expect(orient.getImageData).toHaveBeenCalledWith(0, 0, 8, 4);
         animation.destroy();
     });
 

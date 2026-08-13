@@ -55,6 +55,10 @@ Transparent SVG silhouettes often use black fills. Normal luminance mapping send
 
 Image fitting compares the source aspect ratio with the rendered glyph area, including the measured glyph width and line height. `imageScale` and `imageFov` change the centered source window. `imageScaleX` and `imageScaleY` then change the centered sampled output width and height. This distinction preserves the source ratio by default while allowing intentional horizontal or vertical distortion.
 
+`imageRotation` rotates the fitted source clockwise in degrees. `imageFlipX` and
+`imageFlipY` mirror it horizontally or vertically. These transforms run only while
+sampling or recapturing image grids; they do not add work to ordinary render frames.
+
 ## ASCII text sources
 
 JavaScript FIGlet implementations can convert text into multiline ASCII banners before rendering. The `figlet` package provides browser and ESM builds and implements the FIGfont format. Keep it as an application-level optional adapter so asciiam retains zero runtime dependencies: generate the banner, rasterize it to a canvas or SVG data URL, then pass that result to `setImage()` and select any global mode.
@@ -82,6 +86,8 @@ The engine creates a byte mask during image sampling. Per-frame image animation 
 | `imageScaleX` | number | `1` | Scales sampled output width around the centre. |
 | `imageScaleY` | number | `1` | Scales sampled output height around the centre. |
 | `imageFov` | number | `1` | Controls the sampled field of view. |
+| `imageRotation` | degrees | `0` | Rotates the fitted source clockwise during sampling. |
+| `imageFlipX` / `imageFlipY` | boolean | `false` | Mirrors the sampled source by axis. |
 | `imageLuminance` | `auto \| normal \| invert` | `auto` | Controls silhouette-aware brightness mapping. |
 | `imageChars` | string | active character set | Maps brightness to glyphs. |
 | `colorFromImage` | boolean | `false` | Uses sampled RGB values. |

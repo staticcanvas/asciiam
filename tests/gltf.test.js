@@ -132,6 +132,21 @@ describe("dependency-free glTF and GLB loader", () => {
         expect(progress).toHaveBeenCalledWith(expect.objectContaining({ loaded: positions.byteLength, buffer: 0 }));
     });
 
+    it("maps an external buffer to a caller-selected file or byte resource", async () => {
+        const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+        const document = triangleDocument();
+        document.buffers = [{ byteLength: positions.byteLength, uri: "triangle.bin" }];
+        document.bufferViews = [{ buffer: 0, byteLength: positions.byteLength }];
+        document.accessors = [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }];
+        document.meshes[0].primitives[0].indices = undefined;
+        const resolveUri = jest.fn(async () => positions.buffer);
+
+        const mesh = await loadGltf(document, { resolveUri });
+
+        expect(mesh.vertexCount).toBe(3);
+        expect(resolveUri).toHaveBeenCalledWith("triangle.bin", { kind: "buffer", index: 0, baseUrl: null });
+    });
+
     it("honors a caller cancellation signal before allocation", async () => {
         const controller = new AbortController();
         controller.abort();

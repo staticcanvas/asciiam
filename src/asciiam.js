@@ -699,6 +699,9 @@ import { loadGltf } from "./gltf.js";
                     imageScaleX: 1,
                     imageScaleY: 1,
                     imageFov: 1,
+                    imageRotation: 0,
+                    imageFlipX: false,
+                    imageFlipY: false,
                     fit: "cover",
                     imageLuminance: "auto",
                     colorFromImage: false,
@@ -819,6 +822,8 @@ import { loadGltf } from "./gltf.js";
             this._imageRecaptureTimer = null;
             this._imageSampleCanvas = null;
             this._imageSampleContext = null;
+            this._imageOrientCanvas = null;
+            this._imageOrientContext = null;
             this._loadedImageSource = null;
             this._loadedImageOptionsKey = null;
             this._mesh = null;
@@ -947,6 +952,8 @@ import { loadGltf } from "./gltf.js";
             this._imageRecaptureTimer = null;
             this._imageSampleCanvas = null;
             this._imageSampleContext = null;
+            this._imageOrientCanvas = null;
+            this._imageOrientContext = null;
             this._mesh = null;
             this._meshRasterizer = null;
             this._modelLoadToken++;
@@ -1099,7 +1106,7 @@ import { loadGltf } from "./gltf.js";
                 this._time = 0;
                 this._lastT = null;
             }
-            if (key === "imageScale" || key === "imageScaleX" || key === "imageScaleY" || key === "imageFov" || key === "fit" || key === "imageChars" || key === "imageLuminance" || key === "colorFromImage" || key === "imageAnimationRange") {
+            if (key === "imageScale" || key === "imageScaleX" || key === "imageScaleY" || key === "imageFov" || key === "imageRotation" || key === "imageFlipX" || key === "imageFlipY" || key === "fit" || key === "imageChars" || key === "imageLuminance" || key === "colorFromImage" || key === "imageAnimationRange") {
                 if (this._sourceImage) this._resampleImage();
                 this._scheduleAnimatedFrameCapture();
             }
@@ -2537,7 +2544,36 @@ import { loadGltf } from "./gltf.js";
                 dh = scaledH;
             }
             octx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-            const data = octx.getImageData(0, 0, cols, rows).data;
+            const rotation = ((Number(this.opts.imageRotation) || 0) % 360) * Math.PI / 180;
+            const flipX = this.opts.imageFlipX ? -1 : 1;
+            const flipY = this.opts.imageFlipY ? -1 : 1;
+            let sampleContext = octx;
+            if (rotation || flipX < 0 || flipY < 0) {
+                if (!this._imageOrientCanvas) {
+                    this._imageOrientCanvas = document.createElement("canvas");
+                    this._imageOrientContext = this._imageOrientCanvas.getContext("2d", { alpha: true, willReadFrequently: true });
+                }
+                const oriented = this._imageOrientCanvas;
+                if (oriented.width !== cols) oriented.width = cols;
+                if (oriented.height !== rows) oriented.height = rows;
+                const orientedContext = this._imageOrientContext;
+                if (orientedContext) {
+                    const cosine = Math.abs(Math.cos(rotation));
+                    const sine = Math.abs(Math.sin(rotation));
+                    const rotatedWidth = cosine * cols + sine * rows;
+                    const rotatedHeight = sine * cols + cosine * rows;
+                    const fitRotation = Math.min(cols / rotatedWidth, rows / rotatedHeight);
+                    orientedContext.clearRect(0, 0, cols, rows);
+                    orientedContext.save();
+                    orientedContext.translate(cols * 0.5, rows * 0.5);
+                    orientedContext.scale(flipX * fitRotation, flipY * fitRotation);
+                    orientedContext.rotate(rotation);
+                    orientedContext.drawImage(off, -cols * 0.5, -rows * 0.5, cols, rows);
+                    orientedContext.restore();
+                    sampleContext = orientedContext;
+                }
+            }
+            const data = sampleContext.getImageData(0, 0, cols, rows).data;
 
             const chars = new Array(cols * rows),
                 colors = new Array(cols * rows);
