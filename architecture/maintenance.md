@@ -81,7 +81,7 @@ This document maps common changes to their source files, derived outputs, and re
 | Command | Verifies | Required for |
 | --- | --- | --- |
 | `npm test` | Runtime, utility, asset, and documentation contracts | Every behavior or docs-structure change |
-| `npm run test:browser` | Built Web Utility pointer controls, nested popovers, renderer switching, reset, and asset-revision integrity in Chromium | Web Utility behavior and deployment changes |
+| `npm run test:browser` | Built Web Utility controls, non-empty canvas output, 3D configuration, mobile bounds, and asset integrity in Chromium, Firefox, and WebKit | Web Utility behavior and deployment changes |
 | `npm run lint` | Authored JavaScript diagnostics | JavaScript changes |
 | `npm run build` | UMD/ESM bundles, maps, copied package and utility assets | Runtime and packaging changes |
 | `npm run docs:build` | Generated data, Hugo templates, links, and output | Documentation or public API changes |

@@ -13,6 +13,10 @@ strangers with confidence."
 - [ ] 🟠🌟⏳2️⃣ **Distribution** - **Real-browser verification.** Run a manual visual pass in current
       Chrome/Firefox/Safari; DOM emulation verifies lifecycle behavior but cannot
       validate browser canvas rasterization or font metrics.
+  - [x] 🟠🌟✅2️⃣ **Distribution** - Automated built-site checks now run the same authoring flow in
+        Chromium, Firefox, and WebKit, including non-empty Canvas 2D pixels, grid changes,
+        procedural 3D configuration, generated output, responsive bounds, and browser errors.
+        WebKit on Linux is not treated as Safari or physical-device verification.
 - [ ] 🟠🌟⏳2️⃣ **Distribution** - **Safari-specific canvas text rendering unverified.** Font metrics and subpixel
       text positioning have known quirks in Safari; the quantized-font-level approach
       hasn't been visually checked there.
@@ -33,7 +37,7 @@ strangers with confidence."
 
 - [ ] 🟠🌟✔️3️⃣ **Engineering Backlog** - 3D feature verification and documentation. Allocation reuse, the 8.92 KiB combined gzip delta, repeatable desktop benchmark, regression coverage, README/API/architecture guidance, a live docs example, and bounded web-utility controls are complete. Current Chrome/Firefox/Safari and representative mobile visual/performance passes remain required before release claims.
   > **Note!** - `npm run benchmark:mesh` measures the cell raster stage in Node. It does not replace browser glyph-raster, GPU-driver, font-metric, or mobile thermal verification.
-  > **Note!** - A headless Firefox pass rendered the built web utility's transferred torus configuration and the built 3D guide. Interactive Firefox plus current Chrome, Safari, and representative mobile passes remain outstanding.
+  > **Note!** - Headless Chromium, Firefox, and WebKit configure a torus through the built utility and validate its generated output. Interactive current Chrome/Firefox, Safari on Apple hardware, and representative physical-mobile passes remain outstanding.
 - [ ] 🟠💡⏳4️⃣ **Engineering Backlog** - Deferred mesh-compression research. After uncompressed glTF/GLB support has production measurements, benchmark Draco and Meshopt transfer size, decoder payload, initialization, decode time, peak memory, retained memory, and render-ready latency on desktop and mobile. Keep all codec code and dependencies out of released artifacts unless a later evidence-based architecture review explicitly approves a change.
   > **Note!** - `architecture/mesh-compression-evaluation.md` and `npm run benchmark:model` define the isolated corpus, baseline, measurements, and decision rule. The evaluation remains deferred until production uncompressed-model data exists.
 

@@ -298,6 +298,10 @@ strangers with confidence."
 - [ ] 🟠🌟⏳2️⃣ **Distribution** - **Real-browser verification.** Run a manual visual pass in current
       Chrome/Firefox/Safari; DOM emulation verifies lifecycle behavior but cannot
       validate browser canvas rasterization or font metrics.
+  - [x] 🟠🌟✅2️⃣ **Distribution** - Automated built-site checks now run the same authoring flow in
+        Chromium, Firefox, and WebKit, including non-empty Canvas 2D pixels, grid changes,
+        procedural 3D configuration, generated output, responsive bounds, and browser errors.
+        WebKit on Linux is not treated as Safari or physical-device verification.
 - [x] 🟠🌟✅2️⃣ **Distribution** - **TypeScript definitions.** `src/asciiam.d.ts` documents the options object and
       method signatures discoverable in editors and catch misconfiguration at
       compile time for TS consumers.
@@ -336,7 +340,7 @@ strangers with confidence."
 - [x] 🔴🌟✅3️⃣ **Engineering Backlog** - Dependency-free 3D-to-ASCII mesh mode. MeshData validation, camera and transform controls, points/wireframe/solid styles, four procedural primitives, Canvas/WebGL2 presentation parity, reusable raster buffers, lifecycle cleanup, and TypeScript contracts are implemented.
 - [ ] 🟠🌟✔️3️⃣ **Engineering Backlog** - 3D feature verification and documentation. Allocation reuse, the 8.92 KiB combined gzip delta, repeatable desktop benchmark, regression coverage, README/API/architecture guidance, a live docs example, and bounded web-utility controls are complete. Current Chrome/Firefox/Safari and representative mobile visual/performance passes remain required before release claims.
   > **Note!** - `npm run benchmark:mesh` measures the cell raster stage in Node. It does not replace browser glyph-raster, GPU-driver, font-metric, or mobile thermal verification.
-  > **Note!** - A headless Firefox pass rendered the built web utility's transferred torus configuration and the built 3D guide. Interactive Firefox plus current Chrome, Safari, and representative mobile passes remain outstanding.
+  > **Note!** - Headless Chromium, Firefox, and WebKit configure a torus through the built utility and validate its generated output. Interactive current Chrome/Firefox, Safari on Apple hardware, and representative physical-mobile passes remain outstanding.
 - [x] 🔴🌟✅3️⃣ **Engineering Backlog** - Core glTF 2.0 and GLB v2 loading. The dependency-free loader handles scenes, node transforms, embedded and external buffers, interleaved and sparse accessors, all core point/line/triangle modes, abortable URL/Blob/byte-buffer input, progress, complexity limits, cleanup, types, tests, and documentation. Required compression extensions are rejected by name before buffer fetching or accessor allocation; no decoder hook exists.
 - [ ] 🟠💡⏳4️⃣ **Engineering Backlog** - Deferred mesh-compression research. After uncompressed glTF/GLB support has production measurements, benchmark Draco and Meshopt transfer size, decoder payload, initialization, decode time, peak memory, retained memory, and render-ready latency on desktop and mobile. Keep all codec code and dependencies out of released artifacts unless a later evidence-based architecture review explicitly approves a change.
   > **Note!** - `architecture/mesh-compression-evaluation.md` and `npm run benchmark:model` define the isolated corpus, baseline, measurements, and decision rule. The evaluation remains deferred until production uncompressed-model data exists.

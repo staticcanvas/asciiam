@@ -71,7 +71,10 @@ frames at 0.399 ms median and 0.479 ms 95th percentile on the development machin
 measurement excludes browser glyph rasterization and does not replace the required mobile
 or real-browser verification.
 
-A 2026-08-13 headless Firefox pass against the built site rendered the URL-transferred torus configuration and the 3D documentation page without load or layout failure. This is a browser integration check, not an interactive, cross-browser, or mobile performance result.
+A 2026-08-14 built-site suite configures the torus and validates generated output in
+headless Chromium, Firefox, and WebKit alongside non-empty Canvas 2D pixels and responsive
+layout bounds. This is browser-engine integration coverage, not an interactive Safari or
+physical-mobile visual and performance result.
 
 ### Phase 1: dependency-free public feature
 

@@ -869,9 +869,11 @@ git push origin feature/ascii-media-change
 ```
 
 `npm run test:browser` rebuilds the deployable documentation site and exercises the actual
-Web Utility in headless Chromium. It verifies nested popovers, pointer-driven grid resolution,
-WebGL2/Canvas selection, reset behavior, generated configuration, and deploy-time asset revision
-agreement. JSDOM tests remain the faster control-contract suite.
+Web Utility in headless Chromium, Firefox, and WebKit. It verifies nested popovers,
+pointer-driven grid resolution, non-empty Canvas 2D output, procedural 3D configuration,
+renderer selection, reset behavior, mobile toolbar bounds, generated configuration, and
+deploy-time asset revision agreement. WebKit on Linux provides engine coverage; it does not
+replace Safari verification on Apple hardware. JSDOM tests remain the faster control-contract suite.
 
 ## Maintainer documentation
 

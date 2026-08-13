@@ -65,7 +65,7 @@
     "benchmark:model": "node scripts/benchmark-model-loading.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
     "test:browser": "npm run docs:build && node scripts/test-webutil-browser.js",
-    "test:browser:install": "playwright-core install chromium",
+    "test:browser:install": "playwright-core install chromium firefox webkit",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "lint": "eslint src/**/*.js tests/**/*.js",
     "lint:fix": "eslint src/**/*.js tests/**/*.js --fix",
