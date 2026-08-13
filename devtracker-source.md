@@ -52,6 +52,11 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
+- [x] 🟡🪲✅1️⃣ **Critical** - **Web Utility live-control asset integrity.** Reproduced
+      logical grid changes in Chromium, replaced static release-version query strings with
+      one content-derived revision across the utility runtime graph, and added tests for
+      rendered grid changes, reset behavior, deploy-time asset consistency, and cache-sensitive
+      controls using `setOption()` rather than direct option mutation.
 - [x] 🟡🌟✅1️⃣ **Critical** - **Manual logical grid resolution.** Added a bounded
       `resolutionScale` core option and Web Utility slider with live cell dimensions. The
       default preserves automatic sizing; lower values reduce cell work and higher values

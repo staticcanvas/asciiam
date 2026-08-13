@@ -860,11 +860,18 @@ Merge requests should target `develop`.
 git switch develop
 git switch -c feature/ascii-media-change
 npm test
+npm run test:browser:install # once per development machine
+npm run test:browser
 npm run lint
 npm run build
 git commit -m "feat: add ASCII media change"
 git push origin feature/ascii-media-change
 ```
+
+`npm run test:browser` rebuilds the deployable documentation site and exercises the actual
+Web Utility in headless Chromium. It verifies nested popovers, pointer-driven grid resolution,
+WebGL2/Canvas selection, reset behavior, generated configuration, and deploy-time asset revision
+agreement. JSDOM tests remain the faster control-contract suite.
 
 ## Maintainer documentation
 

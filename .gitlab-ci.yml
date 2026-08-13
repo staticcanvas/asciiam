@@ -62,6 +62,14 @@ test:
     - npm test
   allow_failure: false
 
+browser:test:
+  stage: test
+  script:
+    - npm ci
+    - npx playwright-core install --with-deps chromium
+    - npm run test:browser
+  allow_failure: false
+
 # ------------------------------------------------------
 # Build stage
 # ------------------------------------------------------

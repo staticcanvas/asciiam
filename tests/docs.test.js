@@ -102,6 +102,26 @@ describe('Hugo documentation source', () => {
     expect(builtUtility).not.toContain('./docs/');
   });
 
+  it('revisions the Web Utility runtime graph as one deployable unit', () => {
+    const sourcePage = projectFile('docs/static/webutil/index.html');
+    const sourceScript = projectFile('docs/static/webutil/js/webutil.js');
+    const builtPage = projectFile('public/webutil/index.html');
+    const builtScript = projectFile('public/webutil/js/webutil.js');
+    const buildScript = projectFile('scripts/build-docs.js');
+    const pageRevision = builtPage.match(/libs\/asciiam\.js\?v=([a-f0-9]{12})/)?.[1];
+    const scriptRevision = builtPage.match(/js\/webutil\.js\?v=([a-f0-9]{12})/)?.[1];
+    const moduleRevisions = [...builtScript.matchAll(/\?v=([a-f0-9]{12})/g)].map((match) => match[1]);
+
+    expect(sourcePage.match(/__ASSET_REVISION__/g)).toHaveLength(2);
+    expect(sourceScript.match(/__ASSET_REVISION__/g)).toHaveLength(2);
+    expect(pageRevision).toBeDefined();
+    expect(scriptRevision).toBe(pageRevision);
+    expect(moduleRevisions).toEqual([pageRevision, pageRevision]);
+    expect(buildScript).toContain("createHash('sha256')");
+    expect(builtPage).not.toContain('__ASSET_REVISION__');
+    expect(builtScript).not.toContain('__ASSET_REVISION__');
+  });
+
   it('provides standard search shortcuts, metadata, tags, and repository edit links', () => {
     const base = projectFile('docs/layouts/_default/baseof.html');
     const search = projectFile('docs/static/js/docs.js');

@@ -34,6 +34,7 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 - Image sampling reuses its readback canvas and retains glyph atlases while animated frames change.
 - Shared frame scheduling, visibility pausing, quality tiers, glyph atlases, and static-wave caching.
 - Added bounded `resolutionScale` control for logical grid detail independent of canvas DPR, including live cell dimensions in the Web Utility.
+- Web Utility runtime assets now share a content-derived cache revision, preventing new controls from loading with stale JavaScript. Cache-sensitive controls consistently use `setOption()` invalidation, and a built-site Chromium suite covers pointer, renderer, reset, and asset-integrity behavior.
 
 ### Web utility
 

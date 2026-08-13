@@ -18,7 +18,12 @@ function createDemo(includedImages = [], url = 'https://demo.test/webutil/') {
   });
   const { window } = dom;
   const stage = window.document.getElementById('stage');
+  const backgroundTarget = window.document.querySelector('[data-ascii-target="background"]');
   Object.defineProperties(stage, {
+    clientWidth: { configurable: true, value: 320 },
+    clientHeight: { configurable: true, value: 180 },
+  });
+  Object.defineProperties(backgroundTarget, {
     clientWidth: { configurable: true, value: 320 },
     clientHeight: { configurable: true, value: 180 },
   });
@@ -36,6 +41,7 @@ function createDemo(includedImages = [], url = 'https://demo.test/webutil/') {
   window.HTMLElement.prototype.showPopover = function showPopover() {};
   window.HTMLElement.prototype.hidePopover = function hidePopover() {};
   window.HTMLCanvasElement.prototype.getContext = () => ({
+    font: '14px monospace',
     setTransform() {},
     clearRect() {},
     fillRect() {},
@@ -43,7 +49,7 @@ function createDemo(includedImages = [], url = 'https://demo.test/webutil/') {
     save() {},
     restore() {},
     drawImage() {},
-    measureText: () => ({ width: 8 }),
+    measureText() { return { width: (Number.parseFloat(this.font) || 14) * 0.57 }; },
     createLinearGradient: () => ({ addColorStop() {} }),
     createRadialGradient: () => ({ addColorStop() {} }),
     getImageData: () => ({ data: new Uint8ClampedArray(4) }),
@@ -247,14 +253,42 @@ describe('demo toolbar quality-of-life controls', () => {
     const { document, Event } = activeDom.window;
     const resolution = document.getElementById('resolutionScale');
 
+    const automaticGrid = document.getElementById('resolutionGridStatus').textContent;
+    const automaticCells = automaticGrid.match(/(\d+)×(\d+)/).slice(1).map(Number);
     expect(resolution.value).toBe('1');
     expect(document.getElementById('resolutionScaleVal').textContent).toBe('100%');
     resolution.value = '1.5';
     resolution.dispatchEvent(new Event('input', { bubbles: true }));
 
     expect(document.getElementById('resolutionScaleVal').textContent).toBe('150%');
-    expect(document.getElementById('resolutionGridStatus').textContent).toMatch(/cells · 150%/);
+    const detailedGrid = document.getElementById('resolutionGridStatus').textContent;
+    const detailedCells = detailedGrid.match(/(\d+)×(\d+)/).slice(1).map(Number);
+    expect(detailedGrid).toMatch(/cells · 150%/);
+    expect(detailedCells[0]).toBeGreaterThan(automaticCells[0]);
+    expect(detailedCells[1]).toBeGreaterThan(automaticCells[1]);
     expect(document.getElementById('usageCodePopover').textContent).toContain('"resolutionScale": 1.5');
+
+    document.getElementById('resetSettingsBtn').click();
+    expect(resolution.value).toBe('1');
+    expect(document.getElementById('resolutionGridStatus').textContent).toContain('100% logical resolution');
+  });
+
+  it('routes cache-sensitive live controls through setOption', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const script = projectFile('docs/static/webutil/js/webutil.js');
+
+    expect(script).not.toMatch(/anim\.opts\.(color|edgeFade|speed|trail|pulse|cursor|showStats|colorAnimation|colorFromImage)\s*=(?!=)/);
+
+    const color = document.getElementById('color');
+    color.value = '#ff0000';
+    color.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"color": "#ff0000"');
+
+    const edgeFade = document.getElementById('edgeFade');
+    edgeFade.value = '0.4';
+    edgeFade.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"edgeFade": 0.4');
   });
 
   it('controls backdrop opacity from zero to one with exact input', () => {

@@ -1,5 +1,5 @@
-import { highlightJavaScript } from "./webutil-code.js?v=0.10.0";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=0.10.0";
+import { highlightJavaScript } from "./webutil-code.js?v=9558d7d2600a";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=9558d7d2600a";
 
 const asciiam = window.asciiam;
 
@@ -689,7 +689,7 @@ function setRangeFill(input) {
 /* Initialise fills for all range sliders */
 document.querySelectorAll('input[type="range"]').forEach(setRangeFill);
 document.getElementById("speed").oninput = (e) => {
-    anim.opts.speed = parseFloat(e.target.value);
+    anim.setOption("speed", parseFloat(e.target.value));
     document.getElementById("speedVal").textContent = e.target.value;
     setRangeFill(e.target);
     renderUsage();
@@ -700,13 +700,13 @@ document.getElementById("revealDirection").onchange = (e) => {
     renderUsage();
 };
 document.getElementById("edgeFade").oninput = (e) => {
-    anim.opts.edgeFade = parseFloat(e.target.value);
+    anim.setOption("edgeFade", parseFloat(e.target.value));
     document.getElementById("edgeFadeVal").textContent = e.target.value;
     setRangeFill(e.target);
     renderUsage();
 };
 document.getElementById("trail").oninput = (e) => {
-    anim.opts.trail = parseFloat(e.target.value);
+    anim.setOption("trail", parseFloat(e.target.value));
     document.getElementById("trailVal").textContent = e.target.value;
     setRangeFill(e.target);
     renderUsage();
@@ -714,7 +714,7 @@ document.getElementById("trail").oninput = (e) => {
 document.getElementById("pulse").oninput = (e) => {
     const amt = parseFloat(e.target.value);
     document.getElementById("pulseVal").textContent = amt.toFixed(2);
-    anim.opts.pulse = amt > 0 ? { amplitude: amt, speed: 0.8 } : null;
+    anim.setOption("pulse", amt > 0 ? { amplitude: amt, speed: 0.8 } : null);
     setRangeFill(e.target);
     renderUsage();
 };
@@ -743,10 +743,10 @@ function setTheme(theme) {
 
     const currentColor = String(anim.opts.color).toLocaleLowerCase("en");
     if (isLight && currentColor === "#4fa8ff") {
-        anim.opts.color = "#0066cc";
+        anim.setOption("color", "#0066cc");
         document.getElementById("color").value = "#0066cc";
     } else if (!isLight && anim.opts.color === "#0066cc") {
-        anim.opts.color = "#4fa8ff";
+        anim.setOption("color", "#4fa8ff");
         document.getElementById("color").value = "#4fa8ff";
     }
 }
@@ -791,7 +791,7 @@ function syncColor() {
     document.getElementById("gradAnimateRow").style.display = mode === "gradient" ? "flex" : "none";
 
     anim.setOption("gradient", null);
-    anim.opts.colorAnimation = null;
+    anim.setOption("colorAnimation", null);
 
     if (mode === "gradient") {
         const stopInputs = [...document.querySelectorAll("#gradStopsContainer .grad-stop-input")];
@@ -804,9 +804,9 @@ function syncColor() {
             animate: document.getElementById("gradAnimate").checked,
         });
     } else if (mode === "hueRotate") {
-        anim.opts.colorAnimation = { type: "hueRotate", speed: 40 };
+        anim.setOption("colorAnimation", { type: "hueRotate", speed: 40 });
     } else if (mode === "breathe") {
-        anim.opts.colorAnimation = { type: "breathe", speed: 0.6, colorA: "#4FA8FF", colorB: "#C04FFF" };
+        anim.setOption("colorAnimation", { type: "breathe", speed: 0.6, colorA: "#4FA8FF", colorB: "#C04FFF" });
     }
     renderUsage();
 }
@@ -920,18 +920,18 @@ document.getElementById("backdropAngle").oninput = (event) => {
 document.querySelectorAll(".backdrop-stop-input").forEach((input) => { input.oninput = syncBackdrop; });
 document.getElementById("gradAnimate").onchange = syncColor;
 document.getElementById("color").oninput = (e) => {
-    anim.opts.color = e.target.value;
+    anim.setOption("color", e.target.value);
     renderUsage();
 };
 
 document.getElementById("cursorToggle").onchange = (e) => {
-    anim.opts.cursor = { enabled: e.target.checked, radius: 160, strength: 0.7 };
+    anim.setOption("cursor", { enabled: e.target.checked, radius: 160, strength: 0.7 });
     e.target.setAttribute('aria-checked', String(e.target.checked));
     renderUsage();
 };
 
 document.getElementById("statsToggle").onchange = (e) => {
-    anim.opts.showStats = e.target.checked;
+    anim.setOption("showStats", e.target.checked);
     statsEl.style.display = e.target.checked ? "block" : "none";
     e.target.setAttribute('aria-checked', String(e.target.checked));
     renderUsage();
@@ -942,7 +942,7 @@ document.getElementById("extendedStatsToggle").onchange = (event) => {
     event.target.setAttribute("aria-checked", String(enabled));
     statsEl.dataset.extended = String(enabled);
     if (enabled && !anim.opts.showStats) {
-        anim.opts.showStats = true;
+        anim.setOption("showStats", true);
         const statsToggle = document.getElementById("statsToggle");
         statsToggle.checked = true;
         statsToggle.setAttribute("aria-checked", "true");
@@ -954,7 +954,7 @@ document.getElementById("extendedStatsToggle").onchange = (event) => {
 const colorFromImgEl = document.getElementById("colorFromImageToggle");
 if (colorFromImgEl) {
     colorFromImgEl.onchange = (e) => {
-        anim.opts.colorFromImage = e.target.checked;
+        anim.setOption("colorFromImage", e.target.checked);
         e.target.setAttribute('aria-checked', String(e.target.checked));
     };
 }
@@ -980,7 +980,7 @@ async function useLibraryImage(image, button) {
     let capturedFrames = 0;
     const stopListening = anim.on("imageFramesReady", ({ frameCount }) => { capturedFrames = frameCount || 0; });
     try {
-        anim.opts.colorFromImage = true;
+        anim.setOption("colorFromImage", true);
         if (colorFromImgEl) {
             colorFromImgEl.checked = true;
             colorFromImgEl.setAttribute('aria-checked', 'true');
@@ -1231,7 +1231,7 @@ document.getElementById("imageInput").onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
-    anim.opts.colorFromImage = true;
+    anim.setOption("colorFromImage", true);
     if (colorFromImgEl) {
         colorFromImgEl.checked = true;
         colorFromImgEl.setAttribute('aria-checked', 'true');

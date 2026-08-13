@@ -1,4 +1,6 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,37 +19,58 @@ const localBuild = spawnSync('hugo', hugoArguments, {
   stdio: 'inherit',
 });
 
-if (!localBuild.error) {
-  process.exit(localBuild.status ?? 1);
-}
+let buildStatus;
+if (!localBuild.error) buildStatus = localBuild.status ?? 1;
 
-if (localBuild.error.code !== 'ENOENT') throw localBuild.error;
+if (localBuild.error && localBuild.error.code !== 'ENOENT') throw localBuild.error;
 
-console.log('Hugo was not found on PATH; using ghcr.io/gohugoio/hugo:v0.164.0.');
-const containerBuild = spawnSync(
-  'docker',
-  [
-    'run',
-    '--rm',
-    '-v',
-    `${projectRoot}:/src`,
-    'ghcr.io/gohugoio/hugo:v0.164.0',
-    '--source',
-    '/src/docs',
-    '--destination',
-    '/src/public',
-    '--cleanDestinationDir',
-    '--minify',
-  ],
-  {
-    cwd: projectRoot,
-    stdio: 'inherit',
+if (localBuild.error?.code === 'ENOENT') {
+  console.log('Hugo was not found on PATH; using ghcr.io/gohugoio/hugo:v0.164.0.');
+  const containerBuild = spawnSync(
+    'docker',
+    [
+      'run',
+      '--rm',
+      '-v',
+      `${projectRoot}:/src`,
+      'ghcr.io/gohugoio/hugo:v0.164.0',
+      '--source',
+      '/src/docs',
+      '--destination',
+      '/src/public',
+      '--cleanDestinationDir',
+      '--minify',
+    ],
+    {
+      cwd: projectRoot,
+      stdio: 'inherit',
+    }
+  );
+
+  if (containerBuild.error?.code === 'ENOENT') {
+    console.error('Documentation build requires Hugo Extended or Docker.');
+    process.exit(1);
   }
-);
-
-if (containerBuild.error?.code === 'ENOENT') {
-  console.error('Documentation build requires Hugo Extended or Docker.');
-  process.exit(1);
+  if (containerBuild.error) throw containerBuild.error;
+  buildStatus = containerBuild.status ?? 1;
 }
-if (containerBuild.error) throw containerBuild.error;
-process.exit(containerBuild.status ?? 1);
+
+if (buildStatus !== 0) process.exit(buildStatus);
+
+// One content-derived revision prevents a deployment from combining new HTML
+// controls with cached utility/runtime JavaScript from an earlier build.
+const revisionSources = [
+  'public/webutil/index.html',
+  'public/webutil/js/webutil.js',
+  'public/webutil/js/webutil-code.js',
+  'public/webutil/js/webutil-sequence.js',
+  'public/webutil/libs/asciiam.js',
+];
+const sourceContents = await Promise.all(revisionSources.map((file) => readFile(resolve(projectRoot, file), 'utf8')));
+const assetRevision = createHash('sha256').update(sourceContents.join('\0')).digest('hex').slice(0, 12);
+await Promise.all(revisionSources.slice(0, 2).map(async (file) => {
+  const path = resolve(projectRoot, file);
+  const source = await readFile(path, 'utf8');
+  await writeFile(path, source.replaceAll('__ASSET_REVISION__', assetRevision));
+}));
+console.log(`Web Utility asset revision: ${assetRevision}`);

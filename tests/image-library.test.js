@@ -29,7 +29,7 @@ describe("local image library", () => {
         expect(page).toContain("docs/static/webutil/assets/images");
         expect(utilityScript).toContain('fetch("./assets/backgrounds.json", { cache: "no-store" })');
         expect(page).not.toContain("image-search");
-        expect(page).toContain('src="./js/webutil.js?v=0.10.0"');
+        expect(page).toContain('src="./js/webutil.js?v=__ASSET_REVISION__"');
         expect(utilityScript.length).toBeGreaterThan(1000);
         expect(page).not.toContain("downloadLocation");
         expect(page).not.toContain("image.thumbnail || image.src");
