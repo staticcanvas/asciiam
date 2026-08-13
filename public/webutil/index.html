@@ -2209,6 +2209,12 @@
                     </select>
                 </div>
                 <div class="cpop-group">
+                    <label class="cpop-label row" for="resolutionScale">Grid resolution <span class="val" id="resolutionScaleVal">100%</span></label>
+                    <input id="resolutionScale" type="range" min="0.5" max="2" step="0.05" value="1"
+                           data-aria-label="Grid resolution" />
+                    <p class="sequence-status" id="resolutionGridStatus" role="status" aria-live="polite">100% uses the automatic grid size.</p>
+                </div>
+                <div class="cpop-group">
                     <label class="cpop-label" for="renderer">Rendering backend</label>
                     <select id="renderer">
                         <option value="auto" selected>Auto — WebGL2 preferred</option>

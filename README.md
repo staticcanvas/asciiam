@@ -435,6 +435,7 @@ new asciiam(target, {
   fontFamily: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
   fontSize: 14,
   density: 1, // >1 = looser grid, <1 = tighter
+  resolutionScale: 1, // 0.5–2; logical grid detail independent of DPR
   color: '#4FA8FF',
   gradient: null, // see Gradients below
   background: 'transparent',
@@ -604,6 +605,14 @@ rate. Dense modes (`wave`, `current`, `ripple`, `vortex`, `plasma`, `fadeIn`,
 Sparse modes (`matrix`, `snow`, `sparkle`, `fire`, `starfield`, and `orbit`) scale
 with their active particle count. Reducing DPR and increasing density has the largest
 impact on dense-mode FPS.
+
+Browser zoom changes the target's CSS-pixel dimensions and therefore the automatically
+measured grid. Use `resolutionScale` to adjust logical detail independently: `1` retains
+automatic sizing, values below `1` produce fewer/larger cells, and values above `1`
+produce more/smaller cells. The accepted range is `0.5` through `2`. This affects both
+procedural and sampled media output. It does not change canvas DPR or physical display
+resolution. Cell work grows approximately with the square of the scale on a fixed-size
+surface, so verify higher values on target devices.
 Gradients are cached per frame. Edge-fade factors, cell coordinates, and baselines are
 precomputed on resize. Opacity is quantized by quality tier so repeated cells avoid
 redundant Canvas state mutations. Performance and Ultra rasterize their solid-color
@@ -901,6 +910,7 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | `charSet` / `imageChars`                                  | `string`                                   | `asciiExtended`             | Maps intensity or image brightness to glyphs.                             |
 | `fontFamily`                                              | `string`                                   | IBM Plex Mono stack         | Sets the font stack used to rasterize glyphs.                             |
 | `fontSize` / `density` / `fontLevels`                     | `number`                                   | `14` / tier / tier          | Controls grid measurement and cached font sizes.                          |
+| `resolutionScale`                                        | `number`                                   | `1`                         | Scales logical grid detail from `0.5` to `2` without changing DPR.        |
 | `alphaLevels`                                             | `number`                                   | tier value                  | Quantizes opacity to reduce Canvas state changes.                         |
 | `useGlyphAtlas`                                           | `boolean`                                  | tier value                  | Reuses rasterized solid-color glyphs in Performance and Ultra.            |
 | `cacheStaticWave`                                         | `boolean`                                  | tier value                  | Caches and shares Ultra's unchanged horizontal wave field.                |

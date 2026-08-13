@@ -597,6 +597,15 @@ describe("asciiam lifecycle", () => {
         expect(animation._fontRegular).toHaveLength(7);
         expect(animation._fontRegular[0]).toContain("monospace");
         expect(animation.canvas.width).toBe(160);
+
+        const automaticCells = animation.cols * animation.rows;
+        animation.setOption("resolutionScale", 2);
+        expect(animation.opts.resolutionScale).toBe(2);
+        expect(animation.cols * animation.rows).toBeGreaterThan(automaticCells);
+        animation.setOption("resolutionScale", 10);
+        expect(animation.opts.resolutionScale).toBe(2);
+        animation.setOption("resolutionScale", 0.1);
+        expect(animation.opts.resolutionScale).toBe(0.5);
         animation.destroy();
     });
 

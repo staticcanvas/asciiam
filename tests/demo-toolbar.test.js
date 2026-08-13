@@ -242,6 +242,21 @@ describe('demo toolbar quality-of-life controls', () => {
     );
   });
 
+  it('controls logical grid resolution independently of the quality tier', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const resolution = document.getElementById('resolutionScale');
+
+    expect(resolution.value).toBe('1');
+    expect(document.getElementById('resolutionScaleVal').textContent).toBe('100%');
+    resolution.value = '1.5';
+    resolution.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(document.getElementById('resolutionScaleVal').textContent).toBe('150%');
+    expect(document.getElementById('resolutionGridStatus').textContent).toMatch(/cells · 150%/);
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"resolutionScale": 1.5');
+  });
+
   it('controls backdrop opacity from zero to one with exact input', () => {
     activeDom = createDemo();
     const { document, Event } = activeDom.window;

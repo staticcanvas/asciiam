@@ -3,7 +3,7 @@ title: API reference
 description: Constructor, static members, options, methods, events, renderer data, sequence objects, and callback contracts.
 weight: 40
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [API, reference, JavaScript, TypeScript, options, methods, events]
 keywords: [asciiam API, configuration reference, animation options, renderer methods, sequence events, callbacks, TypeScript declarations]
 ---
@@ -74,6 +74,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `fontFamily` | string | IBM Plex Mono fallback stack | Sets glyph measurement and rasterization fonts. |
 | `fontSize` | number | `14` | Sets the base font size in CSS pixels. |
 | `density` | number | quality-tier value | Scales glyph-cell spacing. |
+| `resolutionScale` | number | `1` | Scales logical grid detail from `0.5` to `2`; does not change DPR. |
 | `color` | CSS color string | `#4FA8FF` | Sets the fallback glyph color. |
 | `background` | CSS color string | `transparent` | Sets the renderer clear color. |
 | `speed` | number | `1` | Scales the animation timeline. |

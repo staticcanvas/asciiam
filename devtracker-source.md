@@ -52,6 +52,10 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
+- [x] 🟡🌟✅1️⃣ **Critical** - **Manual logical grid resolution.** Added a bounded
+      `resolutionScale` core option and Web Utility slider with live cell dimensions. The
+      default preserves automatic sizing; lower values reduce cell work and higher values
+      increase detail without changing backing-store DPR.
 - [x] 🟠🌟✅1️⃣ **Critical** - **Opt-in extended diagnostics.** Preserved compact FPS output
       by default and added estimated display cadence, renderer and adapter detail, CPU-side
       frame-work and fill-history text charts, structured snapshots, and retained 3D counts

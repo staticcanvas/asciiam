@@ -4,7 +4,7 @@ description: Release history and behavior changes for asciiam.
 weight: 50
 type: changelog
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [release, compatibility, changes]
 keywords: [asciiam changelog, release notes, upgrade notes]
 ---
@@ -33,6 +33,7 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 - `imageLuminance` adds `auto`, `normal`, and `invert` mappings. Auto mode detects dark artwork on transparency so common black silhouette SVGs map to visible glyphs.
 - Image sampling reuses its readback canvas and retains glyph atlases while animated frames change.
 - Shared frame scheduling, visibility pausing, quality tiers, glyph atlases, and static-wave caching.
+- Added bounded `resolutionScale` control for logical grid detail independent of canvas DPR, including live cell dimensions in the Web Utility.
 
 ### Web utility
 

@@ -3,7 +3,7 @@ title: Web utility workflow
 description: Configure, validate, export, and persist asciiam settings in the browser utility.
 weight: 50
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [web utility, configuration, editor, export, presets, local storage]
 keywords: [asciiam web utility, animation configurator, preset editor, generated code, saved settings, image library, sequence editor]
 ---
@@ -20,6 +20,11 @@ The dock keeps Preset, Sequence, Mode, Motion, Color, Reset, Image, and Code dir
 available. Advanced contains lower-frequency quality, character-set, alignment,
 backdrop, theme, and history controls. Reset intentionally remains outside Advanced.
 Documentation, About, and the FPS switch form one level action row on the stage.
+
+Quality includes a Grid resolution slider. `100%` retains automatic grid measurement;
+`50%` reduces cell count for constrained devices, while values up to `200%` increase
+logical detail. The live status reports the resulting columns and rows. This setting
+changes glyph-grid resolution, not canvas DPR.
 
 The sequence editor is a horizontally ordered node flow. Each node edits its animation,
 image-source action, duration, stagger, repeat policy, transition, and JSON option
@@ -96,7 +101,7 @@ The [Usage examples]({{< relref "/examples" >}}) workbench provides a second aut
 | Utility control | Runtime option or API | Default behavior |
 | --- | --- | --- |
 | Renderer | `renderer`, `setRenderer()` | `auto`; WebGL2 first, Canvas 2D fallback. |
-| Quality | `quality`, `maxDPR`, `targetFPS` | Uses the selected quality tier. |
+| Quality | `quality`, `resolutionScale`, `maxDPR`, `targetFPS` | Uses the selected quality tier and 100% logical resolution. |
 | Extended diagnostics | `showStats`, `extendedStats`, `getStats()` | Disabled; samples only when explicitly enabled. |
 | Mode | `mode`, `setMode()` | Selects the active cell algorithm. |
 | Motion and Align | `speed`, `edgeFade`, `trail`, `pulse`, `align` | Updates animation and spatial state. |

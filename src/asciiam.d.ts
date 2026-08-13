@@ -238,6 +238,8 @@ export interface asciiamOptions {
   fontFamily?: string;
   fontSize?: number;
   density?: number;
+  /** Logical grid-detail multiplier. Clamped to 0.5–2; 1 retains automatic sizing. */
+  resolutionScale?: number;
   color?: string;
   gradient?: Record<string, unknown> | null;
   background?: string;

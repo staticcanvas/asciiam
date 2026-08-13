@@ -681,6 +681,7 @@ import { loadGltf } from "./gltf.js";
                     fontFamily: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
                     fontSize: 14,
                     density: quality.density,
+                    resolutionScale: 1,
                     color: "#4FA8FF",
                     gradient: null,
                     background: "transparent",
@@ -1068,7 +1069,7 @@ import { loadGltf } from "./gltf.js";
             }
             this.opts[key] = value;
             if (key === "extendedStats" && !value) this._extendedStats = null;
-            if (key === "fontSize" || key === "density") {
+            if (key === "fontSize" || key === "density" || key === "resolutionScale") {
                 this._buildFontCache();
                 this._resize();
             }
@@ -2072,10 +2073,17 @@ import { loadGltf } from "./gltf.js";
 
         // ---- sizing / measurement ----
         _buildFontCache() {
-            this.ctx.font = `${this.opts.fontSize}px ${this.opts.fontFamily}`;
+            // resolutionScale changes logical grid detail independently of the
+            // canvas backing-store DPR. Bound it because cell work grows roughly
+            // with the square of this value on a fixed-size surface.
+            const resolutionScale = Math.max(0.5, Math.min(2, Number(this.opts.resolutionScale) || 1));
+            this.opts.resolutionScale = resolutionScale;
+            const effectiveFontSize = this.opts.fontSize / resolutionScale;
+            this._effectiveFontSize = effectiveFontSize;
+            this.ctx.font = `${effectiveFontSize}px ${this.opts.fontFamily}`;
             const m = this.ctx.measureText("M");
             this.charW = Math.max(4, m.width * this.opts.density);
-            this.charH = Math.max(6, this.opts.fontSize * 1.2 * this.opts.density);
+            this.charH = Math.max(6, effectiveFontSize * 1.2 * this.opts.density);
 
             const steps = Math.max(2, Math.round(this.opts.fontLevels || 2));
             this.opts.fontLevels = steps;
@@ -2083,7 +2091,7 @@ import { loadGltf } from "./gltf.js";
             this._fontBold = [];
             for (let i = 0; i < steps; i++) {
                 const scale = 1 + (i / (steps - 1)) * 0.5;
-                const size = Math.round(this.opts.fontSize * scale * 10) / 10;
+                const size = Math.round(effectiveFontSize * scale * 10) / 10;
                 this._fontRegular.push(`400 ${size}px ${this.opts.fontFamily}`);
                 this._fontBold.push(`700 ${size}px ${this.opts.fontFamily}`);
             }
@@ -2114,7 +2122,7 @@ import { loadGltf } from "./gltf.js";
             }
 
             const padding = 2;
-            const maxFontSize = this.opts.fontSize * 1.5;
+            const maxFontSize = this._effectiveFontSize * 1.5;
             const tileWidth = Math.max(4, Math.ceil(maxFontSize + padding * 2));
             const tileHeight = Math.max(6, Math.ceil(this.charH + padding * 2));
             const columns = Math.max(1, Math.floor(2048 / tileWidth));
@@ -2896,7 +2904,7 @@ import { loadGltf } from "./gltf.js";
             const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.charH]);
             if (this._webglAtlas?.key === key) return this._webglAtlas;
             const padding = 2;
-            const tileWidth = Math.max(4, Math.ceil(this.opts.fontSize * 1.5 + padding * 2));
+            const tileWidth = Math.max(4, Math.ceil(this._effectiveFontSize * 1.5 + padding * 2));
             const tileHeight = Math.max(6, Math.ceil(this.charH + padding * 2));
             const columns = Math.max(1, Math.floor(2048 / tileWidth));
             const tileCount = characters.length * this._fontRegular.length * 2;

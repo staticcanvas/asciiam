@@ -10,6 +10,7 @@ const settingsStorageKey = "asciiam:demo-settings:v1";
 const savedPresetsStorageKey = "asciiam:saved-presets:v1";
 const demoDefaults = Object.assign({}, asciiam.presets.heroWave, {
     quality: "ultra",
+    resolutionScale: 1,
     renderer: "auto",
     charSet: asciiam.CHARACTER_SETS.asciiExtended,
     imageChars: asciiam.CHARACTER_SETS.asciiExtended,
@@ -616,6 +617,20 @@ document.getElementById("quality").onchange = (e) => {
     document.getElementById("preset").value = "";
     renderUsage();
 };
+const resolutionScale = document.getElementById("resolutionScale");
+function updateResolutionStatus() {
+    const percent = Math.round((Number(anim.opts.resolutionScale) || 1) * 100);
+    document.getElementById("resolutionScaleVal").textContent = `${percent}%`;
+    document.getElementById("resolutionGridStatus").textContent = `${anim.cols}×${anim.rows} cells · ${percent}% logical resolution`;
+}
+resolutionScale.oninput = (event) => {
+    anim.setOption("resolutionScale", Number(event.target.value));
+    setRangeFill(event.target);
+    updateResolutionStatus();
+    document.getElementById("preset").value = "";
+    renderUsage();
+};
+anim.on("resize", updateResolutionStatus);
 function updateRendererControls(info = anim.getRendererInfo()) {
     document.getElementById("renderer").value = info.requested;
     document.getElementById("rendererStatus").textContent = info.backend === "webgl2"
@@ -1325,6 +1340,8 @@ function syncControlsFromOpts() {
     setActiveModeButton(anim.opts.mode);
     setAlignment(anim.opts.align || "center");
     document.getElementById("quality").value = anim.opts.quality || "ultra";
+    resolutionScale.value = String(anim.opts.resolutionScale || 1);
+    updateResolutionStatus();
     document.getElementById("renderer").value = anim.opts.renderer || "auto";
     meshPrimitive.value = anim.opts.meshPrimitive || "";
     meshStyle.value = anim.opts.meshStyle || "wireframe";
@@ -1378,7 +1395,7 @@ function syncControlsFromOpts() {
     document.getElementById("interactionDuration").value = String(anim.opts.interactionDuration || 1.1);
     document.getElementById("interactionDurationVal").textContent = `${Number(anim.opts.interactionDuration || 1.1).toFixed(2)}s`;
     // Sync range fills after value update
-    ['speed','edgeFade','trail','pulse','interactionRadius','interactionDuration','imageScale','imageScaleX','imageScaleY','imageFov','imageRotation','meshScale','meshScaleX','meshScaleY','meshScaleZ','meshRotationX','meshRotationY','meshRotationZ','meshFov','meshRotationSpeed','backdropOpacity','backdropAngle'].forEach((id) => {
+    ['resolutionScale','speed','edgeFade','trail','pulse','interactionRadius','interactionDuration','imageScale','imageScaleX','imageScaleY','imageFov','imageRotation','meshScale','meshScaleX','meshScaleY','meshScaleZ','meshRotationX','meshRotationY','meshRotationZ','meshFov','meshRotationSpeed','backdropOpacity','backdropAngle'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) setRangeFill(el);
     });
@@ -1478,6 +1495,7 @@ function usageSource() {
     const options = {
         mode: anim.opts.mode,
         quality: document.getElementById("quality").value,
+        resolutionScale: anim.opts.resolutionScale,
         renderer: document.getElementById("renderer").value,
         charSet: anim.opts.charSet,
         align: anim.opts.align,
@@ -1547,7 +1565,7 @@ function usageSource() {
 }
 function getPersistableOptions() {
     const keys = [
-        "mode", "quality", "renderer", "charSet", "align", "color", "gradient", "backdrop",
+        "mode", "quality", "resolutionScale", "renderer", "charSet", "align", "color", "gradient", "backdrop",
         "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "extendedStats", "colorAnimation",
         "interactionRadius", "interactionDuration",
         "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",

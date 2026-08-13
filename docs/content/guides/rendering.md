@@ -3,7 +3,7 @@ title: Renderers and performance
 description: Select WebGL2 or Canvas 2D and control quality, frame rate, memory, and multi-instance behavior.
 weight: 10
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-14
 tags: [WebGL2, Canvas 2D, GPU, renderer, performance, quality]
 keywords: [WebGL2 ASCII renderer, GPU rendering, Canvas 2D fallback, renderer selection, quality tiers, animation performance, frame rate, 3D to ASCII, glTF GLB research]
 ---
@@ -50,6 +50,26 @@ The `rendererFallback` event reports context-loss fallback. `rendererChange` rep
 | `ultra` | 1 | 2.4 | 2 | 8 | Yes | Yes |
 
 Higher density values produce fewer cells because they increase cell spacing. `targetFPS: null` does not impose a library frame cap; the browser display and scheduler remain the physical limit.
+
+## Logical grid resolution
+
+Browser zoom changes the CSS-pixel size reported by the target, so the automatic column
+and row count changes with it. `resolutionScale` provides an explicit adjustment without
+changing canvas DPR:
+
+`app.js`
+
+```js
+const animation = new asciiam('#target', {
+  resolutionScale: 0.75
+});
+```
+
+`1` retains automatic sizing. `0.5` produces the coarsest supported grid and reduces
+cell work. `2` produces the finest supported grid. Glyph size and cell spacing change
+together, so the grid remains contiguous. The option applies to procedural animation,
+images, GIF frames, and 3D meshes. On a fixed-size surface, cell count grows approximately
+with the square of the scale; test values above `1` on the intended device class.
 
 ## Diagnostics
 
@@ -105,6 +125,7 @@ extensions will fail with a format diagnostic.
 | `renderer` | `auto \| webgl2 \| canvas2d` | `auto` | Selects the presentation backend. |
 | `powerPreference` | `high-performance \| low-power \| default` | `high-performance` | Passes an adapter preference to WebGL2. |
 | `quality` | quality name | `balanced` | Applies tier values. |
+| `resolutionScale` | number | `1` | Scales logical grid detail; clamped to `0.5`–`2`. |
 | `maxDPR` | number | tier value | Caps backing-store pixel ratio. |
 | `targetFPS` | number or `null` | `null` | Adds a per-instance frame cap when numeric. |
 | `showStats` | boolean | `false` | Enables the compact attached output. |
