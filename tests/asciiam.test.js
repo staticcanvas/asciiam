@@ -992,12 +992,15 @@ describe("asciiam lifecycle", () => {
         HTMLCanvasElement.prototype.getContext = jest.fn(() => context);
         const closeFrame = jest.fn();
         const closeDecoder = jest.fn();
+        const animationRef = { current: null };
+        const visibleDuringDecode = [];
         globalThis.ImageDecoder = class {
             static isTypeSupported = jest.fn(async () => true);
             constructor() {
                 this.tracks = { ready: Promise.resolve(), selectedTrack: { frameCount: 2 } };
             }
             async decode({ frameIndex }) {
+                if (frameIndex > 0) visibleDuringDecode.push(animationRef.current._imageGrid);
                 return {
                     image: {
                         displayWidth: 2,
@@ -1014,9 +1017,12 @@ describe("asciiam lifecycle", () => {
             arrayBuffer: async () => new ArrayBuffer(8),
         }));
         const animation = new asciiam(host, { respectReducedMotion: false });
+        animationRef.current = animation;
         animation.cols = 2;
         animation.rows = 1;
         animation._sourceImage = { width: 2, height: 1 };
+        const visibleGrid = { cols: 2, rows: 1, chars: ["V", "V"], colors: [null, null] };
+        animation._imageGrid = visibleGrid;
         animation._animatedImage = true;
         const ready = jest.fn();
         animation.on("imageFramesReady", ready);
@@ -1026,6 +1032,7 @@ describe("asciiam lifecycle", () => {
         expect(animation._capturedImageFrames).toHaveLength(2);
         expect(animation._capturedImageFrames.map((frame) => frame.duration)).toEqual([40, 60]);
         expect(animation._sourceImage).toEqual({ width: 2, height: 1 });
+        expect(visibleDuringDecode).toEqual([visibleGrid]);
         expect(closeFrame).toHaveBeenCalledTimes(2);
         expect(closeDecoder).toHaveBeenCalledTimes(1);
         expect(ready).toHaveBeenCalledWith({ frameCount: 2, duration: 0.1 }, animation);
@@ -1262,6 +1269,32 @@ describe("asciiam lifecycle", () => {
         animation.destroy();
     });
 
+    it("retains animated-image playback position across mode-only sequence steps", () => {
+        const animation = new asciiam(document.querySelector("#host"), { respectReducedMotion: false });
+        animation._sourceImage = { width: 1, height: 1 };
+        animation._loadedImageSource = "/retained.gif";
+        animation._loadedImageOptionsKey = "true";
+        animation._animatedImage = true;
+        animation._capturedImageFrames = [
+            { grid: { chars: ["A"] }, duration: 40 },
+            { grid: { chars: ["B"] }, duration: 60 },
+        ];
+        animation._imageFrameIndex = 1;
+        animation._imageFrameAccumulator = 23;
+        animation.setSequence([
+            { mode: "wave", image: "/retained.gif", imageOptions: { animated: true }, duration: 1 },
+            { mode: "ripple", duration: 1 },
+        ], { loop: false });
+
+        animation.playSequence();
+        animation._advanceSequence(1000);
+
+        expect(animation.opts.mode).toBe("ripple");
+        expect(animation._imageFrameIndex).toBe(1);
+        expect(animation._imageFrameAccumulator).toBe(23);
+        animation.destroy();
+    });
+
     it("morphs between sequence steps with one outgoing snapshot", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {
@@ -1321,7 +1354,7 @@ describe("asciiam lifecycle", () => {
         const animation = new asciiam(host, { respectReducedMotion: false });
         animation.setSequence([
             { mode: "wave", duration: 1 },
-            { mode: "ripple", duration: 3, image: "/second.png" },
+            { mode: "ripple", duration: 3, image: "/second.png", transition: { type: "morph", duration: 0.5 } },
             { mode: "current", duration: 1, image: null },
         ], { loop: false });
 
@@ -1333,6 +1366,8 @@ describe("asciiam lifecycle", () => {
             elapsed: 0,
         }));
         expect(animation.opts.mode).toBe("wave");
+        expect(animation.getSequenceState().morphing).toBe(false);
+        expect(host.querySelectorAll(".asciiam-morph-layer")).toHaveLength(1);
 
         animation.pauseSequence();
         await pendingImages[0].onload();
@@ -1352,10 +1387,36 @@ describe("asciiam lifecycle", () => {
         }));
         expect(animation.opts.mode).toBe("ripple");
         expect(animation.opts.image).toBe("/second.png");
+        expect(animation.getSequenceState().morphing).toBe(true);
 
         animation._advanceSequence(3000);
         expect(animation.opts.mode).toBe("current");
         expect(animation.opts.image).toBeNull();
+        animation.destroy();
+    });
+
+    it("waits for a sequence model before starting a mesh step", async () => {
+        const animation = new asciiam(document.querySelector("#host"), { respectReducedMotion: false });
+        let resolveModel;
+        animation.setModel = jest.fn(() => new Promise((resolve) => { resolveModel = resolve; }));
+        animation.setSequence([
+            { mode: "wave", duration: 1 },
+            { mode: "mesh", duration: 2, model: "/model.glb" },
+        ], { loop: false });
+
+        animation.playSequence();
+        animation._advanceSequence(1000);
+        expect(animation.getSequenceState()).toEqual(expect.objectContaining({ index: 1, loading: true, elapsed: 0 }));
+        expect(animation.opts.mode).toBe("wave");
+        expect(animation.getSequenceState().morphing).toBe(false);
+        expect(document.querySelectorAll(".asciiam-morph-layer")).toHaveLength(1);
+
+        resolveModel({ vertexCount: 3 });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(animation.opts.mode).toBe("mesh");
+        expect(animation.getSequenceState().loading).toBe(false);
+        expect(document.querySelector(".asciiam-morph-layer")).toBeNull();
         animation.destroy();
     });
 

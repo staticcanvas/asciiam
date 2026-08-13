@@ -24,7 +24,11 @@ Uploaded files can be passed through an object URL. Revoke the URL after `setIma
 
 URL paths ending in `.gif` are detected automatically. Object URLs do not retain a filename, so pass `{ animated: true }` when loading an uploaded GIF. `setImage()` waits while each decoded frame is converted to the current ASCII grid, preserves the GIF's individual frame delays, and emits `imageFramesReady` with `frameCount` and total `duration`. The decoded bitmap for each frame is closed immediately; playback retains ASCII data, not full-resolution frames.
 
-If `ImageDecoder` or fetch access is unavailable, asciiam falls back to sampling the browser-animated `<img>`. `imageFrameRate` limits only that compatibility path and does not cap renderer FPS. Changing image sampling options or target dimensions re-captures the ASCII frames after a short debounce.
+Frame conversion is preparation, not playback. asciiam keeps the current grid visible
+through the decode pass and publishes the completed frame set atomically at frame zero.
+Decoded frames therefore cannot flash or fast-forward before normal animation begins.
+
+If `ImageDecoder` or fetch access is unavailable, asciiam falls back to sampling the browser-animated `<img>`. `imageFrameRate` limits only that compatibility path; it does not alter exact GIF frame delays or cap renderer FPS. Changing image sampling options or target dimensions re-captures the ASCII frames after a short debounce.
 
 `app.js`
 

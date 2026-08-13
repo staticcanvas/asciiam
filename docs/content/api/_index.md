@@ -265,12 +265,14 @@ the first reporting interval completes. Calling this method does not start sampl
 | `repeat` | boolean | No | Repeats a finite mode timeline within the step; defaults to `false`. |
 | `image` | string, `null`, or omitted | No | Decodes a new source before timing starts, clears the source, or retains it when omitted. |
 | `imageOptions` | image option record | No | Passes decode hints such as `animated` to `setImage()`. |
+| `model` | glTF/GLB source, `null`, or omitted | No | Decodes new geometry before timing starts, clears geometry, or retains it when omitted. |
+| `modelOptions` | model load option record | No | Passes loader limits, scene selection, and progress handling to `setModel()`. |
 | `options` | option record | No | Step-local option overrides. |
-| `transition` | transition object | No | Incoming `cut` or snapshot `morph` transition. |
+| `transition` | transition object | No | Incoming `cut` or retained-frame `morph` transition. |
 | `onStart` | callback | No | Runs when the step starts. |
 | `onComplete` | callback | No | Runs on normal completion. |
 | `onInterrupt` | callback | No | Runs when interrupted. |
-| `onError` | callback | No | Runs when the step image fails to load; playback pauses. |
+| `onError` | callback | No | Runs when a step image or model fails to load; playback pauses. |
 
 ### Sequence options
 

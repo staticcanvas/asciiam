@@ -1,15 +1,15 @@
 ---
 title: Animation sequences
-description: Run ordered, image-aware animation nodes with controlled timing, transitions, callbacks, and looping.
+description: Run ordered media and mesh animation nodes with controlled timing, retained-frame transitions, callbacks, and looping.
 weight: 30
 date: 2026-08-13
 lastmod: 2026-08-13
-tags: [sequences, timeline, images, transitions, morph, repeat, events]
-keywords: [animation sequence, image sequence, animation playlist, sequence nodes, ASCII transitions, morph cross-fade, snapshot transition, step repeat, callbacks]
+tags: [sequences, timeline, images, 3D, glTF, transitions, morph, repeat, events]
+keywords: [animation sequence, image sequence, mesh sequence, glTF sequence, animation playlist, sequence nodes, ASCII transitions, retained frame morph, snapshot transition, step repeat, callbacks]
 ---
 
 A sequence controls one renderer. Each node selects a mode, duration, optional delay,
-image-source action, mode-repeat policy, option overrides, and lifecycle callbacks. The
+image or model-source action, mode-repeat policy, option overrides, and lifecycle callbacks. The
 web utility displays nodes left to right in playback order; its image selector can
 retain the current source, clear it, or load one of the included images.
 
@@ -19,7 +19,7 @@ restarts a finite mode such as `fadeIn`, `fadeOut`, `irisIn`, `dissolveOut`, or
 reaches its final frame and holds it until the next step. Sequence `loop` controls
 whether playback returns to the first step after the final step.
 
-An incoming step can also declare a `morph` transition. asciiam captures the outgoing frame once, starts the incoming mode, and fades the captured frame over it. Only the incoming algorithm remains live, so the transition does not run two animation modes concurrently. The default transition is `cut`; reduced-motion preference also resolves morphs to cuts.
+An incoming step can also declare a `morph` transition. asciiam captures and holds the outgoing presentation before it changes or begins source preparation. After the incoming image, media frame set, or mesh is ready, the incoming mode starts live beneath that retained frame and the outgoing frame eases away. This is a bounded retained-frame morph: it does not restart retained GIF playback, expose decode frames, or run two render engines concurrently. The default transition is `cut`; reduced-motion preference resolves morphs to cuts.
 
 ## Configure the requested flow
 
@@ -78,6 +78,28 @@ animation.on('sequenceStepError', ({ index, error }) => {
 An image failure pauses the sequence, calls the node's optional `onError`, and emits
 `sequenceStepError`. Correct the source or seek to another node before resuming.
 
+## Move between 3D models
+
+Set `model` to a URL or other `setModel()` source to load glTF/GLB geometry before a
+mesh node starts. Omit it to retain the current mesh, or set it to `null` to clear
+geometry. `modelOptions` accepts the same bounded loader options as `setModel()`.
+
+```js
+animation.setSequence([
+  { mode: 'mesh', model: '/models/part-a.glb', duration: 4 },
+  {
+    mode: 'mesh',
+    model: '/models/part-b.glb',
+    options: { meshStyle: 'wireframe', meshAutoRotate: true },
+    duration: 4,
+    transition: { type: 'morph', duration: 0.7, easing: 'easeInOut' }
+  }
+], { autoplay: true });
+```
+
+Model load or validation failure follows the same `onError` and
+`sequenceStepError` path as image failure.
+
 `delay` staggers the start of a step. During the delay, the prior frame state continues. `duration` begins after the delay completes.
 
 ## Sequence state
@@ -87,9 +109,9 @@ stateDiagram-v2
   [*] --> Configured: setSequence()
   Configured --> Waiting: playSequence() + delay
   Configured --> Playing: playSequence()
-  Waiting --> Loading: node declares a new image
-  Loading --> Playing: image decoded and sampled
-  Loading --> Paused: image error
+  Waiting --> Loading: node declares a new image or model
+  Loading --> Playing: source decoded and sampled
+  Loading --> Paused: source error
   Waiting --> Playing: delay elapsed, image retained or cleared
   Playing --> Waiting: next step has delay
   Playing --> Playing: next step
@@ -118,10 +140,12 @@ Step callbacks receive `(detail, animation)`. The same lifecycle is available th
 | `getSequenceState()` | none | Returns configured, running, completed, index, length, loop, elapsed, waiting, loading, and morph state. |
 | `step.image` | string, `null`, or omitted | Loads a source, clears the current source, or retains it. |
 | `step.imageOptions` | object | Passes image decode hints such as `animated` to `setImage()`. |
-| `step.onError` | callback | Runs when the node's image cannot be decoded. |
+| `step.model` | source, `null`, or omitted | Loads a glTF/GLB source, clears geometry, or retains it. |
+| `step.modelOptions` | object | Passes bounded loader options to `setModel()`. |
+| `step.onError` | callback | Runs when the node's image or model cannot be decoded. |
 | `step.repeat` | boolean, default `false` | Repeats a finite mode timeline while the step remains active. |
 | `step.transition` | `{ type, duration, easing }` | Selects an incoming `cut` or snapshot `morph`; duration uses seconds. |
 | `options.loop` | boolean | Legacy per-mode repeat input; `step.repeat` is the explicit sequence form. |
-| `sequenceMorphStart` | event | Emitted after the outgoing frame is captured. |
+| `sequenceMorphStart` | event | Emitted after incoming state is ready and the retained outgoing frame begins easing away. |
 | `sequenceMorphComplete` | event | Emitted after the outgoing snapshot reaches zero opacity. |
-| `sequenceStepError` | event | Emitted when a node image fails; playback pauses. |
+| `sequenceStepError` | event | Emitted when a node image or model fails; playback pauses. |

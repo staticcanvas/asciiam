@@ -530,9 +530,11 @@ to override detection. This changes density mapping only and does not rotate the
 GIF URLs play automatically. Where the browser exposes WebCodecs `ImageDecoder`,
 asciiam decodes every composited GIF frame once, converts it to an ASCII grid, and
 plays those grids using the GIF's frame delays. Decoded bitmaps are released as soon
-as they are sampled. Uploaded GIF object URLs should be identified explicitly.
+as they are sampled. Decode-time grids are never presented: the current visual remains
+stable until the complete frame set is ready, then playback starts at frame zero.
+Uploaded GIF object URLs should be identified explicitly.
 `imageFrameRate` controls only the compatibility sampler used when exact capture is
-unavailable:
+unavailable; it does not override GIF frame delays or renderer FPS:
 
 ```js
 // app.js
@@ -701,6 +703,13 @@ field to retain the current source or use `image: null` to clear it. `imageOptio
 accepts the same decode hints as `setImage()`. A failed node image pauses playback,
 runs `onError`, and emits `sequenceStepError`; `getSequenceState().loading` distinguishes
 image decoding from a configured delay.
+
+Mesh steps use the same retained-source contract. Set `model` to a glTF/GLB source,
+omit it to retain current geometry, or use `model: null` to clear it. `modelOptions`
+is passed to `setModel()`. Image and model preparation both finish before step timing
+starts. For a `morph`, asciiam captures the outgoing presentation before preparation,
+holds it without running a second renderer, then reveals the live incoming mode after
+its sources are ready. GIF and retained-image clocks are not reset by mode-only steps.
 
 Steps may also define `onStart`, `onComplete`, and `onInterrupt`. Callback failures are
 caught so they cannot stop the shared render scheduler. The same lifecycle is available

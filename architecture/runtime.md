@@ -72,18 +72,26 @@ When `ImageDecoder` supports GIF:
 5. Retain the ASCII grid and duration.
 6. Emit `imageFramesReady` after all frames are available.
 
-When exact capture is unavailable, the browser-animated image is resampled at `imageFrameRate`. Sampling-option and size changes debounce a recapture from retained encoded GIF data.
+Decoded grids remain private to the capture pass and are published together at frame
+zero. This prevents the decoder's iteration speed from becoming visible playback.
+When exact capture is unavailable, the browser-animated image is resampled at
+`imageFrameRate`. Sampling-option and size changes debounce a recapture from retained
+encoded GIF data.
 
 ## Sequence state
 
-A sequence contains normalized steps, current index, delay and duration clocks, loop policy, callbacks, and optional outgoing snapshot morph state. Step option changes reuse the existing renderer. Manual `setMode()` interrupts and pauses active sequence playback.
+A sequence contains normalized steps, current index, delay and duration clocks, loop policy, callbacks, optional image/model source actions, and outgoing retained-frame morph state. Step option changes reuse the existing renderer. Manual `setMode()` interrupts and pauses active sequence playback.
 
 An omitted step image retains the sampled source, `null` clears it, and a string starts
 an asynchronous decode after the step delay. An activation token prevents a late image
 from committing after seek, stop, or reconfiguration. The duration clock stays at zero
 while decoding. A decode failure pauses playback and emits `sequenceStepError`.
 
-Morph transitions capture one outgoing frame and draw the incoming live state beneath it. Reduced-motion preference resolves morphs to cuts.
+Morph transitions capture one outgoing frame before image or model preparation. The
+opaque retained frame preserves continuity while sources load; after readiness, the
+incoming live state runs beneath it while the retained frame eases to zero opacity.
+This bounds work to one live renderer and one static compositing layer. Reduced-motion
+preference resolves morphs to cuts.
 
 ## Cache ownership
 

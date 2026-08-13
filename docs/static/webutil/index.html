@@ -2651,27 +2651,6 @@
             </button>
             <div class="ctrl-popover ctrl-popover--wide" id="pop-image" popover>
                 <div class="cpop-group">
-                    <span class="cpop-label">3D mesh source</span>
-                    <label class="cpop-label" for="meshPrimitive">Procedural primitive</label>
-                    <select id="meshPrimitive">
-                        <option value="">None</option>
-                        <option value="cube">Cube</option>
-                        <option value="plane">Plane</option>
-                        <option value="icosphere">Icosphere</option>
-                        <option value="torus">Torus</option>
-                    </select>
-                    <label class="cpop-label" for="modelInput" style="margin-block-start:var(--space-xs)">Upload glTF 2.0 or GLB v2</label>
-                    <input type="file" id="modelInput" accept=".gltf,.glb,model/gltf+json,model/gltf-binary" />
-                    <label class="cpop-label" for="meshStyle" style="margin-block-start:var(--space-xs)">Raster style</label>
-                    <select id="meshStyle">
-                        <option value="points">Points</option>
-                        <option value="wireframe" selected>Wireframe</option>
-                        <option value="solid">Solid</option>
-                    </select>
-                    <p class="image-status" id="modelStatus" role="status" aria-live="polite">No model loaded.</p>
-                    <p class="image-library-help">GLB is self-contained. Local glTF files work when their buffers are embedded; external sibling files cannot be resolved from a browser file picker.</p>
-                </div>
-                <div class="cpop-group">
                     <label class="cpop-label" for="imageInput">Upload image</label>
                     <input type="file" id="imageInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/avif" />
                 </div>
@@ -2702,7 +2681,7 @@
                     </label>
                     <label class="cpop-label row" for="imageFrameRate" style="margin-top:var(--space-xs)">GIF fallback rate <span class="val" id="imageFrameRateVal">12 fps</span></label>
                     <input type="range" id="imageFrameRate" min="1" max="30" step="1" value="12" />
-                    <p class="image-library-help" style="margin-block-start:var(--space-xs);text-align:start">GIF frames are resampled at this rate; the renderer continues at the selected display frame rate.</p>
+                    <p class="image-library-help" style="margin-block-start:var(--space-xs);text-align:start">Fallback browser-timed GIF sampling uses this rate. Exact decoded GIFs keep their own frame delays; renderer FPS is independent.</p>
                 </div>
                 <div class="cpop-group">
                     <label class="ui-switch" for="colorFromImageToggle">
@@ -2739,6 +2718,37 @@
                         <h2 class="image-section-title">Available images</h2>
                         <div class="image-grid" id="localImages"></div>
                     </section>
+                </div>
+            </div>
+
+            <!-- 3D -->
+            <button class="ctrl-pill ctrl-pill--media" id="meshTriggerBtn" type="button" title="Choose a 3D primitive or load a model"
+                    popovertarget="pop-mesh" aria-expanded="false" aria-controls="pop-mesh">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 7 9 5 9-5"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+                <span>3D</span>
+                <span class="ctrl-pill__status" id="meshToolbarStatus">none</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-mesh" popover>
+                <div class="cpop-group">
+                    <span class="cpop-label">3D mesh source</span>
+                    <label class="cpop-label" for="meshPrimitive">Procedural primitive</label>
+                    <select id="meshPrimitive">
+                        <option value="">None</option>
+                        <option value="cube">Cube</option>
+                        <option value="plane">Plane</option>
+                        <option value="icosphere">Icosphere</option>
+                        <option value="torus">Torus</option>
+                    </select>
+                    <label class="cpop-label" for="modelInput" style="margin-block-start:var(--space-xs)">Upload glTF 2.0 or GLB v2</label>
+                    <input type="file" id="modelInput" accept=".gltf,.glb,model/gltf+json,model/gltf-binary" />
+                    <label class="cpop-label" for="meshStyle" style="margin-block-start:var(--space-xs)">Raster style</label>
+                    <select id="meshStyle">
+                        <option value="points">Points</option>
+                        <option value="wireframe" selected>Wireframe</option>
+                        <option value="solid">Solid</option>
+                    </select>
+                    <p class="image-status" id="modelStatus" role="status" aria-live="polite">No model loaded.</p>
+                    <p class="image-library-help">GLB is self-contained. Local glTF files work when their buffers are embedded; external sibling files cannot be resolved from a browser file picker.</p>
                 </div>
             </div>
 

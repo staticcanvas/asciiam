@@ -167,6 +167,9 @@ export interface asciiamSequenceStep {
   /** New source to decode before the step starts; null clears the current image. */
   image?: string | null;
   imageOptions?: { animated?: boolean } & Record<string, unknown>;
+  /** New glTF/GLB source to decode before the step starts; null clears retained geometry. */
+  model?: asciiamModelSource | null;
+  modelOptions?: asciiamModelLoadOptions;
   options?: Record<string, unknown>;
   transition?: asciiamSequenceTransition;
   onStart?: asciiamSequenceCallback | null;

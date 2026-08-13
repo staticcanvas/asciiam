@@ -153,7 +153,7 @@ describe('demo toolbar quality-of-life controls', () => {
     const advanced = document.getElementById('moreAdvancedActions');
     const workspace = document.getElementById('moreWorkspaceActions');
 
-    expect(primaryLabels).toHaveLength(9);
+    expect(primaryLabels).toHaveLength(10);
     expect(primaryLabels.join(' ')).toContain('Preset');
     expect(primaryLabels.join(' ')).toContain('Sequence');
     expect(primaryLabels.join(' ')).toContain('Mode');
@@ -161,8 +161,11 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(primaryLabels.join(' ')).toContain('Color');
     expect(primaryLabels.join(' ')).toContain('Advanced');
     expect(primaryLabels.join(' ')).toContain('Image');
+    expect(primaryLabels.join(' ')).toContain('3D');
     expect(primaryLabels.join(' ')).toContain('Reset');
     expect(primaryLabels.join(' ')).toContain('Code');
+    expect(primaryLabels.indexOf('Image none')).toBeLessThan(primaryLabels.indexOf('3D none'));
+    expect(primaryLabels.indexOf('3D none')).toBeLessThan(primaryLabels.indexOf('Code'));
     expect(advanced.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(4);
     expect(workspace.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(3);
     expect(

@@ -1429,6 +1429,11 @@ function updateToolbarSummaries() {
     setToolbarSummary("colorTriggerBtn", "colorToolbarStatus", "Color", colorMode);
     setToolbarSummary("backdropTriggerBtn", "backdropToolbarStatus", "Backdrop", backdropLabel);
     setToolbarSummary("imageTriggerBtn", "imageToolbarStatus", "Image", anim._sourceImage ? "active" : "none");
+    const meshInfo = anim.getMeshInfo();
+    const meshLabel = meshInfo.loaded
+        ? anim.opts.meshPrimitive || (anim.opts.model ? "model" : `${meshInfo.primitiveCount} primitives`)
+        : "none";
+    setToolbarSummary("meshTriggerBtn", "meshToolbarStatus", "3D", meshLabel);
 }
 function syncHistoryButtons() {
     document.getElementById("undoSettingsBtn").disabled = historyIndex <= 0 && historyTimer === null;

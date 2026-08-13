@@ -19,6 +19,7 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 - Runtime renderer selection through `auto`, `webgl2`, and `canvas2d`.
 - Ordered animation sequences with delays, durations, independent per-step mode repeat, whole-sequence looping, interruption, callbacks, and lifecycle events. Replaying a completed sequence restarts from step zero.
 - Sequence nodes can retain, clear, or asynchronously replace image sources. Node timing waits for decoding; failures pause playback and emit `sequenceStepError`.
+- Sequence nodes can also retain, clear, or asynchronously replace glTF/GLB model sources. Retained-frame morphs capture outgoing output before source preparation and reveal the live destination only after readiness.
 - Dense, spatial, reveal, sparse-particle, image, and custom animation modes.
 - Added `irisIn`, `irisOut`, `dissolveIn`, `dissolveOut`, `lumaFold`, `riftLace`, and `echoBloom`, with the global mode inventory available to image-backed output.
 - Added `hoverZone` and `clickZone` for pointer-local and triggered interaction fields, with programmatic `setCursor()` and `triggerInteraction()` control.
@@ -28,6 +29,7 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 - Image-to-ASCII sampling with mask modes, inclusive RGB animation ranges, and independent centered horizontal and vertical output scaling.
 - Image fitting now uses rendered glyph-cell dimensions instead of treating ASCII cells as square, preserving source proportions.
 - Animated GIF sources capture every composited frame into an ASCII grid through WebCodecs `ImageDecoder`, preserve per-frame timing, and release decoded bitmaps immediately. Browser-timed sampling remains the fallback; `imageFrameRate` controls only that compatibility path.
+- GIF capture keeps decode-time grids private and publishes the completed frame set at frame zero, preventing visible decode fast-forward.
 - `imageLuminance` adds `auto`, `normal`, and `invert` mappings. Auto mode detects dark artwork on transparency so common black silhouette SVGs map to visible glyphs.
 - Image sampling reuses its readback canvas and retains glyph atlases while animated frames change.
 - Shared frame scheduling, visibility pausing, quality tiers, glyph atlases, and static-wave caching.
@@ -35,6 +37,7 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 ### Web utility
 
 - Interactive web utility with preset editing, undo and redo, generated code, renderer selection, local image upload, animated-image controls, independent image-axis controls, and luminance mapping.
+- 3D primitives and glTF/GLB upload use a dedicated toolbar control immediately after Image.
 - Sequence steps expose a mode-repeat switch enabled by default for utility previews; exported configuration retains the explicit value.
 - Replaced the vertical sequence stack with an ordered node flow and per-node image-source controls.
 - Split web-utility behavior into a module entry point plus focused code-formatting and sequence-data modules; documentation scripts remain separated by site-wide and page-specific responsibility.

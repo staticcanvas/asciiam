@@ -247,6 +247,10 @@ strangers with confidence."
 - [x] 🟠🌟✅1️⃣ **Critical** - **About alignment.** About shares the same action row and control height as FPS.
 - [x] 🟠🌟✅1️⃣ **Critical** - **Direct documentation access.** Added Documentation immediately before About.
 
+- [x] 🟠🪲✅1️⃣ **Critical** - **Sequence media continuity.** GIF decode grids remain private until complete;
+      retained-frame morphs capture before asynchronous image/model preparation; sequence nodes support
+      tri-state model sources; 3D controls have a dedicated toolbar menu after Image.
+
 ### **Distribution Readiness (priority-2)**
 
 - [x] 🟠🌟✅2️⃣ **Distribution** - **Multi-instance frame scheduling.** Active renderers share one

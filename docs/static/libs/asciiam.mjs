@@ -794,7 +794,6 @@ import { loadGltf } from "./gltf.js";
             this._edgeFadeCache = null;
             this._cell = { char: " ", opacity: 0, level: 0, bold: false, color: null };
             this._frames = 0;
-            this._fpsAccum = 0;
             this._fps = 0;
             this._statsEl = null;
             this._statsWindowStart = null;
@@ -1325,6 +1324,10 @@ import { loadGltf } from "./gltf.js";
                         ? (step.image === null ? null : String(step.image))
                         : undefined,
                     imageOptions: step.imageOptions && typeof step.imageOptions === "object" ? { ...step.imageOptions } : {},
+                    // Models follow the same retained-source contract as images:
+                    // omitted retains, null clears, and a source waits for decode.
+                    model: Object.prototype.hasOwnProperty.call(step, "model") ? step.model : undefined,
+                    modelOptions: step.modelOptions && typeof step.modelOptions === "object" ? { ...step.modelOptions } : {},
                     options: step.options && typeof step.options === "object" ? { ...step.options } : {},
                     transition,
                     onStart: typeof step.onStart === "function" ? step.onStart : null,
@@ -1440,7 +1443,7 @@ import { loadGltf } from "./gltf.js";
                 elapsed: sequence?.elapsed ?? 0,
                 waiting: !!sequence && sequence.index >= 0 && !sequence.stepStarted,
                 loading: !!sequence?.stepLoading,
-                morphing: !!this._morph,
+                morphing: !!this._morph?.started,
                 morphProgress: this._morph ? Math.min(1, this._morph.elapsed / this._morph.duration) : 0,
             };
         }
@@ -1563,10 +1566,7 @@ import { loadGltf } from "./gltf.js";
 
         _activateSequenceStep(index) {
             const sequence = this._sequence;
-            if (sequence.stepLoading) {
-                this._imageLoadToken++;
-                this._imageCaptureToken++;
-            }
+            if (sequence.stepLoading) this._cancelSequenceLoads();
             sequence.index = index;
             sequence.elapsed = 0;
             sequence.delayElapsed = 0;
@@ -1582,20 +1582,36 @@ import { loadGltf } from "./gltf.js";
             const step = sequence.steps[sequence.index];
             if (sequence.stepStarted || sequence.stepLoading) return;
             const activationToken = sequence.activationToken;
-            if (step.image === null) this.clearImage();
+
             const imageOptionsKey = step.imageOptions.animated === undefined ? "" : String(!!step.imageOptions.animated);
-            if (typeof step.image === "string" &&
-                (step.image !== this._loadedImageSource || imageOptionsKey !== this._loadedImageOptionsKey)) {
+            const needsImageLoad = typeof step.image === "string" &&
+                (step.image !== this._loadedImageSource || imageOptionsKey !== this._loadedImageOptionsKey);
+            const needsModelLoad = step.model !== undefined && step.model !== null && step.model !== this._loadedModelSource;
+
+            // Retain the outgoing presentation before an asynchronous source can
+            // replace live image or mesh state. Morphs ease this layer away; cuts
+            // remove it atomically once every requested source is ready.
+            if (sequence.startedOnce) this._prepareMorph(step.transition, needsImageLoad || needsModelLoad);
+            if (step.image === null) this.clearImage();
+            if (step.model === null) this.clearModel();
+            const imageLoad = needsImageLoad
+                ? this.setImage(step.image, step.imageOptions)
+                : null;
+            const modelLoad = needsModelLoad
+                ? this.setModel(step.model, step.modelOptions)
+                : null;
+            if (imageLoad || modelLoad) {
                 sequence.stepLoading = true;
-                this.setImage(step.image, step.imageOptions).then((image) => {
-                    if (!image || sequence.activationToken !== activationToken) return;
+                Promise.all([imageLoad, modelLoad].filter(Boolean)).then((resources) => {
+                    if (resources.some((resource) => !resource) || sequence.activationToken !== activationToken) return;
                     sequence.stepLoading = false;
                     if (sequence.running) this._commitSequenceStep(step);
                 }).catch((error) => {
                     if (sequence.activationToken !== activationToken) return;
                     sequence.stepLoading = false;
                     sequence.running = false;
-                    const detail = this._sequenceDetail({ step, reason: "image-error", error });
+                    this._clearMorph();
+                    const detail = this._sequenceDetail({ step, reason: "source-error", error });
                     this._callSequenceCallback(step.onError, detail);
                     this._emit("sequenceStepError", detail);
                 });
@@ -1607,11 +1623,10 @@ import { loadGltf } from "./gltf.js";
         /** Applies a decoded sequence step and starts its timed lifecycle. */
         _commitSequenceStep(step) {
             const sequence = this._sequence;
-            if (sequence.startedOnce) this._beginMorph(step.transition);
             this._applyingSequence = true;
             try {
                 for (const [key, value] of Object.entries(step.options)) {
-                    if (key !== "mode" && key !== "image" && key !== "loop" && key !== "sequence" && key !== "sequenceOptions") this.setOption(key, value);
+                    if (key !== "mode" && key !== "image" && key !== "model" && key !== "loop" && key !== "sequence" && key !== "sequenceOptions") this.setOption(key, value);
                 }
                 // Sequence repetition and mode repetition are separate controls.
                 // Apply this for every step so a prior step cannot leak its mode
@@ -1621,6 +1636,7 @@ import { loadGltf } from "./gltf.js";
             } finally {
                 this._applyingSequence = false;
             }
+            if (sequence.startedOnce) this._startPreparedMorph(step.transition);
             sequence.stepStarted = true;
             sequence.startedOnce = true;
             const detail = this._sequenceDetail({ step });
@@ -1642,10 +1658,8 @@ import { loadGltf } from "./gltf.js";
         _interruptSequenceStep(reason) {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
-            if (sequence.stepLoading) {
-                this._imageLoadToken++;
-                this._imageCaptureToken++;
-            }
+            if (sequence.stepLoading) this._cancelSequenceLoads();
+            this._clearMorph();
             const detail = this._sequenceDetail({ step, reason });
             this._callSequenceCallback(step?.onInterrupt, detail);
             this._callSequenceCallback(sequence.onStepInterrupt, detail);
@@ -1685,10 +1699,12 @@ import { loadGltf } from "./gltf.js";
             }
         }
 
-        _beginMorph(transition) {
+        /** Capture the outgoing presentation before incoming source preparation begins. */
+        _prepareMorph(transition, retainDuringLoad = false) {
             this._clearMorph();
-            if (this._reduced || transition?.type !== "morph" || !this.canvas.parentElement) return;
-            const duration = Math.max(0.05, Number(transition.duration) || 0.8) * 1000;
+            const isMorph = !this._reduced && transition?.type === "morph";
+            if ((!isMorph && !retainDuringLoad) || !this.canvas.parentElement) return;
+            const duration = Math.max(0.05, Number(transition?.duration) || 0.8) * 1000;
             const snapshot = document.createElement("canvas");
             snapshot.width = this.canvas.width;
             snapshot.height = this.canvas.height;
@@ -1706,13 +1722,26 @@ import { loadGltf } from "./gltf.js";
                 return;
             }
             this.canvas.after(snapshot);
-            this._morph = { canvas: snapshot, elapsed: 0, duration, easing: transition.easing || "easeInOut" };
+            this._morph = { canvas: snapshot, elapsed: 0, duration, easing: transition?.easing || "easeInOut", isMorph, started: false };
+        }
+
+        /** Reveal the live incoming state beneath the retained outgoing frame. */
+        _startPreparedMorph(transition) {
+            if (this._morph && !this._morph.isMorph) {
+                this._clearMorph();
+                return;
+            }
+            if (!this._morph) {
+                this._prepareMorph(transition);
+                if (!this._morph) return;
+            }
+            this._morph.started = true;
             this._emit("sequenceMorphStart", this._sequenceDetail({ transition }));
         }
 
         _advanceMorph(dt) {
             const morph = this._morph;
-            if (!morph) return;
+            if (!morph?.started) return;
             morph.elapsed = Math.min(morph.duration, morph.elapsed + Math.max(0, dt));
             const progress = morph.elapsed / morph.duration;
             let eased = progress;
@@ -1732,6 +1761,14 @@ import { loadGltf } from "./gltf.js";
         _clearMorph() {
             if (this._morph?.canvas.parentElement) this._morph.canvas.remove();
             this._morph = null;
+        }
+
+        /** Cancel every source preparation owned by an interrupted sequence step. */
+        _cancelSequenceLoads() {
+            this._imageLoadToken++;
+            this._imageCaptureToken++;
+            this._modelLoadToken++;
+            this._modelAbortController?.abort();
         }
 
         _advanceSequence(dt) {
@@ -1862,6 +1899,7 @@ import { loadGltf } from "./gltf.js";
                 const frameCount = track?.frameCount || 0;
                 if (frameCount < 2) return false;
                 const originalSource = this._sourceImage;
+                const visibleGrid = this._imageGrid;
                 const frames = new Array(frameCount);
                 let totalDuration = 0;
                 for (let index = 0; index < frameCount; index++) {
@@ -1871,13 +1909,17 @@ import { loadGltf } from "./gltf.js";
                     try {
                         this._sourceImage = image;
                         this._resampleImage();
+                        const decodedGrid = this._imageGrid;
                         const duration = Math.max(10, Number(image.duration) > 0 ? Number(image.duration) / 1000 : 100);
                         totalDuration += duration;
                         // _resampleImage creates a fresh grid, so retaining it avoids
                         // a second full-grid allocation for every decoded frame.
-                        frames[index] = { grid: this._imageGrid, duration };
+                        frames[index] = { grid: decodedGrid, duration };
                     } finally {
                         if (this._sourceImage === image) this._sourceImage = originalSource;
+                        // Decoding is preparation, not playback. Keep the previously
+                        // presented grid stable until the complete frame set is ready.
+                        this._imageGrid = visibleGrid;
                         if (typeof image.close === "function") image.close();
                     }
                     // Long GIFs should not monopolize the main thread while their
