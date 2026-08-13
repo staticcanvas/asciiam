@@ -27,11 +27,33 @@ This file records external sources and services referenced by asciiam developmen
 | [Shields.io](https://shields.io/) | README status badges. |
 | [Codecov](https://codecov.io/) | Optional coverage reporting reference. |
 
+## 3D research and mesh sources
+
+These sources support the planned 3D-to-ASCII feasibility work. asciiam does not currently
+bundle a mesh, parse glTF/GLB, or expose a public mesh API.
+
+| Resource | Maintained use | License or integration note |
+| --- | --- | --- |
+| [Poly Haven models](https://polyhaven.com/models) | Candidate CC0 models for optional demonstrations and visual verification. | Poly Haven publishes its models under CC0. Retain the exact model URL and source metadata even though attribution is not required. |
+| [Poly Haven license](https://polyhaven.com/license) | License authority for selected Poly Haven assets. | Recheck before adding or redistributing an asset. |
+| [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) | Parser fixtures, compatibility cases, and example geometry. | License and attribution requirements vary by model. Read the selected model directory's README before use. |
+| [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) | Format reference for planned core glTF and GLB input. | Base-format loading will be dependency-free. Assets requiring compression extensions will be rejected; no codec or decoder hook is planned for the released runtime. |
+| [meshoptimizer](https://github.com/zeux/meshoptimizer) | Future research reference only. | Do not add its code or dependency to released artifacts. Compare measured transfer, startup, decode, and memory costs only after the uncompressed loader is established. |
+| [Draco](https://github.com/google/draco) | Future research reference only. | Do not add its code or dependency to released artifacts. Any review must include decoder payload and WebAssembly initialization costs. |
+| [WebGL2 3D feasibility assessment](architecture/webgl2-3d-feasibility.md) | Project decision, performance gates, mesh contract, and bundle policy. | Internal source of truth for evaluating implementation work. |
+
 ## Maintenance rules
 
 - Do not treat a provider homepage as an asset license record.
 - Store an exact asset URL and creator identifier when new media enters `public/assets/images`.
 - Record embedded code or icon licenses in `THIRD_PARTY_NOTICES.md`.
+- Record each selected mesh's exact URL, author, license, triangle count, original size,
+  optimized size, and repository role before copying it into the project.
+- Keep core glTF/GLB parsing dependency-free and enforce its measured bundle budget.
+- Reject assets requiring Draco, Meshopt, or another unsupported compression extension
+  before mesh-buffer allocation. Do not expose a decoder injection or loading hook.
+- Keep compression evaluation in isolated research work; no codec code may enter released
+  artifacts without a later measured architecture decision.
 - Keep consumer-facing attribution in `docs/content/attributions.md` and README aligned with this inventory.
 
 ## API reference
@@ -42,3 +64,4 @@ This file records external sources and services referenced by asciiam developmen
 | `THIRD_PARTY_NOTICES.md` | Redistributed license and public-domain notices. |
 | `docs/content/attributions.md` | Consumer-facing attribution page. |
 | `public/assets/images` | Bundled demonstration inputs whose provenance must remain traceable. |
+| `architecture/webgl2-3d-feasibility.md` | Proposed 3D-to-ASCII boundary, performance budgets, and asset controls. |

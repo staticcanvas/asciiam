@@ -157,7 +157,7 @@ describe('Hugo documentation source', () => {
     expect(script).not.toContain('new Function');
   });
 
-  it('records Lucide, SVG Repo, PAT, and provider attribution sources', () => {
+  it('records icon, media, mesh, and format attribution sources', () => {
     const readme = projectFile('README.md');
     const notices = projectFile('THIRD_PARTY_NOTICES.md');
     const attributions = projectFile('docs/content/attributions.md');
@@ -171,6 +171,15 @@ describe('Hugo documentation source', () => {
     expect(attributions).toContain('PAT');
     expect(resources).toContain('Pexels');
     expect(resources).toContain('Pixabay');
+    [readme, attributions, resources].forEach((source) => {
+      expect(source).toContain('Poly Haven');
+      expect(source).toContain('Khronos glTF Sample Assets');
+      expect(source).toContain('glTF 2.0 specification');
+    });
+    expect(attributions).toContain('planned core glTF/GLB input boundary');
+    expect(resources).toContain('Assets requiring compression extensions will be rejected');
+    expect(resources).toContain('Do not expose a decoder injection or loading hook');
+    expect(resources).toContain('License and attribution requirements vary by model');
   });
 
   it('ships maintainer architecture and the documentation audit', () => {
@@ -179,6 +188,7 @@ describe('Hugo documentation source', () => {
       'architecture/runtime.md',
       'architecture/documentation.md',
       'architecture/maintenance.md',
+      'architecture/webgl2-3d-feasibility.md',
       'project_docs_audit.md',
       'THIRD_PARTY_NOTICES.md',
       'LICENSE',

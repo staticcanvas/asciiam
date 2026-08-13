@@ -77,6 +77,12 @@ strangers with confidence."
       column resets rather than continuing at the new density. Minor visual hitch,
       not a bug.
 
+- [ ] 🟠💡⏳2️⃣ **Engineering Backlog** - WebGL2 3D feasibility gate. Build a private typed-array mesh prototype that projects points, edges, and flat triangles into cell-resolution depth and luminance buffers; benchmark each stage against the budgets in architecture/webgl2-3d-feasibility.md before exposing an API.
+- [ ] 🔴🌟⏳3️⃣ **Engineering Backlog** - Dependency-free 3D-to-ASCII mesh mode. After the feasibility gate passes, add MeshData validation, camera and transform controls, points/wireframe/solid styles, procedural primitives, Canvas fallback parity, lifecycle cleanup, and TypeScript contracts.
+- [ ] 🟠🌟⏳3️⃣ **Engineering Backlog** - 3D feature verification and documentation. Add allocation and bundle-size checks, browser benchmarks, regression coverage, README/API/architecture guidance, live docs examples, and a bounded web-utility control surface.
+- [ ] 🔴🌟⏳3️⃣ **Engineering Backlog** - Core glTF 2.0 and GLB v2 loading. After MeshData stabilizes, add dependency-free parsing for scenes, nodes, transforms, buffers, accessors, sparse data, and point/line/triangle primitives; normalize them into MeshData with abortable URL, Blob, ArrayBuffer, external-buffer, progress, validation, cleanup, types, tests, and documentation support. Do not bundle or expose decoder hooks; reject assets requiring Draco, Meshopt, or another unsupported compression extension with a clear diagnostic before mesh allocation.
+- [ ] 🟠💡⏳4️⃣ **Engineering Backlog** - Deferred mesh-compression research. After uncompressed glTF/GLB support has production measurements, benchmark Draco and Meshopt transfer size, decoder payload, initialization, decode time, peak memory, retained memory, and render-ready latency on desktop and mobile. Keep all codec code and dependencies out of released artifacts unless a later evidence-based architecture review explicitly approves a change.
+
 ### **Deferred Concepts (priority-4)**
 
 - WebGPU backend. WebGL2 now provides the selectable GPU path with much broader browser

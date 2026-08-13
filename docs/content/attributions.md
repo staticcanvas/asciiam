@@ -1,11 +1,11 @@
 ---
 title: Attributions and external resources
-description: Source, license, and service references for icons, bundled demonstration media, registries, and delivery infrastructure.
+description: Source, license, and service references for icons, demonstration media, future mesh research, registries, and delivery infrastructure.
 weight: 70
 date: 2026-08-13
 lastmod: 2026-08-13
-tags: [attribution, licenses, resources]
-keywords: [Lucide license, SVG Repo attribution, asciiam image sources, third-party notices]
+tags: [attribution, licenses, resources, 3D, glTF]
+keywords: [Lucide license, SVG Repo attribution, asciiam image sources, Poly Haven CC0 models, Khronos glTF sample assets, glTF GLB specification, third-party notices]
 ---
 
 This page identifies third-party material and external services referenced by the repository; it does not change the MIT license applied to asciiam source code.
@@ -28,6 +28,26 @@ Icons are embedded locally so documentation navigation does not depend on a clie
 
 The image library contains development and rendering-test media sourced from [Pexels](https://www.pexels.com/), [Pixabay](https://pixabay.com/), and local repository contributions. Provider and creator identifiers are retained in filenames where available. Provider references are not blanket license claims: verify an individual source record before redistributing an asset outside this repository.
 
+## 3D research and future mesh sources
+
+asciiam does not currently bundle 3D models or provide a glTF/GLB loader. The following
+sources are recorded for the planned, performance-gated 3D-to-ASCII investigation:
+
+- [Poly Haven models](https://polyhaven.com/models) are published under
+  [Poly Haven's CC0 asset license](https://polyhaven.com/license). Record the exact model
+  source and metadata before including one in a demonstration or test fixture.
+- [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)
+  provide format test cases and example models. Each model carries its own license and
+  credit record; check the selected model directory before use or redistribution.
+- The [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)
+  defines the planned core glTF/GLB input boundary. Base-format parsing will ship in the
+  main package without external dependencies. Assets requiring Draco, Meshopt, or another
+  compression extension will be rejected. Codec evaluation is deferred research and no
+  decoder or decoder hook is planned for the released runtime.
+
+These references do not grant a blanket license for assets obtained elsewhere and do not
+indicate that a mesh importer is available in the current release.
+
 ## External project services
 
 GitLab and GitHub host source mirrors and page editing. npm and JSR are package registries. jsDelivr and unpkg provide package CDN delivery after publication. Shields.io supplies README badges. These services are not runtime dependencies of the asciiam library.
@@ -40,6 +60,9 @@ GitLab and GitHub host source mirrors and page editing. npm and JSR are package 
 | SVG Repo Bird Shape | Bundled SVG sampling input | SVG Repo asset 23736, CC0. |
 | PAT globe map | Bundled land-mask animation input | PAT public-domain map collection. |
 | Pexels and Pixabay | Demonstration photographs | Per-asset source verification required for reuse. |
+| Poly Haven | Candidate 3D demonstration models | CC0; retain exact source metadata. |
+| Khronos glTF Sample Assets | Candidate format fixtures and example geometry | Verify the selected model's license and credits. |
+| glTF 2.0 specification | Planned core glTF/GLB input reference | No importer in the current runtime; compressed extensions will be rejected. |
 | GitLab and GitHub | Source hosting and page editing | External project services. |
 | npm, JSR, jsDelivr, unpkg | Package publication and delivery | External release services. |
 | Shields.io | Repository badges | External documentation service. |

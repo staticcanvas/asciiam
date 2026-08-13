@@ -1,5 +1,3 @@
-# asciiam (Ascii Animator) v0.10.0
-
 ![asciiam — ASCII Background Animator](branding/asciiam-banner.svg)
 
 [![gitlab-license](https://img.shields.io/gitlab/license/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![gitlab-pipeline](https://img.shields.io/gitlab/pipeline-status/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![gitlab-issues](https://img.shields.io/gitlab/issues/open/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![jsr-version](https://img.shields.io/jsr/v/%40staticcanvas/asciiam?style=flat-square&logo=jsr&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://jsr.io/%40staticcanvas/asciiam) [![jsdelivr-hitsperweek](https://img.shields.io/jsdelivr/npm/hw/asciiam?style=flat-square&logo=jsdelivr&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://cdn.jsdelivr.net/package/npm/asciiam) [![npm-sizeMin](https://img.shields.io/bundlephobia/min/@staticcanvas/asciiam?style=flat-square&logo=npm&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://www.npmjs.com/package/asciiam) [![npm-sizeZipped](https://img.shields.io/bundlephobia/minzip/@staticcanvas/asciiam?style=flat-square&logo=npm&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://www.npmjs.com/package/asciiam)
@@ -156,19 +154,19 @@ descriptions highlight literal query words, while metadata tags identify matched
 
 ### Documentation map
 
-| Destination                                                | Owns                                                                                 |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [Getting started](docs/content/getting-started.md)         | Installation, initialization, renderer selection, and lifecycle.                     |
-| [Integration and lifecycle](docs/content/guides/integration.md) | Target ownership, application teardown, accessibility, and custom-mode boundaries. |
-| [Web utility workflow](docs/content/guides/web-utility.md) | Controls, previews, validation, persistence, and generated configuration.            |
-| [Rendering](docs/content/guides/rendering.md)              | WebGL2, Canvas 2D, quality tiers, frame rate, and multi-instance behavior.           |
-| [Animation modes](docs/content/guides/animations.md)       | Built-in algorithms, mode changes, image-backed behavior, and custom modes.          |
-| [Character sets](docs/content/guides/character-sets.md)    | Default glyph inventory, ordered ramps, symbolic sets, and custom strings.           |
-| [Images](docs/content/guides/images.md)                    | Image-to-ASCII sampling, fitting, masks, and RGB animation ranges.                   |
-| [Sequences](docs/content/guides/sequences.md)              | Ordered steps, staggering, interruption, callbacks, and events.                      |
-| [Usage examples](docs/content/examples/_index.md)          | Live minimum-to-complete configurations with reset and web-utility transfer.         |
-| [API reference](docs/content/api/_index.md)                | Constructor, options, methods, events, renderer information, and callback contracts. |
-| [Attributions](docs/content/attributions.md)               | Icon, SVG, map, media-provider, registry, and delivery references.                    |
+| Destination                                                     | Owns                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [Getting started](docs/content/getting-started.md)              | Installation, initialization, renderer selection, and lifecycle.                     |
+| [Integration and lifecycle](docs/content/guides/integration.md) | Target ownership, application teardown, accessibility, and custom-mode boundaries.   |
+| [Web utility workflow](docs/content/guides/web-utility.md)      | Controls, previews, validation, persistence, and generated configuration.            |
+| [Rendering](docs/content/guides/rendering.md)                   | WebGL2, Canvas 2D, quality tiers, frame rate, and multi-instance behavior.           |
+| [Animation modes](docs/content/guides/animations.md)            | Built-in algorithms, mode changes, image-backed behavior, and custom modes.          |
+| [Character sets](docs/content/guides/character-sets.md)         | Default glyph inventory, ordered ramps, symbolic sets, and custom strings.           |
+| [Images](docs/content/guides/images.md)                         | Image-to-ASCII sampling, fitting, masks, and RGB animation ranges.                   |
+| [Sequences](docs/content/guides/sequences.md)                   | Ordered steps, staggering, interruption, callbacks, and events.                      |
+| [Usage examples](docs/content/examples/_index.md)               | Live minimum-to-complete configurations with reset and web-utility transfer.         |
+| [API reference](docs/content/api/_index.md)                     | Constructor, options, methods, events, renderer information, and callback contracts. |
+| [Attributions](docs/content/attributions.md)                    | Icon, SVG, map, media-provider, registry, and delivery references.                   |
 
 The web utility About view intentionally contains only product orientation, installation,
 and links to these references. Detailed operational material belongs in Hugo so it has
@@ -352,31 +350,31 @@ new asciiam('#hero', { ...asciiam.presets.heroWave, color: '#C04FFF' });
 
 ## Modes
 
-| mode         | description                                                                                                                    |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `wave`       | A line sweeps across the field; nearby characters go bolder/larger/more opaque with a smooth falloff.                          |
-| `current`    | Layered sine waves for a flowing, water-like texture (no single hard edge).                                                    |
-| `ripple`     | Concentric rings expanding from the center.                                                                                    |
-| `vortex`     | Three rotating spiral arms around the selected spatial origin.                                                                 |
-| `plasma`     | Three layered low-frequency fields producing organic color and glyph motion.                                                   |
-| `fadeIn`     | Staggered reveal from the left, right, or center; loops by default, or set `loop: false` for a one-shot intro.                 |
-| `fadeOut`    | The matching directional exit animation for dismissals and scene transitions.                                                  |
-| `irisIn` / `irisOut` | Radial entrance and exit centered on the selected spatial origin.                                                    |
-| `dissolveIn` / `dissolveOut` | Seeded directional transitions suitable for sequence boundaries.                                         |
-| `lumaFold`   | Folded luminance ridges that travel across the glyph field.                                                                       |
-| `riftLace`   | Intersecting animated seams forming a shifting lace lattice.                                                                      |
-| `echoBloom`  | Layered radial echoes that open from the selected origin.                                                                          |
-| `matrix`     | Classic falling-character rain, per-column speed/length/flicker.                                                               |
-| `snow`       | Sparse falling particles with horizontal drift.                                                                                |
-| `sparkle`    | Sparse fixed particles with independent brightness cycles.                                                                     |
-| `fire`       | A bottom-origin heat ramp with sparse embers, drift, and lifetime decay.                                                       |
-| `starfield`  | Sparse depth-projected particles moving outward from the selected origin.                                                      |
-| `glitch`     | Dense timed character displacement with moving scan-band corruption.                                                           |
-| `typewriter` | Deterministic row-major character reveal with a visible cursor.                                                                |
-| `orbit`      | Sparse glyph particles following elliptical paths around the selected origin.                                                  |
-| `hoverZone`  | Dense local field that follows pointer movement or coordinates supplied through `setCursor()`.                                |
-| `clickZone`  | Timed expanding field triggered by pointer/touch press or `triggerInteraction()`.                                               |
-| `image`      | Converts a supplied image into an ASCII grid (brightness → character ramp), with the `wave` reveal optionally animated on top. |
+| mode                         | description                                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `wave`                       | A line sweeps across the field; nearby characters go bolder/larger/more opaque with a smooth falloff.                          |
+| `current`                    | Layered sine waves for a flowing, water-like texture (no single hard edge).                                                    |
+| `ripple`                     | Concentric rings expanding from the center.                                                                                    |
+| `vortex`                     | Three rotating spiral arms around the selected spatial origin.                                                                 |
+| `plasma`                     | Three layered low-frequency fields producing organic color and glyph motion.                                                   |
+| `fadeIn`                     | Staggered reveal from the left, right, or center; loops by default, or set `loop: false` for a one-shot intro.                 |
+| `fadeOut`                    | The matching directional exit animation for dismissals and scene transitions.                                                  |
+| `irisIn` / `irisOut`         | Radial entrance and exit centered on the selected spatial origin.                                                              |
+| `dissolveIn` / `dissolveOut` | Seeded directional transitions suitable for sequence boundaries.                                                               |
+| `lumaFold`                   | Folded luminance ridges that travel across the glyph field.                                                                    |
+| `riftLace`                   | Intersecting animated seams forming a shifting lace lattice.                                                                   |
+| `echoBloom`                  | Layered radial echoes that open from the selected origin.                                                                      |
+| `matrix`                     | Classic falling-character rain, per-column speed/length/flicker.                                                               |
+| `snow`                       | Sparse falling particles with horizontal drift.                                                                                |
+| `sparkle`                    | Sparse fixed particles with independent brightness cycles.                                                                     |
+| `fire`                       | A bottom-origin heat ramp with sparse embers, drift, and lifetime decay.                                                       |
+| `starfield`                  | Sparse depth-projected particles moving outward from the selected origin.                                                      |
+| `glitch`                     | Dense timed character displacement with moving scan-band corruption.                                                           |
+| `typewriter`                 | Deterministic row-major character reveal with a visible cursor.                                                                |
+| `orbit`                      | Sparse glyph particles following elliptical paths around the selected origin.                                                  |
+| `hoverZone`                  | Dense local field that follows pointer movement or coordinates supplied through `setCursor()`.                                 |
+| `clickZone`                  | Timed expanding field triggered by pointer/touch press or `triggerInteraction()`.                                              |
+| `image`                      | Converts a supplied image into an ASCII grid (brightness → character ramp), with the `wave` reveal optionally animated on top. |
 
 Switch modes live: `anim.setMode('ripple')`.
 
@@ -466,18 +464,18 @@ it is not a measured light-to-dark ramp.
 Use `density`, `extended`, `technical`, or another deliberately ordered set when image
 luminance should map predictably from a leading blank to a dense final glyph.
 
-| Set | Characters or composition | Use |
-| --- | --- | --- |
-| `density` | ` .:-=+*#%@` | Compact luminance ramp. |
-| `ascii` | Printable ASCII, 95 characters | Broad ASCII variation. |
-| `asciiExtended` | Printable ASCII plus Latin-1, 190 characters | Default broad Latin inventory. |
-| `extended` | Hand-ordered photographic ramp | Higher-step image conversion. |
-| `minimal` | ` .oO@` | Portable five-level density. |
-| `technical` | ` .·:+=*#%@` | Technical display density. |
-| `geometric` | Circular, square, triangular, and diamond forms | Shape transitions and interaction zones. |
-| `circuit` | ` ·-+=oO0#@` | Circuit and node textures. |
-| `waves` | ` ~≈≋∿` | Flowing fields. |
-| `terminal` | Binary digits, brackets, operators, and density marks | Terminal textures. |
+| Set             | Characters or composition                             | Use                                      |
+| --------------- | ----------------------------------------------------- | ---------------------------------------- |
+| `density`       | ` .:-=+*#%@`                                          | Compact luminance ramp.                  |
+| `ascii`         | Printable ASCII, 95 characters                        | Broad ASCII variation.                   |
+| `asciiExtended` | Printable ASCII plus Latin-1, 190 characters          | Default broad Latin inventory.           |
+| `extended`      | Hand-ordered photographic ramp                        | Higher-step image conversion.            |
+| `minimal`       | ` .oO@`                                               | Portable five-level density.             |
+| `technical`     | ` .·:+=*#%@`                                          | Technical display density.               |
+| `geometric`     | Circular, square, triangular, and diamond forms       | Shape transitions and interaction zones. |
+| `circuit`       | ` ·-+=oO0#@`                                          | Circuit and node textures.               |
+| `waves`         | ` ~≈≋∿`                                               | Flowing fields.                          |
+| `terminal`      | Binary digits, brackets, operators, and density marks | Terminal textures.                       |
 
 Additional included sets cover alphanumeric text, letter case, symbols, box drawing,
 arrows, mathematics, blocks, binary, Braille, Katakana, and punctuation. Font coverage
@@ -641,7 +639,13 @@ wall-clock seconds and are intentionally independent of the mode's `speed` optio
 ```js
 const sequence = [
   { mode: 'ripple', image: './media/first.webp', duration: 5 },
-  { mode: 'fadeOut', image: './media/second.webp', duration: 5, repeat: false, options: { revealDirection: 'center' } },
+  {
+    mode: 'fadeOut',
+    image: './media/second.webp',
+    duration: 5,
+    repeat: false,
+    options: { revealDirection: 'center' },
+  },
   { mode: 'fadeIn', duration: 2, delay: 0.4 },
   { mode: 'ripple', duration: 5, options: { speed: 1.4 } },
   { mode: 'fadeOut', image: null, duration: 2 },
@@ -751,6 +755,16 @@ See `pending-tasks.md` for the current gap list and rough priority.
 
 - [Canvas 2D API](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D)
 - [WebGL2 API](https://developer.mozilla.org/docs/Web/API/WebGL2RenderingContext)
+- [Poly Haven models](https://polyhaven.com/models) are a source of CC0 3D assets;
+  confirm the source record before adding a model to a demonstration or fixture.
+- [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)
+  provide format tests and example models. Licenses and required credits vary by model
+  and must be checked in the selected model directory.
+- The [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)
+  is the reference for planned core `.gltf` and `.glb` input. Import is not implemented
+  in the current release. Base-format parsing will ship in asciiam without dependencies.
+  Assets requiring Draco, Meshopt, or another compression extension will be rejected;
+  codecs are reserved for a future performance study and are not part of the runtime plan.
 - [npm documentation](https://docs.npmjs.com/)
 - [jsDelivr documentation](https://www.jsdelivr.com/documentation)
 - [GitLab CI/CD documentation](https://docs.gitlab.com/ci/)
@@ -817,69 +831,69 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 
 ## API and configuration reference
 
-| Name                                                | Type                                       | Default                     | Effect                                                             |
-| --------------------------------------------------- | ------------------------------------------ | --------------------------- | ------------------------------------------------------------------ |
-| `mode`                                              | `asciiamMode`                              | `wave`                      | Selects the animation; `setMode()` restarts its local timeline.    |
-| `quality`                                           | `high \| balanced \| performance \| ultra` | `balanced`                  | Applies the tier's DPR, density, FPS, and font-level values.       |
-| `renderer`                                          | `auto \| webgl2 \| canvas2d`               | `auto`                      | Selects GPU-first, explicit GPU, or CPU rendering.                 |
-| `powerPreference`                                   | WebGL power preference                     | `high-performance`          | Requests the preferred adapter class for WebGL2.                   |
-| `charSet` / `imageChars`                            | `string`                                   | `asciiExtended`             | Maps intensity or image brightness to glyphs.                      |
-| `fontFamily`                                        | `string`                                   | IBM Plex Mono stack         | Sets the font stack used to rasterize glyphs.                      |
-| `fontSize` / `density` / `fontLevels`               | `number`                                   | `14` / tier / tier          | Controls grid measurement and cached font sizes.                   |
-| `alphaLevels`                                       | `number`                                   | tier value                  | Quantizes opacity to reduce Canvas state changes.                  |
-| `useGlyphAtlas`                                     | `boolean`                                  | tier value                  | Reuses rasterized solid-color glyphs in Performance and Ultra.     |
-| `cacheStaticWave`                                   | `boolean`                                  | tier value                  | Caches and shares Ultra's unchanged horizontal wave field.         |
-| `preferGPU`                                         | `boolean`                                  | `true`                      | Makes `auto` GPU-first; `false` defaults to Canvas 2D.             |
-| `desynchronized`                                    | `boolean`                                  | `true`                      | Requests a low-latency presentation path from either backend.      |
-| `color`                                             | CSS color                                  | `#4FA8FF`                   | Sets the fallback glyph color.                                     |
-| `gradient`                                          | `object \| null`                           | `null`                      | Sets a cached linear, radial, or cubic glyph gradient.             |
-| `background`                                        | CSS color                                  | `transparent`               | Clears to a solid canvas background.                               |
-| `backdrop`                                          | `object \| null`                           | `null`                      | Draws a solid or gradient layer behind or over glyphs.             |
-| `speed`                                             | `number`                                   | `1`                         | Scales the animation timeline once for every mode.                 |
-| `direction`                                         | `horizontal \| vertical \| diagonal`       | `horizontal`                | Sets wave travel direction.                                        |
-| `revealDirection`                                   | `left-to-right \| right-to-left \| center` | `center`                    | Sets fade sequencing.                                              |
-| `align`                                             | nine-position spatial alignment            | `center`                    | Sets the origin used by compatible spatial modes.                  |
-| `minOpacity` / `maxOpacity`                         | `number`                                   | `0.05` / `0.85`             | Sets glyph opacity bounds.                                         |
-| `boldOnPeak` / `loop`                               | `boolean`                                  | `true` / `true`             | Controls high-intensity weight and timeline repetition.            |
-| `edgeFade`                                          | `number`                                   | `0`                         | Applies a cached edge opacity falloff.                             |
-| `trail` / `trailColor`                              | `number` / CSS color                       | `0` / `#070809`             | Controls retained-frame clearing.                                  |
-| `pulse`                                             | `object \| null`                           | `null`                      | Applies one frame-level opacity multiplier.                        |
-| `colorAnimation`                                    | `object \| null`                           | `null`                      | Applies `hueRotate` or `breathe` color animation.                  |
-| `cursor`                                            | `object \| null`                           | `null`                      | Boosts opacity around pointer or supplied coordinates.             |
-| `interactionRadius` / `interactionDuration`         | `number` / seconds                         | `180` / `1.1`               | Controls hover-zone extent and click-zone timing.                  |
-| `image`                                             | `string \| null`                           | `null`                      | Loads an initial image URL.                                        |
-| `fit`                                               | `cover \| contain`                         | `cover`                     | Crops or letterboxes the sample without stretching.                |
-| `imageScale` / `imageScaleX` / `imageScaleY` / `imageFov` | `number`                             | `1`                         | Controls source zoom, centered output width/height, and visible fraction. |
-| `colorFromImage`                                    | `boolean`                                  | `false`                     | Uses cached sampled RGB colors per cell.                           |
-| `imageLuminance`                                    | `auto \| normal \| invert`                | `auto`                      | Controls silhouette-aware image brightness mapping.                |
-| `animateImageMask`                                  | `boolean`                                  | `true`                      | Enables image-cell animation.                                      |
-| `imageMaskMode`                                     | legacy image-mask mode                     | `waveSweep`                 | Deprecated compatibility option for `mode: 'image'`; use global `mode`. |
-| `imageAnimationRange`                               | `{ min, max } \| null`                     | `null`                      | Animates only cells inside inclusive RGB bounds.                   |
-| `animateImageFrames`                               | `boolean`                                  | `true`                      | Plays captured animated GIF frames.                                |
-| `imageFrameRate`                                   | `number`                                   | `12`                        | Caps fallback GIF sampling from 1 through 60 frames per second.    |
-| `snowDensity` / `sparkleDensity`                    | `number`                                   | `0.02` / `0.05`             | Sets sparse particle counts as grid fractions.                     |
-| `fireDensity` / `starfieldDensity` / `orbitDensity` | `number`                                   | `0.035` / `0.018` / `0.014` | Sets mode-specific sparse particle counts.                         |
-| `glitchIntensity`                                   | `number`                                   | `0.32`                      | Sets the approximate displaced-row share.                          |
-| `typewriterDuration`                                | seconds                                    | `4.5`                       | Sets full-grid reveal duration.                                    |
-| `maxDPR` / `targetFPS`                              | `number` / `number \| null`                | tier values                 | Caps backing resolution and optional frame rate.                   |
-| `showStats`                                         | `boolean`                                  | `false`                     | Updates an attached stats element.                                 |
-| `respectReducedMotion`                              | `boolean`                                  | `true`                      | Draws a static frame when requested by the OS.                     |
-| `onReady` / `onImageError`                          | `function \| null`                         | `null`                      | Handles initial readiness or image failure.                        |
-| `customCell`                                        | `function \| null`                         | `null`                      | Supplies cells for `custom` mode.                                  |
-| `sequence` / `sequenceOptions`                      | `array \| object`                          | `null`                      | Configures ordered, optionally looping animation steps.            |
-| `sequence[].repeat`                                 | `boolean`                                  | `false`                     | Repeats a finite mode within the active step duration.              |
-| `start()` / `stop()` / `destroy()`                  | method                                     | —                           | Controls and disposes the renderer lifecycle.                      |
-| `setMode(mode)`                                     | method                                     | —                           | Selects a mode and restarts its timeline.                          |
-| `setOption(key, value)`                             | method                                     | —                           | Updates an option and dependent cached state.                      |
-| `setImage(url, options?)`                           | async method                               | —                           | Decodes an image; animated GIFs capture every frame when supported. |
-| `setTarget(target)`                                 | method                                     | —                           | Moves the existing canvas and bindings to another container.       |
-| `setSequence(steps, options)`                       | method                                     | —                           | Sets ordered modes, durations, staggers, overrides, and callbacks. |
-| `playSequence()` / `pauseSequence()`                | method                                     | —                           | Starts, resumes, or pauses the configured sequence.                |
-| `nextSequenceStep()` / `seekSequence(index)`        | method                                     | —                           | Interrupts the active step and changes sequence position.          |
-| `stopSequence()` / `clearSequence()`                | method                                     | —                           | Stops playback or removes sequence configuration.                  |
-| `setRenderer(renderer)`                             | method                                     | —                           | Replaces the presentation backend while retaining instance state.  |
-| `getRendererInfo()`                                 | method                                     | —                           | Reports requested and resolved renderer information.               |
-| `setCursor(x, y)`                                   | method                                     | —                           | Sets or clears cursor-reactive coordinates.                        |
-| `triggerInteraction(x?, y?)`                        | method                                     | aligned origin              | Starts a click-zone pulse.                                         |
-| `attachStats(element)`                              | method                                     | —                           | Selects the statistics output element.                             |
-| `on()` / `off()`                                    | method                                     | —                           | Subscribes or unsubscribes lifecycle listeners.                    |
+| Name                                                      | Type                                       | Default                     | Effect                                                                    |
+| --------------------------------------------------------- | ------------------------------------------ | --------------------------- | ------------------------------------------------------------------------- |
+| `mode`                                                    | `asciiamMode`                              | `wave`                      | Selects the animation; `setMode()` restarts its local timeline.           |
+| `quality`                                                 | `high \| balanced \| performance \| ultra` | `balanced`                  | Applies the tier's DPR, density, FPS, and font-level values.              |
+| `renderer`                                                | `auto \| webgl2 \| canvas2d`               | `auto`                      | Selects GPU-first, explicit GPU, or CPU rendering.                        |
+| `powerPreference`                                         | WebGL power preference                     | `high-performance`          | Requests the preferred adapter class for WebGL2.                          |
+| `charSet` / `imageChars`                                  | `string`                                   | `asciiExtended`             | Maps intensity or image brightness to glyphs.                             |
+| `fontFamily`                                              | `string`                                   | IBM Plex Mono stack         | Sets the font stack used to rasterize glyphs.                             |
+| `fontSize` / `density` / `fontLevels`                     | `number`                                   | `14` / tier / tier          | Controls grid measurement and cached font sizes.                          |
+| `alphaLevels`                                             | `number`                                   | tier value                  | Quantizes opacity to reduce Canvas state changes.                         |
+| `useGlyphAtlas`                                           | `boolean`                                  | tier value                  | Reuses rasterized solid-color glyphs in Performance and Ultra.            |
+| `cacheStaticWave`                                         | `boolean`                                  | tier value                  | Caches and shares Ultra's unchanged horizontal wave field.                |
+| `preferGPU`                                               | `boolean`                                  | `true`                      | Makes `auto` GPU-first; `false` defaults to Canvas 2D.                    |
+| `desynchronized`                                          | `boolean`                                  | `true`                      | Requests a low-latency presentation path from either backend.             |
+| `color`                                                   | CSS color                                  | `#4FA8FF`                   | Sets the fallback glyph color.                                            |
+| `gradient`                                                | `object \| null`                           | `null`                      | Sets a cached linear, radial, or cubic glyph gradient.                    |
+| `background`                                              | CSS color                                  | `transparent`               | Clears to a solid canvas background.                                      |
+| `backdrop`                                                | `object \| null`                           | `null`                      | Draws a solid or gradient layer behind or over glyphs.                    |
+| `speed`                                                   | `number`                                   | `1`                         | Scales the animation timeline once for every mode.                        |
+| `direction`                                               | `horizontal \| vertical \| diagonal`       | `horizontal`                | Sets wave travel direction.                                               |
+| `revealDirection`                                         | `left-to-right \| right-to-left \| center` | `center`                    | Sets fade sequencing.                                                     |
+| `align`                                                   | nine-position spatial alignment            | `center`                    | Sets the origin used by compatible spatial modes.                         |
+| `minOpacity` / `maxOpacity`                               | `number`                                   | `0.05` / `0.85`             | Sets glyph opacity bounds.                                                |
+| `boldOnPeak` / `loop`                                     | `boolean`                                  | `true` / `true`             | Controls high-intensity weight and timeline repetition.                   |
+| `edgeFade`                                                | `number`                                   | `0`                         | Applies a cached edge opacity falloff.                                    |
+| `trail` / `trailColor`                                    | `number` / CSS color                       | `0` / `#070809`             | Controls retained-frame clearing.                                         |
+| `pulse`                                                   | `object \| null`                           | `null`                      | Applies one frame-level opacity multiplier.                               |
+| `colorAnimation`                                          | `object \| null`                           | `null`                      | Applies `hueRotate` or `breathe` color animation.                         |
+| `cursor`                                                  | `object \| null`                           | `null`                      | Boosts opacity around pointer or supplied coordinates.                    |
+| `interactionRadius` / `interactionDuration`               | `number` / seconds                         | `180` / `1.1`               | Controls hover-zone extent and click-zone timing.                         |
+| `image`                                                   | `string \| null`                           | `null`                      | Loads an initial image URL.                                               |
+| `fit`                                                     | `cover \| contain`                         | `cover`                     | Crops or letterboxes the sample without stretching.                       |
+| `imageScale` / `imageScaleX` / `imageScaleY` / `imageFov` | `number`                                   | `1`                         | Controls source zoom, centered output width/height, and visible fraction. |
+| `colorFromImage`                                          | `boolean`                                  | `false`                     | Uses cached sampled RGB colors per cell.                                  |
+| `imageLuminance`                                          | `auto \| normal \| invert`                 | `auto`                      | Controls silhouette-aware image brightness mapping.                       |
+| `animateImageMask`                                        | `boolean`                                  | `true`                      | Enables image-cell animation.                                             |
+| `imageMaskMode`                                           | legacy image-mask mode                     | `waveSweep`                 | Deprecated compatibility option for `mode: 'image'`; use global `mode`.   |
+| `imageAnimationRange`                                     | `{ min, max } \| null`                     | `null`                      | Animates only cells inside inclusive RGB bounds.                          |
+| `animateImageFrames`                                      | `boolean`                                  | `true`                      | Plays captured animated GIF frames.                                       |
+| `imageFrameRate`                                          | `number`                                   | `12`                        | Caps fallback GIF sampling from 1 through 60 frames per second.           |
+| `snowDensity` / `sparkleDensity`                          | `number`                                   | `0.02` / `0.05`             | Sets sparse particle counts as grid fractions.                            |
+| `fireDensity` / `starfieldDensity` / `orbitDensity`       | `number`                                   | `0.035` / `0.018` / `0.014` | Sets mode-specific sparse particle counts.                                |
+| `glitchIntensity`                                         | `number`                                   | `0.32`                      | Sets the approximate displaced-row share.                                 |
+| `typewriterDuration`                                      | seconds                                    | `4.5`                       | Sets full-grid reveal duration.                                           |
+| `maxDPR` / `targetFPS`                                    | `number` / `number \| null`                | tier values                 | Caps backing resolution and optional frame rate.                          |
+| `showStats`                                               | `boolean`                                  | `false`                     | Updates an attached stats element.                                        |
+| `respectReducedMotion`                                    | `boolean`                                  | `true`                      | Draws a static frame when requested by the OS.                            |
+| `onReady` / `onImageError`                                | `function \| null`                         | `null`                      | Handles initial readiness or image failure.                               |
+| `customCell`                                              | `function \| null`                         | `null`                      | Supplies cells for `custom` mode.                                         |
+| `sequence` / `sequenceOptions`                            | `array \| object`                          | `null`                      | Configures ordered, optionally looping animation steps.                   |
+| `sequence[].repeat`                                       | `boolean`                                  | `false`                     | Repeats a finite mode within the active step duration.                    |
+| `start()` / `stop()` / `destroy()`                        | method                                     | —                           | Controls and disposes the renderer lifecycle.                             |
+| `setMode(mode)`                                           | method                                     | —                           | Selects a mode and restarts its timeline.                                 |
+| `setOption(key, value)`                                   | method                                     | —                           | Updates an option and dependent cached state.                             |
+| `setImage(url, options?)`                                 | async method                               | —                           | Decodes an image; animated GIFs capture every frame when supported.       |
+| `setTarget(target)`                                       | method                                     | —                           | Moves the existing canvas and bindings to another container.              |
+| `setSequence(steps, options)`                             | method                                     | —                           | Sets ordered modes, durations, staggers, overrides, and callbacks.        |
+| `playSequence()` / `pauseSequence()`                      | method                                     | —                           | Starts, resumes, or pauses the configured sequence.                       |
+| `nextSequenceStep()` / `seekSequence(index)`              | method                                     | —                           | Interrupts the active step and changes sequence position.                 |
+| `stopSequence()` / `clearSequence()`                      | method                                     | —                           | Stops playback or removes sequence configuration.                         |
+| `setRenderer(renderer)`                                   | method                                     | —                           | Replaces the presentation backend while retaining instance state.         |
+| `getRendererInfo()`                                       | method                                     | —                           | Reports requested and resolved renderer information.                      |
+| `setCursor(x, y)`                                         | method                                     | —                           | Sets or clears cursor-reactive coordinates.                               |
+| `triggerInteraction(x?, y?)`                              | method                                     | aligned origin              | Starts a click-zone pulse.                                                |
+| `attachStats(element)`                                    | method                                     | —                           | Selects the statistics output element.                                    |
+| `on()` / `off()`                                          | method                                     | —                           | Subscribes or unsubscribes lifecycle listeners.                           |

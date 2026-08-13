@@ -5,7 +5,7 @@ weight: 10
 date: 2026-08-13
 lastmod: 2026-08-13
 tags: [WebGL2, Canvas 2D, GPU, renderer, performance, quality]
-keywords: [WebGL2 ASCII renderer, GPU rendering, Canvas 2D fallback, renderer selection, quality tiers, animation performance, frame rate]
+keywords: [WebGL2 ASCII renderer, GPU rendering, Canvas 2D fallback, renderer selection, quality tiers, animation performance, frame rate, 3D to ASCII, glTF GLB research]
 ---
 
 asciiam separates animation-state calculation from presentation. WebGL2 uploads one glyph instance buffer and draws the visible glyphs as instanced quads. Canvas 2D uses cached glyph atlases and mode-specific shortcuts where possible.
@@ -55,6 +55,22 @@ Higher density values produce fewer cells because they increase cell spacing. `t
 
 All running instances share one `requestAnimationFrame` scheduler. Each instance retains independent timing, visibility, renderer, and target state. For galleries or grids, construct only visible previews and destroy off-screen instances after a short delay. Browsers limit the number of simultaneous WebGL contexts.
 
+## 3D rendering status
+
+The current WebGL2 backend renders glyph instances; it is not a general 3D scene renderer.
+A 3D-to-ASCII mesh source is under feasibility review. The proposed path projects small
+meshes into cell-resolution depth and luminance buffers, then uses the existing WebGL2 or
+Canvas 2D glyph presentation path.
+
+[Poly Haven models](https://polyhaven.com/models) are recorded as a CC0 candidate source
+for optional demonstrations. [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)
+are recorded for format fixtures, with per-model license verification required. The
+[glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) is the
+format reference for planned core `.gltf` and `.glb` input. No mesh API or importer is
+available in the current release. Base-format parsing will be dependency-free; codecs for
+compressed extensions will not be bundled, loaded, or injectable. Files requiring those
+extensions will fail with a format diagnostic.
+
 ## API reference
 
 | Property or method | Type | Default | Effect |
@@ -66,3 +82,5 @@ All running instances share one `requestAnimationFrame` scheduler. Each instance
 | `targetFPS` | number or `null` | `null` | Adds a per-instance frame cap when numeric. |
 | `setRenderer(value)` | method | — | Replaces the presentation canvas while retaining instance state. |
 | `getRendererInfo()` | method | — | Returns requested and resolved renderer information. |
+| 3D mesh input | not implemented | — | Planned work remains behind a benchmark and bundle-size gate. |
+| glTF/GLB import | not implemented | — | Planned as dependency-free core input; compression extensions will be rejected. |
