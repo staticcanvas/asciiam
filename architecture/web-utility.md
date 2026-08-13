@@ -33,11 +33,17 @@ utility route so project-path deployments remain valid.
 
 ## Control hierarchy
 
-Primary actions cover the repeated authoring path: preset, sequence, mode, motion,
-color, Reset, image, and code. Advanced owns lower-frequency renderer-detail and
-workspace controls. Reset remains direct because recovery should take one action.
+Primary actions cover the repeated authoring path: preset, sequence, mode, charset,
+motion, alignment, color, backdrop, Reset, image, 3D, and code. Advanced owns
+lower-frequency quality, renderer-detail, and workspace controls. Reset remains direct
+because recovery should take one action.
 Documentation, About, and FPS are stage-level information actions rather than
 configuration inputs.
+
+A persistent inspector or command surface is intentionally omitted. It would duplicate
+control ownership and reduce preview space without shortening the repeated authoring
+flows. Advanced is the single secondary surface; controls move out of it only when the
+same adjustment recurs across procedural, image, and mesh work.
 
 FPS preserves the compact default output. Extended diagnostics belongs to Quality because
 it changes measurement detail rather than animation state. Enabling it also enables FPS;

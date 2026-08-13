@@ -150,7 +150,7 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(controls.filter((control) => control.tabIndex === 0)).toEqual([document.activeElement]);
   });
 
-  it('keeps the primary dock on-screen and moves secondary controls into Advanced', () => {
+  it('keeps repeated authoring controls direct and moves secondary controls into Advanced', () => {
     activeDom = createDemo();
     const { document } = activeDom.window;
     const primaryLabels = [...document.querySelectorAll('.ctrl-bar > .ctrl-pill')].map((control) =>
@@ -159,12 +159,15 @@ describe('demo toolbar quality-of-life controls', () => {
     const advanced = document.getElementById('moreAdvancedActions');
     const workspace = document.getElementById('moreWorkspaceActions');
 
-    expect(primaryLabels).toHaveLength(10);
+    expect(primaryLabels).toHaveLength(13);
     expect(primaryLabels.join(' ')).toContain('Preset');
     expect(primaryLabels.join(' ')).toContain('Sequence');
     expect(primaryLabels.join(' ')).toContain('Mode');
+    expect(primaryLabels.join(' ')).toContain('Charset');
     expect(primaryLabels.join(' ')).toContain('Motion');
+    expect(primaryLabels.join(' ')).toContain('Align');
     expect(primaryLabels.join(' ')).toContain('Color');
+    expect(primaryLabels.join(' ')).toContain('Backdrop');
     expect(primaryLabels.join(' ')).toContain('Advanced');
     expect(primaryLabels.join(' ')).toContain('Image');
     expect(primaryLabels.join(' ')).toContain('3D');
@@ -172,7 +175,8 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(primaryLabels.join(' ')).toContain('Code');
     expect(primaryLabels.indexOf('Image none')).toBeLessThan(primaryLabels.indexOf('3D none'));
     expect(primaryLabels.indexOf('3D none')).toBeLessThan(primaryLabels.indexOf('Code'));
-    expect(advanced.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(4);
+    expect(advanced.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(1);
+    expect(advanced.firstElementChild).toBe(document.getElementById('qualityTriggerBtn'));
     expect(workspace.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(3);
     expect(
       document.getElementById('pop-more').contains(document.getElementById('pop-quality'))

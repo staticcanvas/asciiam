@@ -8,12 +8,6 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
-- [ ] 🟠💡⏳1️⃣ **Critical** - **Reduce repetitive web-utility navigation.** Continue the toolbar workflow audit
-      using real repeated authoring sessions rather than changing control order by taste.
-  - [x] 🟡🌟✅1️⃣ **Critical** - Removed Reset from the nested Advanced workflow.
-  - [x] 🟡🌟✅1️⃣ **Critical** - Made Documentation, About, and FPS direct, consistently sized stage actions.
-  - [ ] 🟡🌟⏳1️⃣ **Critical** - Validate whether lower-frequency controls need a persistent inspector or command
-        surface; preserve mobile bounds, roving focus, and current status visibility.
 ### **Distribution Readiness (priority-2)**
 
 - [ ] 🟠🌟⏳2️⃣ **Distribution** - **Real-browser verification.** Run a manual visual pass in current

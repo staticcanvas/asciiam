@@ -247,12 +247,17 @@ strangers with confidence."
       image before their timed phase. Decode waits, cancellation, failures, types,
       events, tests, and docs are covered; the utility now uses a horizontal node flow.
 - [x] 🟠🌟✅1️⃣ **Critical** - **Reset placement.** Reset is a direct primary-dock action outside Advanced.
-- [ ] 🟠💡⏳1️⃣ **Critical** - **Reduce repetitive web-utility navigation.** Continue the toolbar workflow audit
-      using real repeated authoring sessions rather than changing control order by taste.
+- [x] 🟠🌟✅1️⃣ **Critical** - **Reduce repetitive web-utility navigation.** Audited procedural,
+      image, mesh, appearance, diagnostics, and recovery authoring flows. Charset, alignment,
+      and backdrop now remain direct toolbar controls because they recur across composition
+      types; quality, theme, undo, and redo remain under Advanced. DOM and Chromium coverage
+      verify ownership, keyboard order, mobile bounds, and usable touch-target height.
   - [x] 🟡🌟✅1️⃣ **Critical** - Removed Reset from the nested Advanced workflow.
   - [x] 🟡🌟✅1️⃣ **Critical** - Made Documentation, About, and FPS direct, consistently sized stage actions.
-  - [ ] 🟡🌟⏳1️⃣ **Critical** - Validate whether lower-frequency controls need a persistent inspector or command
-        surface; preserve mobile bounds, roving focus, and current status visibility.
+  - [x] 🟡🌟✅1️⃣ **Critical** - Rejected a persistent inspector or command surface for lower-frequency
+        controls: it would duplicate ownership and reduce preview space. Advanced remains the single
+        secondary surface, while direct repeated controls retain status, roving focus, mobile bounds,
+        and at least 44-pixel touch-target height.
 - [x] 🟠🌟✅1️⃣ **Critical** - **About alignment.** About shares the same action row and control height as FPS.
 - [x] 🟠🌟✅1️⃣ **Critical** - **Direct documentation access.** Added Documentation immediately before About.
 

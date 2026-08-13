@@ -499,8 +499,10 @@ function organizeToolbarOverflow() {
         if (popover) nestedPopovers.appendChild(popover);
     };
 
-    ["qualityTriggerBtn", "charsetTriggerBtn", "alignTriggerBtn", "backdropTriggerBtn"]
-        .forEach((id) => moveControl(id, advancedActions));
+    // Quality changes are occasional runtime tuning. Charset, alignment, and
+    // backdrop remain in the primary authoring path because procedural, image,
+    // and mesh compositions commonly adjust them while iterating.
+    ["qualityTriggerBtn"].forEach((id) => moveControl(id, advancedActions));
     ["themeToggleBtn", "undoSettingsBtn", "redoSettingsBtn"]
         .forEach((id) => moveControl(id, workspaceActions));
 }

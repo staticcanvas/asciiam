@@ -16,9 +16,9 @@ Start with a preset or animation mode, then adjust renderer, quality, character 
 
 The Character set control includes the documented `asciiExtended` default, ordered density ramps, symbolic palettes, and a custom string editor. Hover Zone and Click Zone expose radius and click-duration controls in Motion. Align provides nine spatial anchors.
 
-The dock keeps Preset, Sequence, Mode, Motion, Color, Reset, Image, and Code directly
-available. Advanced contains lower-frequency quality, character-set, alignment,
-backdrop, theme, and history controls. Reset intentionally remains outside Advanced.
+The dock keeps Preset, Sequence, Mode, Character set, Motion, Align, Color, Backdrop,
+Reset, Image, 3D, and Code directly available. Advanced contains lower-frequency
+quality, theme, and history controls. Reset intentionally remains outside Advanced.
 Documentation, About, and the FPS switch form one level action row on the stage.
 
 Quality includes a Grid resolution slider. `100%` retains automatic grid measurement;

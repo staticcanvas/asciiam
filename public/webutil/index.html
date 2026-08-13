@@ -2026,6 +2026,7 @@
             /* Toolbar responsive rules live after the component SOT so they win the cascade. */
             @media (max-width: 720px) {
                 .ctrl-bar > .ctrl-pill .ctrl-pill__status { display: none; }
+                .ctrl-bar > .ctrl-pill { min-block-size: 2.75rem; }
                 .ctrl-pill--code { margin-inline-start: 0; }
                 .ctrl-popover,
                 .ctrl-popover--wide {
@@ -2527,7 +2528,7 @@
             </button>
             <div class="ctrl-popover" id="pop-more" popover>
                 <section class="cpop-group" aria-labelledby="moreAdvancedLabel">
-                    <span class="cpop-label" id="moreAdvancedLabel">Advanced controls</span>
+                    <span class="cpop-label" id="moreAdvancedLabel">Render tuning</span>
                     <div class="ctrl-more__actions" id="moreAdvancedActions"></div>
                 </section>
                 <section class="cpop-group" aria-labelledby="moreWorkspaceLabel">
@@ -2886,7 +2887,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=9558d7d2600a"></script>
-        <script type="module" src="./js/webutil.js?v=9558d7d2600a"></script>
+        <script src="./libs/asciiam.js?v=70dc653c2077"></script>
+        <script type="module" src="./js/webutil.js?v=70dc653c2077"></script>
     </body>
 </html>

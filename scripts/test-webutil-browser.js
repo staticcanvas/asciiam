@@ -98,6 +98,26 @@ try {
     await page.locator("#resetSettingsBtn").click();
     const reset = parseGridStatus(await page.locator("#resolutionGridStatus").textContent());
     assert.equal(reset.percent, 100);
+
+    const directAuthoringControls = ["charsetTriggerBtn", "alignTriggerBtn", "backdropTriggerBtn"];
+    for (const id of directAuthoringControls) {
+        assert.equal(await page.locator(`#${id}`).evaluate((element) => element.parentElement?.classList.contains("ctrl-bar")), true);
+    }
+    assert.equal(await page.locator("#qualityTriggerBtn").evaluate((element) => element.parentElement?.id), "moreAdvancedActions");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileToolbar = await page.locator(".ctrl-bar").evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+    }));
+    assert(mobileToolbar.scrollWidth <= mobileToolbar.clientWidth + 1, "Mobile toolbar overflows horizontally");
+    for (const id of directAuthoringControls) {
+        const size = await page.locator(`#${id}`).evaluate((element) => {
+            const rect = element.getBoundingClientRect();
+            return { width: rect.width, height: rect.height };
+        });
+        assert(size.width > 0 && size.height >= 44, `${id} is not a usable mobile target (${size.width}×${size.height})`);
+    }
     assert.deepEqual(browserErrors, []);
     console.log(`Web Utility browser smoke passed: ${automatic.columns}×${automatic.rows} → ${detailed.columns}×${detailed.rows}`);
 } finally {

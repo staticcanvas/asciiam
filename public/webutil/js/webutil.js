@@ -1,5 +1,5 @@
-import { highlightJavaScript } from "./webutil-code.js?v=9558d7d2600a";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=9558d7d2600a";
+import { highlightJavaScript } from "./webutil-code.js?v=70dc653c2077";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=70dc653c2077";
 
 const asciiam = window.asciiam;
 
@@ -499,8 +499,10 @@ function organizeToolbarOverflow() {
         if (popover) nestedPopovers.appendChild(popover);
     };
 
-    ["qualityTriggerBtn", "charsetTriggerBtn", "alignTriggerBtn", "backdropTriggerBtn"]
-        .forEach((id) => moveControl(id, advancedActions));
+    // Quality changes are occasional runtime tuning. Charset, alignment, and
+    // backdrop remain in the primary authoring path because procedural, image,
+    // and mesh compositions commonly adjust them while iterating.
+    ["qualityTriggerBtn"].forEach((id) => moveControl(id, advancedActions));
     ["themeToggleBtn", "undoSettingsBtn", "redoSettingsBtn"]
         .forEach((id) => moveControl(id, workspaceActions));
 }
