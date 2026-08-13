@@ -10,6 +10,10 @@
     // count, not grid size.
     const SPARSE_MODES = new Set(["matrix", "snow", "sparkle", "fire", "starfield", "orbit"]);
 
+    /**
+     * Private WebGL2 presentation backend.
+     * Animation state remains in asciiam; this class owns GPU resources only.
+     */
     class WebGL2GlyphRenderer {
         constructor(canvas, options = {}) {
             this.canvas = canvas;
@@ -270,6 +274,10 @@
         }
     }
 
+    /**
+     * Owns one ASCII animation surface, its renderer, timing, image source, and
+     * optional sequence state. Running instances share a frame scheduler.
+     */
     class asciiam {
         static QUALITY = {
             high: { maxDPR: 3, density: 0.9, targetFPS: null, fontLevels: 6, alphaLevels: 64, useGlyphAtlas: false, cacheStaticWave: false },
@@ -277,6 +285,14 @@
             performance: { maxDPR: 1.5, density: 1.4, targetFPS: null, fontLevels: 4, alphaLevels: 16, useGlyphAtlas: true, cacheStaticWave: false },
             ultra: { maxDPR: 1, density: 2.4, targetFPS: null, fontLevels: 2, alphaLevels: 8, useGlyphAtlas: true, cacheStaticWave: true },
         };
+
+        /** Canonical inventory used by documentation and integration tooling. */
+        static BUILT_IN_MODES = Object.freeze([
+            "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
+            "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace",
+            "echoBloom", "matrix", "snow", "sparkle", "fire", "starfield", "glitch",
+            "typewriter", "orbit", "hoverZone", "clickZone", "image", "custom",
+        ]);
 
         static CHARACTER_SETS = {
             density: " .:-=+*#%@",
@@ -292,6 +308,12 @@
             arrows: " ←↑→↓↖↗↘↙↔↕⇐⇑⇒⇓⇔",
             math: " ±×÷=≠≈∞√∑∏∫∆∇∂∈∉⊂⊃≤≥",
             blocks: " ░▒▓█",
+            minimal: " .oO@",
+            technical: " .·:+=*#%@",
+            geometric: " ·•○●□■△▲◇◆",
+            circuit: " ·-+=oO0#@",
+            waves: " ~≈≋∿",
+            terminal: " 01<>/\\|[]{}#@",
             binary: " 01",
             binaryWide: " 001101",
             braille: "⠀⠂⠒⠲⠶⠷⠿⣿",
@@ -332,6 +354,23 @@
                 minOpacity: 0.03,
                 maxOpacity: 0.4,
                 cursor: { enabled: true, radius: 160, strength: 0.7 },
+            },
+            hoverField: {
+                mode: "hoverZone",
+                color: "#72F1B8",
+                charSet: " .·:+=*#%@",
+                interactionRadius: 180,
+                minOpacity: 0.025,
+                maxOpacity: 0.9,
+            },
+            clickPulse: {
+                mode: "clickZone",
+                color: "#C04FFF",
+                charSet: " ·•○●□■△▲◇◆",
+                interactionRadius: 220,
+                interactionDuration: 1.1,
+                minOpacity: 0.02,
+                maxOpacity: 0.95,
             },
             auroraCurrent: {
                 mode: "current",
@@ -439,15 +478,18 @@
         static _waveBaseLayerLimit = 2;
         static _activeInstances = new Set();
         static _schedulerRaf = null;
+        /** Ensures all running instances are served by one animation-frame callback. */
         static _scheduleFrame() {
             if (asciiam._schedulerRaf !== null || !asciiam._activeInstances.size) return;
             asciiam._schedulerRaf = requestAnimationFrame(asciiam._tickFrame);
         }
+        /** Advances every active instance, then schedules the next shared frame. */
         static _tickFrame(t) {
             asciiam._schedulerRaf = null;
             for (const instance of asciiam._activeInstances) instance._runFrame(t);
             asciiam._scheduleFrame();
         }
+        /** Registers a process-wide named cell callback. */
         static registerMode(name, fn) {
             asciiam._registry[name] = fn;
         }
@@ -462,6 +504,7 @@
             }
         }
 
+        /** Creates an instance around a container or application-owned canvas. */
         constructor(target, opts = {}) {
             const el = typeof target === "string" ? document.querySelector(target) : target;
             if (!el) throw new Error("asciiam: target not found");
@@ -474,10 +517,10 @@
             if (!asciiam.isSupported()) {
                 console.warn("asciiam: canvas 2D not supported in this browser — instance is a no-op.");
                 this._disabled = true;
-                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor =
+                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.clearImage =
                     this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
                     this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
-                this.getSequenceState = () => ({ configured: false, running: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false });
+                this.getSequenceState = () => ({ configured: false, running: false, completed: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false, loading: false, morphing: false, morphProgress: 0 });
                 this.getRendererInfo = () => ({ requested: "canvas2d", backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
                 this.on = () => () => {};
                 this.off = () => {};
@@ -549,7 +592,7 @@
             if (!this.ctx) {
                 console.warn("asciiam: failed to acquire 2D context — instance is a no-op.");
                 this._disabled = true;
-                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor =
+                this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction =
                     this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
                     this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
                 this.getSequenceState = () => ({ configured: false, running: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false });
@@ -626,6 +669,8 @@
 
                     // --- opt-in, small added cost ---
                     cursor: null, // { enabled, radius, strength, mode:'boost' }
+                    interactionRadius: 180,
+                    interactionDuration: 1.1,
 
                     // --- sparse mode density ---
                     snowDensity: 0.02,
@@ -672,6 +717,7 @@
             this._pulseFactor = 1;
             this._animatedColor = null;
             this._cursor = null;
+            this._interaction = null;
             this._canvasRect = null;
             this._sequence = null;
             this._applyingSequence = false;
@@ -688,6 +734,8 @@
             this._imageRecaptureTimer = null;
             this._imageSampleCanvas = null;
             this._imageSampleContext = null;
+            this._loadedImageSource = null;
+            this._loadedImageOptionsKey = null;
             this._api = {
                 col: 0,
                 row: 0,
@@ -743,6 +791,7 @@
         }
 
         // ---- public API ----
+        /** Starts or resumes this instance on the shared frame scheduler. */
         start() {
             if (this._disabled || this._running) return;
             if (this._reduced) {
@@ -754,6 +803,7 @@
             asciiam._activeInstances.add(this);
             asciiam._scheduleFrame();
         }
+        /** Stops frame scheduling while retaining renderer and animation state. */
         stop() {
             if (!this._running) return;
             this._running = false;
@@ -764,6 +814,7 @@
                 asciiam._schedulerRaf = null;
             }
         }
+        /** Releases observers, listeners, renderer resources, and owned DOM. */
         destroy() {
             this._destroyed = true;
             this.stop();
@@ -792,6 +843,7 @@
             this._events.clear();
         }
 
+        /** Advances time-dependent state in a fixed order before presenting a frame. */
         _runFrame(t) {
             if (!this._running) return;
             if (document.hidden || !this._visible) {
@@ -811,6 +863,13 @@
             this._advanceMorph(dt);
             if (this._sequence?.running) this._advanceSequence(dt);
             this._time += dt * 0.001 * this.opts.speed;
+            if (this._interaction) {
+                // Interaction duration is wall-clock based; changing animation speed
+                // must not make a click gesture feel shorter or longer.
+                this._interaction.elapsed += dt * 0.001;
+                const duration = Math.max(0.05, Number(this.opts.interactionDuration) || 1.1);
+                if (this._interaction.elapsed >= duration) this._interaction = null;
+            }
             this._advanceImageFrames(dt);
             this._draw(dt);
             if (this._events.get("frame")?.size) {
@@ -829,21 +888,24 @@
             listeners.add(listener);
             return () => this.off(event, listener);
         }
+        /** Removes a previously registered lifecycle listener. */
         off(event, listener) {
             const listeners = this._events.get(event);
             if (!listeners) return;
             listeners.delete(listener);
             if (!listeners.size) this._events.delete(event);
         }
+        /** Changes the algorithm and restarts its mode-local timeline. */
         setMode(mode, fromSequence = false) {
             if (!fromSequence && this._sequence?.running) {
-                if (this._sequence.stepStarted) this._interruptSequenceStep("mode-change");
+                if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("mode-change");
                 this.pauseSequence("mode-change");
                 this._sequence.elapsed = 0;
                 this._sequence.delayElapsed = 0;
                 this._emit("sequenceInterrupt", this._sequenceDetail({ reason: "mode-change" }));
             }
             this.opts.mode = mode;
+            if (mode === "clickZone") this._interaction = null;
             // Mode-local timelines are expected to begin when a mode is selected.
             // Without this reset, one-shot modes can be complete before their first
             // visible frame when selected on a long-running instance.
@@ -856,6 +918,7 @@
             if (mode === "starfield") this._initStarfield();
             if (mode === "orbit") this._initOrbit();
         }
+        /** Updates one option and rebuilds only its dependent state or caches. */
         setOption(key, value) {
             if (key === "mode") {
                 this.setMode(value);
@@ -968,7 +1031,7 @@
         setSequence(steps, options = {}) {
             if (!Array.isArray(steps)) throw new TypeError("asciiam: sequence steps must be an array");
             if (this._sequence?.running) {
-                if (this._sequence.stepStarted) this._interruptSequenceStep("reconfigure");
+                if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("reconfigure");
                 this.pauseSequence("reconfigure");
             }
             const normalized = steps.map((step, index) => {
@@ -990,11 +1053,22 @@
                     mode: step.mode,
                     duration: Number.isFinite(duration) && duration > 0 ? duration : 5,
                     delay: Number.isFinite(delay) && delay > 0 ? delay : 0,
+                    // `repeat` controls a mode's finite timeline within this step.
+                    // Preserve configurations that previously used options.loop,
+                    // while keeping one-shot sequence steps as the default.
+                    repeat: step.repeat === true || (step.repeat === undefined && step.options?.loop === true),
+                    // `undefined` retains the current image, `null` clears it, and a
+                    // string loads a new source before this step's duration begins.
+                    image: Object.prototype.hasOwnProperty.call(step, "image")
+                        ? (step.image === null ? null : String(step.image))
+                        : undefined,
+                    imageOptions: step.imageOptions && typeof step.imageOptions === "object" ? { ...step.imageOptions } : {},
                     options: step.options && typeof step.options === "object" ? { ...step.options } : {},
                     transition,
                     onStart: typeof step.onStart === "function" ? step.onStart : null,
                     onComplete: typeof step.onComplete === "function" ? step.onComplete : null,
                     onInterrupt: typeof step.onInterrupt === "function" ? step.onInterrupt : null,
+                    onError: typeof step.onError === "function" ? step.onError : null,
                 };
             });
             this._sequence = {
@@ -1003,7 +1077,10 @@
                 elapsed: 0,
                 delayElapsed: 0,
                 stepStarted: false,
+                stepLoading: false,
+                activationToken: 0,
                 startedOnce: false,
+                completed: false,
                 running: false,
                 loop: options.loop !== false,
                 onStepStart: typeof options.onStepStart === "function" ? options.onStepStart : null,
@@ -1020,17 +1097,18 @@
         playSequence(startIndex) {
             const sequence = this._sequence;
             if (!sequence || !sequence.steps.length) return this;
-            const wasConfigured = sequence.index < 0;
+            const shouldRestart = sequence.index < 0 || sequence.completed;
             sequence.running = true;
-            if (startIndex !== undefined || wasConfigured) {
+            if (startIndex !== undefined || shouldRestart) {
                 const index = startIndex === undefined ? 0 : this._normalizeSequenceIndex(startIndex);
                 this._activateSequenceStep(index);
             }
-            this._emit(wasConfigured ? "sequenceStart" : "sequenceResume", this._sequenceDetail());
+            this._emit(shouldRestart ? "sequenceStart" : "sequenceResume", this._sequenceDetail());
             this.start();
             return this;
         }
 
+        /** Pauses sequence time without stopping the renderer. */
         pauseSequence(reason = "pause") {
             if (!this._sequence?.running) return this;
             this._sequence.running = false;
@@ -1038,20 +1116,25 @@
             return this;
         }
 
+        /** Stops sequence playback and resets its position. */
         stopSequence() {
             if (!this._sequence) return this;
-            if (this._sequence.stepStarted) this._interruptSequenceStep("stop");
+            if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("stop");
             this._sequence.running = false;
             this._sequence.index = -1;
             this._sequence.elapsed = 0;
             this._sequence.delayElapsed = 0;
             this._sequence.stepStarted = false;
+            this._sequence.stepLoading = false;
+            this._sequence.activationToken++;
             this._sequence.startedOnce = false;
+            this._sequence.completed = false;
             this._clearMorph();
             this._emit("sequenceStop", this._sequenceDetail({ reason: "stop" }));
             return this;
         }
 
+        /** Removes the configured sequence and transient morph state. */
         clearSequence() {
             this.stopSequence();
             this._sequence = null;
@@ -1060,17 +1143,19 @@
             return this;
         }
 
+        /** Selects a step using normalized wraparound indexing. */
         seekSequence(index) {
             if (!this._sequence?.steps.length) return this;
-            if (this._sequence.stepStarted) this._interruptSequenceStep("seek");
+            if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("seek");
             this._activateSequenceStep(this._normalizeSequenceIndex(index));
             return this;
         }
 
+        /** Interrupts the active step and advances according to loop policy. */
         nextSequenceStep() {
             const sequence = this._sequence;
             if (!sequence?.steps.length) return this;
-            if (sequence.stepStarted) this._interruptSequenceStep("skip");
+            if (sequence.stepStarted || sequence.stepLoading) this._interruptSequenceStep("skip");
             const next = sequence.index + 1;
             if (next < sequence.steps.length) this._activateSequenceStep(next);
             else if (sequence.loop) {
@@ -1080,21 +1165,25 @@
             return this;
         }
 
+        /** Returns a serializable snapshot of sequence playback state. */
         getSequenceState() {
             const sequence = this._sequence;
             return {
                 configured: !!sequence?.steps.length,
                 running: !!sequence?.running,
+                completed: !!sequence?.completed,
                 index: sequence?.index ?? -1,
                 length: sequence?.steps.length ?? 0,
                 loop: sequence?.loop ?? false,
                 elapsed: sequence?.elapsed ?? 0,
                 waiting: !!sequence && sequence.index >= 0 && !sequence.stepStarted,
+                loading: !!sequence?.stepLoading,
                 morphing: !!this._morph,
                 morphProgress: this._morph ? Math.min(1, this._morph.elapsed / this._morph.duration) : 0,
             };
         }
 
+        /** Reports requested policy and the resolved presentation backend. */
         getRendererInfo() {
             const context = this._webgl?.gl || this.ctx;
             const attributes = typeof context?.getContextAttributes === "function" ? context.getContextAttributes() : null;
@@ -1108,6 +1197,7 @@
             };
         }
 
+        /** Replaces presentation resources while retaining instance-level state. */
         setRenderer(renderer, requestedRenderer = renderer) {
             if (!["auto", "webgl2", "canvas2d"].includes(renderer)) {
                 throw new TypeError('asciiam: renderer must be "auto", "webgl2", or "canvas2d"');
@@ -1211,22 +1301,60 @@
 
         _activateSequenceStep(index) {
             const sequence = this._sequence;
+            if (sequence.stepLoading) {
+                this._imageLoadToken++;
+                this._imageCaptureToken++;
+            }
             sequence.index = index;
             sequence.elapsed = 0;
             sequence.delayElapsed = 0;
             sequence.stepStarted = false;
+            sequence.stepLoading = false;
+            sequence.activationToken++;
+            sequence.completed = false;
             if (sequence.steps[index].delay === 0) this._startSequenceStep();
         }
 
         _startSequenceStep() {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
+            if (sequence.stepStarted || sequence.stepLoading) return;
+            const activationToken = sequence.activationToken;
+            if (step.image === null) this.clearImage();
+            const imageOptionsKey = step.imageOptions.animated === undefined ? "" : String(!!step.imageOptions.animated);
+            if (typeof step.image === "string" &&
+                (step.image !== this._loadedImageSource || imageOptionsKey !== this._loadedImageOptionsKey)) {
+                sequence.stepLoading = true;
+                this.setImage(step.image, step.imageOptions).then((image) => {
+                    if (!image || sequence.activationToken !== activationToken) return;
+                    sequence.stepLoading = false;
+                    if (sequence.running) this._commitSequenceStep(step);
+                }).catch((error) => {
+                    if (sequence.activationToken !== activationToken) return;
+                    sequence.stepLoading = false;
+                    sequence.running = false;
+                    const detail = this._sequenceDetail({ step, reason: "image-error", error });
+                    this._callSequenceCallback(step.onError, detail);
+                    this._emit("sequenceStepError", detail);
+                });
+                return;
+            }
+            this._commitSequenceStep(step);
+        }
+
+        /** Applies a decoded sequence step and starts its timed lifecycle. */
+        _commitSequenceStep(step) {
+            const sequence = this._sequence;
             if (sequence.startedOnce) this._beginMorph(step.transition);
             this._applyingSequence = true;
             try {
                 for (const [key, value] of Object.entries(step.options)) {
-                    if (key !== "mode" && key !== "sequence" && key !== "sequenceOptions") this.setOption(key, value);
+                    if (key !== "mode" && key !== "image" && key !== "loop" && key !== "sequence" && key !== "sequenceOptions") this.setOption(key, value);
                 }
+                // Sequence repetition and mode repetition are separate controls.
+                // Apply this for every step so a prior step cannot leak its mode
+                // cycle policy into the next one.
+                this.setOption("loop", step.repeat);
                 this.setMode(step.mode, true);
             } finally {
                 this._applyingSequence = false;
@@ -1252,16 +1380,23 @@
         _interruptSequenceStep(reason) {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
+            if (sequence.stepLoading) {
+                this._imageLoadToken++;
+                this._imageCaptureToken++;
+            }
             const detail = this._sequenceDetail({ step, reason });
             this._callSequenceCallback(step?.onInterrupt, detail);
             this._callSequenceCallback(sequence.onStepInterrupt, detail);
             this._emit("sequenceStepInterrupt", detail);
             sequence.stepStarted = false;
+            sequence.stepLoading = false;
+            sequence.activationToken++;
         }
 
         _completeSequence() {
             const sequence = this._sequence;
             sequence.running = false;
+            sequence.completed = true;
             const detail = this._sequenceDetail({ reason: "complete" });
             this._callSequenceCallback(sequence.onComplete, detail);
             this._emit("sequenceComplete", detail);
@@ -1350,6 +1485,7 @@
                     remaining -= consumed;
                     if (sequence.delayElapsed + Number.EPSILON < step.delay) return;
                     this._startSequenceStep();
+                    if (!sequence.stepStarted) return;
                     if (remaining <= 0) return;
                 }
 
@@ -1370,6 +1506,11 @@
         }
         /** Returns a Promise that resolves once the image is sampled into the ASCII grid. */
         setImage(src, options = {}) {
+            if (src === null || src === undefined || src === "") {
+                this.clearImage();
+                return Promise.resolve(null);
+            }
+            this.opts.image = String(src);
             const token = ++this._imageLoadToken;
             const captureToken = ++this._imageCaptureToken;
             if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
@@ -1386,6 +1527,8 @@
                         return;
                     }
                     this._sourceImage = img;
+                    this._loadedImageSource = String(src);
+                    this._loadedImageOptionsKey = options.animated === undefined ? "" : String(!!options.animated);
                     this._animatedImage = options.animated ?? /^(?:data:image\/gif)|\.gif(?:$|[?#])/i.test(String(src));
                     this._imageFrameAccumulator = 0;
                     this._resampleImage();
@@ -1417,6 +1560,27 @@
             });
         }
 
+        /** Clears the sampled image while retaining the active procedural mode. */
+        clearImage() {
+            this._imageLoadToken++;
+            this._imageCaptureToken++;
+            if (this._imageRecaptureTimer !== null) clearTimeout(this._imageRecaptureTimer);
+            this._imageRecaptureTimer = null;
+            this._sourceImage = null;
+            this._loadedImageSource = null;
+            this._loadedImageOptionsKey = null;
+            this._imageGrid = null;
+            this._capturedImageFrames = null;
+            this._animatedImageData = null;
+            this._animatedImage = false;
+            this._imageFrameIndex = 0;
+            this._imageFrameAccumulator = 0;
+            this._activeGlyphAtlas = null;
+            this.opts.image = null;
+            return this;
+        }
+
+        /** Decodes a GIF once and stores per-frame ASCII grids instead of bitmaps. */
         async _captureAnimatedImageFrames(src, token = this._imageLoadToken, captureToken = this._imageCaptureToken) {
             const Decoder = globalThis.ImageDecoder;
             if (typeof Decoder !== "function") return false;
@@ -1470,6 +1634,7 @@
             }
         }
 
+        /** Debounces GIF recapture after geometry or sampling options change. */
         _scheduleAnimatedFrameCapture() {
             if (!this._animatedImage || !this._animatedImageData || this._destroyed) return;
             this._capturedImageFrames = null;
@@ -1486,6 +1651,7 @@
             }, 180);
         }
 
+        /** Advances captured frames or the browser-timed compatibility sampler. */
         _advanceImageFrames(dt) {
             if (!this._animatedImage || !this.opts.animateImageFrames || !this._sourceImage) return;
             if (this._capturedImageFrames?.length) {
@@ -1514,6 +1680,12 @@
         /** Programmatically drive the cursor-reactive modifier (e.g. for touch, audio-sync, demos). Pass null to clear. */
         setCursor(x, y) {
             this._cursor = x === null || x === undefined ? null : { x, y };
+        }
+
+        /** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */
+        triggerInteraction(x = this._originX, y = this._originY) {
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+            this._interaction = { x, y, elapsed: 0 };
         }
 
         _emit(event, detail) {
@@ -1558,8 +1730,8 @@
             });
         }
 
-        // Pointer tracking is always bound (mousemove only fires on real movement,
-        // negligible cost) but only applied in the draw loop when opts.cursor.enabled.
+        // Pointer tracking supplies cursor modifiers and interactive modes. The
+        // presentation canvas remains pointer-transparent; listeners belong to target.
         _bindCursor() {
             const target = this.container || this.canvas.parentElement;
             if (!target) return;
@@ -1570,14 +1742,20 @@
             this._onPointerLeave = () => {
                 this._cursor = null;
             };
+            this._onPointerDown = (e) => {
+                if (!this._canvasRect) this._canvasRect = this.canvas.getBoundingClientRect();
+                this.triggerInteraction(e.clientX - this._canvasRect.left, e.clientY - this._canvasRect.top);
+            };
             target.addEventListener("pointermove", this._onPointerMove, { passive: true });
             target.addEventListener("pointerleave", this._onPointerLeave, { passive: true });
+            target.addEventListener("pointerdown", this._onPointerDown, { passive: true });
         }
         _unbindCursor() {
             const target = this.container || this.canvas.parentElement;
             if (target && this._onPointerMove) {
                 target.removeEventListener("pointermove", this._onPointerMove);
                 target.removeEventListener("pointerleave", this._onPointerLeave);
+                target.removeEventListener("pointerdown", this._onPointerDown);
             }
         }
 
@@ -1678,6 +1856,7 @@
             this._glyphAtlasCharHeight = this.charH;
         }
 
+        /** Re-measures the grid and invalidates geometry-dependent state and caches. */
         _resize() {
             const dpr = Math.min(window.devicePixelRatio || 1, this.opts.maxDPR);
             this._dpr = dpr;
@@ -1800,8 +1979,12 @@
             if (!this.cols || !this.rows) return;
             switch (this.opts.align) {
                 case "top-left": this._originX = 0; this._originY = 0; break;
+                case "top": this._originX = this.w * 0.5; this._originY = 0; break;
                 case "top-right": this._originX = this.w; this._originY = 0; break;
+                case "left": this._originX = 0; this._originY = this.h * 0.5; break;
+                case "right": this._originX = this.w; this._originY = this.h * 0.5; break;
                 case "bottom-left": this._originX = 0; this._originY = this.h; break;
+                case "bottom": this._originX = this.w * 0.5; this._originY = this.h; break;
                 case "bottom-right": this._originX = this.w; this._originY = this.h; break;
                 default: this._originX = this.w * 0.5; this._originY = this.h * 0.5;
             }
@@ -1974,6 +2157,7 @@
         }
 
         // ---- image sampling ----
+        /** Converts the current image source into glyph, color, and range-mask arrays. */
         _resampleImage() {
             const img = this._sourceImage;
             if (!img || !this.cols || !this.rows) return;
@@ -2182,6 +2366,7 @@
         }
 
         // ---- main draw loop ----
+        /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
         _draw(dt) {
             if (this._webgl) {
                 this._drawWebGL(dt);
@@ -2234,20 +2419,7 @@
                 }
             }
 
-            if (this.opts.backdrop && this.opts.backdrop.enabled) {
-                const bd = this.opts.backdrop;
-                ctx.save();
-                ctx.globalAlpha = Math.max(0, Math.min(1, bd.opacity !== undefined ? bd.opacity : 0.5));
-                if (bd.gradient && bd.gradient.stops && bd.gradient.stops.length > 0) {
-                    const grad = this._getBackdropGradient(bd.gradient);
-                    if (grad) ctx.fillStyle = grad;
-                    else ctx.fillStyle = bd.color || "#0a0c10";
-                } else {
-                    ctx.fillStyle = bd.color || "#0a0c10";
-                }
-                ctx.fillRect(0, 0, this.w, this.h);
-                ctx.restore();
-            }
+            if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawCanvasBackdrop();
             ctx.textBaseline = "alphabetic";
             this._lastFillStyle = null;
             this._lastFont = null;
@@ -2276,8 +2448,24 @@
                 drawn = this._drawDense(globalGradient);
             }
 
+            if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawCanvasBackdrop();
             ctx.globalAlpha = 1;
             this._lastDrawnCount = drawn;
+        }
+
+        /** Draws the configured Canvas backdrop at its exact clamped alpha. */
+        _drawCanvasBackdrop() {
+            const backdrop = this.opts.backdrop;
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, backdrop.opacity ?? 0.5));
+            if (backdrop.gradient?.stops?.length) {
+                ctx.fillStyle = this._getBackdropGradient(backdrop.gradient) || backdrop.color || "#0a0c10";
+            } else {
+                ctx.fillStyle = backdrop.color || "#0a0c10";
+            }
+            ctx.fillRect(0, 0, this.w, this.h);
+            ctx.restore();
         }
 
         _prepareModeFrame() {
@@ -2331,13 +2519,7 @@
                 const trail = [base[0], base[1], base[2], this.opts.trail];
                 this._webgl.surface(trail);
             }
-            if (this.opts.backdrop?.enabled) {
-                const backdrop = this.opts.backdrop;
-                const base = this._colorToRgba(backdrop.color || "#0a0c10");
-                const color = [base[0], base[1], base[2], backdrop.opacity ?? 0.5];
-                const gradient = backdrop.gradient ? this._prepareWebGLGradient(backdrop.gradient) : null;
-                this._webgl.surface(color, gradient);
-            }
+            if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawWebGLBackdrop();
             this._webglGradient = this.opts.gradient && !this.opts.colorFromImage ? this._prepareWebGLGradient(this.opts.gradient) : null;
             let drawn = 0;
             if (SPARSE_MODES.has(this.opts.mode)) {
@@ -2347,9 +2529,20 @@
                 drawn = this._drawDense(null);
             }
             this._webgl.flush(this.w, this.h, this._webglGradient);
+            if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawWebGLBackdrop();
             this._lastDrawnCount = drawn;
             this._activeWebGLAtlas = null;
             this._webglGradient = null;
+        }
+
+        /** Draws the configured WebGL backdrop before or after glyph instances. */
+        _drawWebGLBackdrop() {
+            const backdrop = this.opts.backdrop;
+            const base = this._colorToRgba(backdrop.color || "#0a0c10");
+            const alpha = Math.max(0, Math.min(1, backdrop.opacity ?? 0.5));
+            const color = [base[0], base[1], base[2], alpha];
+            const gradient = backdrop.gradient ? this._prepareWebGLGradient(backdrop.gradient) : null;
+            this._webgl.surface(color, gradient);
         }
 
         _getWebGLAtlas() {
@@ -2617,6 +2810,7 @@
             return drawn;
         }
 
+        /** Advances and paints sparse particles without scanning the complete grid. */
         _drawSparse(dt, globalGradient) {
             let drawn = 0;
             const mode = this.opts.mode;
@@ -2727,9 +2921,10 @@
             return drawn;
         }
 
-        // Shared per-cell paint step: pulse, edge fade, cursor modifier, then the
-        // cached fillStyle/font assignment + fillText. Used by both dense and
-        // sparse draw paths so the perf-critical caching logic lives in one place.
+        /**
+         * Applies shared opacity and cursor modifiers, then emits one glyph through
+         * the active backend while minimizing repeated Canvas state changes.
+         */
         _paintCell(cell, col, row, x, y, globalGradient, baselineY, applyImageSource = true) {
             if (applyImageSource && this._imageGrid && this.opts.mode !== "image") {
                 cell = this._applyImageSource(cell, col, row);
@@ -2920,6 +3115,10 @@
                     return this._riftLaceCell(col, row, x, y);
                 case "echoBloom":
                     return this._echoBloomCell(col, row, x, y);
+                case "hoverZone":
+                    return this._hoverZoneCell(col, row, x, y);
+                case "clickZone":
+                    return this._clickZoneCell(col, row, x, y);
                 case "image":
                     return this._imageCell(col, row, x, y);
                 default:
@@ -3172,6 +3371,47 @@
             return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, intensity > 0.76);
         }
 
+        _hoverZoneCell(col, row, x, y) {
+            const index = row * this.cols + col;
+            const origin = this._cursor;
+            if (!origin) {
+                const ambient = this._seedCache[index] * 0.18;
+                const charIdx = Math.floor(ambient * (this.opts.charSet.length - 1));
+                return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity, ambient, false);
+            }
+            const radius = Math.max(1, Number(this.opts.interactionRadius) || 180);
+            const distance = Math.hypot(x - origin.x, y - origin.y);
+            const falloff = Math.max(0, 1 - distance / radius);
+            const eased = falloff * falloff * (3 - 2 * falloff);
+            const ripple = 0.72 + Math.sin(distance * 0.085 - this._time * 4.2) * 0.28;
+            const intensity = Math.max(0, Math.min(1, eased * ripple));
+            const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+            const opacity = this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity);
+            return this._setCell(this.opts.charSet[charIdx] || " ", opacity, intensity, intensity > 0.72);
+        }
+
+        _clickZoneCell(col, row, x, y) {
+            const index = row * this.cols + col;
+            const interaction = this._interaction;
+            if (!interaction) {
+                const ambient = this._seedCache[index] * 0.16;
+                const charIdx = Math.floor(ambient * (this.opts.charSet.length - 1));
+                return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity, ambient, false);
+            }
+            const duration = Math.max(0.05, Number(this.opts.interactionDuration) || 1.1);
+            const progress = Math.max(0, Math.min(1, interaction.elapsed / duration));
+            const radius = Math.max(1, Number(this.opts.interactionRadius) || 180);
+            const distance = Math.hypot(x - interaction.x, y - interaction.y);
+            const ringPosition = progress * radius;
+            const ringWidth = Math.max(this.charW * 2, radius * 0.16);
+            const ring = Math.max(0, 1 - Math.abs(distance - ringPosition) / ringWidth);
+            const centre = Math.max(0, 1 - distance / radius) * (1 - progress);
+            const intensity = Math.max(0, Math.min(1, Math.max(ring, centre) * (1 - progress * 0.25)));
+            const charIdx = Math.floor(intensity * (this.opts.charSet.length - 1));
+            const opacity = this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity);
+            return this._setCell(this.opts.charSet[charIdx] || " ", opacity, intensity, intensity > 0.72);
+        }
+
         _imageCell(col, row, x, y) {
             if (!this._imageGrid) return null;
             const g = this._imageGrid;
@@ -3230,9 +3470,10 @@
             return cell;
         }
 
-        // Image sampling is a source layer. The selected global mode supplies
-        // opacity, intensity, bold state, timing, and particle placement while
-        // this method supplies the sampled glyph shape and optional pixel color.
+        /**
+         * Overlays sampled glyph and color data without replacing the selected
+         * mode's opacity, timing, or particle geometry.
+         */
         _applyImageSource(effectCell, col, row) {
             const grid = this._imageGrid;
             if (!grid || col < 0 || row < 0 || col >= grid.cols || row >= grid.rows) return null;
@@ -3276,6 +3517,7 @@
                 }
             }
         }
+        /** Selects the text element updated by the optional diagnostics counter. */
         attachStats(el) {
             this._statsEl = el;
         }

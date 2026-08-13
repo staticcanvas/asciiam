@@ -5,6 +5,8 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import asciiam from "../src/asciiam.js";
 
+const NativeImage = globalThis.Image;
+
 const makeGradient = () => ({ addColorStop: jest.fn() });
 
 const makeContext = () => ({
@@ -101,6 +103,7 @@ describe("asciiam lifecycle", () => {
         delete globalThis.IntersectionObserver;
         delete globalThis.ImageDecoder;
         delete globalThis.fetch;
+        globalThis.Image = NativeImage;
     });
 
     it("constructs, starts, resizes, and destroys without throwing", async () => {
@@ -200,6 +203,12 @@ describe("asciiam lifecycle", () => {
         expect(asciiam.CHARACTER_SETS.boxDrawing).toContain("┼");
         expect(asciiam.CHARACTER_SETS.arrows).toContain("→");
         expect(asciiam.CHARACTER_SETS.math).toContain("∞");
+        expect(asciiam.CHARACTER_SETS.minimal).toBe(" .oO@");
+        expect(asciiam.CHARACTER_SETS.technical).toBe(" .·:+=*#%@");
+        expect(asciiam.CHARACTER_SETS.geometric).toContain("◆");
+        expect(asciiam.CHARACTER_SETS.circuit).toContain("0");
+        expect(asciiam.CHARACTER_SETS.waves).toContain("∿");
+        expect(asciiam.CHARACTER_SETS.terminal).toContain("{}");
         expect(animation._originX).toBe(160);
         expect(animation._originY).toBe(90);
 
@@ -209,9 +218,90 @@ describe("asciiam lifecycle", () => {
         expect(animation._originY).toBe(0);
         expect(animation._rippleFalloff).toHaveLength(animation.cols * animation.rows);
 
+        animation.setOption("align", "top");
+        expect(animation._originX).toBe(160);
+        expect(animation._originY).toBe(0);
+        animation.setOption("align", "right");
+        expect(animation._originX).toBe(320);
+        expect(animation._originY).toBe(90);
+        animation.setOption("align", "bottom");
+        expect(animation._originX).toBe(160);
+        expect(animation._originY).toBe(180);
+
         animation.setOption("imageChars", " .#");
         animation.setOption("charSet", " 01");
         expect(animation.opts.imageChars).toBe(" .#");
+        animation.destroy();
+    });
+
+    it("supports pointer hover fields and triggered click-zone pulses", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, {
+            mode: "hoverZone",
+            charSet: " .#",
+            interactionRadius: 100,
+            respectReducedMotion: false,
+        });
+
+        animation.setCursor(160, 90);
+        const hoverCentre = animation._hoverZoneCell(0, 0, 160, 90).opacity;
+        const hoverOutside = animation._hoverZoneCell(0, 0, 0, 0).opacity;
+        expect(hoverCentre).toBeGreaterThan(hoverOutside);
+
+        animation.setMode("clickZone");
+        expect(animation._interaction).toBeNull();
+        animation.setOption("align", "bottom-right");
+        animation.triggerInteraction();
+        expect(animation._interaction).toEqual(expect.objectContaining({ x: 320, y: 180 }));
+        const clickCentre = animation._clickZoneCell(0, 0, 320, 180).opacity;
+        const clickOutside = animation._clickZoneCell(0, 0, 0, 0).opacity;
+        expect(clickCentre).toBeGreaterThan(clickOutside);
+
+        animation._interaction.elapsed = animation.opts.interactionDuration;
+        animation.start();
+        animation._runFrame(16.7);
+        expect(animation._interaction).toBeNull();
+
+        animation.setMode("wave");
+        host.dispatchEvent(new MouseEvent("pointerdown", { clientX: 40, clientY: 50 }));
+        expect(animation._interaction).toEqual(expect.objectContaining({ x: 40, y: 50 }));
+        animation.destroy();
+    });
+
+    it("draws exact-alpha backdrops behind or over glyphs", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, {
+            mode: "current",
+            charSet: "@@",
+            backdrop: { enabled: true, opacity: 1, color: "#000000", placement: "behind" },
+            respectReducedMotion: false,
+        });
+        const alphaWrites = [];
+        Object.defineProperty(animation.ctx, "globalAlpha", {
+            configurable: true,
+            get: () => alphaWrites.at(-1) ?? 1,
+            set: (value) => {
+                alphaWrites.push(value);
+            },
+        });
+
+        animation._draw(16.7);
+        expect(alphaWrites).toContain(1);
+        expect(animation.ctx.fillRect.mock.invocationCallOrder[0]).toBeLessThan(animation.ctx.fillText.mock.invocationCallOrder[0]);
+
+        animation.ctx.fillRect.mockClear();
+        animation.ctx.fillText.mockClear();
+        animation.setOption("backdrop", { enabled: true, opacity: 1, color: "#000000", placement: "over" });
+        animation._draw(16.7);
+        expect(animation.ctx.fillRect.mock.invocationCallOrder[0]).toBeGreaterThan(animation.ctx.fillText.mock.invocationCallOrder[0]);
         animation.destroy();
     });
 
@@ -990,6 +1080,46 @@ describe("asciiam lifecycle", () => {
         animation.destroy();
     });
 
+    it("keeps mode repetition separate from sequence looping", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, { loop: true, respectReducedMotion: false });
+        animation.setSequence([
+            { mode: "fadeIn", duration: 5 },
+            { mode: "fadeOut", duration: 5, repeat: true },
+            { mode: "typewriter", duration: 5, options: { loop: true } },
+        ], { loop: false });
+
+        animation.playSequence();
+        expect(animation.opts.loop).toBe(false);
+        expect(animation.opts.sequence[0].repeat).toBe(false);
+
+        animation._advanceSequence(5000);
+        expect(animation.opts.mode).toBe("fadeOut");
+        expect(animation.opts.loop).toBe(true);
+
+        animation._advanceSequence(5000);
+        expect(animation.opts.mode).toBe("typewriter");
+        expect(animation.opts.loop).toBe(true);
+        expect(animation.opts.sequence[2].repeat).toBe(true);
+
+        animation._advanceSequence(5000);
+        expect(animation.getSequenceState().running).toBe(false);
+        expect(animation.getSequenceState().completed).toBe(true);
+
+        animation.playSequence();
+        expect(animation.getSequenceState()).toEqual(expect.objectContaining({
+            running: true,
+            completed: false,
+            index: 0,
+        }));
+        expect(animation.opts.mode).toBe("fadeIn");
+        animation.destroy();
+    });
+
     it("morphs between sequence steps with one outgoing snapshot", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {
@@ -1021,6 +1151,69 @@ describe("asciiam lifecycle", () => {
         expect(animation.getSequenceState().morphing).toBe(false);
         expect(host.querySelector(".asciiam-morph-layer")).toBeNull();
         expect(completed).toHaveBeenCalledTimes(1);
+        animation.destroy();
+    });
+
+    it("waits for a sequence image to decode before timing its step", async () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const pendingImages = [];
+        globalThis.Image = class MockImage {
+            constructor() {
+                this.naturalWidth = 32;
+                this.naturalHeight = 18;
+                this.width = 32;
+                this.height = 18;
+            }
+            set src(value) {
+                this.currentSrc = value;
+                pendingImages.push(this);
+            }
+            get src() {
+                return this.currentSrc;
+            }
+        };
+        const animation = new asciiam(host, { respectReducedMotion: false });
+        animation.setSequence([
+            { mode: "wave", duration: 1 },
+            { mode: "ripple", duration: 3, image: "/second.png" },
+            { mode: "current", duration: 1, image: null },
+        ], { loop: false });
+
+        animation.playSequence();
+        animation._advanceSequence(1000);
+        expect(animation.getSequenceState()).toEqual(expect.objectContaining({
+            index: 1,
+            loading: true,
+            elapsed: 0,
+        }));
+        expect(animation.opts.mode).toBe("wave");
+
+        animation.pauseSequence();
+        await pendingImages[0].onload();
+        await Promise.resolve();
+        expect(animation.getSequenceState()).toEqual(expect.objectContaining({
+            loading: false,
+            waiting: true,
+            elapsed: 0,
+        }));
+        expect(animation.opts.mode).toBe("wave");
+
+        animation.playSequence();
+        animation._advanceSequence(16);
+        expect(animation.getSequenceState()).toEqual(expect.objectContaining({
+            loading: false,
+            waiting: false,
+        }));
+        expect(animation.opts.mode).toBe("ripple");
+        expect(animation.opts.image).toBe("/second.png");
+
+        animation._advanceSequence(3000);
+        expect(animation.opts.mode).toBe("current");
+        expect(animation.opts.image).toBeNull();
         animation.destroy();
     });
 

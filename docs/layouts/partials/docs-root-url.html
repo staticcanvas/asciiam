@@ -1,0 +1,4 @@
+{{- $pagePath := strings.Trim .RelPermalink "/" -}}
+{{- $depth := 0 -}}
+{{- with $pagePath }}{{ $depth = len (split . "/") }}{{ end -}}
+{{- if eq $depth 0 -}}./{{- else -}}{{- strings.Repeat $depth "../" -}}{{- end -}}

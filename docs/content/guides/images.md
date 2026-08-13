@@ -2,6 +2,10 @@
 title: Images and colour-range animation
 description: Sample local or remote images into ASCII and restrict animation to an inclusive RGB range.
 weight: 40
+date: 2026-08-13
+lastmod: 2026-08-13
+tags: [images, media, GIF, SVG, sampling, colour range]
+keywords: [image to ASCII, photo to ASCII, animated GIF ASCII, SVG silhouette, image sampling, RGB animation range, colour from image]
 ---
 
 Image loading establishes a sampled glyph source. Static images are resampled after grid or image-option changes. Animated GIFs capture each composited frame as an ASCII grid when WebCodecs `ImageDecoder` is available. Brightness selects glyph density. Optional sampled RGB values color each glyph. The global `mode` then animates that source, so the same mode inventory applies to procedural and image-backed output.

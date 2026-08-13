@@ -2,6 +2,10 @@
 title: API reference
 description: Constructor, static members, options, methods, events, renderer data, sequence objects, and callback contracts.
 weight: 40
+date: 2026-08-13
+lastmod: 2026-08-13
+tags: [API, reference, JavaScript, TypeScript, options, methods, events]
+keywords: [asciiam API, configuration reference, animation options, renderer methods, sequence events, callbacks, TypeScript declarations]
 ---
 
 The package exports the `asciiam` class as its default export and provides TypeScript declarations in `src/asciiam.d.ts`.
@@ -49,6 +53,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 
 | Member | Type | Description |
 | --- | --- | --- |
+| `asciiam.BUILT_IN_MODES` | readonly mode-name array | Canonical inventory implemented by the library. |
 | `asciiam.QUALITY` | record | Quality-tier values for DPR, density, font levels, alpha levels, and caches. |
 | `asciiam.CHARACTER_SETS` | record | Named glyph strings ordered for density mapping. |
 | `asciiam.presets` | record | Included option objects keyed by preset name. |
@@ -71,7 +76,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `speed` | number | `1` | Scales the animation timeline. |
 | `direction` | `horizontal \| vertical \| diagonal` | `horizontal` | Sets wave travel direction. |
 | `revealDirection` | reveal direction string | `center` | Sets horizontal, vertical, diagonal, center-out, or edge-in reveal order. |
-| `align` | spatial alignment | `center` | Sets the origin for spatial modes. |
+| `align` | nine-position spatial alignment | `center` | Sets the origin for compatible spatial modes. |
 | `minOpacity` | number | `0.05` | Sets the lower procedural opacity bound. |
 | `maxOpacity` | number | `0.85` | Sets the upper procedural opacity bound. |
 | `boldOnPeak` | boolean | `true` | Uses bold font variants for high-intensity cells. |
@@ -99,12 +104,14 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `gradient` | gradient object or `null` | `null` | Applies linear, radial, or cubic multi-stop glyph color. |
-| `backdrop` | backdrop object or `null` | `null` | Draws a solid or gradient surface before glyphs. |
+| `backdrop` | backdrop object or `null` | `null` | Draws a solid or gradient surface in the selected layer. |
 | `trail` | number | `0` | Sets retained-frame overlay opacity. |
 | `trailColor` | CSS color | `#070809` | Sets the retained-frame overlay color. |
 | `pulse` | `{ amplitude, speed }` or `null` | `null` | Applies a frame-level opacity multiplier. |
 | `colorAnimation` | color animation object or `null` | `null` | Applies `hueRotate` or `breathe`. |
 | `cursor` | cursor options or `null` | `null` | Raises opacity near pointer or supplied coordinates. |
+| `interactionRadius` | CSS pixels | `180` | Sets hover-zone extent and click-zone travel distance. |
+| `interactionDuration` | seconds | `1.1` | Sets click-zone pulse duration. |
 
 ### Gradient object
 
@@ -125,6 +132,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `enabled` | boolean | `false` | Enables the backdrop. |
 | `opacity` | number | `0.5` | Sets backdrop alpha. |
 | `color` | CSS color | `#0a0c10` | Sets solid or fallback color. |
+| `placement` | `behind \| over` | `behind` | Draws before glyphs or composites after them. `over` at opacity `1` covers the animation. |
 | `gradient` | gradient object or `null` | `null` | Sets backdrop gradient color. |
 
 ## Image options
@@ -172,7 +180,9 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `setOption(key, value)` | `void` | Updates an option and rebuilds affected caches or state. |
 | `setTarget(target)` | `void` | Moves the presentation canvas and target bindings. |
 | `setImage(source, options?)` | `Promise<HTMLImageElement \| null>` | Decodes an image; supported browsers capture every GIF frame and its delay. |
+| `clearImage()` | instance | Cancels pending image work and clears sampled image state without changing the active mode. |
 | `setCursor(x, y?)` | `void` | Sets cursor coordinates or clears them when `x` is `null`. |
+| `triggerInteraction(x?, y?)` | `void` | Starts a click-zone pulse; omitted coordinates use the aligned origin. |
 | `attachStats(element)` | `void` | Selects the element that receives FPS and grid output. |
 
 ### Live configuration
@@ -207,11 +217,15 @@ Returns the resolved backend: `webgl2` or `canvas2d`. The method replaces the pr
 | `mode` | mode string | Yes | Mode activated for the step. |
 | `duration` | seconds | No | Active step duration. |
 | `delay` | seconds | No | Wait before step activation. |
+| `repeat` | boolean | No | Repeats a finite mode timeline within the step; defaults to `false`. |
+| `image` | string, `null`, or omitted | No | Decodes a new source before timing starts, clears the source, or retains it when omitted. |
+| `imageOptions` | image option record | No | Passes decode hints such as `animated` to `setImage()`. |
 | `options` | option record | No | Step-local option overrides. |
 | `transition` | transition object | No | Incoming `cut` or snapshot `morph` transition. |
 | `onStart` | callback | No | Runs when the step starts. |
 | `onComplete` | callback | No | Runs on normal completion. |
 | `onInterrupt` | callback | No | Runs when interrupted. |
+| `onError` | callback | No | Runs when the step image fails to load; playback pauses. |
 
 ### Sequence options
 
@@ -243,11 +257,13 @@ Returns the resolved backend: `webgl2` or `canvas2d`. The method replaces the pr
 | --- | --- | --- |
 | `configured` | boolean | Whether steps exist. |
 | `running` | boolean | Whether sequence time advances. |
+| `completed` | boolean | Whether a non-looping sequence reached its final boundary. |
 | `index` | number | Active step index or `-1`. |
 | `length` | number | Step count. |
 | `loop` | boolean | Active loop policy. |
 | `elapsed` | number | Seconds elapsed in the current phase. |
 | `waiting` | boolean | Whether the active step delay is pending. |
+| `loading` | boolean | Whether the active step is waiting for an image decode. Duration remains at zero. |
 | `morphing` | boolean | Whether an outgoing snapshot is currently fading. |
 | `morphProgress` | number | Normalized morph progress from `0` through `1`. |
 
@@ -282,6 +298,7 @@ Keep the returned unsubscribe function when a listener belongs to a component li
 | `sequenceStepStart` | A delayed or immediate step starts. |
 | `sequenceStepComplete` | A step reaches its duration. |
 | `sequenceStepInterrupt` | Seek, stop, reconfiguration, or manual input interrupts a step. |
+| `sequenceStepError` | A step image fails to decode; detail contains `error` and playback pauses. |
 | `sequenceMorphStart`, `sequenceMorphComplete` | A snapshot morph begins or finishes. |
 
 ## Callback types

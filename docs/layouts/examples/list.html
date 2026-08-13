@@ -1,0 +1,60 @@
+{{ define "head" }}<script type="module" src="{{ "js/examples.js" | relURL }}"></script>{{ end }}
+{{ define "main" }}
+<header class="hero hero-compact examples-hero">
+  <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
+  <p class="hero-eyebrow">One renderer · editable configurations</p>
+  <h1 class="hero-title">Usage <em>examples.</em></h1>
+  <p class="hero-desc">{{ .Description }}</p>
+</header>
+<section class="examples-page" data-examples-playground data-utility-url="{{ partial "web-utility-url.html" . }}">
+  <nav class="example-rail" aria-label="Example configurations">
+    <p class="example-rail-label">Configuration range</p>
+    {{ range hugo.Data.examples.examples }}
+    <button type="button" data-example-choice data-example-id="{{ .id }}" data-options="{{ .options | jsonify | base64Encode }}" data-description="{{ .description }}" aria-pressed="{{ if eq .id "minimum" }}true{{ else }}false{{ end }}">
+      <span>{{ .level }}</span>
+      <strong>{{ .title }}</strong>
+    </button>
+    {{ end }}
+  </nav>
+  <div class="example-workbench">
+    <header class="example-workbench-head">
+      <div>
+        <p class="section-tag">Live configuration</p>
+        <h2 data-example-title>Minimum</h2>
+        <p data-example-description>Use library defaults with only a render target.</p>
+      </div>
+      <output class="example-status" data-example-status role="status" aria-live="polite">Ready</output>
+    </header>
+    <div class="example-split">
+      <section class="example-editor-panel" aria-label="Configuration editor">
+        <div class="example-panel-bar">
+          <span>options.json</span>
+          <span>JSON · auto-run</span>
+        </div>
+        <label class="sr-only" for="example-editor">Editable asciiam options</label>
+        <textarea id="example-editor" data-example-editor spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+        <div class="example-error" data-example-error hidden></div>
+      </section>
+      <section class="example-preview-panel" aria-label="Live output">
+        <div class="example-panel-bar">
+          <span>preview</span>
+          <span data-example-backend>Starting renderer</span>
+        </div>
+        <div class="example-preview" data-example-preview aria-label="Live ASCII animation output"></div>
+        <p class="example-preview-hint">Move, click, or tap inside interactive examples.</p>
+      </section>
+    </div>
+    <div class="example-actions">
+      <button type="button" class="btn-primary" data-example-run>Run</button>
+      <button type="button" class="btn-ghost" data-example-reset>Reset</button>
+      <button type="button" class="btn-ghost" data-example-copy>Copy JSON</button>
+      <a class="btn-ghost" data-example-utility href="{{ partial "web-utility-url.html" . }}">View in web utility</a>
+    </div>
+    <div class="example-harness" aria-label="Application harness">
+      <span>app.js</span>
+      <code>const animation = new asciiam('#preview', options); animation.start();</code>
+    </div>
+  </div>
+  <article class="prose examples-reference">{{ .Content }}</article>
+</section>
+{{ end }}

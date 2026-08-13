@@ -9,7 +9,8 @@ const docsImages = new URL("../docs/static/images/", import.meta.url);
 
 const sparseModes = new Set(["matrix", "snow", "sparkle", "fire", "starfield", "orbit"]);
 const revealModes = new Set(["fadeIn", "fadeOut", "typewriter"]);
-const spatialModes = new Set(["ripple", "vortex", "plasma", "orbit"]);
+const spatialModes = new Set(["ripple", "vortex", "plasma", "orbit", "hoverZone", "clickZone"]);
+/** Maps a mode to the gallery filter that describes its rendering model. */
 const categoryFor = (mode) => {
     if (mode === "image") return "image";
     if (sparseModes.has(mode)) return "particles";
@@ -34,8 +35,9 @@ await Promise.all([
     mkdir(docsImages, { recursive: true }),
 ]);
 await Promise.all([
-    writeFile(new URL("presets.json", docsData), `${JSON.stringify({ version: packageMetadata.version, presets }, null, 2)}\n`),
+    writeFile(new URL("presets.json", docsData), `${JSON.stringify({ version: packageMetadata.version, builtInModeCount: asciiam.BUILT_IN_MODES.length, presets }, null, 2)}\n`),
     cp(new URL("../src/asciiam.js", import.meta.url), new URL("asciiam.esm.js", docsLibrary)),
+    cp(new URL("../src/asciiam.js", import.meta.url), new URL("asciiam.mjs", docsLibrary)),
     cp(new URL("../public/assets/branding/asciiam-logo.svg", import.meta.url), new URL("asciiam-logo.svg", docsBranding)),
     cp(new URL("../public/assets/images/domitian-tunnel-5122424_1920.jpg", import.meta.url), new URL("domitian-tunnel-5122424_1920.jpg", docsImages)),
 ]);

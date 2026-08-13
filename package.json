@@ -4,8 +4,8 @@
   "description": "A dependency-free canvas engine for animated ASCII backgrounds and image-to-ASCII effects",
   "license": "MIT",
   "type": "module",
-  "main": "dist/asciiam.js",
-  "module": "dist/asciiam.esm.js",
+  "main": "dist/asciiam.cjs",
+  "module": "dist/asciiam.mjs",
   "types": "src/asciiam.d.ts",
   "jsdelivr": "dist/asciiam.min.js",
   "unpkg": "dist/asciiam.min.js",
@@ -17,9 +17,9 @@
   "exports": {
     ".": {
       "types": "./src/asciiam.d.ts",
-      "import": "./dist/asciiam.esm.js",
-      "require": "./dist/asciiam.js",
-      "default": "./dist/asciiam.esm.js"
+      "import": "./dist/asciiam.mjs",
+      "require": "./dist/asciiam.cjs",
+      "default": "./dist/asciiam.mjs"
     }
   },
   "extras": {

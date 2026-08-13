@@ -21,6 +21,8 @@ export type asciiamMode =
   | 'glitch'
   | 'typewriter'
   | 'orbit'
+  | 'hoverZone'
+  | 'clickZone'
   | 'image'
   | 'custom'
   | (string & {});
@@ -39,6 +41,7 @@ export type asciiamEvent =
   | 'sequenceStepStart'
   | 'sequenceStepComplete'
   | 'sequenceStepInterrupt'
+  | 'sequenceStepError'
   | 'sequenceMorphStart'
   | 'sequenceMorphComplete'
   | 'rendererChange'
@@ -69,11 +72,17 @@ export interface asciiamSequenceStep {
   mode: asciiamMode;
   duration?: number;
   delay?: number;
+  /** Repeats a finite mode timeline within this step. Defaults to false. */
+  repeat?: boolean;
+  /** New source to decode before the step starts; null clears the current image. */
+  image?: string | null;
+  imageOptions?: { animated?: boolean } & Record<string, unknown>;
   options?: Record<string, unknown>;
   transition?: asciiamSequenceTransition;
   onStart?: asciiamSequenceCallback | null;
   onComplete?: asciiamSequenceCallback | null;
   onInterrupt?: asciiamSequenceCallback | null;
+  onError?: asciiamSequenceCallback | null;
 }
 
 export interface asciiamSequenceOptions {
@@ -88,11 +97,13 @@ export interface asciiamSequenceOptions {
 export interface asciiamSequenceState {
   configured: boolean;
   running: boolean;
+  completed: boolean;
   index: number;
   length: number;
   loop: boolean;
   elapsed: number;
   waiting: boolean;
+  loading: boolean;
   morphing: boolean;
   morphProgress: number;
 }
@@ -135,12 +146,13 @@ export interface asciiamOptions {
     enabled?: boolean;
     opacity?: number;
     color?: string;
+    placement?: 'behind' | 'over';
     gradient?: Record<string, unknown> | null;
   } | null;
   speed?: number;
   direction?: 'horizontal' | 'vertical' | 'diagonal';
   revealDirection?: 'left-to-right' | 'right-to-left' | 'top-to-bottom' | 'bottom-to-top' | 'diagonal' | 'center' | 'edges';
-  align?: 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  align?: 'center' | 'top' | 'top-left' | 'top-right' | 'left' | 'right' | 'bottom' | 'bottom-left' | 'bottom-right';
   minOpacity?: number;
   maxOpacity?: number;
   boldOnPeak?: boolean;
@@ -185,6 +197,8 @@ export interface asciiamOptions {
   pulse?: { amplitude?: number; speed?: number } | null;
   colorAnimation?: Record<string, unknown> | null;
   cursor?: { enabled?: boolean; radius?: number; strength?: number } | null;
+  interactionRadius?: number;
+  interactionDuration?: number;
   snowDensity?: number;
   sparkleDensity?: number;
   fireDensity?: number;
@@ -198,6 +212,8 @@ export interface asciiamOptions {
 
 export default class asciiam {
   static readonly QUALITY: Record<string, Record<string, number | boolean | null>>;
+  /** Canonical names of modes implemented by the library. */
+  static readonly BUILT_IN_MODES: readonly asciiamMode[];
   static readonly CHARACTER_SETS: Record<string, string>;
   static readonly presets: Record<string, asciiamOptions>;
   static isSupported(): boolean;
@@ -230,6 +246,9 @@ export default class asciiam {
   setRenderer(renderer: 'auto' | 'webgl2' | 'canvas2d'): 'webgl2' | 'canvas2d';
   /** Decodes and samples an image. Animated GIFs capture every frame when ImageDecoder is available. */
   setImage(source: string, options?: { animated?: boolean }): Promise<HTMLImageElement | null>;
+  clearImage(): this;
   setCursor(x: number | null, y?: number): void;
+  /** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */
+  triggerInteraction(x?: number, y?: number): void;
   attachStats(element: HTMLElement): void;
 }

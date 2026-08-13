@@ -1,10 +1,23 @@
 ---
 title: Animation sequences
-description: Run ordered, staggered, interruptible animation steps with callbacks and looping.
+description: Run ordered, image-aware animation nodes with controlled timing, transitions, callbacks, and looping.
 weight: 30
+date: 2026-08-13
+lastmod: 2026-08-13
+tags: [sequences, timeline, images, transitions, morph, repeat, events]
+keywords: [animation sequence, image sequence, animation playlist, sequence nodes, ASCII transitions, morph cross-fade, snapshot transition, step repeat, callbacks]
 ---
 
-A sequence controls one renderer. Each step selects a mode, duration, optional delay, option overrides, and lifecycle callbacks.
+A sequence controls one renderer. Each node selects a mode, duration, optional delay,
+image-source action, mode-repeat policy, option overrides, and lifecycle callbacks. The
+web utility displays nodes left to right in playback order; its image selector can
+retain the current source, clear it, or load one of the included images.
+
+`repeat` and sequence `loop` control different boundaries. A step with `repeat: true`
+restarts a finite mode such as `fadeIn`, `fadeOut`, `irisIn`, `dissolveOut`, or
+`typewriter` while that step remains active. It defaults to `false`, so a finite mode
+reaches its final frame and holds it until the next step. Sequence `loop` controls
+whether playback returns to the first step after the final step.
 
 An incoming step can also declare a `morph` transition. asciiam captures the outgoing frame once, starts the incoming mode, and fades the captured frame over it. Only the incoming algorithm remains live, so the transition does not run two animation modes concurrently. The default transition is `cut`; reduced-motion preference also resolves morphs to cuts.
 
@@ -19,7 +32,8 @@ animation.setSequence([
   { mode: 'ripple', duration: 5 },
   {
     mode: 'fadeOut',
-    duration: 1,
+    duration: 5,
+    repeat: false,
     transition: { type: 'morph', duration: 0.8, easing: 'easeInOut' }
   },
   {
@@ -36,6 +50,34 @@ animation.setSequence([
 });
 ```
 
+## Move between images
+
+Set `image` to a URL to decode and sample a new source before that node starts. Omit
+the field to retain the current source, or use `null` to clear image data and return to
+a procedural grid. A node's delay elapses first; its duration does not begin until the
+new image is ready. This prevents decode time from shortening the visible node.
+
+```js
+animation.setSequence([
+  { mode: 'fadeIn', image: '/media/product-front.webp', duration: 3 },
+  {
+    mode: 'lumaFold',
+    image: '/media/product-detail.webp',
+    imageOptions: { animated: false },
+    duration: 4,
+    transition: { type: 'morph', duration: 0.6, easing: 'easeInOut' }
+  },
+  { mode: 'wave', image: null, duration: 2 }
+], { autoplay: true, loop: true });
+
+animation.on('sequenceStepError', ({ index, error }) => {
+  console.error(`Image for node ${index + 1} could not be loaded`, error);
+});
+```
+
+An image failure pauses the sequence, calls the node's optional `onError`, and emits
+`sequenceStepError`. Correct the source or seek to another node before resuming.
+
 `delay` staggers the start of a step. During the delay, the prior frame state continues. `duration` begins after the delay completes.
 
 ## Sequence state
@@ -45,7 +87,10 @@ stateDiagram-v2
   [*] --> Configured: setSequence()
   Configured --> Waiting: playSequence() + delay
   Configured --> Playing: playSequence()
-  Waiting --> Playing: delay elapsed
+  Waiting --> Loading: node declares a new image
+  Loading --> Playing: image decoded and sampled
+  Loading --> Paused: image error
+  Waiting --> Playing: delay elapsed, image retained or cleared
   Playing --> Waiting: next step has delay
   Playing --> Playing: next step
   Playing --> Paused: pauseSequence()
@@ -70,7 +115,13 @@ Step callbacks receive `(detail, animation)`. The same lifecycle is available th
 | `clearSequence()` | none | Removes sequence configuration. |
 | `seekSequence(index)` | numeric index | Interrupts the current step and selects another. |
 | `nextSequenceStep()` | none | Advances one step using loop policy. |
-| `getSequenceState()` | none | Returns configured, running, index, length, loop, elapsed, and waiting state. |
+| `getSequenceState()` | none | Returns configured, running, completed, index, length, loop, elapsed, waiting, loading, and morph state. |
+| `step.image` | string, `null`, or omitted | Loads a source, clears the current source, or retains it. |
+| `step.imageOptions` | object | Passes image decode hints such as `animated` to `setImage()`. |
+| `step.onError` | callback | Runs when the node's image cannot be decoded. |
+| `step.repeat` | boolean, default `false` | Repeats a finite mode timeline while the step remains active. |
 | `step.transition` | `{ type, duration, easing }` | Selects an incoming `cut` or snapshot `morph`; duration uses seconds. |
+| `options.loop` | boolean | Legacy per-mode repeat input; `step.repeat` is the explicit sequence form. |
 | `sequenceMorphStart` | event | Emitted after the outgoing frame is captured. |
 | `sequenceMorphComplete` | event | Emitted after the outgoing snapshot reaches zero opacity. |
+| `sequenceStepError` | event | Emitted when a node image fails; playback pauses. |

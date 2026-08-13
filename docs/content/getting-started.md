@@ -2,6 +2,10 @@
 title: Getting started
 description: Install asciiam, create a sized target, select a renderer, and start the animation lifecycle.
 weight: 10
+date: 2026-08-13
+lastmod: 2026-08-13
+tags: [installation, setup, quickstart, lifecycle, ESM, npm]
+keywords: [install asciiam, getting started, JavaScript ASCII animation, canvas quickstart, browser module, mjs import]
 ---
 
 asciiam renders an animated glyph grid into a canvas owned by an HTML element or into a canvas supplied by the caller.
@@ -31,6 +35,22 @@ const animation = new asciiam('#hero', {
 });
 
 animation.start();
+```
+
+The package export resolves to `dist/asciiam.mjs` in ESM-aware runtimes. A direct
+browser import can use the same module artifact without a bundler:
+
+`index.html`
+
+```html
+<section id="hero" style="position:relative; min-height:30rem"></section>
+
+<script type="module">
+  import asciiam from './libs/asciiam.mjs';
+
+  const animation = new asciiam('#hero', asciiam.presets.heroWave);
+  animation.start();
+</script>
 ```
 
 ## Load a browser bundle
@@ -87,6 +107,7 @@ stateDiagram-v2
 
 - Review [renderers and performance]({{< relref "/guides/rendering" >}}).
 - Build [animation sequences]({{< relref "/guides/sequences" >}}).
+- Edit configurations in [Usage examples]({{< relref "/examples" >}}).
 - Preview configurations in the [preset gallery]({{< relref "/gallery" >}}).
 - Consult the [API reference]({{< relref "/api" >}}).
 
@@ -96,6 +117,8 @@ stateDiagram-v2
 | --- | --- | --- | --- |
 | `new asciiam(target, options)` | constructor | — | Creates one renderer and animation state container. |
 | `renderer` | option | `auto` | Selects automatic, WebGL2, or Canvas 2D rendering. |
+| `dist/asciiam.mjs` | ESM artifact | — | Supports package resolution and direct browser module imports. |
+| `dist/asciiam.cjs` | CommonJS artifact | — | Supports `require('@staticcanvas/asciiam')`. |
 | `start()` | method | — | Starts or resumes frame scheduling. |
 | `stop()` | method | — | Stops frame scheduling without removing the canvas. |
 | `destroy()` | method | — | Removes observers, listeners, renderer resources, and the owned canvas. |

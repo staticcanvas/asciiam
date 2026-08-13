@@ -5,6 +5,8 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import { JSDOM, VirtualConsole } from 'jsdom';
+import { highlightJavaScript } from '../public/js/webutil-code.js';
+import { normalizeSequenceDraft, serializeSequenceDraft } from '../public/js/webutil-sequence.js';
 
 const projectFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -49,8 +51,11 @@ function createDemo(includedImages = [], url = 'https://demo.test/') {
   window.fetch = async (resource) =>
     Response.json(String(resource) === '/assets/backgrounds.json' ? includedImages : []);
   window.eval(projectFile('public/libs/asciiam.js'));
-  const demoScript = [...window.document.querySelectorAll('script:not([src])')].at(-1);
-  window.eval(demoScript.textContent);
+  window.__webutilModules = { highlightJavaScript, normalizeSequenceDraft, serializeSequenceDraft };
+  const utilityScript = projectFile('public/js/webutil.js')
+    .replace(/import \{ highlightJavaScript \}[^\n]+\n/, 'const { highlightJavaScript } = window.__webutilModules;\n')
+    .replace(/import \{ normalizeSequenceDraft, serializeSequenceDraft \}[^\n]+\n/, 'const { normalizeSequenceDraft, serializeSequenceDraft } = window.__webutilModules;\n');
+  window.eval(`(() => {\n${utilityScript}\n})();`);
   return dom;
 }
 
@@ -61,6 +66,18 @@ afterEach(() => {
 });
 
 describe('demo toolbar quality-of-life controls', () => {
+  it('loads JSON-safe configurations transferred from documentation examples', () => {
+    const options = { mode: 'clickZone', color: '#C04FFF', interactionRadius: 260 };
+    const encoded = Buffer.from(JSON.stringify(options), 'utf8').toString('base64url');
+    activeDom = createDemo([], `https://demo.test/?config=${encodeURIComponent(encoded)}`);
+    const { document } = activeDom.window;
+
+    expect(document.getElementById('modeToolbarStatus').textContent).toBe('clickZone');
+    expect(document.getElementById('color').value.toUpperCase()).toBe('#C04FFF');
+    expect(document.getElementById('interactionRadius').value).toBe('260');
+    expect(document.getElementById('presetDirtyIndicator').textContent).toBe('Docs example');
+  });
+
   it('renders included image manifest entries as selectable defaults', async () => {
     activeDom = createDemo([
       { name: 'Bird Silhouette', src: '/assets/images/bird-silhouette.svg', thumbnail: '/assets/thumbnails/bird.webp' },
@@ -136,7 +153,7 @@ describe('demo toolbar quality-of-life controls', () => {
     const advanced = document.getElementById('moreAdvancedActions');
     const workspace = document.getElementById('moreWorkspaceActions');
 
-    expect(primaryLabels).toHaveLength(8);
+    expect(primaryLabels).toHaveLength(9);
     expect(primaryLabels.join(' ')).toContain('Preset');
     expect(primaryLabels.join(' ')).toContain('Sequence');
     expect(primaryLabels.join(' ')).toContain('Mode');
@@ -144,15 +161,16 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(primaryLabels.join(' ')).toContain('Color');
     expect(primaryLabels.join(' ')).toContain('Advanced');
     expect(primaryLabels.join(' ')).toContain('Image');
+    expect(primaryLabels.join(' ')).toContain('Reset');
     expect(primaryLabels.join(' ')).toContain('Code');
     expect(advanced.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(4);
-    expect(workspace.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(4);
+    expect(workspace.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(3);
     expect(
       document.getElementById('pop-more').contains(document.getElementById('pop-quality'))
     ).toBe(true);
-    expect(document.querySelector('.stage-top-actions').firstElementChild.id).toBe(
-      'aboutTriggerBtn'
-    );
+    expect([...document.querySelector('.stage-top-actions').children].map((item) => item.id)).toEqual([
+      'documentationBtn', 'aboutTriggerBtn', ''
+    ]);
     expect(document.getElementById('pop-more').contains(document.getElementById('pop-about'))).toBe(
       false
     );
@@ -228,6 +246,7 @@ describe('demo toolbar quality-of-life controls', () => {
     const range = document.getElementById('backdropOpacity');
     const number = document.getElementById('backdropOpacityNumber');
     const value = document.getElementById('backdropOpacityVal');
+    const placement = document.getElementById('backdropPlacement');
 
     expect(range.min).toBe('0');
     expect(range.max).toBe('1');
@@ -246,6 +265,10 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(number.value).toBe('1.00');
     expect(value.textContent).toBe('1.00');
     expect(document.getElementById('usageCodePopover').textContent).toContain('"opacity": 1');
+
+    placement.value = 'over';
+    placement.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"placement": "over"');
 
     number.value = '1.5';
     number.dispatchEvent(new Event('change', { bubbles: true }));
@@ -288,6 +311,8 @@ describe('demo toolbar quality-of-life controls', () => {
       ['glitch', 'signalGlitch'],
       ['typewriter', 'terminalType'],
       ['orbit', 'orbitalFlow'],
+      ['hoverZone', 'hoverField'],
+      ['clickZone', 'clickPulse'],
     ];
 
     expected.forEach(([mode, preset]) => {
@@ -301,6 +326,21 @@ describe('demo toolbar quality-of-life controls', () => {
         `"mode": "${mode}"`
       );
     });
+  });
+
+  it('exposes expanded character sets and nine alignment anchors', () => {
+    activeDom = createDemo();
+    const { document } = activeDom.window;
+    const characterSet = document.getElementById('charSet');
+    const options = [...characterSet.options].map((option) => option.value);
+    expect(options).toEqual(expect.arrayContaining([
+      'asciiExtended', 'minimal', 'technical', 'geometric', 'circuit', 'waves', 'terminal'
+    ]));
+
+    const alignments = [...document.querySelectorAll('[data-align]')].map((button) => button.dataset.align);
+    expect(alignments).toEqual([
+      'top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right'
+    ]);
   });
 
   it('opens a gallery preset through the web utility query parameter', () => {
@@ -492,7 +532,7 @@ describe('demo toolbar quality-of-life controls', () => {
     stagger.value = '1.5';
     stagger.dispatchEvent(new Event('change', { bubbles: true }));
 
-    steps()[2].querySelector('button[aria-label="Move step 3 up"]').click();
+    steps()[2].querySelector('button[aria-label="Move node 3 earlier"]').click();
     expect(steps()[1].querySelector('select').value).toBe('fadeIn');
 
     document.getElementById('playSequenceBtn').click();
@@ -503,8 +543,38 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(source).toContain('anim.setSequence');
     expect(source).toContain('"duration": 5');
     expect(source).toContain('"delay": 1.5');
+    expect(source).toContain('"repeat": true');
     expect(source).toContain('anim.on("sequenceStepStart"');
     expect(source).toContain('anim.playSequence()');
+  });
+
+  it('edits image changes as ordered sequence nodes', async () => {
+    activeDom = createDemo([
+      { name: 'Bird', src: '/assets/images/bird.svg', thumbnail: '/assets/thumbnails/bird.webp' },
+      { name: 'Hawk', src: '/assets/images/hawk.svg', thumbnail: '/assets/thumbnails/hawk.webp' },
+    ]);
+    await new Promise((resolve) => setImmediate(resolve));
+    const { document, Event } = activeDom.window;
+
+    document.getElementById('addSequenceStepBtn').click();
+    const node = document.querySelector('#sequenceList .sequence-step');
+    const sourceSelect = node.querySelector('[aria-label="Step 1 image source"]');
+
+    expect([...sourceSelect.options].map((option) => option.textContent)).toEqual([
+      'Retain current image', 'Clear image', 'Bird', 'Hawk'
+    ]);
+    sourceSelect.value = '/assets/images/hawk.svg';
+    sourceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(node.dataset.source).toBe('image');
+    expect(document.getElementById('usageCodePopover').textContent).toContain(
+      '"image": "/assets/images/hawk.svg"'
+    );
+
+    sourceSelect.value = '__clear__';
+    sourceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(node.dataset.source).toBe('clear');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"image": null');
   });
 
   it('keeps About concise and routes detailed guidance to documentation', () => {

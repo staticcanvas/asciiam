@@ -1,5 +1,6 @@
 {
   "version": "0.10.0",
+  "builtInModeCount": 26,
   "presets": [
     {
       "name": "heroWave",
@@ -206,6 +207,37 @@
           "radius": 160,
           "strength": 0.7
         }
+      }
+    },
+    {
+      "name": "hoverField",
+      "title": "Hover Field",
+      "mode": "hoverZone",
+      "category": "spatial",
+      "previewable": true,
+      "options": {
+        "mode": "hoverZone",
+        "color": "#72F1B8",
+        "charSet": " .·:+=*#%@",
+        "interactionRadius": 180,
+        "minOpacity": 0.025,
+        "maxOpacity": 0.9
+      }
+    },
+    {
+      "name": "clickPulse",
+      "title": "Click Pulse",
+      "mode": "clickZone",
+      "category": "spatial",
+      "previewable": true,
+      "options": {
+        "mode": "clickZone",
+        "color": "#C04FFF",
+        "charSet": " ·•○●□■△▲◇◆",
+        "interactionRadius": 220,
+        "interactionDuration": 1.1,
+        "minOpacity": 0.02,
+        "maxOpacity": 0.95
       }
     },
     {

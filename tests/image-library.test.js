@@ -24,10 +24,13 @@ describe("local image library", () => {
 
     it("keeps the demo independent of remote image search UI and API calls", () => {
         const page = projectFile("public/index.html");
+        const utilityScript = projectFile("public/js/webutil.js");
 
         expect(page).toContain("public/assets/images");
-        expect(page).toContain('fetch("/assets/backgrounds.json", { cache: "no-store" })');
+        expect(utilityScript).toContain('fetch("/assets/backgrounds.json", { cache: "no-store" })');
         expect(page).not.toContain("image-search");
+        expect(page).toContain('src="./js/webutil.js?v=0.10.0"');
+        expect(utilityScript.length).toBeGreaterThan(1000);
         expect(page).not.toContain("downloadLocation");
         expect(page).not.toContain("image.thumbnail || image.src");
     });

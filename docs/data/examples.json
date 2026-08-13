@@ -1,0 +1,207 @@
+{
+  "examples": [
+    {
+      "id": "minimum",
+      "title": "Minimum",
+      "level": "01",
+      "description": "Use library defaults with only a render target.",
+      "options": {}
+    },
+    {
+      "id": "styled-wave",
+      "title": "Styled wave",
+      "level": "02",
+      "description": "Select a mode, compact glyph ramp, colour, speed, and edge attenuation.",
+      "options": {
+        "mode": "wave",
+        "charSet": " .:-=+*#%@",
+        "color": "#72F1B8",
+        "speed": 0.8,
+        "edgeFade": 0.3
+      }
+    },
+    {
+      "id": "spatial-gradient",
+      "title": "Spatial gradient",
+      "level": "03",
+      "description": "Move a radial mode to an edge anchor and colour it with a stepped gradient.",
+      "options": {
+        "mode": "vortex",
+        "align": "right",
+        "charSet": " .·:+=*#%@",
+        "speed": 0.65,
+        "edgeFade": 0.2,
+        "gradient": {
+          "type": "radial",
+          "center": [0.72, 0.5],
+          "radius": 0.85,
+          "stops": ["#72F1B8", "#4FA8FF", "#C04FFF"],
+          "steps": 3
+        }
+      }
+    },
+    {
+      "id": "hover-zone",
+      "title": "Hover zone",
+      "level": "04",
+      "description": "Move the pointer through the preview to drive a local field.",
+      "options": {
+        "mode": "hoverZone",
+        "charSet": " ·•○●□■△▲◇◆",
+        "color": "#72F1B8",
+        "interactionRadius": 190,
+        "minOpacity": 0.02,
+        "maxOpacity": 0.92
+      }
+    },
+    {
+      "id": "click-zone",
+      "title": "Click zone",
+      "level": "05",
+      "description": "Click or tap the preview to restart an expanding interaction pulse.",
+      "options": {
+        "mode": "clickZone",
+        "charSet": " .oO@",
+        "color": "#C04FFF",
+        "interactionRadius": 240,
+        "interactionDuration": 1.25,
+        "backdrop": {
+          "enabled": true,
+          "opacity": 0.28,
+          "color": "#070809",
+          "placement": "behind"
+        }
+      }
+    },
+    {
+      "id": "sequence",
+      "title": "Sequence",
+      "level": "06",
+      "description": "Run serializable steps with an automatic loop and snapshot morphs.",
+      "options": {
+        "mode": "ripple",
+        "color": "#4FA8FF",
+        "sequence": [
+          {
+            "id": "ripple",
+            "mode": "ripple",
+            "duration": 3,
+            "transition": { "type": "cut" }
+          },
+          {
+            "id": "bloom",
+            "mode": "echoBloom",
+            "duration": 3,
+            "options": { "color": "#72F1B8", "align": "bottom-right" },
+            "transition": { "type": "morph", "duration": 0.6 }
+          },
+          {
+            "id": "vortex",
+            "mode": "vortex",
+            "duration": 3,
+            "options": { "color": "#C04FFF", "align": "top-left" },
+            "transition": { "type": "morph", "duration": 0.6 }
+          }
+        ],
+        "sequenceOptions": {
+          "loop": true,
+          "autoplay": true
+        }
+      }
+    },
+    {
+      "id": "image-source",
+      "title": "Image source",
+      "level": "07",
+      "description": "Sample a bundled documentation image and animate its glyph grid.",
+      "options": {
+        "mode": "ripple",
+        "image": "../images/domitian-tunnel-5122424_1920.jpg",
+        "fit": "contain",
+        "imageScale": 0.72,
+        "imageFov": 0.85,
+        "imageLuminance": "auto",
+        "imageChars": " .:-=+*#%@",
+        "colorFromImage": true,
+        "align": "center"
+      }
+    },
+    {
+      "id": "complete",
+      "title": "Complete serializable config",
+      "level": "08",
+      "description": "Inspect the complete JSON-safe option surface with explicit defaults and representative optional values.",
+      "options": {
+        "mode": "current",
+        "quality": "balanced",
+        "renderer": "auto",
+        "preferGPU": true,
+        "powerPreference": "high-performance",
+        "desynchronized": true,
+        "charSet": " .:-=+*#%@",
+        "fontFamily": "'IBM Plex Mono', ui-monospace, Consolas, monospace",
+        "fontSize": 14,
+        "density": 1,
+        "color": "#4FA8FF",
+        "gradient": null,
+        "background": "transparent",
+        "backdrop": {
+          "enabled": true,
+          "opacity": 0.18,
+          "color": "#070809",
+          "placement": "behind",
+          "gradient": null
+        },
+        "speed": 1,
+        "direction": "horizontal",
+        "revealDirection": "center",
+        "align": "center",
+        "minOpacity": 0.05,
+        "maxOpacity": 0.85,
+        "boldOnPeak": true,
+        "loop": true,
+        "edgeFade": 0.12,
+        "maxDPR": 2,
+        "targetFPS": null,
+        "showStats": false,
+        "fontLevels": 5,
+        "alphaLevels": 32,
+        "useGlyphAtlas": false,
+        "cacheStaticWave": false,
+        "respectReducedMotion": true,
+        "ambient": 0.35,
+        "bandWidth": 0.14,
+        "trail": 0,
+        "trailColor": "#070809",
+        "pulse": null,
+        "colorAnimation": null,
+        "cursor": null,
+        "interactionRadius": 180,
+        "interactionDuration": 1.1,
+        "snowDensity": 0.02,
+        "sparkleDensity": 0.05,
+        "fireDensity": 0.035,
+        "starfieldDensity": 0.018,
+        "orbitDensity": 0.014,
+        "glitchIntensity": 0.32,
+        "typewriterDuration": 4.5,
+        "image": null,
+        "imageChars": " .:-=+*#%@",
+        "fit": "cover",
+        "imageScale": 1,
+        "imageScaleX": 1,
+        "imageScaleY": 1,
+        "imageFov": 1,
+        "imageLuminance": "auto",
+        "colorFromImage": false,
+        "animateImageMask": true,
+        "imageMaskMode": "waveSweep",
+        "imageAnimationRange": null,
+        "animateImageFrames": true,
+        "imageFrameRate": 12,
+        "sequence": null,
+        "sequenceOptions": null
+      }
+    }
+  ]
+}

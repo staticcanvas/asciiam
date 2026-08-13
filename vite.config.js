@@ -58,6 +58,20 @@ export default defineConfig({
           plugins: [terser({ format: { comments: /^!/ }, compress: true, mangle: true })],
         },
         {
+          format: 'umd',
+          name: 'asciiam',
+          dir: bundleDist,
+          entryFileNames: `${packageName}.cjs`,
+          exports: 'default',
+          plugins: [terser({ format: { comments: true, preamble: banner } })],
+        },
+        {
+          format: 'es',
+          dir: bundleDist,
+          entryFileNames: `${packageName}.mjs`,
+          plugins: [terser({ format: { comments: true, preamble: banner } })],
+        },
+        {
           format: 'es',
           dir: bundleDist,
           entryFileNames: `${packageName}.esm.js`,
@@ -89,6 +103,7 @@ export default defineConfig({
         },
         { src: 'src', dest: packageDist },
         { src: 'branding', dest: packageDist },
+        { src: 'LICENSE', dest: packageDist },
         { src: 'jsr.jsonc', dest: packageDist },
       ],
       hook: 'writeBundle',

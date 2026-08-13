@@ -4,17 +4,17 @@
 
 [![gitlab-license](https://img.shields.io/gitlab/license/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![gitlab-pipeline](https://img.shields.io/gitlab/pipeline-status/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![gitlab-issues](https://img.shields.io/gitlab/issues/open/staticcanvas/asciiam?style=flat-square&logo=gitlab&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://gitlab.com/staticcanvas/asciiam) [![jsr-version](https://img.shields.io/jsr/v/%40staticcanvas/asciiam?style=flat-square&logo=jsr&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://jsr.io/%40staticcanvas/asciiam) [![jsdelivr-hitsperweek](https://img.shields.io/jsdelivr/npm/hw/asciiam?style=flat-square&logo=jsdelivr&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://cdn.jsdelivr.net/package/npm/asciiam) [![npm-sizeMin](https://img.shields.io/bundlephobia/min/@staticcanvas/asciiam?style=flat-square&logo=npm&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://www.npmjs.com/package/asciiam) [![npm-sizeZipped](https://img.shields.io/bundlephobia/minzip/@staticcanvas/asciiam?style=flat-square&logo=npm&labelColor=%231c1c1c&color=%23005fff&logoColor=%2300afff)](https://www.npmjs.com/package/asciiam)
 
-## About this project
+## Purpose
 
 A dependency-free canvas engine for procedural ASCII media, hero image regions, section
 backgrounds, splash pages, and image-to-ASCII reveals. WebGL2 is selected first by
 default, with Canvas 2D available as an automatic fallback or explicit CPU renderer.
 
-## Feature list
+## Capabilities
 
 - WebGL2 glyph rendering with instanced quad batching and Canvas 2D fallback.
 - Developer-selectable `auto`, `webgl2`, and `canvas2d` rendering policies.
-- Seventeen built-in animation modes plus registered and per-instance custom cells.
+- Twenty-six built-in animation modes plus registered and per-instance custom cells.
 - Ordered animation sequences with delays, durations, looping, interruption, callbacks,
   and lifecycle events.
 - Image-to-ASCII sampling with cover/contain fitting, field-of-view controls, sampled
@@ -43,7 +43,7 @@ Version sources that must remain aligned:
 | `README.md`              | Repository-facing version and release summary.            |
 | `public/index.html`      | Web utility version labels and install badges.            |
 
-## Package Repositories and installation
+## Install
 
 Install the package from npm:
 
@@ -73,9 +73,14 @@ Use a pinned browser bundle from jsDelivr when a package manager is not used:
 - `public/index.html` — interactive static demo with live controls for every mode/option.
 - `docs/` — Hugo source for the homepage, guides, gallery, API reference, changelog,
   and version pages.
-- `docs/static-sot-template.html` — structural design reference for Hugo layouts.
-- `docs/static/css/docs.css` — readable SOT-derived documentation stylesheet with
+- `docs/static-sot-template.html` — visual-design provenance retained from the original
+  documentation prototype; it is not a build input.
+- `docs/static/css/docs.css` — authored documentation stylesheet with
   web utility color tokens and compatibility fallbacks.
+- `architecture/` — maintainer-facing runtime, documentation, and change-workflow
+  architecture.
+- `project_docs_audit.md` — dated documentation audit, completed corrections, and
+  follow-up risks.
 - `docs/assets/images/` — Hugo pipeline source directory for future gallery images.
 - `scripts/generate-docs-data.js` — generates gallery data and copies the current ESM
   browser bundle and brand asset into the Hugo static tree.
@@ -143,16 +148,27 @@ site build publishes the same output under `public/docs`. Documentation asset UR
 relative, so the output works at `/docs/` and beneath a project path such as
 `/asciiam/docs/`.
 
+Documentation search is available with `Ctrl+K`, `Command+K`, or `/`. The static Hugo
+index ranks page titles, descriptions, tags, keywords, and body text without an external
+search service. Common vocabulary aliases connect terms such as setup/installation,
+charset/glyphs, sequence/timeline, morph/cross-fade, and renderer/GPU. Result titles and
+descriptions highlight literal query words, while metadata tags identify matched topics.
+
 ### Documentation map
 
 | Destination                                                | Owns                                                                                 |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | [Getting started](docs/content/getting-started.md)         | Installation, initialization, renderer selection, and lifecycle.                     |
+| [Integration and lifecycle](docs/content/guides/integration.md) | Target ownership, application teardown, accessibility, and custom-mode boundaries. |
 | [Web utility workflow](docs/content/guides/web-utility.md) | Controls, previews, validation, persistence, and generated configuration.            |
 | [Rendering](docs/content/guides/rendering.md)              | WebGL2, Canvas 2D, quality tiers, frame rate, and multi-instance behavior.           |
+| [Animation modes](docs/content/guides/animations.md)       | Built-in algorithms, mode changes, image-backed behavior, and custom modes.          |
+| [Character sets](docs/content/guides/character-sets.md)    | Default glyph inventory, ordered ramps, symbolic sets, and custom strings.           |
 | [Images](docs/content/guides/images.md)                    | Image-to-ASCII sampling, fitting, masks, and RGB animation ranges.                   |
 | [Sequences](docs/content/guides/sequences.md)              | Ordered steps, staggering, interruption, callbacks, and events.                      |
+| [Usage examples](docs/content/examples/_index.md)          | Live minimum-to-complete configurations with reset and web-utility transfer.         |
 | [API reference](docs/content/api/_index.md)                | Constructor, options, methods, events, renderer information, and callback contracts. |
+| [Attributions](docs/content/attributions.md)               | Icon, SVG, map, media-provider, registry, and delivery references.                    |
 
 The web utility About view intentionally contains only product orientation, installation,
 and links to these references. Detailed operational material belongs in Hugo so it has
@@ -162,6 +178,11 @@ The preset gallery is generated from `asciiam.presets`. It creates renderers onl
 the viewport, retains no more than six concurrent preview instances, destroys off-screen
 instances after a delay, and supports copying a configuration or opening it in the web
 utility through `?preset=<name>`.
+
+The usage playground keeps one renderer active. It accepts JSON-safe options, replaces the
+instance only after valid input, and transfers edited configurations to the web utility
+through a URL-safe `config` value. It imports the documentation bundle, so local examples do
+not depend on npm publication or CDN availability.
 
 ## Usage and export formats
 
@@ -205,13 +226,15 @@ constructor:
 
 | Export                | File or specifier         | Intended use                                                              |
 | --------------------- | ------------------------- | ------------------------------------------------------------------------- |
-| Package ESM           | `@staticcanvas/asciiam`   | Bundlers and ESM-aware runtimes; resolves to `dist/asciiam.esm.js`.       |
+| Package ESM           | `@staticcanvas/asciiam`   | Bundlers and ESM-aware runtimes; resolves to `dist/asciiam.mjs`.          |
+| Browser ESM           | `dist/asciiam.mjs`        | Canonical native module artifact.                                         |
 | Browser ESM           | `dist/asciiam.esm.js`     | Native module script with readable source.                                |
 | Browser ESM, minified | `dist/asciiam.esm.min.js` | Native module script for deployment.                                      |
+| CommonJS              | `dist/asciiam.cjs`        | Node/CommonJS entry used by `require('@staticcanvas/asciiam')`.           |
 | UMD                   | `dist/asciiam.js`         | Classic script with readable source and the global `asciiam` constructor. |
 | UMD, minified         | `dist/asciiam.min.js`     | Classic script for deployment and the default jsDelivr/unpkg entry.       |
 
-Source maps are emitted beside all four browser bundles for debugging.
+Source maps are emitted beside each generated bundle for debugging.
 For CDN delivery, replace the local browser path with a versioned jsDelivr URL such
 as `https://cdn.jsdelivr.net/npm/@staticcanvas/asciiam@0.10.0/dist/asciiam.min.js` or
 the matching `asciiam.esm.min.js` path for a module script.
@@ -351,6 +374,8 @@ new asciiam('#hero', { ...asciiam.presets.heroWave, color: '#C04FFF' });
 | `glitch`     | Dense timed character displacement with moving scan-band corruption.                                                           |
 | `typewriter` | Deterministic row-major character reveal with a visible cursor.                                                                |
 | `orbit`      | Sparse glyph particles following elliptical paths around the selected origin.                                                  |
+| `hoverZone`  | Dense local field that follows pointer movement or coordinates supplied through `setCursor()`.                                |
+| `clickZone`  | Timed expanding field triggered by pointer/touch press or `triggerInteraction()`.                                               |
 | `image`      | Converts a supplied image into an ASCII grid (brightness → character ramp), with the `wave` reveal optionally animated on top. |
 
 Switch modes live: `anim.setMode('ripple')`.
@@ -368,7 +393,7 @@ new asciiam(target, {
   color: '#4FA8FF',
   gradient: null, // see Gradients below
   background: 'transparent',
-  backdrop: { enabled: true, opacity: 0.5, color: '#0A0C10' }, // opacity: 0..1
+  backdrop: { enabled: true, opacity: 0.5, color: '#0A0C10', placement: 'behind' }, // opacity: 0..1
   speed: 1,
   direction: 'horizontal', // wave mode: horizontal | vertical | diagonal
   revealDirection: 'center', // horizontal, vertical, diagonal, center-out, or edges-in
@@ -403,8 +428,14 @@ new asciiam(target, {
   orbitDensity: 0.014, // active orbiting glyph count as a fraction of grid cells
   glitchIntensity: 0.32, // 0..1, approximate fraction of displaced scan rows
   typewriterDuration: 4.5, // seconds to reveal the complete grid
+  interactionRadius: 180, // CSS-pixel extent for hover and click zones
+  interactionDuration: 1.1, // click-zone pulse duration in seconds
 });
 ```
+
+Backdrop `placement` defaults to `behind`. Set `placement: 'over'` to composite the
+layer after glyph rendering; an overlaid backdrop with `opacity: 1` completely covers
+the animation. Both renderers clamp opacity to the inclusive range from `0` through `1`.
 
 ### Gradients
 
@@ -424,9 +455,37 @@ gradient: {
 cached canvas gradient. `linear` and `radial` use the corresponding Canvas 2D
 gradient geometry. Two steps are used by default; the demo exposes 1–6 steps.
 
-Built-in character ramps are available as `asciiam.CHARACTER_SETS`, including
-`density`, `extended`, `blocks`, `binary`, `braille`, `japanese`, and `punctuation`.
-You can also provide any string as `charSet` or `imageChars`.
+### Character sets
+
+The default value for both `charSet` and `imageChars` is
+`asciiam.CHARACTER_SETS.asciiExtended`. It contains the 95 printable ASCII code points
+from U+0020 through U+007E followed by the 95 Latin-1 code points from U+00A1 through
+U+00FF. This 190-character default is ordered by code point and favors glyph variety;
+it is not a measured light-to-dark ramp.
+
+Use `density`, `extended`, `technical`, or another deliberately ordered set when image
+luminance should map predictably from a leading blank to a dense final glyph.
+
+| Set | Characters or composition | Use |
+| --- | --- | --- |
+| `density` | ` .:-=+*#%@` | Compact luminance ramp. |
+| `ascii` | Printable ASCII, 95 characters | Broad ASCII variation. |
+| `asciiExtended` | Printable ASCII plus Latin-1, 190 characters | Default broad Latin inventory. |
+| `extended` | Hand-ordered photographic ramp | Higher-step image conversion. |
+| `minimal` | ` .oO@` | Portable five-level density. |
+| `technical` | ` .·:+=*#%@` | Technical display density. |
+| `geometric` | Circular, square, triangular, and diamond forms | Shape transitions and interaction zones. |
+| `circuit` | ` ·-+=oO0#@` | Circuit and node textures. |
+| `waves` | ` ~≈≋∿` | Flowing fields. |
+| `terminal` | Binary digits, brackets, operators, and density marks | Terminal textures. |
+
+Additional included sets cover alphanumeric text, letter case, symbols, box drawing,
+arrows, mathematics, blocks, binary, Braille, Katakana, and punctuation. Font coverage
+determines whether non-ASCII glyphs render correctly. You can provide any string as
+`charSet` or `imageChars`; the first character maps to the lowest intensity.
+
+See the [character-set guide](docs/content/guides/character-sets.md) for the complete
+inventory and ordering rules.
 
 ### Image support
 
@@ -484,8 +543,6 @@ try {
   URL.revokeObjectURL(objectUrl);
 }
 ```
-
-Built once per frame (not per character), so it's effectively free performance-wise.
 
 ### Performance
 
@@ -551,6 +608,19 @@ Animation sequences use the same renderer and canvas. Advancing a step changes m
 step-level options; it does not create another animation instance or add work to the
 per-cell drawing loop.
 
+### Interactive zones and alignment
+
+`hoverZone` reads pointer coordinates over the target or coordinates supplied through
+`setCursor()`. `clickZone` reacts to pointer and touch presses; applications can start
+the same pulse through `triggerInteraction(x, y)`. `interactionRadius` controls the
+field extent and `interactionDuration` controls click-pulse time.
+
+`align` accepts nine anchors: `top-left`, `top`, `top-right`, `left`, `center`, `right`,
+`bottom-left`, `bottom`, and `bottom-right`. It affects current, ripple, vortex, plasma,
+iris, echo bloom, starfield, orbit, legacy radial image masks, and a coordinate-free
+`triggerInteraction()` call. Directional and pointer-defined modes ignore fixed-origin
+alignment where it has no meaningful effect.
+
 Run the JavaScript-side dense-renderer benchmark with configurable dimensions, frame
 count, and concurrent instance count:
 
@@ -570,11 +640,11 @@ wall-clock seconds and are intentionally independent of the mode's `speed` optio
 
 ```js
 const sequence = [
-  { mode: 'ripple', duration: 5 },
-  { mode: 'fadeOut', duration: 2, options: { revealDirection: 'center' } },
+  { mode: 'ripple', image: './media/first.webp', duration: 5 },
+  { mode: 'fadeOut', image: './media/second.webp', duration: 5, repeat: false, options: { revealDirection: 'center' } },
   { mode: 'fadeIn', duration: 2, delay: 0.4 },
   { mode: 'ripple', duration: 5, options: { speed: 1.4 } },
-  { mode: 'fadeOut', duration: 2 },
+  { mode: 'fadeOut', image: null, duration: 2 },
 ];
 
 anim.setSequence(sequence, {
@@ -591,6 +661,16 @@ anim.setSequence(sequence, {
 });
 anim.playSequence();
 ```
+
+`repeat: true` restarts a finite mode within the active step's duration. It defaults
+to `false`, so reveal and typewriter modes reach their final frame and hold it. This is
+independent of sequence-level `loop`, which restarts the complete ordered sequence.
+
+A node-level `image` string is decoded before that node's duration starts. Omit the
+field to retain the current source or use `image: null` to clear it. `imageOptions`
+accepts the same decode hints as `setImage()`. A failed node image pauses playback,
+runs `onError`, and emits `sequenceStepError`; `getSequenceState().loading` distinguishes
+image decoding from a configured delay.
 
 Steps may also define `onStart`, `onComplete`, and `onInterrupt`. Callback failures are
 caught so they cannot stop the shared render scheduler. The same lifecycle is available
@@ -622,10 +702,14 @@ anim.clearSequence();
 anim.setRenderer('webgl2'); // live backend switch; returns the resolved backend
 anim.getRendererInfo(); // requested and resolved backend
 anim.setImage(url); // returns a Promise, resolves with the loaded Image
+anim.clearImage(); // cancels pending image work and returns to procedural source data
+anim.setCursor(x, y); // drives cursor and hover-zone coordinates; pass null to clear
+anim.triggerInteraction(x, y); // starts clickZone; omit coordinates to use align
 anim.attachStats(el); // el.textContent gets "N fps · WxH cells · N drawn" every ~500ms
 asciiam.isSupported(); // static: feature-detect before constructing
 asciiam.presets; // static: named preset configs
 asciiam.QUALITY; // static: quality tier definitions
+asciiam.BUILT_IN_MODES; // static: canonical built-in mode names
 ```
 
 Lifecycle events are `ready` (emitted on the microtask after construction), `resize`,
@@ -635,14 +719,14 @@ The `onReady` option is available when a constructor callback is more convenient
 
 ## Behavior you should know about
 
-- **Auto-pauses** when the element scrolls off-screen (`IntersectionObserver`) or the
+- Pauses when the element scrolls off-screen (`IntersectionObserver`) or the
   tab is hidden (`visibilitychange`) — no manual wiring needed.
-- **Respects `prefers-reduced-motion`** by default: renders a single static frame
+- Respects `prefers-reduced-motion` by default: renders a single static frame
   instead of animating. Set `respectReducedMotion: false` to opt out.
-- **Fails safely**: if WebGL2 is unavailable, the renderer falls back to Canvas 2D. If
+- If WebGL2 is unavailable, the renderer falls back to Canvas 2D. If
   neither backend is available, the instance becomes a no-op instead of throwing.
-- **Warns once** if the container has ~zero height/width — the most common integration
-  mistake (a div with no explicit height collapses the grid to nothing).
+- Warns once if the container has approximately zero height or width. A container
+  without an explicit or inherited size produces an empty grid.
 - Re-measures its character grid once web fonts finish loading, in case a custom font
   was still loading at construction time.
 
@@ -656,16 +740,6 @@ always-visible for pause detection).
 ## Known limitations
 
 See `pending-tasks.md` for the current gap list and rough priority.
-
-## Installation
-
-```bash
-# shell
-npm install @staticcanvas/asciiam
-```
-
-Browser builds can also be loaded from jsDelivr or unpkg using a pinned package
-version. See Usage and export formats for the matching ESM and UMD filenames.
 
 ## Links
 
@@ -708,11 +782,38 @@ git commit -m "feat: add ASCII media change"
 git push origin feature/ascii-media-change
 ```
 
-## Acknowledgments
+## Maintainer documentation
+
+- [Architecture index](architecture/README.md) — component boundaries and source-of-truth map.
+- [Runtime architecture](architecture/runtime.md) — scheduling, renderers, image sampling,
+  sequences, caches, and lifecycle invariants.
+- [Documentation architecture](architecture/documentation.md) — Hugo source, generated output,
+  navigation, and build ownership.
+- [Maintenance workflow](architecture/maintenance.md) — change paths and verification matrix.
+- [Documentation audit](project_docs_audit.md) — audited scope, corrections, and open risks.
+
+## Third-party services
 
 - [jsDelivr](https://www.jsdelivr.com/) and [unpkg](https://unpkg.com/) provide package CDN delivery.
 - [npm](https://www.npmjs.com/) and [JSR](https://jsr.io/) provide package registries.
 - [Shields.io](https://shields.io/) provides repository badge generation.
+
+## Asset and icon attributions
+
+- Documentation navigation embeds selected [Lucide](https://lucide.dev/) SVG paths under
+  the ISC License; Feather-derived designs retain their MIT notice.
+- `public/assets/images/bird-silhouette.svg` is the
+  [Bird Shape vector from SVG Repo](https://www.svgrepo.com/svg/23736/bird-shape), identified
+  by SVG Repo as CC0.
+- `public/assets/images/earth-landmask-256-slow.gif` uses a globe land-mask source associated
+  with [PAT](https://ian.macky.net/pat/map/globe.html), whose maps and generating scripts are
+  public domain.
+- Demonstration photographs include files sourced from Pexels and Pixabay. Creator/provider
+  identifiers remain in filenames where available; verify individual source terms before
+  redistributing those media files independently.
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for redistributed license notices and
+the [documentation attribution page](docs/content/attributions.md) for the maintained source map.
 
 ## API and configuration reference
 
@@ -733,11 +834,11 @@ git push origin feature/ascii-media-change
 | `color`                                             | CSS color                                  | `#4FA8FF`                   | Sets the fallback glyph color.                                     |
 | `gradient`                                          | `object \| null`                           | `null`                      | Sets a cached linear, radial, or cubic glyph gradient.             |
 | `background`                                        | CSS color                                  | `transparent`               | Clears to a solid canvas background.                               |
-| `backdrop`                                          | `object \| null`                           | `null`                      | Draws a solid or gradient layer before glyphs.                     |
+| `backdrop`                                          | `object \| null`                           | `null`                      | Draws a solid or gradient layer behind or over glyphs.             |
 | `speed`                                             | `number`                                   | `1`                         | Scales the animation timeline once for every mode.                 |
 | `direction`                                         | `horizontal \| vertical \| diagonal`       | `horizontal`                | Sets wave travel direction.                                        |
 | `revealDirection`                                   | `left-to-right \| right-to-left \| center` | `center`                    | Sets fade sequencing.                                              |
-| `align`                                             | spatial alignment                          | `center`                    | Sets the origin used by spatial modes.                             |
+| `align`                                             | nine-position spatial alignment            | `center`                    | Sets the origin used by compatible spatial modes.                  |
 | `minOpacity` / `maxOpacity`                         | `number`                                   | `0.05` / `0.85`             | Sets glyph opacity bounds.                                         |
 | `boldOnPeak` / `loop`                               | `boolean`                                  | `true` / `true`             | Controls high-intensity weight and timeline repetition.            |
 | `edgeFade`                                          | `number`                                   | `0`                         | Applies a cached edge opacity falloff.                             |
@@ -745,6 +846,7 @@ git push origin feature/ascii-media-change
 | `pulse`                                             | `object \| null`                           | `null`                      | Applies one frame-level opacity multiplier.                        |
 | `colorAnimation`                                    | `object \| null`                           | `null`                      | Applies `hueRotate` or `breathe` color animation.                  |
 | `cursor`                                            | `object \| null`                           | `null`                      | Boosts opacity around pointer or supplied coordinates.             |
+| `interactionRadius` / `interactionDuration`         | `number` / seconds                         | `180` / `1.1`               | Controls hover-zone extent and click-zone timing.                  |
 | `image`                                             | `string \| null`                           | `null`                      | Loads an initial image URL.                                        |
 | `fit`                                               | `cover \| contain`                         | `cover`                     | Crops or letterboxes the sample without stretching.                |
 | `imageScale` / `imageScaleX` / `imageScaleY` / `imageFov` | `number`                             | `1`                         | Controls source zoom, centered output width/height, and visible fraction. |
@@ -765,6 +867,7 @@ git push origin feature/ascii-media-change
 | `onReady` / `onImageError`                          | `function \| null`                         | `null`                      | Handles initial readiness or image failure.                        |
 | `customCell`                                        | `function \| null`                         | `null`                      | Supplies cells for `custom` mode.                                  |
 | `sequence` / `sequenceOptions`                      | `array \| object`                          | `null`                      | Configures ordered, optionally looping animation steps.            |
+| `sequence[].repeat`                                 | `boolean`                                  | `false`                     | Repeats a finite mode within the active step duration.              |
 | `start()` / `stop()` / `destroy()`                  | method                                     | —                           | Controls and disposes the renderer lifecycle.                      |
 | `setMode(mode)`                                     | method                                     | —                           | Selects a mode and restarts its timeline.                          |
 | `setOption(key, value)`                             | method                                     | —                           | Updates an option and dependent cached state.                      |
@@ -777,5 +880,6 @@ git push origin feature/ascii-media-change
 | `setRenderer(renderer)`                             | method                                     | —                           | Replaces the presentation backend while retaining instance state.  |
 | `getRendererInfo()`                                 | method                                     | —                           | Reports requested and resolved renderer information.               |
 | `setCursor(x, y)`                                   | method                                     | —                           | Sets or clears cursor-reactive coordinates.                        |
+| `triggerInteraction(x?, y?)`                        | method                                     | aligned origin              | Starts a click-zone pulse.                                         |
 | `attachStats(element)`                              | method                                     | —                           | Selects the statistics output element.                             |
 | `on()` / `off()`                                    | method                                     | —                           | Subscribes or unsubscribes lifecycle listeners.                    |

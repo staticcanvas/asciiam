@@ -10,6 +10,7 @@ const supportedExtensions = new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", "
 
 await mkdir(thumbnailDirectory, { recursive: true });
 
+/** Returns the first available ImageMagick executable without invoking a shell. */
 function imageMagickCommand() {
     for (const command of ["magick", "convert"]) {
         const result = spawnSync(command, ["-version"], { stdio: "ignore" });
@@ -20,6 +21,7 @@ function imageMagickCommand() {
 
 const imageMagick = imageMagickCommand();
 
+/** Creates or reuses one bounded static preview for an image-library source. */
 async function ensureThumbnail(fileName) {
     const source = resolve(backgroundDirectory, fileName);
     const thumbnailName = `${fileName}.webp`;

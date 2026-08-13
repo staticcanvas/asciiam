@@ -1,0 +1,15 @@
+{{- $contentPages := where site.Pages "Kind" "in" (slice "page" "section") -}}
+{{- $pages := where $contentPages "Params.searchExclude" "ne" true -}}
+[
+{{- range $index, $page := $pages -}}
+  {{- if $index }},{{ end -}}
+  {{- dict
+    "title" $page.Title
+    "description" $page.Description
+    "url" (strings.TrimPrefix "/" $page.RelPermalink)
+    "tags" ($page.Params.tags | default slice)
+    "keywords" ($page.Params.keywords | default slice)
+    "text" ($page.Plain | plainify | htmlUnescape)
+    | jsonify -}}
+{{- end -}}
+]

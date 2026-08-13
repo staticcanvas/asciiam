@@ -2,6 +2,10 @@
 title: Renderers and performance
 description: Select WebGL2 or Canvas 2D and control quality, frame rate, memory, and multi-instance behavior.
 weight: 10
+date: 2026-08-13
+lastmod: 2026-08-13
+tags: [WebGL2, Canvas 2D, GPU, renderer, performance, quality]
+keywords: [WebGL2 ASCII renderer, GPU rendering, Canvas 2D fallback, renderer selection, quality tiers, animation performance, frame rate]
 ---
 
 asciiam separates animation-state calculation from presentation. WebGL2 uploads one glyph instance buffer and draws the visible glyphs as instanced quads. Canvas 2D uses cached glyph atlases and mode-specific shortcuts where possible.

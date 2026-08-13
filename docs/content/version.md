@@ -2,6 +2,10 @@
 title: Version and compatibility
 description: Current package version, artifacts, runtime requirements, and compatibility policy.
 weight: 60
+date: 2026-08-13
+lastmod: 2026-08-13
+tags: [version, compatibility, artifacts, package, ESM, CommonJS]
+keywords: [asciiam version, browser compatibility, package exports, ESM bundle, mjs module, CommonJS cjs, UMD bundle]
 ---
 
 The current documented package version is `0.10.0`.
@@ -10,8 +14,10 @@ The current documented package version is `0.10.0`.
 
 | Artifact | Module format | Source map |
 | --- | --- | --- |
+| `asciiam.mjs` | ESM package entry | Yes |
 | `asciiam.esm.js` | ESM | Yes |
 | `asciiam.esm.min.js` | ESM, minified | Yes |
+| `asciiam.cjs` | CommonJS package entry | Yes |
 | `asciiam.js` | UMD | Yes |
 | `asciiam.min.js` | UMD, minified | Yes |
 | `src/asciiam.d.ts` | TypeScript declarations | Not applicable |

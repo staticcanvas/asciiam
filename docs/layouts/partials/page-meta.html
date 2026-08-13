@@ -1,0 +1,18 @@
+{{- with .File -}}
+{{- $contentPath := printf "docs/content/%s" .Path -}}
+<aside class="page-meta" aria-label="Page metadata">
+  <div class="page-meta-summary">
+    {{- with $.Lastmod }}<span>Updated <time datetime="{{ .Format "2006-01-02" }}">{{ .Format "2 January 2006" }}</time></span>{{ end -}}
+    {{- with $.Params.tags }}
+    <ul class="page-tags" aria-label="Tags">
+      {{- range . }}<li>{{ . }}</li>{{ end -}}
+    </ul>
+    {{- end }}
+  </div>
+  <nav class="page-edit-links" aria-label="Edit this page">
+    <span>Edit this page</span>
+    <a href="{{ site.Params.gitlabURL }}/-/edit/{{ site.Params.editBranch }}/{{ $contentPath }}" rel="noopener noreferrer">GitLab</a>
+    <a href="{{ site.Params.githubURL }}/edit/{{ site.Params.editBranch }}/{{ $contentPath }}" rel="noopener noreferrer">GitHub</a>
+  </nav>
+</aside>
+{{- end -}}

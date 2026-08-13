@@ -2,6 +2,10 @@
 title: Web utility workflow
 description: Configure, validate, export, and persist asciiam settings in the browser utility.
 weight: 50
+date: 2026-08-13
+lastmod: 2026-08-13
+tags: [web utility, configuration, editor, export, presets, local storage]
+keywords: [asciiam web utility, animation configurator, preset editor, generated code, saved settings, image library, sequence editor]
 ---
 
 The web utility is an authoring surface for asciiam option objects; detailed runtime behavior remains defined by the package API.
@@ -10,7 +14,17 @@ The web utility is an authoring surface for asciiam option objects; detailed run
 
 Start with a preset or animation mode, then adjust renderer, quality, character density, spatial origin, motion, color, backdrop, and image controls. Undo and Redo operate on the current browser session. Reset restores utility defaults without deleting named presets.
 
-The controls are grouped by frequency. Renderer, quality, mode, preset, and output belong to the primary workflow. Image sampling, gradient stops, mask ranges, sequences, diagnostics, and persistence controls are advanced configuration.
+The Character set control includes the documented `asciiExtended` default, ordered density ramps, symbolic palettes, and a custom string editor. Hover Zone and Click Zone expose radius and click-duration controls in Motion. Align provides nine spatial anchors.
+
+The dock keeps Preset, Sequence, Mode, Motion, Color, Reset, Image, and Code directly
+available. Advanced contains lower-frequency quality, character-set, alignment,
+backdrop, theme, and history controls. Reset intentionally remains outside Advanced.
+Documentation, About, and the FPS switch form one level action row on the stage.
+
+The sequence editor is a horizontally ordered node flow. Each node edits its animation,
+image-source action, duration, stagger, repeat policy, transition, and JSON option
+overrides. Nodes can retain or clear the current image, or load an included image;
+reordering changes playback order immediately.
 
 ## Preview presentation types
 
@@ -49,6 +63,8 @@ animation.start();
 
 Call `destroy()` when removing the target. This releases observers, subscriptions, presentation resources, and an owned canvas.
 
+The [Usage examples]({{< relref "/examples" >}}) workbench provides a second authoring path. Its **View in web utility** action sends the current JSON-safe options through a base64url-encoded `config` query value. The utility applies that configuration after defaults and locally restored settings, then exposes it as a custom composition. Invalid or non-object values are ignored.
+
 ## Persistence and local data
 
 | Data | Persistence |
@@ -66,6 +82,7 @@ Call `destroy()` when removing the target. This releases observers, subscription
 - Use [Renderers and performance]({{< relref "/guides/rendering" >}}) for backend and quality behavior.
 - Use [Images and colour-range animation]({{< relref "/guides/images" >}}) for sampled media.
 - Use [Animation sequences]({{< relref "/guides/sequences" >}}) for staggered and interruptible flows.
+- Use [Usage examples]({{< relref "/examples" >}}) for editable minimum-to-complete configurations.
 - Use the [API reference]({{< relref "/api" >}}) for option and method contracts.
 
 ## API reference
@@ -80,6 +97,9 @@ Call `destroy()` when removing the target. This releases observers, subscription
 | Image | `setImage()`, image options | Samples a local or remote image into the glyph grid. |
 | Sequence | `setSequence()`, sequence methods | Configures ordered animation steps. |
 | Code | constructor options | Serializes the current supported configuration. |
+| `config` URL value | JSON-safe constructor options | Imports a documentation example without depending on npm or a CDN. |
+
+Backdrop placement is explicit. `behind` draws before glyphs. `over` composites after glyphs, so opacity `1` fully covers the animation. The range and exact numeric input both accept the inclusive interval from `0` through `1`.
 
 The Image popover exposes centered uniform, horizontal, and vertical scaling; field of view; silhouette-aware luminance mapping; animated-image playback and sample rate; sampled color; and an optional RGB animation range. The global Mode popover remains the animation selector after an image is loaded.
 

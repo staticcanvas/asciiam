@@ -5,9 +5,15 @@ title = "asciiam documentation"
 enableRobotsTXT = true
 disableKinds = ["taxonomy", "term", "RSS"]
 
+[outputs]
+home = ["HTML", "JSON"]
+
 [params]
 description = "Reference documentation for the asciiam ASCII animation engine."
 repositoryURL = "https://gitlab.com/staticcanvas/asciiam"
+gitlabURL = "https://gitlab.com/staticcanvas/asciiam"
+githubURL = "https://github.com/staticcanvas/asciiam"
+editBranch = "main"
 packageURL = "https://www.npmjs.com/package/@staticcanvas/asciiam"
 
 [markup]
@@ -22,26 +28,100 @@ packageURL = "https://www.npmjs.com/package/@staticcanvas/asciiam"
 
 [menus]
   [[menus.main]]
-  name = "Start"
+  name = "Getting started"
   pageRef = "/getting-started"
   weight = 10
+  [menus.main.params]
+  icon = "play-circle"
   [[menus.main]]
   name = "Guides"
+  identifier = "guides"
   pageRef = "/guides"
   weight = 20
+  [menus.main.params]
+  icon = "book-open"
+  [[menus.main]]
+  name = "Renderers and performance"
+  parent = "guides"
+  pageRef = "/guides/rendering"
+  weight = 10
+  [menus.main.params]
+  icon = "gauge"
+  [[menus.main]]
+  name = "Integration and lifecycle"
+  parent = "guides"
+  pageRef = "/guides/integration"
+  weight = 15
+  [menus.main.params]
+  icon = "workflow"
+  [[menus.main]]
+  name = "Animation modes"
+  parent = "guides"
+  pageRef = "/guides/animations"
+  weight = 20
+  [menus.main.params]
+  icon = "sparkles"
+  [[menus.main]]
+  name = "Character sets"
+  parent = "guides"
+  pageRef = "/guides/character-sets"
+  weight = 25
+  [menus.main.params]
+  icon = "type"
+  [[menus.main]]
+  name = "Animation sequences"
+  parent = "guides"
+  pageRef = "/guides/sequences"
+  weight = 30
+  [menus.main.params]
+  icon = "list-ordered"
+  [[menus.main]]
+  name = "Images"
+  parent = "guides"
+  pageRef = "/guides/images"
+  weight = 40
+  [menus.main.params]
+  icon = "image"
+  [[menus.main]]
+  name = "Web utility"
+  parent = "guides"
+  pageRef = "/guides/web-utility"
+  weight = 50
+  [menus.main.params]
+  icon = "sliders-horizontal"
+  [[menus.main]]
+  name = "Usage examples"
+  pageRef = "/examples"
+  weight = 25
+  [menus.main.params]
+  icon = "code-2"
   [[menus.main]]
   name = "Gallery"
   pageRef = "/gallery"
   weight = 30
+  [menus.main.params]
+  icon = "images"
   [[menus.main]]
-  name = "API"
+  name = "API reference"
   pageRef = "/api"
   weight = 40
+  [menus.main.params]
+  icon = "braces"
   [[menus.main]]
   name = "Changelog"
   pageRef = "/changelog"
   weight = 50
+  [menus.main.params]
+  icon = "history"
   [[menus.main]]
-  name = "Version"
+  name = "Version and compatibility"
   pageRef = "/version"
   weight = 60
+  [menus.main.params]
+  icon = "tag"
+  [[menus.main]]
+  name = "Attributions"
+  pageRef = "/attributions"
+  weight = 70
+  [menus.main.params]
+  icon = "copyright"
