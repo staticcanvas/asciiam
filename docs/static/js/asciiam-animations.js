@@ -18,6 +18,13 @@ import asciiam from "../libs/asciiam.esm.js";
  */
 
 /**
+ * @typedef {Object} HeroCompactAnimationOptions
+ * @property {string} [mode="fadeIn"] Animation mode for page hero header background.
+ * @property {string} [color="#4FA8FF"] Primary ASCII glyph color.
+ * @property {string} [charSet=" 01"] Character ramp string.
+ */
+
+/**
  * Initializes the main hero stage ASCII animation sequence.
  *
  * @param {HTMLElement} stageElement The DOM element acting as the canvas container.
@@ -101,10 +108,88 @@ export function initHeroAnimation(stageElement, options = {}) {
 }
 
 /**
+ * Initializes ASCII background animation for page header hero panels (.hero.hero-compact),
+ * matching the specification in context-source -> animations-list.md.
+ *
+ * @param {HTMLElement} heroElement Header element (.hero.hero-compact).
+ * @param {HeroCompactAnimationOptions} [options={}] Configuration overrides.
+ * @returns {asciiam|null} The initialized asciiam instance, or null if unsupported.
+ */
+export function initHeroCompactAnimation(heroElement, options = {}) {
+    if (!heroElement || !asciiam.isSupported()) return null;
+    const bgContainer = heroElement.querySelector(".hero-bg") || heroElement;
+
+    const anim = new asciiam(bgContainer, {
+        mode: options.mode || "fadeIn",
+        quality: "high",
+        targetFPS: 60,
+        resolutionScale: 2,
+        renderer: "auto",
+        charSet: options.charSet || " 01",
+        align: "center",
+        color: options.color || "#4FA8FF",
+        speed: options.speed || 1,
+        edgeFade: 0,
+        trail: 0.34,
+        showStats: false,
+        extendedStats: false,
+        pulse: null,
+        cursor: null,
+        revealDirection: "center",
+        imageScale: 0.5,
+        imageScaleX: 2.05,
+        imageScaleY: 0.9,
+        imageFov: 0.9,
+        imageRotation: 0,
+        imageFlipX: false,
+        imageFlipY: false,
+        imageLuminance: "auto",
+        animateImageFrames: true,
+        imageFrameRate: 12,
+        fit: "cover",
+        colorFromImage: false,
+        imageChars: options.charSet || " 01",
+        animateImageMask: true,
+        backdrop: {
+            enabled: true,
+            opacity: 0.9,
+            color: "#0a0c10",
+            placement: "over",
+            gradient: {
+                type: "cubic",
+                angle: 45,
+                steps: 4,
+                stops: ["#000000", "#061718", "#081421", "#160c1d"],
+            },
+        },
+        ...options,
+    });
+
+    anim.start();
+    window.addEventListener("pagehide", () => anim.destroy(), { once: true });
+    return anim;
+}
+
+/**
+ * Automatically attaches ASCII background animations to all .hero.hero-compact elements on the page.
+ *
+ * @returns {asciiam[]} Array of initialized compact hero animation instances.
+ */
+export function initAllHeroCompactElements() {
+    const compactHeroes = document.querySelectorAll(".hero.hero-compact");
+    const instances = [];
+    compactHeroes.forEach((element) => {
+        const instance = initHeroCompactAnimation(element);
+        if (instance) instances.push(instance);
+    });
+    return instances;
+}
+
+/**
  * Initializes interactive mini-example cards on the documentation homepage.
  *
- * @param {HTMLElement} exampleContainer The parent container holding example canvases.
- * @returns {{ instances: asciiam[], destroy: Function }} An object containing initialized instances and a cleanup function.
+ * @param {HTMLElement} exampleBox The parent container holding example canvases.
+ * @returns {{ examples: asciiam[], destroy: Function }} An object containing initialized instances and a cleanup function.
  */
 export function initExampleCards(exampleBox) {
     if (!exampleBox || !asciiam.isSupported()) return { examples: [], destroy: () => {} };
@@ -251,6 +336,8 @@ export function createPresetAnimation(target, presetName = "heroWave", overrides
 
 export default {
     initHeroAnimation,
+    initHeroCompactAnimation,
+    initAllHeroCompactElements,
     initExampleCards,
     createPresetAnimation,
 };

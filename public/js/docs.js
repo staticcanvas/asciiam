@@ -348,3 +348,19 @@ if (pageSearch) {
         }
     });
 }
+
+// Mount ASCII background animations on all .hero.hero-compact page header elements
+const mountCompactHeroes = () => {
+    if (!document.querySelector(".hero.hero-compact")) return;
+    import("./asciiam-animations.js")
+        .then(({ initAllHeroCompactElements }) => {
+            initAllHeroCompactElements();
+        })
+        .catch(() => {});
+};
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountCompactHeroes);
+} else {
+    mountCompactHeroes();
+}
