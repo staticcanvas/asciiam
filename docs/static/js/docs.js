@@ -356,7 +356,7 @@ const mountCompactHeroes = () => {
         .then(({ initAllHeroCompactElements }) => {
             initAllHeroCompactElements();
         })
-        .catch(() => {});
+        .catch((err) => console.error("[docs.js] Failed to mount compact hero animation:", err));
 };
 
 if (document.readyState === "loading") {
