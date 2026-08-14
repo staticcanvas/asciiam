@@ -126,6 +126,7 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
 
     const anim = new asciiam(stageContainer, {
         mode: "fadeIn",
+        loop: false,
         quality: "high",
         targetFPS: 60,
         resolutionScale: 2,
