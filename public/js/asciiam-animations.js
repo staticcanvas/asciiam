@@ -167,7 +167,7 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
  * @returns {asciiam[]} Array of initialized compact hero animation instances.
  */
 export function initAllHeroCompactElements() {
-    const compactHeroes = document.querySelectorAll(".hero.hero-compact");
+    const compactHeroes = document.querySelectorAll("header.hero.hero-compact, .hero.hero-compact");
     const instances = [];
     compactHeroes.forEach((element) => {
         const instance = initHeroCompactAnimation(element);

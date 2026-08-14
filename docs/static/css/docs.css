@@ -729,6 +729,7 @@ textarea {
   text-transform: uppercase;
   backdrop-filter: blur(12px);
 }
+header.hero-compact,
 .hero-compact {
   position: relative;
   isolation: isolate;
@@ -737,6 +738,7 @@ textarea {
   padding-bottom: 45px;
   overflow: hidden;
 }
+header.hero-compact > canvas,
 .hero-compact > canvas {
   position: absolute !important;
   inset: 0 !important;
@@ -745,6 +747,11 @@ textarea {
   pointer-events: none;
   z-index: 0 !important;
 }
+header.hero-compact > .hero-eyebrow,
+header.hero-compact > .hero-title,
+header.hero-compact > .hero-desc,
+header.hero-compact > .api-paths,
+header.hero-compact > .release-summary,
 .hero-compact > .hero-eyebrow,
 .hero-compact > .hero-title,
 .hero-compact > .hero-desc,
