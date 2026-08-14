@@ -730,9 +730,28 @@ textarea {
   backdrop-filter: blur(12px);
 }
 .hero-compact {
+  position: relative;
+  isolation: isolate;
   min-height: 0;
   padding-top: 58px;
   padding-bottom: 45px;
+  overflow: hidden;
+}
+.hero-compact > canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none;
+  z-index: 0 !important;
+}
+.hero-compact > .hero-eyebrow,
+.hero-compact > .hero-title,
+.hero-compact > .hero-desc,
+.hero-compact > .api-paths,
+.hero-compact > .release-summary {
+  position: relative;
+  z-index: 2;
 }
 .hero-bg,
 .hero-grid,

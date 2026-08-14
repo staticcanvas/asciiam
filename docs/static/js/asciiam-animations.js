@@ -107,10 +107,9 @@ export function initHeroAnimation(stageElement, options = {}) {
  */
 export function initHeroCompactAnimation(heroElement, options = {}) {
     if (!heroElement || !asciiam.isSupported()) return null;
-    const bgContainer = heroElement.querySelector(".hero-bg") || heroElement;
     const imageUrl = options.image || heroElement.dataset?.imageUrl || LOGO_URL;
 
-    const anim = new asciiam(bgContainer, {
+    const anim = new asciiam(heroElement, {
         mode: "fadeIn",
         quality: "high",
         targetFPS: 60,
