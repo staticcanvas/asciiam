@@ -5,7 +5,8 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 
-const searchSource = readFileSync(new URL('../docs/static/js/docs.js', import.meta.url), 'utf8');
+const searchSource = readFileSync(new URL('../docs/static/js/docs.js', import.meta.url), 'utf8')
+  .replace(/^import\s+[\s\S]*?;/gm, '');
 const searchIndex = [
   {
     title: 'Animation sequences',

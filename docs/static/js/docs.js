@@ -349,14 +349,13 @@ if (pageSearch) {
     });
 }
 
+import { initAllHeroCompactElements } from "./asciiam-animations.js";
+
 // Mount ASCII background animations on all .hero.hero-compact page header elements
 const mountCompactHeroes = () => {
-    if (!document.querySelector(".hero.hero-compact")) return;
-    import("./asciiam-animations.js")
-        .then(({ initAllHeroCompactElements }) => {
-            initAllHeroCompactElements();
-        })
-        .catch((err) => console.error("[docs.js] Failed to mount compact hero animation:", err));
+    if (document.querySelector(".hero.hero-compact")) {
+        initAllHeroCompactElements();
+    }
 };
 
 if (document.readyState === "loading") {

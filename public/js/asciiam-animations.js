@@ -160,7 +160,7 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
             enabled: true,
             opacity: 0.9,
             color: "#0a0c10",
-            placement: "over",
+            placement: options.backdrop?.placement || "behind",
             gradient: {
                 type: "cubic",
                 angle: 45,
