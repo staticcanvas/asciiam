@@ -1,3 +1,9 @@
+/**
+ * @file examples.js
+ * @description Interactive JSON configuration builder and live runner script for the Asciiam documentation playground.
+ * @module examples
+ */
+
 import asciiam from "../libs/asciiam.esm.js";
 
 const root = document.querySelector("[data-examples-playground]");
@@ -19,7 +25,18 @@ if (root) {
     let instance = null;
     let runTimer = null;
 
+    /**
+     * Escapes raw text content into HTML entity characters.
+     * @param {string} val Raw text input.
+     * @returns {string} Safe HTML string.
+     */
     const escapeHtml = (val) => val.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    /**
+     * Tokenizes JSON/JavaScript code strings and wraps syntax components in CSS token spans.
+     * @param {string} value Raw JSON string.
+     * @returns {string} Tokenized HTML string.
+     */
     const highlightJson = (value) => {
         const tokenPattern = /(<\/?[A-Za-z][^>\n]*>)|(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"(?=\s*:))|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\b(const|let|var|new|true|false|null|undefined|return|await|async|function|class|import|from|export|default|if|else|try|catch|finally|throw)\b|\b(\d+(?:\.\d+)?)\b/g;
         let highlighted = "";
@@ -34,6 +51,10 @@ if (root) {
         return highlighted + escapeHtml(value.slice(cursor));
     };
 
+    /**
+     * Synchronizes live syntax highlighting overlay with the editor textarea content.
+     * @returns {void}
+     */
     const updateHighlight = () => {
         if (!highlightCode) return;
         highlightCode.innerHTML = highlightJson(editor.value) + "\n";
@@ -43,17 +64,34 @@ if (root) {
         }
     };
 
+    /**
+     * Decodes Base64-URL encoded options payload into a JavaScript options object.
+     * @param {string} value Base64 encoded payload.
+     * @returns {Object} Parsed configuration object.
+     */
     const decodeOptions = (value) => {
         const binary = atob(value);
         const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
         return JSON.parse(new TextDecoder().decode(bytes));
     };
+
+    /**
+     * Encodes a configuration options object into a URL-safe Base64 payload.
+     * @param {Object} options Configuration object.
+     * @returns {string} Base64 URL safe payload.
+     */
     const encodeOptions = (options) => {
         const bytes = new TextEncoder().encode(JSON.stringify(options));
         let binary = "";
         bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
         return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
     };
+
+    /**
+     * Parses JSON configuration content from the live editor.
+     * @throws {TypeError} If editor content is invalid JSON.
+     * @returns {Object} Configuration options object.
+     */
     const parseEditor = () => {
         const options = JSON.parse(editor.value);
         if (!options || Array.isArray(options) || typeof options !== "object") {
@@ -61,16 +99,33 @@ if (root) {
         }
         return options;
     };
+
+    /**
+     * Updates the Web Utility playground link with current editor options.
+     * @param {Object} options Configuration options object.
+     * @returns {void}
+     */
     const updateUtilityLink = (options) => {
         const separator = root.dataset.utilityUrl.includes("?") ? "&" : "?";
         utility.href = `${root.dataset.utilityUrl}${separator}config=${encodeURIComponent(encodeOptions(options))}`;
     };
+
+    /**
+     * Reports JSON parse or instance errors to the UI error panel.
+     * @param {Error|unknown} caught Exception object.
+     * @returns {void}
+     */
     const reportError = (caught) => {
         error.hidden = false;
         error.textContent = caught instanceof Error ? caught.message : "The configuration could not be applied.";
         status.textContent = "Invalid configuration";
         status.dataset.state = "error";
     };
+
+    /**
+     * Applies the current JSON configuration to the live preview canvas.
+     * @returns {void}
+     */
     const run = () => {
         clearTimeout(runTimer);
         let options;
@@ -90,6 +145,11 @@ if (root) {
             reportError(caught);
         }
     };
+
+    /**
+     * Debounces live configuration updates during continuous editor typing.
+     * @returns {void}
+     */
     const queueRun = () => {
         clearTimeout(runTimer);
         updateHighlight();
@@ -97,6 +157,12 @@ if (root) {
         status.dataset.state = "pending";
         runTimer = setTimeout(run, 360);
     };
+
+    /**
+     * Selects a preset configuration option from the dropdown or pill selector.
+     * @param {HTMLOptionElement|HTMLElement} target Selected preset element.
+     * @returns {void}
+     */
     const selectExample = (target) => {
         if (!target) return;
         selectedTarget = target;

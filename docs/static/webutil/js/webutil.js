@@ -1,3 +1,9 @@
+/**
+ * @file webutil.js
+ * @description Primary UI controller, state management, toolbar popovers, and interactive workbench script for the Asciiam Web Utility.
+ * @module webutil
+ */
+
 import { highlightJavaScript } from "./webutil-code.js?v=__ASSET_REVISION__";
 import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=__ASSET_REVISION__";
 

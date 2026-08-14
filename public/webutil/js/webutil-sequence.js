@@ -1,4 +1,15 @@
-/** Normalize serializable sequence input for the visual node editor. */
+/**
+ * @file webutil-sequence.js
+ * @description Sequence step normalizer and serializer module for the Web Utility timeline editor.
+ * @module webutil-sequence
+ */
+
+/**
+ * Normalizes serializable sequence input array for visual editing in the Web Utility timeline UI.
+ *
+ * @param {Object[]} steps Raw sequence step objects.
+ * @returns {Object[]} Normalized sequence steps.
+ */
 export function normalizeSequenceDraft(steps) {
     if (!Array.isArray(steps)) return [];
     return steps.map((step, index) => ({
@@ -15,7 +26,12 @@ export function normalizeSequenceDraft(steps) {
     }));
 }
 
-/** Remove editor-only state while retaining explicit image changes. */
+/**
+ * Removes editor-only transient state while retaining explicit image source assignments.
+ *
+ * @param {Object[]} steps Editor sequence steps.
+ * @returns {Object[]} Clean serializable sequence steps.
+ */
 export function serializeSequenceDraft(steps) {
     return steps.map((step) => {
         const serialized = {

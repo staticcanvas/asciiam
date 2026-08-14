@@ -1,3 +1,9 @@
+/**
+ * @file generate-docs-data.js
+ * @description Node.js script to extract preset metadata, copy source modules into static library locations, and generate JSON docs manifests.
+ * @module generate-docs-data
+ */
+
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import asciiam from "../src/asciiam.js";
 
@@ -10,7 +16,13 @@ const docsImages = new URL("../docs/static/images/", import.meta.url);
 const sparseModes = new Set(["matrix", "snow", "sparkle", "fire", "starfield", "orbit"]);
 const revealModes = new Set(["fadeIn", "fadeOut", "typewriter"]);
 const spatialModes = new Set(["ripple", "vortex", "plasma", "orbit", "hoverZone", "clickZone"]);
-/** Maps a mode to the gallery filter that describes its rendering model. */
+
+/**
+ * Maps an animation mode algorithm name to its gallery filter category.
+ *
+ * @param {string} mode Mode algorithm key.
+ * @returns {string} Category identifier string.
+ */
 const categoryFor = (mode) => {
     if (mode === "image") return "image";
     if (sparseModes.has(mode)) return "particles";

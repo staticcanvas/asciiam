@@ -1,9 +1,25 @@
-/** Escape generated source before adding syntax-token markup. */
+/**
+ * @file webutil-code.js
+ * @description Code syntax highlighter and HTML escaper for the Web Utility live snippet editor.
+ * @module webutil-code
+ */
+
+/**
+ * Escapes unsafe HTML characters into entity encodings.
+ *
+ * @param {string} value Raw text input.
+ * @returns {string} Safe HTML string.
+ */
 export function escapeHtml(value) {
-    return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+    return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-/** Tokenize generated JavaScript without evaluating it or accepting HTML input. */
+/**
+ * Tokenizes generated JavaScript/JSON code strings and wraps syntax components in CSS token spans.
+ *
+ * @param {string} value Raw code string.
+ * @returns {string} Syntax-highlighted HTML string.
+ */
 export function highlightJavaScript(value) {
     const tokenPattern = /(<\/?[A-Za-z][^>\n]*>)|(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"(?=\s*:))|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\b(const|let|var|new|true|false|null|undefined|return|await|async|function|class|import|from|export|default|if|else|try|catch|finally|throw)\b|\b(\d+(?:\.\d+)?)\b/g;
     let highlighted = "";

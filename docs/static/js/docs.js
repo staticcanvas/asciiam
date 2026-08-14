@@ -1,3 +1,10 @@
+/**
+ * @file docs.js
+ * @description Main documentation site client script providing table accessibility, Mermaid diagram rendering, TOC tracking, and live documentation search.
+ * @module docs
+ */
+
+// Format tables into responsive scroll regions for screen readers
 document.querySelectorAll(".prose table").forEach((table) => {
     const wrapper = document.createElement("div");
     wrapper.className = "table-scroll";
@@ -8,6 +15,7 @@ document.querySelectorAll(".prose table").forEach((table) => {
     wrapper.append(table);
 });
 
+// Render client-side Mermaid architecture and sequence diagrams
 const mermaidDiagrams = [...document.querySelectorAll(".mermaid-diagram")];
 if (mermaidDiagrams.length) {
     import("https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.esm.min.mjs")
@@ -53,6 +61,7 @@ if (mermaidDiagrams.length) {
         });
 }
 
+// Track active table of contents heading using IntersectionObserver
 const tocLinks = [...document.querySelectorAll(".toc-panel nav a[href^='#']")];
 if (tocLinks.length && "IntersectionObserver" in window) {
     const linksById = new Map(tocLinks.map((link) => [decodeURIComponent(link.hash.slice(1)), link]));
@@ -68,6 +77,7 @@ if (tocLinks.length && "IntersectionObserver" in window) {
     });
 }
 
+// Live documentation client-side search engine
 const pageSearch = document.querySelector("#docs-search");
 if (pageSearch) {
     const SEARCH_ALIASES = [
@@ -84,16 +94,42 @@ if (pageSearch) {
         ["render", "renderer", "rendering", "webgl", "webgl2", "canvas", "gpu"],
         ["sequence", "sequences", "timeline", "steps", "playlist"],
     ];
+
+    /**
+     * Normalizes input text by removing diacritics and converting to lowercase.
+     * @param {string} value Raw input string.
+     * @returns {string} Normalized string for index matching.
+     */
     const normalizeSearchText = (value) => String(value || "")
         .normalize("NFKD")
         .replace(/[\u0300-\u036f]/g, "")
         .toLocaleLowerCase("en");
+
+    /**
+     * Resolves expanded query aliases for a given search token.
+     * @param {string} term Query token.
+     * @returns {string[]} List of matching alias terms.
+     */
     const aliasesFor = (term) => {
         const group = SEARCH_ALIASES.find((entries) => entries.includes(term));
         return group || [term];
     };
+
+    /**
+     * Checks if a candidate string matches any term in a candidate list.
+     * @param {string} value Normalized target string.
+     * @param {string[]} candidates Alias candidate list.
+     * @returns {boolean}
+     */
     const includesCandidate = (value, candidates) => candidates.some((candidate) => value.includes(candidate));
-    /** Adds visible matches without assigning search-index content through innerHTML. */
+
+    /**
+     * Appends search query match highlights safely without raw innerHTML evaluation.
+     * @param {HTMLElement} element Target text container element.
+     * @param {string} value Original text string.
+     * @param {string[]} terms Query match terms.
+     * @returns {void}
+     */
     const appendHighlightedText = (element, value, terms) => {
         const text = String(value || "");
         const escaped = terms.filter(Boolean).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
@@ -112,6 +148,7 @@ if (pageSearch) {
         }
         if (offset < text.length) element.append(document.createTextNode(text.slice(offset)));
     };
+
     const shell = pageSearch.closest("[data-search-index]");
     const resultList = shell.querySelector("#docs-search-results");
     const indexURL = shell.dataset.searchIndex;
@@ -120,6 +157,12 @@ if (pageSearch) {
     let activeIndex = -1;
     let searchTimer = null;
     let queryVersion = 0;
+
+    /**
+     * Asynchronously loads the JSON documentation search index.
+     * @async
+     * @returns {Promise<Object[]>}
+     */
     const loadIndex = async () => {
         if (documents) return documents;
         if (!indexPromise) {
@@ -140,6 +183,11 @@ if (pageSearch) {
         }
         return indexPromise;
     };
+
+    /**
+     * Closes the active search dropdown menu and resets focus indices.
+     * @returns {void}
+     */
     const closeResults = () => {
         resultList.hidden = true;
         resultList.replaceChildren();
@@ -147,6 +195,12 @@ if (pageSearch) {
         pageSearch.removeAttribute("aria-activedescendant");
         activeIndex = -1;
     };
+
+    /**
+     * Highlights and focuses a specific search result item by index.
+     * @param {number} index Target index in the dropdown result list.
+     * @returns {void}
+     */
     const selectResult = (index) => {
         const options = [...resultList.querySelectorAll("[role='option']")];
         if (!options.length) return;
@@ -155,6 +209,13 @@ if (pageSearch) {
         pageSearch.setAttribute("aria-activedescendant", options[activeIndex].id);
         options[activeIndex].scrollIntoView({ block: "nearest" });
     };
+
+    /**
+     * Scores a documentation document against search query tokens.
+     * @param {Object} document Documentation index item.
+     * @param {string[]} terms Normalized query terms.
+     * @returns {number} Score rank value.
+     */
     const scoreDocument = (document, terms) => {
         const title = normalizeSearchText(document.title);
         const tags = normalizeSearchText([...(document.tags || []), ...(document.keywords || [])].join(" "));
@@ -176,6 +237,12 @@ if (pageSearch) {
         }
         return score;
     };
+
+    /**
+     * Renders matching documentation search results in the dropdown.
+     * @async
+     * @returns {Promise<void>}
+     */
     const renderResults = async () => {
         const rawQuery = pageSearch.value.trim();
         const query = normalizeSearchText(rawQuery);
@@ -239,6 +306,7 @@ if (pageSearch) {
             pageSearch.setAttribute("aria-expanded", "true");
         }
     };
+
     pageSearch.addEventListener("input", () => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(renderResults, 120);

@@ -33,9 +33,9 @@ describe('Hugo documentation source', () => {
     expect(template).toContain('?preset=');
   });
 
-  it('renders four live splash canvases including the bundled laptop model', () => {
+  it('renders four live splash cards with explicit options and model targets', () => {
     const template = projectFile('docs/layouts/index.html');
-    const script = projectFile('docs/static/js/home.js');
+    const script = projectFile('docs/static/js/home.js') + projectFile('docs/static/js/asciiam-animations.js');
     const styles = projectFile('docs/static/css/docs.css');
 
     expect(template.match(/data-example-canvas=/g)).toHaveLength(4);
@@ -347,7 +347,7 @@ describe('Hugo documentation source', () => {
 
   it('renders the start-page image sequence and complete footer treatment', () => {
     const home = projectFile('docs/layouts/index.html');
-    const homeScript = projectFile('docs/static/js/home.js');
+    const homeScript = projectFile('docs/static/js/home.js') + projectFile('docs/static/js/asciiam-animations.js');
     const generator = projectFile('scripts/generate-docs-data.js');
     const stylesheet = projectFile('docs/static/css/docs.css');
 

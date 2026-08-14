@@ -1,5 +1,11 @@
-import { highlightJavaScript } from "./webutil-code.js?v=6600fa1bad13";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=6600fa1bad13";
+/**
+ * @file webutil.js
+ * @description Primary UI controller, state management, toolbar popovers, and interactive workbench script for the Asciiam Web Utility.
+ * @module webutil
+ */
+
+import { highlightJavaScript } from "./webutil-code.js?v=d234d2675a00";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=d234d2675a00";
 
 const asciiam = window.asciiam;
 
