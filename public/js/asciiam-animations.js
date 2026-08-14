@@ -112,7 +112,7 @@ export function initHeroAnimation(stageElement, options = {}) {
 
 /**
  * Initializes ASCII background animation for page header hero panels (.hero.hero-compact)
- * using a single-step sequence with repeat disabled.
+ * using a single-step sequence with repeat disabled and renderer stop on completion.
  *
  * @param {HTMLElement} heroElement Header element (.hero.hero-compact).
  * @param {HeroCompactAnimationOptions} [options={}] Configuration overrides.
@@ -151,12 +151,12 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
         imageFlipX: false,
         imageFlipY: false,
         imageLuminance: "auto",
-        animateImageFrames: true,
+        animateImageFrames: false,
         imageFrameRate: 12,
         fit: "cover",
         colorFromImage: false,
         imageChars: options.charSet || " 01",
-        animateImageMask: true,
+        animateImageMask: false,
         backdrop: {
             enabled: true,
             opacity: 0.9,
@@ -179,7 +179,11 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
             duration: 5,
             delay: 0,
             repeat: false,
-            options: {},
+            options: {
+                loop: false,
+                animateImageFrames: false,
+                animateImageMask: false,
+            },
             transition: {
                 type: "cut",
                 duration: 0,
@@ -194,6 +198,7 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
 
     anim.on("sequenceStepComplete", ({ index, step }) => {
         console.log("completed", index, step.mode);
+        anim.stop();
     });
 
     anim.playSequence();
