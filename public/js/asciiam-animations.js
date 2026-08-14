@@ -174,17 +174,27 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
 
     anim.setSequence([
         {
-            id: "compact-hero-reveal",
+            id: "step-1786727252129-1",
             mode: options.mode || "fadeIn",
-            duration: 3,
+            duration: 5,
             delay: 0,
             repeat: false,
-            options: {
-                loop: false,
-                revealDirection: "center",
+            options: {},
+            transition: {
+                type: "cut",
+                duration: 0,
+                easing: "linear",
             },
         },
     ], { loop: false });
+
+    anim.on("sequenceStepStart", ({ index, step }) => {
+        console.log("started", index, step.mode);
+    });
+
+    anim.on("sequenceStepComplete", ({ index, step }) => {
+        console.log("completed", index, step.mode);
+    });
 
     anim.playSequence();
     window.addEventListener("pagehide", () => anim.destroy(), { once: true });
