@@ -354,12 +354,10 @@ describe('Hugo documentation source', () => {
     expect(home).toContain('data-asciiam-hero');
     expect(home).toContain('data-asciiam-stage');
     expect(home).toContain('js/home.js');
-    expect(homeScript).toContain('mode: "ripple"');
+    expect(homeScript).toContain('mode: "current"');
+    expect(homeScript).toContain('mode: "fadeIn"');
     expect(homeScript).not.toContain('imageMaskMode');
-    expect(homeScript).toContain('step-1786547801812-1');
-    expect(homeScript).toContain('anim.on("sequenceStepStart"');
-    expect(homeScript).toContain('anim.on("sequenceStepComplete"');
-    expect(homeScript).toContain('anim.playSequence()');
+    expect(homeScript).toContain('anim.start()');
     expect(generator).toContain('domitian-tunnel-5122424_1920.jpg');
     expect(stylesheet).toMatch(/\.topbar \{[\s\S]*border-bottom: 0/);
     expect(stylesheet).toMatch(/\.hero \{[\s\S]*border-bottom: 0/);

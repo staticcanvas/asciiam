@@ -8,13 +8,15 @@
 
 import asciiam from "../libs/asciiam.esm.js";
 
+const HERO_RAMP = '  .\'`,^:";~+_(){}[]<>!?ilI|/\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$';
+
 /**
  * @typedef {Object} HeroAnimationOptions
- * @property {string} [mode="ripple"] Primary mode algorithm for the hero stage.
- * @property {string} [color="#C04FFF"] Fallback ASCII text color.
+ * @property {string} [mode="current"] Primary mode algorithm for the hero stage.
+ * @property {string} [color="#4FA8FF"] Fallback ASCII text color.
  * @property {string} [charSet] Printable ASCII character set ramp.
  * @property {string} [imageUrl] Optional background image URL to sample.
- * @property {boolean} [showStats=true] Whether to attach live FPS diagnostic counters.
+ * @property {boolean} [showStats=false] Whether to attach live FPS diagnostic counters.
  */
 
 /**
@@ -25,7 +27,7 @@ import asciiam from "../libs/asciiam.esm.js";
  */
 
 /**
- * Initializes the main hero stage ASCII animation sequence.
+ * Initializes the main splash page hero stage ASCII animation (Animation 1 from context-source -> animations-list.md).
  *
  * @param {HTMLElement} stageElement The DOM element acting as the canvas container.
  * @param {HeroAnimationOptions} [options={}] Configuration overrides for the hero animation.
@@ -33,83 +35,70 @@ import asciiam from "../libs/asciiam.esm.js";
  */
 export function initHeroAnimation(stageElement, options = {}) {
     if (!stageElement || !asciiam.isSupported()) return null;
+    const hero = stageElement.closest("[data-asciiam-hero]");
+    const imageUrl = options.imageUrl || hero?.dataset?.imageUrl || "./your-image.png";
 
     const anim = new asciiam(stageElement, {
-        mode: "ripple",
-        quality: "balanced",
+        mode: "current",
+        quality: "high",
+        targetFPS: 60,
+        resolutionScale: 1,
         renderer: "auto",
-        charSet: options.charSet || "  \\//**kk",
-        align: "top-left",
-        color: options.color || "#C04FFF",
+        charSet: options.charSet || HERO_RAMP,
+        align: "center",
+        color: options.color || "#4FA8FF",
         speed: 1,
-        edgeFade: 0.55,
-        trail: 0.4,
-        showStats: options.showStats !== false,
-        pulse: {
-            amplitude: 0.5,
-            speed: 0.8,
-        },
-        cursor: {
-            enabled: true,
-            radius: 160,
-            strength: 0.7,
-        },
-        image: options.imageUrl || stageElement.closest("[data-asciiam-hero]")?.dataset?.imageUrl,
-        imageScale: 0.5,
-        imageFov: 0.65,
+        edgeFade: 0,
+        trail: 0.34,
+        showStats: false,
+        extendedStats: false,
+        pulse: null,
+        cursor: null,
+        image: imageUrl,
+        imageScale: 1.4,
+        imageScaleX: 1,
+        imageScaleY: 1,
+        imageFov: 0.9,
+        imageRotation: 0,
+        imageFlipX: false,
+        imageFlipY: false,
+        imageLuminance: "auto",
+        animateImageFrames: true,
+        imageFrameRate: 12,
         fit: "cover",
         colorFromImage: true,
-        imageChars: options.charSet || "  \\//**kk",
+        imageChars: options.charSet || HERO_RAMP,
         animateImageMask: true,
-        gradient: {
-            type: "radial",
-            angle: 45,
-            steps: 5,
-            stops: ["#4fa8ff", "#c04fff", "#ff4f8b", "#ff9d5c", "#4ffff3"],
-            animate: false,
+        backdrop: {
+            enabled: true,
+            opacity: 0.9,
+            color: "#0a0c10",
+            placement: "over",
+            gradient: {
+                type: "cubic",
+                angle: 45,
+                steps: 4,
+                stops: ["#000000", "#061718", "#081421", "#160c1d"],
+            },
         },
+        ...options,
     });
 
-    anim.setSequence([
-        {
-            id: "step-1786547801812-1",
-            mode: "orbit",
-            duration: 10,
-            delay: 0,
-            options: {},
-        },
-        {
-            id: "step-1786547816180-2",
-            mode: "fadeIn",
-            duration: 10,
-            delay: 0,
-            options: {},
-        },
-    ], { loop: false });
-
-    const hero = stageElement.closest("[data-asciiam-hero]");
     const stats = hero?.querySelector("[data-hero-stats]");
     if (stats) anim.attachStats(stats);
-
-    anim.on("sequenceStepStart", ({ index, step }) => {
-        console.debug(`[asciiam-animations] Hero sequence step ${index} started: ${step.mode}`);
-    });
-    anim.on("sequenceStepComplete", ({ index, step }) => {
-        console.debug(`[asciiam-animations] Hero sequence step ${index} completed: ${step.mode}`);
-    });
 
     anim.on("rendererFallback", ({ backend }) => {
         if (stats) stats.textContent = `${backend} fallback active`;
     });
 
-    anim.playSequence();
+    anim.start();
     window.addEventListener("pagehide", () => anim.destroy(), { once: true });
     return anim;
 }
 
 /**
- * Initializes ASCII background animation for page header hero panels (.hero.hero-compact),
- * matching the specification in context-source -> animations-list.md.
+ * Initializes ASCII background animation for page header hero panels (.hero.hero-compact)
+ * matching Animation 2 from context-source -> animations-list.md.
  *
  * @param {HTMLElement} heroElement Header element (.hero.hero-compact).
  * @param {HeroCompactAnimationOptions} [options={}] Configuration overrides.
@@ -118,9 +107,10 @@ export function initHeroAnimation(stageElement, options = {}) {
 export function initHeroCompactAnimation(heroElement, options = {}) {
     if (!heroElement || !asciiam.isSupported()) return null;
     const bgContainer = heroElement.querySelector(".hero-bg") || heroElement;
+    const imageUrl = options.image || heroElement.dataset?.imageUrl || "./your-image.png";
 
     const anim = new asciiam(bgContainer, {
-        mode: options.mode || "fadeIn",
+        mode: "fadeIn",
         quality: "high",
         targetFPS: 60,
         resolutionScale: 2,
@@ -128,7 +118,7 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
         charSet: options.charSet || " 01",
         align: "center",
         color: options.color || "#4FA8FF",
-        speed: options.speed || 1,
+        speed: 1,
         edgeFade: 0,
         trail: 0.34,
         showStats: false,
@@ -136,6 +126,7 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
         pulse: null,
         cursor: null,
         revealDirection: "center",
+        image: imageUrl,
         imageScale: 0.5,
         imageScaleX: 2.05,
         imageScaleY: 0.9,
