@@ -1,7 +1,11 @@
 # Validation runs for merge requests, main/develop, and strict SemVer tags.
 # Registry publishing and GitLab releases run only for strict SemVer tags.
 
-image: node:${NODE_VERSION}
+image: sgkens/phellams-automator:${AUTOMATOR_VERSION}
+
+default:
+  tags:
+    - docker
 
 variables:
   NODE_VERSION: '25.2.1'
