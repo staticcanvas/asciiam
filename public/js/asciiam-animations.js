@@ -12,6 +12,18 @@ const HERO_RAMP = '  .\'`,^:";~+_(){}[]<>!?ilI|/\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao
 const LOGO_URL = new URL("../branding/asciiam-logo.svg", import.meta.url).href;
 
 /**
+ * Resolves relative logo URLs to absolute root-relative ESM URLs across subpages.
+ * @param {string} url Input image URL or path string.
+ * @returns {string} Fully resolved image URL.
+ */
+function resolveImageUrl(url) {
+    if (!url || url === "./branding/asciiam-logo.svg" || url === "branding/asciiam-logo.svg" || url.endsWith("/branding/asciiam-logo.svg")) {
+        return LOGO_URL;
+    }
+    return url;
+}
+
+/**
  * @typedef {Object} HeroAnimationOptions
  * @property {string} [mode="current"] Primary mode algorithm for the hero stage.
  * @property {string} [color="#4FA8FF"] Fallback ASCII text color.
@@ -37,7 +49,8 @@ const LOGO_URL = new URL("../branding/asciiam-logo.svg", import.meta.url).href;
 export function initHeroAnimation(stageElement, options = {}) {
     if (!stageElement || !asciiam.isSupported()) return null;
     const hero = stageElement.closest("[data-asciiam-hero]");
-    const imageUrl = options.imageUrl || hero?.dataset?.imageUrl || LOGO_URL;
+    const rawUrl = options.imageUrl || options.image || hero?.dataset?.imageUrl || LOGO_URL;
+    const imageUrl = resolveImageUrl(rawUrl);
 
     const anim = new asciiam(stageElement, {
         mode: "current",
@@ -99,7 +112,7 @@ export function initHeroAnimation(stageElement, options = {}) {
 
 /**
  * Initializes ASCII background animation for page header hero panels (.hero.hero-compact)
- * matching Animation 2 from context-source -> animations-list.md.
+ * matching Animation 2 from context-source -> animations-list.md targeting .hero-bg.
  *
  * @param {HTMLElement} heroElement Header element (.hero.hero-compact).
  * @param {HeroCompactAnimationOptions} [options={}] Configuration overrides.
@@ -108,7 +121,8 @@ export function initHeroAnimation(stageElement, options = {}) {
 export function initHeroCompactAnimation(heroElement, options = {}) {
     if (!heroElement || !asciiam.isSupported()) return null;
     const bgContainer = heroElement.querySelector(".hero-bg") || heroElement;
-    const imageUrl = options.image || heroElement.dataset?.imageUrl || LOGO_URL;
+    const rawUrl = options.image || heroElement.dataset?.imageUrl || LOGO_URL;
+    const imageUrl = resolveImageUrl(rawUrl);
 
     const anim = new asciiam(bgContainer, {
         mode: "fadeIn",
