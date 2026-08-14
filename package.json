@@ -1,6 +1,6 @@
 {
   "name": "@staticcanvas/asciiam",
-  "version": "0.10.0",
+  "version": "0.26.0",
   "description": "A dependency-free canvas engine for animated ASCII backgrounds and image-to-ASCII effects",
   "license": "MIT",
   "type": "module",

@@ -3,11 +3,16 @@
 .npmrc
 public/libs/
 
+# Build locks & cache
+.hugo_build.lock
+.cache/
+coverage/
+*.tmp
+
 # Ignore environment variable files
 *.env
 .dev.vars*
 build.env
-
 
 # Ignore log files
 *.log
@@ -15,6 +20,7 @@ build.env
 # Ignore OS generated files
 .DS_Store
 Thumbs.db
+
 # Ignore IDE/editor specific files
 .vscode/
 .idea/
