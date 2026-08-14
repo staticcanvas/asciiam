@@ -1,5 +1,6 @@
 {{ define "main" }}
-<header class="hero hero-compact">
+<header class="hero hero-compact" data-asciiam-hero-compact>
+  <div class="hero-asciiam-stage" data-hero-compact-stage aria-hidden="true"></div>
   <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
   <p class="hero-eyebrow">{{ with .Parent }}{{ .Title }}{{ else }}Documentation{{ end }}</p>
   <h1 class="hero-title">{{ .Title }}</h1>

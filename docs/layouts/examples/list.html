@@ -1,6 +1,7 @@
 {{ define "head" }}<script type="module" src="{{ "js/examples.js" | relURL }}"></script>{{ end }}
 {{ define "main" }}
-<header class="hero hero-compact examples-hero">
+<header class="hero hero-compact examples-hero" data-asciiam-hero-compact>
+  <div class="hero-asciiam-stage" data-hero-compact-stage aria-hidden="true"></div>
   <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
   <p class="hero-eyebrow">One renderer · live JSON configurations</p>
   <h1 class="hero-title">JSON <em>builder.</em></h1>
