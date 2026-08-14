@@ -9,6 +9,7 @@
 import asciiam from "../libs/asciiam.esm.js";
 
 const HERO_RAMP = '  .\'`,^:";~+_(){}[]<>!?ilI|/\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$';
+const LOGO_URL = new URL("../branding/asciiam-logo.svg", import.meta.url).href;
 
 /**
  * @typedef {Object} HeroAnimationOptions
@@ -36,7 +37,7 @@ const HERO_RAMP = '  .\'`,^:";~+_(){}[]<>!?ilI|/\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao
 export function initHeroAnimation(stageElement, options = {}) {
     if (!stageElement || !asciiam.isSupported()) return null;
     const hero = stageElement.closest("[data-asciiam-hero]");
-    const imageUrl = options.imageUrl || hero?.dataset?.imageUrl || "./your-image.png";
+    const imageUrl = options.imageUrl || hero?.dataset?.imageUrl || LOGO_URL;
 
     const anim = new asciiam(stageElement, {
         mode: "current",
@@ -107,7 +108,7 @@ export function initHeroAnimation(stageElement, options = {}) {
 export function initHeroCompactAnimation(heroElement, options = {}) {
     if (!heroElement || !asciiam.isSupported()) return null;
     const bgContainer = heroElement.querySelector(".hero-bg") || heroElement;
-    const imageUrl = options.image || heroElement.dataset?.imageUrl || "./your-image.png";
+    const imageUrl = options.image || heroElement.dataset?.imageUrl || LOGO_URL;
 
     const anim = new asciiam(bgContainer, {
         mode: "fadeIn",
