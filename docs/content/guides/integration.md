@@ -79,7 +79,7 @@ flowchart TD
   E -->|no| G[destroy]
 ```
 
-## API reference
+## Reference
 
 | API | Owner | Result |
 | --- | --- | --- |

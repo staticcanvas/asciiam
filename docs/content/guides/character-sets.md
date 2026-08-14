@@ -73,7 +73,7 @@ animation.setOption('imageChars', ' .:-=+*#%@');
 
 Repeated characters are allowed and weight selection toward those glyphs. `binaryWide`, for example, intentionally repeats digits.
 
-## API reference
+## Reference
 
 | API | Type | Default | Effect |
 | --- | --- | --- | --- |

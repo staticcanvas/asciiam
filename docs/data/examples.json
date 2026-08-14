@@ -143,9 +143,310 @@
       }
     },
     {
+      "id": "quality-cap",
+      "title": "Quality and frame cap",
+      "level": "09",
+      "description": "Select a quality tier, increase logical grid detail, and cap rendering at 30 frames per second.",
+      "options": {
+        "mode": "wave",
+        "quality": "balanced",
+        "resolutionScale": 1.15,
+        "targetFPS": 30,
+        "color": "#4FA8FF"
+      }
+    },
+    {
+      "id": "current-flow",
+      "title": "Current field",
+      "level": "10",
+      "description": "Render a restrained directional current with a compact opacity range.",
+      "options": {
+        "mode": "current",
+        "speed": 0.6,
+        "minOpacity": 0.03,
+        "maxOpacity": 0.48,
+        "color": "#4FA8FF"
+      }
+    },
+    {
+      "id": "matrix-rain",
+      "title": "Matrix rain",
+      "level": "11",
+      "description": "Use the matrix particle mode with a binary and Japanese glyph palette.",
+      "options": {
+        "mode": "matrix",
+        "speed": 1.1,
+        "charSet": " 01アイウエオカキクケコ",
+        "color": "#3CF07A"
+      }
+    },
+    {
+      "id": "plasma-field",
+      "title": "Plasma field",
+      "level": "12",
+      "description": "Combine the plasma mode with a three-stop linear gradient.",
+      "options": {
+        "mode": "plasma",
+        "speed": 0.55,
+        "gradient": {
+          "type": "linear",
+          "angle": 25,
+          "stops": ["#72F1B8", "#4FA8FF", "#C04FFF"],
+          "steps": 3
+        }
+      }
+    },
+    {
+      "id": "intro-reveal",
+      "title": "Directional reveal",
+      "level": "13",
+      "description": "Reveal the grid from left to right without repeating the animation.",
+      "options": {
+        "mode": "fadeIn",
+        "revealDirection": "left-to-right",
+        "speed": 1,
+        "loop": false,
+        "color": "#4FA8FF"
+      }
+    },
+    {
+      "id": "outro-fade",
+      "title": "Directional fade",
+      "level": "14",
+      "description": "Fade the grid from right to left as a single-run transition.",
+      "options": {
+        "mode": "fadeOut",
+        "revealDirection": "right-to-left",
+        "speed": 1,
+        "loop": false,
+        "color": "#72F1B8"
+      }
+    },
+    {
+      "id": "dissolve-in",
+      "title": "Dissolve reveal",
+      "level": "15",
+      "description": "Use a center-out dissolve for a less directional entrance.",
+      "options": {
+        "mode": "dissolveIn",
+        "revealDirection": "center",
+        "speed": 0.8,
+        "loop": false,
+        "charSet": " .:-=+*#%@"
+      }
+    },
+    {
+      "id": "snowfall",
+      "title": "Snowfall",
+      "level": "16",
+      "description": "Configure sparse falling particles with a purpose-built glyph set.",
+      "options": {
+        "mode": "snow",
+        "speed": 0.4,
+        "snowDensity": 0.035,
+        "charSet": " ·*❄",
+        "color": "#E8EEF7"
+      }
+    },
+    {
+      "id": "sparkle-field",
+      "title": "Sparkle field",
+      "level": "17",
+      "description": "Render a sparse field of short-lived highlighted cells.",
+      "options": {
+        "mode": "sparkle",
+        "speed": 0.65,
+        "sparkleDensity": 0.06,
+        "charSet": " .·+*#",
+        "color": "#FF9D5C"
+      }
+    },
+    {
+      "id": "rising-embers",
+      "title": "Rising embers",
+      "level": "18",
+      "description": "Combine fire particles, a warm gradient, and a short retained trail.",
+      "options": {
+        "mode": "fire",
+        "speed": 0.7,
+        "fireDensity": 0.035,
+        "trail": 0.18,
+        "trailColor": "#070809",
+        "gradient": {
+          "type": "linear",
+          "angle": 90,
+          "stops": ["#FFDF8A", "#FF9D5C", "#C04F32"],
+          "steps": 3
+        }
+      }
+    },
+    {
+      "id": "deep-space",
+      "title": "Deep space",
+      "level": "19",
+      "description": "Render a sparse depth field with a four-character luminance ramp.",
+      "options": {
+        "mode": "starfield",
+        "speed": 0.65,
+        "starfieldDensity": 0.018,
+        "charSet": " ·+*",
+        "color": "#E8EEF7"
+      }
+    },
+    {
+      "id": "signal-glitch",
+      "title": "Signal glitch",
+      "level": "20",
+      "description": "Apply controlled displacement with a technical character palette.",
+      "options": {
+        "mode": "glitch",
+        "speed": 0.8,
+        "glitchIntensity": 0.32,
+        "charSet": " 01<>/\\|#@",
+        "color": "#72F1B8"
+      }
+    },
+    {
+      "id": "terminal-type",
+      "title": "Terminal type",
+      "level": "21",
+      "description": "Run the typewriter mode over a terminal-oriented glyph palette.",
+      "options": {
+        "mode": "typewriter",
+        "typewriterDuration": 4.5,
+        "loop": true,
+        "charSet": " 01ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        "color": "#72F1B8"
+      }
+    },
+    {
+      "id": "orbital-flow",
+      "title": "Orbital flow",
+      "level": "22",
+      "description": "Configure orbiting particles with a restrained trail layer.",
+      "options": {
+        "mode": "orbit",
+        "speed": 0.55,
+        "orbitDensity": 0.014,
+        "trail": 0.12,
+        "trailColor": "#070809",
+        "color": "#C04FFF"
+      }
+    },
+    {
+      "id": "cursor-response",
+      "title": "Cursor response",
+      "level": "23",
+      "description": "Add a local pointer-driven highlight to a procedural current.",
+      "options": {
+        "mode": "current",
+        "speed": 0.4,
+        "cursor": {
+          "enabled": true,
+          "radius": 160,
+          "strength": 0.7
+        },
+        "color": "#4FA8FF"
+      }
+    },
+    {
+      "id": "backdrop-over",
+      "title": "Backdrop overlay",
+      "level": "24",
+      "description": "Composite a translucent backdrop over the animated glyph surface.",
+      "options": {
+        "mode": "ripple",
+        "color": "#72F1B8",
+        "backdrop": {
+          "enabled": true,
+          "opacity": 0.22,
+          "color": "#4FA8FF",
+          "placement": "over"
+        }
+      }
+    },
+    {
+      "id": "stepped-gradient",
+      "title": "Stepped gradient",
+      "level": "25",
+      "description": "Quantize a diagonal three-colour gradient into five visible bands.",
+      "options": {
+        "mode": "wave",
+        "gradient": {
+          "type": "linear",
+          "angle": 135,
+          "stops": ["#72F1B8", "#4FA8FF", "#C04FFF"],
+          "steps": 5
+        },
+        "edgeFade": 0.2
+      }
+    },
+    {
+      "id": "image-range",
+      "title": "Image colour range",
+      "level": "26",
+      "description": "Animate only the mid-tone colour interval sampled from an included image.",
+      "options": {
+        "mode": "ripple",
+        "image": "../images/domitian-tunnel-5122424_1920.jpg",
+        "fit": "contain",
+        "colorFromImage": true,
+        "imageAnimationRange": {
+          "min": "#303030",
+          "max": "#c8c8c8"
+        }
+      }
+    },
+    {
+      "id": "image-transform",
+      "title": "Image transform",
+      "level": "27",
+      "description": "Scale, rotate, and horizontally flip a sampled image before glyph conversion.",
+      "options": {
+        "mode": "wave",
+        "image": "../images/domitian-tunnel-5122424_1920.jpg",
+        "fit": "cover",
+        "imageScale": 0.85,
+        "imageScaleX": 1.15,
+        "imageRotation": -8,
+        "imageFlipX": true,
+        "colorFromImage": true
+      }
+    },
+    {
+      "id": "solid-mesh",
+      "title": "Solid 3D mesh",
+      "level": "28",
+      "description": "Render a filled icosphere with perspective projection and automatic rotation.",
+      "options": {
+        "mode": "mesh",
+        "meshPrimitive": "icosphere",
+        "meshStyle": "solid",
+        "meshProjection": "perspective",
+        "meshAutoRotate": true,
+        "meshRotationSpeed": [0.15, 0.35, 0.08],
+        "color": "#4FA8FF"
+      }
+    },
+    {
+      "id": "orthographic-mesh",
+      "title": "Orthographic mesh",
+      "level": "29",
+      "description": "Display a wireframe cube without perspective foreshortening.",
+      "options": {
+        "mode": "mesh",
+        "meshPrimitive": "cube",
+        "meshStyle": "wireframe",
+        "meshProjection": "orthographic",
+        "meshAutoRotate": true,
+        "meshRotationSpeed": [0.2, 0.4, 0.1],
+        "color": "#72F1B8"
+      }
+    },
+    {
       "id": "complete",
       "title": "Complete serializable config",
-      "level": "09",
+      "level": "30",
       "description": "Inspect the complete JSON-safe option surface with explicit defaults and representative optional values.",
       "options": {
         "mode": "current",

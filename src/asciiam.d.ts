@@ -1,4 +1,6 @@
 export type asciiamMode =
+  | 'none'
+  | 'static'
   | 'wave'
   | 'current'
   | 'ripple'
@@ -271,6 +273,8 @@ export interface asciiamOptions {
   imageFlipY?: boolean;
   imageLuminance?: 'auto' | 'normal' | 'invert';
   colorFromImage?: boolean;
+  imageBrightness?: number;
+  imageContrast?: number;
   animateImageMask?: boolean;
   /** @deprecated Use the global `mode` option; retained for legacy `mode: 'image'` configurations. */
   imageMaskMode?: 'waveSweep' | 'radialRipple' | 'scanlinePass' | 'thermalNoise' | 'halftonePulse' | 'fullStatic';
@@ -378,5 +382,29 @@ export default class asciiam {
   /** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */
   triggerInteraction(x?: number, y?: number): void;
   getStats(): asciiamStats;
-  attachStats(element: HTMLElement): void;
+  attachStats(el: HTMLElement | null): void;
+  /** Captures and exports the rendered ASCII art frame as a PNG, JPG, or WebP image. */
+  exportImage(options?: {
+    format?: 'png' | 'jpg' | 'jpeg' | 'webp';
+    quality?: number;
+    scale?: number;
+    download?: boolean;
+    filename?: string;
+  }): Promise<{
+    dataURL: string;
+    blob: Blob;
+    filename: string;
+    width: number;
+    height: number;
+    format: string;
+  }>;
+  /** Convenience shortcut to download current frame snapshot immediately. */
+  downloadSnapshot(format?: 'png' | 'jpg' | 'jpeg' | 'webp', filename?: string, scale?: number): Promise<{
+    dataURL: string;
+    blob: Blob;
+    filename: string;
+    width: number;
+    height: number;
+    format: string;
+  }>;
 }

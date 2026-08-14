@@ -46,14 +46,14 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 - Replaced the vertical sequence stack with an ordered node flow and per-node image-source controls.
 - Split web-utility behavior into a module entry point plus focused code-formatting and sequence-data modules; documentation scripts remain separated by site-wide and page-specific responsibility.
 - Kept Reset in the primary dock and aligned Documentation, About, and FPS as direct stage actions.
-- Kept charset, alignment, and backdrop in the primary toolbar after auditing repeated procedural, image, and mesh authoring flows; render quality and workspace actions remain under Advanced.
+- Kept quality, charset, alignment, and backdrop in the primary toolbar; workspace actions remain under Advanced.
 - Character-set selection includes the expanded built-in inventory; interaction modes expose radius and duration controls; spatial alignment exposes all nine anchors.
 - Versioned runtime loading and revalidated local library caching prevent new controls from executing against an older renderer bundle.
 - Image-library cards use generated static 320×180 WebP previews, first-frame GIF thumbnails, low-priority lazy decoding, and off-screen content containment. Opening the Image popover no longer decodes every original media asset.
 
 ### Documentation
 
-- Audited the README and authored documentation for direct language and factual alignment with the runtime, build, task tracker, and current unpublished package status.
+- Audited the README and authored documentation for direct language and factual alignment with the released package and runtime.
 - Hugo documentation source and a live preset gallery limited to six concurrent renderers.
 - Constructor, option, method, renderer, sequence, event, and callback reference.
 - Web-utility workflow, preset gallery, version policy, GIF/SVG behavior, and integration guides.

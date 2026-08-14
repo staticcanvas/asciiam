@@ -81,10 +81,25 @@ await animation.setModel(gltfFile, {
 ```
 
 The utility’s scale and field-of-view controls are 3D equivalents of the image
-controls, but they update `meshTransform.scale` and `meshCamera.fov`. Image fitting,
-luminance, GIF timing, and sampled-colour controls do not apply to geometry.
+controls, but they update `meshTransform.scale` and `meshCamera.fov`.
 The same `meshTransform.rotation` and signed scale controls rotate or mirror procedural
 primitives and imported models because both use the same normalized mesh pipeline.
+
+## Combining 3D meshes and images
+
+3D meshes and background images can be used together in a single composition. When `colorFromImage` is enabled (`true`) and an image is loaded (via `setImage()` or the web utility image picker), 3D mesh geometry (procedural primitives or glTF/GLB models) automatically samples cell colors directly from the background image grid.
+
+```js
+// app.js - Image-textured 3D mesh composition
+const animation = new asciiam('#hero', {
+  mode: 'mesh',
+  meshPrimitive: 'torus',
+  colorFromImage: true
+});
+
+await animation.setImage('/images/texture.jpg');
+animation.start();
+```
 
 Required extensions are rejected with their names before scene mesh allocation. In particular, Draco and Meshopt decoders are not bundled, downloaded, or injectable. This keeps model behavior deterministic and the runtime dependency-free.
 
@@ -113,9 +128,9 @@ collecting them does not traverse vertex or index buffers per frame.
 
 [Poly Haven](https://polyhaven.com/models) publishes CC0 models. [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) provides format examples, but each model's license must be checked individually. glTF/GLB is the supported import format; no third-party model is bundled with the package. See [Attributions]({{< relref "/attributions" >}}) before adding a demonstration asset.
 
-Run `npm run benchmark:mesh` after changing projection or rasterization code. The development reference scene contains 960 vertices and 1,920 triangles at a 60×45 cell grid; the enforced desktop gate is 4 ms median and 8 ms p95.
+Run `npm run benchmark:mesh` after changing projection or rasterization code. The benchmark reference scene contains 960 vertices and 1,920 triangles at a 60×45 cell grid; the enforced desktop gate is 4 ms median and 8 ms p95.
 
-## API reference
+## Reference
 
 | Diagnostic | Type | Meaning |
 | --- | --- | --- |

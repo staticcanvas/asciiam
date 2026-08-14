@@ -3,8 +3,11 @@ import asciiam from "../libs/asciiam.esm.js";
 const root = document.querySelector("[data-examples-playground]");
 
 if (root) {
+    const selectEl = root.querySelector("[data-example-select]");
     const choices = [...root.querySelectorAll("[data-example-choice]")];
     const editor = root.querySelector("[data-example-editor]");
+    const highlightPre = root.querySelector("[data-example-highlight]");
+    const highlightCode = root.querySelector("[data-example-highlight-code]");
     const preview = root.querySelector("[data-example-preview]");
     const title = root.querySelector("[data-example-title]");
     const description = root.querySelector("[data-example-description]");
@@ -12,9 +15,33 @@ if (root) {
     const backend = root.querySelector("[data-example-backend]");
     const error = root.querySelector("[data-example-error]");
     const utility = root.querySelector("[data-example-utility]");
-    let selected = choices[0];
+    let selectedTarget = selectEl ? selectEl.options[selectEl.selectedIndex] : choices[0];
     let instance = null;
     let runTimer = null;
+
+    const escapeHtml = (val) => val.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const highlightJson = (value) => {
+        const tokenPattern = /(<\/?[A-Za-z][^>\n]*>)|(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"(?=\s*:))|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\b(const|let|var|new|true|false|null|undefined|return|await|async|function|class|import|from|export|default|if|else|try|catch|finally|throw)\b|\b(\d+(?:\.\d+)?)\b/g;
+        let highlighted = "";
+        let cursor = 0;
+        for (const match of value.matchAll(tokenPattern)) {
+            const [token, tag, comment, property, string, keyword, number] = match;
+            highlighted += escapeHtml(value.slice(cursor, match.index));
+            const type = tag ? "tag" : comment ? "comment" : property ? "property" : string ? "string" : keyword ? "keyword" : number ? "number" : "";
+            highlighted += `<span class="token-${type}">${escapeHtml(token)}</span>`;
+            cursor = match.index + token.length;
+        }
+        return highlighted + escapeHtml(value.slice(cursor));
+    };
+
+    const updateHighlight = () => {
+        if (!highlightCode) return;
+        highlightCode.innerHTML = highlightJson(editor.value) + "\n";
+        if (highlightPre) {
+            highlightPre.scrollTop = editor.scrollTop;
+            highlightPre.scrollLeft = editor.scrollLeft;
+        }
+    };
 
     const decodeOptions = (value) => {
         const binary = atob(value);
@@ -65,26 +92,44 @@ if (root) {
     };
     const queueRun = () => {
         clearTimeout(runTimer);
+        updateHighlight();
         status.textContent = "Waiting for valid JSON";
         status.dataset.state = "pending";
         runTimer = setTimeout(run, 360);
     };
-    const selectExample = (choice) => {
-        selected = choice;
-        const options = decodeOptions(choice.dataset.options);
+    const selectExample = (target) => {
+        if (!target) return;
+        selectedTarget = target;
+        if (selectEl && target.value && selectEl.value !== target.value) {
+            selectEl.value = target.value;
+        }
+        const options = decodeOptions(target.dataset.options);
         const update = () => {
-            choices.forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === choice)));
-            title.textContent = choice.querySelector("strong").textContent;
-            description.textContent = choice.dataset.description;
+            choices.forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === target)));
+            if (title) title.textContent = target.dataset.title || target.querySelector?.("strong")?.textContent || target.textContent;
+            if (description) description.textContent = target.dataset.description;
             editor.value = JSON.stringify(options, null, 2);
+            updateHighlight();
             run();
         };
         if (document.startViewTransition) document.startViewTransition(update);
         else update();
     };
 
+    if (selectEl) {
+        selectEl.addEventListener("change", () => {
+            const chosen = selectEl.options[selectEl.selectedIndex];
+            if (chosen) selectExample(chosen);
+        });
+    }
     choices.forEach((choice) => choice.addEventListener("click", () => selectExample(choice)));
     editor.addEventListener("input", queueRun);
+    editor.addEventListener("scroll", () => {
+        if (highlightPre) {
+            highlightPre.scrollTop = editor.scrollTop;
+            highlightPre.scrollLeft = editor.scrollLeft;
+        }
+    });
     editor.addEventListener("keydown", (event) => {
         if (event.key !== "Tab") return;
         event.preventDefault();
@@ -93,7 +138,7 @@ if (root) {
         queueRun();
     });
     root.querySelector("[data-example-run]").addEventListener("click", run);
-    root.querySelector("[data-example-reset]").addEventListener("click", () => selectExample(selected));
+    root.querySelector("[data-example-reset]").addEventListener("click", () => selectExample(selectedTarget));
     root.querySelector("[data-example-copy]").addEventListener("click", async (event) => {
         const button = event.currentTarget;
         try {
@@ -109,5 +154,5 @@ if (root) {
         }
     });
     window.addEventListener("pagehide", () => instance?.destroy(), { once: true });
-    selectExample(selected);
+    if (selectedTarget) selectExample(selectedTarget);
 }

@@ -103,6 +103,20 @@ describe('demo toolbar quality-of-life controls', () => {
     ]);
   });
 
+  it('keeps documentation image handoff paths in generated code', async () => {
+    const source = './assets/images/bird-silhouette.svg';
+    activeDom = createDemo(
+      [{ name: 'Bird Silhouette', src: source, thumbnail: './assets/thumbnails/bird.webp' }],
+      `https://demo.test/webutil/?image=${encodeURIComponent(source)}`
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    const { document } = activeDom.window;
+
+    expect(document.getElementById('usageCodePopover').textContent).toContain(`"image": "${source}"`);
+    expect(document.getElementById('usageCodePopover').textContent).not.toContain('./your-image.png');
+    expect(document.querySelector('.image-select[aria-pressed="true"]')).not.toBeNull();
+  });
+
   it('does not decode original media when a gallery thumbnail is unavailable', async () => {
     activeDom = createDemo([{ name: 'Large GIF', src: './assets/images/large.gif' }]);
     await new Promise((resolve) => setImmediate(resolve));
@@ -146,11 +160,11 @@ describe('demo toolbar quality-of-life controls', () => {
     preset.focus();
     preset.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
 
-    expect(document.activeElement.textContent).toContain('Sequence');
+    expect(document.activeElement.textContent).toContain('Quality');
     expect(controls.filter((control) => control.tabIndex === 0)).toEqual([document.activeElement]);
   });
 
-  it('keeps repeated authoring controls direct and moves secondary controls into Advanced', () => {
+  it('keeps authoring and quality controls direct and moves workspace controls into Advanced', () => {
     activeDom = createDemo();
     const { document } = activeDom.window;
     const primaryLabels = [...document.querySelectorAll('.ctrl-bar > .ctrl-pill')].map((control) =>
@@ -159,8 +173,9 @@ describe('demo toolbar quality-of-life controls', () => {
     const advanced = document.getElementById('moreAdvancedActions');
     const workspace = document.getElementById('moreWorkspaceActions');
 
-    expect(primaryLabels).toHaveLength(13);
+    expect(primaryLabels).toHaveLength(14);
     expect(primaryLabels.join(' ')).toContain('Preset');
+    expect(primaryLabels.join(' ')).toContain('Quality');
     expect(primaryLabels.join(' ')).toContain('Sequence');
     expect(primaryLabels.join(' ')).toContain('Mode');
     expect(primaryLabels.join(' ')).toContain('Charset');
@@ -175,14 +190,14 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(primaryLabels.join(' ')).toContain('Code');
     expect(primaryLabels.indexOf('Image none')).toBeLessThan(primaryLabels.indexOf('3D none'));
     expect(primaryLabels.indexOf('3D none')).toBeLessThan(primaryLabels.indexOf('Code'));
-    expect(advanced.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(1);
-    expect(advanced.firstElementChild).toBe(document.getElementById('qualityTriggerBtn'));
+    expect(advanced).toBeNull();
+    expect(document.getElementById('qualityTriggerBtn').parentElement.classList.contains('ctrl-bar')).toBe(true);
     expect(workspace.querySelectorAll(':scope > .ctrl-pill')).toHaveLength(3);
     expect(
       document.getElementById('pop-more').contains(document.getElementById('pop-quality'))
-    ).toBe(true);
+    ).toBe(false);
     expect([...document.querySelector('.stage-top-actions').children].map((item) => item.id)).toEqual([
-      'documentationBtn', 'aboutTriggerBtn', ''
+      'documentationBtn', 'aboutTriggerBtn', 'exportPictureTriggerBtn', ''
     ]);
     expect(document.getElementById('pop-more').contains(document.getElementById('pop-about'))).toBe(
       false
@@ -275,6 +290,47 @@ describe('demo toolbar quality-of-life controls', () => {
     document.getElementById('resetSettingsBtn').click();
     expect(resolution.value).toBe('1');
     expect(document.getElementById('resolutionGridStatus').textContent).toContain('100% logical resolution');
+  });
+
+  it('resets image and 3D model resources when app settings are reset to default', async () => {
+    const source = './assets/images/bird-silhouette.svg';
+    activeDom = createDemo(
+      [{ name: 'Bird Silhouette', src: source, thumbnail: './assets/thumbnails/bird.webp' }],
+      `https://demo.test/webutil/?image=${encodeURIComponent(source)}`
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    const { document, Event } = activeDom.window;
+
+    const meshPrimitive = document.getElementById('meshPrimitive');
+    meshPrimitive.value = 'torus';
+    meshPrimitive.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(document.getElementById('modelStatus').textContent).toContain('torus primitive active');
+    expect(document.querySelector('.image-select[aria-pressed="true"]')).not.toBeNull();
+
+    document.getElementById('resetSettingsBtn').click();
+
+    expect(meshPrimitive.value).toBe('');
+    expect(document.getElementById('modelStatus').textContent).toBe('No model loaded.');
+    expect(document.querySelector('.image-select[aria-pressed="true"]')).toBeNull();
+    expect(document.getElementById('imageStatus').textContent).toContain('ready');
+  });
+
+  it('caps utility frame-rate controls to the 0–540 fps range with auto and default 60', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    const cap = document.getElementById('targetFPS');
+
+    expect(cap.min).toBe('0');
+    expect(cap.max).toBe('540');
+    expect(cap.value).toBe('60');
+    cap.value = '0';
+    cap.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(document.getElementById('targetFPSVal').textContent).toBe('Auto');
+
+    cap.value = '120';
+    cap.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(document.getElementById('targetFPSVal').textContent).toBe('120 fps');
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"targetFPS": 120');
   });
 
   it('routes cache-sensitive live controls through setOption', () => {
@@ -724,11 +780,9 @@ describe('demo toolbar quality-of-life controls', () => {
       'ASCII media renderer'
     );
     expect(document.getElementById('pop-about').textContent).toContain(
-      'git clone https://gitlab.com/staticcanvas/asciiam.git'
-    );
-    expect(document.getElementById('pop-about').textContent).not.toContain(
       'npm install @staticcanvas/asciiam'
     );
+    expect(document.getElementById('pop-about').textContent).not.toContain('git clone');
     expect(document.querySelector('#pop-about a[href="../"]')).not.toBeNull();
     expect(
       document.querySelector('#pop-about a[href="../guides/web-utility/"]')

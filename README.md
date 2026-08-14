@@ -44,8 +44,14 @@ Version sources that must remain aligned:
 
 ## Install
 
-The package is not yet published to npm or JSR. For a source checkout, install
-development dependencies and build the package:
+Install the package from npm:
+
+```bash
+# shell
+npm install @staticcanvas/asciiam
+```
+
+To build from source, clone the repository and run the package build:
 
 ```bash
 # shell
@@ -55,24 +61,14 @@ npm ci
 npm run build
 ```
 
-Generated package files are written to `dist/asciiam`. Until publication, serve a local
-bundle with the application rather than requesting the package from a registry CDN:
+Generated package files are written to `dist/asciiam`.
 
-```html
-<!-- index.html -->
-<script src="./vendor/asciiam.min.js"></script>
-```
-
-After publication, the package name will be `@staticcanvas/asciiam`. npm, JSR,
-jsDelivr, and unpkg references elsewhere in this repository describe the planned
-release channels, not current package availability.
-
-| Location | Current role |
+| Location | Role |
 | --- | --- |
 | [GitLab](https://gitlab.com/staticcanvas/asciiam) | Primary source repository and issue tracking. |
 | [GitHub](https://github.com/staticcanvas/asciiam) | Source mirror. |
-| npm / JSR | Planned package publication; no release is available at the documented name yet. |
-| jsDelivr / unpkg | Available after npm publication. |
+| npm / JSR | Package registries. |
+| jsDelivr / unpkg | Versioned package CDN delivery. |
 
 ## Files
 
@@ -90,7 +86,7 @@ release channels, not current package availability.
   architecture.
 - `project_docs_audit.md` — dated documentation audit, completed corrections, and
   follow-up risks.
-- `docs/assets/images/` — Hugo pipeline source directory for future gallery images.
+- `docs/assets/images/` — Hugo pipeline source directory for gallery images.
 - `scripts/generate-docs-data.js` — generates gallery data and copies the current ESM
   browser bundle and brand asset into the Hugo static tree.
 
@@ -189,16 +185,12 @@ the viewport, retains no more than six concurrent preview instances, destroys of
 instances after a delay, and supports copying a configuration or opening it in the web
 utility through `?preset=<name>`.
 
-The usage playground keeps one renderer active. It accepts options representable as JSON,
-replaces the instance only after valid input, and transfers edited configurations to the web utility
-through a URL-safe `config` value. It imports the documentation bundle, so local examples do
-not depend on npm publication or CDN availability.
+The usage playground and web utility form a unified composition authoring pipeline. The playground keeps one renderer active for editing serializable JSON option objects, and its **View in web utility** action transfers configurations directly to the web configurator through a URL-safe `config` value, where interactive visual controls, image libraries, and 3D mesh settings can be adjusted.
 
 ## Usage and export formats
 
-The package provides ESM and UMD builds in readable and minified forms. Import the
-package root after registry publication. In a source checkout, import the generated
-`dist/asciiam/asciiam.mjs` file or copy a browser bundle into the application:
+The package provides ESM, CommonJS, and UMD builds in readable and minified forms. Import
+the package root from application code:
 
 ```js
 // app.js
@@ -243,11 +235,11 @@ constructor:
 | Browser ESM, minified | `dist/asciiam.esm.min.js` | Native module script for deployment.                                      |
 | CommonJS              | `dist/asciiam.cjs`        | Node/CommonJS entry used by `require('@staticcanvas/asciiam')`.           |
 | UMD                   | `dist/asciiam.js`         | Classic script with readable source and the global `asciiam` constructor. |
-| UMD, minified         | `dist/asciiam.min.js`     | Classic script for deployment; configured as the future jsDelivr/unpkg entry. |
+| UMD, minified         | `dist/asciiam.min.js`     | Classic script for deployment and CDN delivery. |
 
 Source maps are emitted beside each generated bundle for debugging.
-After npm publication, use a version-pinned CDN URL. Before publication, copy a generated
-bundle from `dist/asciiam` into the application's own static assets.
+Use a version-pinned CDN URL for browser delivery, or copy a generated bundle from
+`dist/asciiam` into the application's own static assets.
 
 ### 3D mesh and model input
 
@@ -280,6 +272,19 @@ scale, perspective field of view, auto-rotation, and Y-axis rotation speed.
 Images can be rotated in degrees and flipped horizontally or vertically during the
 bounded sampling pass. Procedural primitives and imported models use the same mesh
 transform controls for X/Y/Z rotation and axis mirroring.
+
+3D meshes and background images can be used together in a single composition. When `colorFromImage: true` is enabled alongside a loaded background image, active 3D mesh geometry (procedural primitives or imported glTF/GLB models) automatically samples cell colors directly from the background image grid:
+
+```js
+// Combine 3D mesh geometry with background image color sampling
+const model = new asciiam('#hero', {
+  mode: 'mesh',
+  meshPrimitive: 'torus',
+  colorFromImage: true
+});
+await model.setImage('/assets/background.jpg');
+model.start();
+```
 
 Application code can also pair a parsed/local `.gltf` source with separately selected
 buffers through `resolveUri`:
@@ -822,15 +827,11 @@ the default `auto` renderer. `IntersectionObserver` and `ResizeObserver` are use
 available. Without them, resizing uses `window.resize` and the instance is treated as
 visible for pause detection.
 
-## Known limitations
-
-See [`devtracker-pending.md`](devtracker-pending.md) for the current gap list and priority.
-
 ## Links
 
 - [GitLab repository](https://gitlab.com/staticcanvas/asciiam)
 - [Issue tracker](https://gitlab.com/staticcanvas/asciiam/-/issues)
-- Package publication: pending for `@staticcanvas/asciiam`
+- [npm package](https://www.npmjs.com/package/@staticcanvas/asciiam)
 
 ## Resources
 
@@ -845,7 +846,7 @@ See [`devtracker-pending.md`](devtracker-pending.md) for the current gap list an
   defines the implemented core `.gltf` and `.glb` input. Base-format parsing ships in
   asciiam without dependencies.
   Assets requiring Draco, Meshopt, or another compression extension will be rejected;
-  codecs are reserved for a future performance study and are not part of the runtime plan.
+  codecs are excluded from the runtime and may only be evaluated in isolated performance work.
 - [npm documentation](https://docs.npmjs.com/)
 - [jsDelivr documentation](https://www.jsdelivr.com/documentation)
 - [GitLab CI/CD documentation](https://docs.gitlab.com/ci/)
@@ -957,6 +958,8 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | `imageScale` / `imageScaleX` / `imageScaleY` / `imageFov` | `number`                                   | `1`                         | Controls source zoom, centered output width/height, and visible fraction. |
 | `imageRotation` / `imageFlipX` / `imageFlipY`             | `number` / `boolean` / `boolean`           | `0` / `false` / `false`     | Rotates or mirrors the source during image sampling.                      |
 | `colorFromImage`                                          | `boolean`                                  | `false`                     | Uses cached sampled RGB colors per cell.                                  |
+| `imageBrightness`                                         | `number`                                   | `1.0`                       | Adjusts sampled image brightness (0.0 to 3.0 multiplier).                 |
+| `imageContrast`                                           | `number`                                   | `1.0`                       | Adjusts sampled image contrast (0.0 to 3.0 multiplier).                   |
 | `imageLuminance`                                          | `auto \| normal \| invert`                 | `auto`                      | Controls silhouette-aware image brightness mapping.                       |
 | `animateImageMask`                                        | `boolean`                                  | `true`                      | Enables image-cell animation.                                             |
 | `imageMaskMode`                                           | legacy image-mask mode                     | `waveSweep`                 | Deprecated compatibility option for `mode: 'image'`; use global `mode`.   |
@@ -987,6 +990,8 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | `nextSequenceStep()` / `seekSequence(index)`              | method                                     | —                           | Interrupts the active step and changes sequence position.                 |
 | `stopSequence()` / `clearSequence()`                      | method                                     | —                           | Stops playback or removes sequence configuration.                         |
 | `setRenderer(renderer)`                                   | method                                     | —                           | Replaces the presentation backend while retaining instance state.         |
+| `exportImage(options?)`                                   | async method                               | —                           | Captures and exports current frame as PNG, JPG, or WebP at custom scale (1x-8x). |
+| `downloadSnapshot(format?, filename?, scale?)`            | async method                               | —                           | Downloads current ASCII artwork frame directly to disk.                   |
 | `getRendererInfo()`                                       | method                                     | —                           | Reports requested and resolved renderer information.                      |
 | `getStats()`                                              | method                                     | —                           | Returns the current compact and extended diagnostic snapshot.             |
 | `setCursor(x, y)`                                         | method                                     | —                           | Sets or clears cursor-reactive coordinates.                               |

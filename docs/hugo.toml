@@ -96,7 +96,7 @@ editBranch = "main"
   [menus.main.params]
   icon = "sliders-horizontal"
   [[menus.main]]
-  name = "Usage examples"
+  name = "JSON builder"
   pageRef = "/examples"
   weight = 25
   [menus.main.params]

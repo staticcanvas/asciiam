@@ -13,6 +13,9 @@ describe("local image library", () => {
         const manifest = JSON.parse(projectFile("docs/static/webutil/assets/backgrounds.json"));
 
         expect(manifest.length).toBeGreaterThan(0);
+        expect(manifest.map((image) => image.name)).toEqual(expect.arrayContaining([
+            "Forest Road", "Animated Cauldron", "Night Heron", "Volcano at Night", "ASCII Portrait"
+        ]));
         manifest.forEach((image) => {
             expect(image.name).toEqual(expect.any(String));
             expect(image.src).toMatch(/^\.\/assets\/images\//);
@@ -26,7 +29,8 @@ describe("local image library", () => {
         const page = projectFile("docs/static/webutil/index.html");
         const utilityScript = projectFile("docs/static/webutil/js/webutil.js");
 
-        expect(page).toContain("docs/static/webutil/assets/images");
+        expect(page).toContain("Select an included image to load it into the canvas and generated code.");
+        expect(page).not.toContain("Clone users");
         expect(utilityScript).toContain('fetch("./assets/backgrounds.json", { cache: "no-store" })');
         expect(page).not.toContain("image-search");
         expect(page).toContain('src="./js/webutil.js?v=__ASSET_REVISION__"');

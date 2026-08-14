@@ -1,6 +1,6 @@
 ---
 title: Attributions and external resources
-description: Source, license, and service references for icons, demonstration media, future mesh research, registries, and delivery infrastructure.
+description: Source, license, and service references for icons, demonstration media, mesh research, registries, and delivery infrastructure.
 weight: 70
 date: 2026-08-13
 lastmod: 2026-08-13
@@ -26,12 +26,17 @@ Icons are embedded locally so documentation navigation does not depend on a clie
 
 ## Demonstration photographs
 
-The image library contains development and rendering-test media sourced from [Pexels](https://www.pexels.com/), [Pixabay](https://pixabay.com/), and local repository contributions. Provider and creator identifiers are retained in filenames where available. Provider references are not blanket license claims: verify an individual source record before redistributing an asset outside this repository.
+The image library contains demonstration and rendering-test media sourced from [Pexels](https://www.pexels.com/), [Pixabay](https://pixabay.com/), and local repository contributions. Provider and creator identifiers are retained in filenames where available. Provider references are not blanket license claims: verify an individual source record before redistributing an asset outside this repository.
 
 ## 3D model sources and format references
 
-asciiam bundles no third-party 3D models. Its dependency-free glTF/GLB loader uses the
-following format and candidate asset sources:
+The documentation bundles Poly Haven's [Classic Laptop](https://polyhaven.com/a/classic_laptop)
+GLB as the live 3D canvas on the splash page. The model is by Arrangemonk, contains
+14,450 triangles, and is distributed under Poly Haven's CC0 asset license. The staged
+2K GLB is `classic_laptop_2k.gltf.zip.glb`; materials and textures are not rendered by
+asciiam's bounded mesh pipeline.
+
+The dependency-free glTF/GLB loader also uses the following format and candidate sources:
 
 - [Poly Haven models](https://polyhaven.com/models) are published under
   [Poly Haven's CC0 asset license](https://polyhaven.com/license). Record the exact model
@@ -42,16 +47,16 @@ following format and candidate asset sources:
 - The [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)
   defines the core glTF/GLB input boundary. Base-format parsing ships in the main package
   without external dependencies. Assets requiring Draco, Meshopt, or another
-  compression extension will be rejected. Codec evaluation is deferred research and no
-  decoder or decoder hook is planned for the released runtime.
+  compression extension will be rejected. The released runtime contains no compression
+  decoder or decoder hook.
 
 These references do not grant a blanket license for assets obtained elsewhere.
 
 ## External project services
 
-GitLab and GitHub host source mirrors and page editing. npm and JSR are package registries. jsDelivr and unpkg provide package CDN delivery after publication. Shields.io supplies README badges. These services are not runtime dependencies of the asciiam library.
+GitLab and GitHub host source mirrors and page editing. npm and JSR are package registries. jsDelivr and unpkg provide package CDN delivery. Shields.io supplies README badges. These services are not runtime dependencies of the asciiam library.
 
-## API reference
+## Reference
 
 | Material or service | Repository use | Source or notice |
 | --- | --- | --- |
@@ -59,7 +64,7 @@ GitLab and GitHub host source mirrors and page editing. npm and JSR are package 
 | SVG Repo Bird Shape | Bundled SVG sampling input | SVG Repo asset 23736, CC0. |
 | PAT globe map | Bundled land-mask animation input | PAT public-domain map collection. |
 | Pexels and Pixabay | Demonstration photographs | Per-asset source verification required for reuse. |
-| Poly Haven | Candidate 3D demonstration models | CC0; retain exact source metadata. |
+| Poly Haven Classic Laptop | Bundled splash-page 3D canvas input | Arrangemonk; 14,450 triangles; CC0. |
 | Khronos glTF Sample Assets | Candidate format fixtures and example geometry | Verify the selected model's license and credits. |
 | glTF 2.0 specification | Implemented core glTF/GLB input reference | Compressed required extensions are rejected. |
 | GitLab and GitHub | Source hosting and page editing | External project services. |

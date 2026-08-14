@@ -248,7 +248,7 @@
 
             .stage-title {
                 position: absolute;
-                inset-block-end: var(--space-lg);
+                inset-block-end: calc(var(--space-lg) + 5rem);
                 inset-inline-start: var(--space-lg);
                 font-size: var(--font-xl);
                 color: var(--clr-text-main);
@@ -1134,6 +1134,24 @@
             .code-dots i:nth-child(2) { background: oklch(0.75 0.18 80); }
             .code-dots i:nth-child(3) { background: oklch(0.68 0.18 145); }
             .code-lang { color: var(--clr-primary); margin-inline-start: 3px; }
+            .code-tab-switch { display: flex; gap: 4px; margin-inline-start: 6px; }
+            .code-tab-btn {
+                border: 1px solid transparent;
+                background: transparent;
+                color: var(--clr-text-dim);
+                font: inherit;
+                font-size: 11px;
+                cursor: pointer;
+                padding: 2px 8px;
+                border-radius: 3px;
+                transition: all var(--time-fast) var(--ease-fluid);
+            }
+            .code-tab-btn:hover { color: var(--clr-text-main); }
+            .code-tab-btn.active {
+                color: var(--clr-primary);
+                background: oklch(from var(--clr-primary) l c h / 0.12);
+                border-color: oklch(from var(--clr-primary) l c h / 0.35);
+            }
             .copy-btn {
                 margin-inline-start: auto;
                 border: 1px solid var(--clr-border);
@@ -1278,7 +1296,7 @@
                 .custom-charset-input { inline-size: 100%; }
             }
             @media (max-width: 640px) {
-                .preview-scene { padding-block-end: 8rem; }
+                .preview-scene { padding-block-end: 13rem; }
                 .ctrl-bar {
                     display: grid;
                     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1343,7 +1361,8 @@
                 inset-block-end: 0;
                 inset-inline: 0;
                 z-index: var(--z-overlay);
-                display: flex;
+                display: grid;
+                grid-template-columns: repeat(7, minmax(0, 1fr));
                 align-items: center;
                 gap: var(--space-xs);
                 padding: var(--space-xs) var(--space-md);
@@ -1355,7 +1374,7 @@
                 box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
                 /* Ensure it sits inside the .stage */
                 pointer-events: auto;
-                overflow-x: auto;
+                overflow-x: hidden;
                 scrollbar-width: none;
             }
             .ctrl-bar::-webkit-scrollbar { display: none; }
@@ -1392,9 +1411,14 @@
                     transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
                 flex: 0 0 auto;
             }
+            .ctrl-bar > .ctrl-pill {
+                inline-size: 100%;
+                min-inline-size: 0;
+                justify-content: center;
+            }
             .ctrl-pill--code {
                 order: 100;
-                margin-inline-start: auto;
+                margin-inline-start: 0;
             }
             .ctrl-pill--utility {
                 padding-inline: var(--space-sm);
@@ -1413,11 +1437,7 @@
                     inset 0 1px 0 rgb(255 255 255 / 0.24);
             }
             .ctrl-bar__separator {
-                flex: 0 0 1px;
-                inline-size: 1px;
-                block-size: 1.5rem;
-                margin-inline: var(--space-xs);
-                background: var(--clr-border);
+                display: none;
             }
             .ctrl-more__actions {
                 display: grid;
@@ -1499,7 +1519,7 @@
             /* Popover panels — expand upward directly above their pill button */
             .ctrl-popover {
                 position: fixed;
-                bottom: calc(var(--space-sm) + 2.6rem);
+                bottom: calc(var(--space-sm) + 5.25rem);
                 border: none;
                 padding: 0;
                 margin: 0;
@@ -1548,6 +1568,13 @@
             /* Wide variant for image browser */
             .ctrl-popover--wide {
                 inline-size: clamp(320px, 52vw, 540px);
+            }
+            #pop-sequence {
+                left: var(--space-md);
+                right: var(--space-md);
+                inline-size: auto;
+                min-inline-size: 0;
+                max-inline-size: none;
             }
 
             .custom-charset-input {
@@ -1889,6 +1916,15 @@
                 border-block-end: 1px solid oklch(from var(--clr-border) l c h / 0.35);
             }
             .cpop-group:last-child { border-block-end: none; }
+            .cpop-group--compact-range {
+                display: grid;
+                grid-template-columns: minmax(7.5rem, auto) minmax(8rem, 1fr);
+                align-items: center;
+                column-gap: var(--space-sm);
+                padding-block: 7px;
+            }
+            .cpop-group--compact-range .cpop-label,
+            .cpop-group--compact-range input[type="range"] { margin-block: 0; }
             .cpop-label {
                 display: block;
                 font-size: var(--font-xs);
@@ -1927,7 +1963,9 @@
             }
             .sequence-toolbar { justify-content: space-between; }
             .sequence-list {
-                display: flex;
+                display: grid;
+                grid-auto-flow: column;
+                grid-auto-columns: minmax(min(18rem, 82vw), 1fr);
                 gap: var(--space-md);
                 max-block-size: min(52dvh, 32rem);
                 padding-block-end: var(--space-xs);
@@ -1946,7 +1984,6 @@
             .sequence-step {
                 position: relative;
                 display: flex;
-                flex: 0 0 min(23rem, 82vw);
                 flex-direction: column;
                 gap: var(--space-sm);
                 padding: var(--space-sm);
@@ -2034,14 +2071,22 @@
                     min-inline-size: 0;
                     max-inline-size: none;
                 }
+                #pop-sequence {
+                    left: var(--space-sm);
+                    right: var(--space-sm);
+                    inline-size: auto;
+                }
             }
             @media (max-width: 640px) {
-                .preview-scene { padding-block-end: 8rem; }
+                .preview-scene { padding-block-end: 13rem; }
                 .ctrl-bar {
                     display: grid;
                     grid-template-columns: repeat(4, minmax(0, 1fr));
                     overflow-x: visible;
                     gap: var(--space-xs);
+                }
+                .ctrl-popover {
+                    bottom: calc(var(--space-sm) + 12rem);
                 }
                 .ctrl-bar__separator { display: none; }
                 .ctrl-bar > .ctrl-pill {
@@ -2128,11 +2173,44 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                     <span>About</span>
                 </button>
+                <button class="stage-about-trigger" id="exportPictureTriggerBtn" type="button"
+                        title="Export Picture Mode (PNG, JPG, WebP ASCII Art)" aria-label="Export Picture Mode"
+                        popovertarget="pop-export-picture" aria-expanded="false" aria-controls="pop-export-picture">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <span>Export Picture</span>
+                </button>
                 <label class="ui-switch stage-fps-toggle" for="statsToggle">
                     <input class="ui-switch__control" type="checkbox" id="statsToggle" role="switch" aria-checked="false" />
                     <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
                     <span class="ui-switch__label">FPS</span>
                 </label>
+            </div>
+            <div class="ctrl-popover" id="pop-export-picture" popover>
+                <div class="cpop-group">
+                    <label class="cpop-label">Export Picture Mode</label>
+                    <p class="sequence-status" style="margin-top:2px">Export current rendered ASCII artwork from images, 3D meshes, or fields into high-resolution image files.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="exportFormat">Image Format</label>
+                    <select id="exportFormat">
+                        <option value="png" selected>PNG (Lossless)</option>
+                        <option value="jpg">JPG (Compressed)</option>
+                        <option value="webp">WebP (Modern)</option>
+                    </select>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="exportScale">Resolution Scale <span class="val" id="exportScaleVal">1× (Native)</span></label>
+                    <input id="exportScale" type="range" min="1" max="4" step="1" value="1" data-aria-label="Export resolution scale" />
+                </div>
+                <div class="cpop-group" id="exportQualityGroup" style="display:none">
+                    <label class="cpop-label row" for="exportQuality">Compression Quality <span class="val" id="exportQualityVal">92%</span></label>
+                    <input id="exportQuality" type="range" min="0.1" max="1" step="0.05" value="0.92" data-aria-label="Export quality" />
+                </div>
+                <div class="cpop-group" style="display:flex; gap:8px; margin-top:12px;">
+                    <button type="button" class="btn-primary" id="downloadPictureBtn" style="flex:1">Download Image</button>
+                    <button type="button" class="btn-ghost" id="copyPictureBtn" style="flex:1">Copy to Clipboard</button>
+                </div>
+                <p class="sequence-status" id="exportStatus" role="status" aria-live="polite">Ready to export ASCII artwork.</p>
             </div>
             <div class="stats" id="stats" data-extended="false" aria-label="Animation performance statistics"></div>
         <div class="ctrl-bar" role="toolbar" aria-label="Animation controls">
@@ -2208,6 +2286,11 @@
                         <option value="performance">Performance</option>
                         <option value="ultra" selected>Ultra performance</option>
                     </select>
+                </div>
+                <div class="cpop-group cpop-group--compact-range">
+                    <label class="cpop-label row" for="targetFPS">Frame-rate cap <span class="val" id="targetFPSVal">60 fps</span></label>
+                    <input id="targetFPS" type="range" min="0" max="540" step="1" value="60"
+                           data-aria-label="Frame-rate cap" />
                 </div>
                 <div class="cpop-group">
                     <label class="cpop-label row" for="resolutionScale">Grid resolution <span class="val" id="resolutionScaleVal">100%</span></label>
@@ -2347,12 +2430,14 @@
                     </select>
                 </div>
                 <div class="cpop-group">
-                    <label class="cpop-label row" for="edgeFade">Edge fade <span class="val" id="edgeFadeVal">0.0</span></label>
-                    <input type="range" id="edgeFade" min="0" max="1" step="0.05" value="0" />
+                    <label class="cpop-label row" for="edgeFade">Edge fade <span class="val" id="edgeFadeVal">0%</span></label>
+                    <input type="range" id="edgeFade" min="0" max="1" step="0.01" value="0" />
                 </div>
                 <div class="cpop-group">
-                    <label class="cpop-label row" for="trail">Trail <span class="val" id="trailVal">0.0</span></label>
-                    <input type="range" id="trail" min="0" max="0.6" step="0.02" value="0" />
+                    <label class="cpop-label row" for="trail">Trail persistence <span class="val" id="trailVal">0.00</span></label>
+                    <input type="range" id="trail" min="0" max="0.95" step="0.01" value="0" />
+                    <label class="cpop-label" for="trailColor" style="margin-top:var(--space-xs)">Trail decay color</label>
+                    <input type="color" id="trailColor" value="#070809" style="width:100%;height:32px;border:1px solid var(--clr-border);border-radius:4px;background:var(--clr-surface);cursor:pointer;" />
                 </div>
                 <div class="cpop-group">
                     <label class="cpop-label row" for="pulse">Pulse <span class="val" id="pulseVal">0.00</span></label>
@@ -2527,10 +2612,6 @@
                 <span>Advanced</span>
             </button>
             <div class="ctrl-popover" id="pop-more" popover>
-                <section class="cpop-group" aria-labelledby="moreAdvancedLabel">
-                    <span class="cpop-label" id="moreAdvancedLabel">Render tuning</span>
-                    <div class="ctrl-more__actions" id="moreAdvancedActions"></div>
-                </section>
                 <section class="cpop-group" aria-labelledby="moreWorkspaceLabel">
                     <span class="cpop-label" id="moreWorkspaceLabel">Workspace</span>
                     <div class="ctrl-more__actions" id="moreWorkspaceActions"></div>
@@ -2589,10 +2670,10 @@
                         <div class="npm-install-bar" style="margin-block-start:var(--space-sm);max-inline-size:540px">
                             <div class="npm-install-cmd">
                                 <span class="npm-prompt">$</span>
-                                <code>git clone https://gitlab.com/staticcanvas/asciiam.git</code>
-                                <span class="npm-ver-badge">source</span>
+                                <code>npm install @staticcanvas/asciiam</code>
+                                <span class="npm-ver-badge">npm</span>
                             </div>
-                            <button class="npm-copy-btn" id="copySourceCommandAbout" type="button" aria-label="Copy source clone command">
+                            <button class="npm-copy-btn" id="copySourceCommandAbout" type="button" aria-label="Copy npm install command">
                                 <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                                 <span>copy</span>
                             </button>
@@ -2616,8 +2697,8 @@
                                 <p>WebGL2 batches glyph instances when available. Canvas 2D remains the explicit CPU renderer and automatic fallback.</p>
                             </article>
                             <article class="about-reference-card">
-                                <h3>ASCII media</h3>
-                                <p>Procedural fields and sampled images render as glyph grids for backgrounds, bounded hero cards, and splash compositions.</p>
+                                <h3>ASCII media & compositions</h3>
+                                <p>Procedural fields, sampled images, and 3D meshes render as glyph grids for backgrounds, bounded hero cards, and splash compositions. Images and 3D meshes can be combined into textured 3D ASCII compositions.</p>
                             </article>
                             <article class="about-reference-card">
                                 <h3>Lifecycle</h3>
@@ -2697,7 +2778,7 @@
                     </label>
                 </div>
                 <div class="cpop-group">
-                    <p class="image-library-help">The global Mode control animates the sampled image. Every animation mode remains available after an image is loaded.</p>
+                    <p class="image-library-help">The global Mode control animates the sampled image. Images and 3D meshes can be used together in compositions; when "Color from image" is checked, active 3D mesh geometry samples colors from the loaded image.</p>
                 </div>
                 <div class="cpop-group">
                     <label class="ui-switch" for="animateImageFramesToggle">
@@ -2715,6 +2796,10 @@
                         <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
                         <span class="ui-switch__label">Color from image</span>
                     </label>
+                    <label class="cpop-label row" for="imageBrightness" style="margin-top:var(--space-xs)">Image brightness <span class="val" id="imageBrightnessVal">1.00×</span></label>
+                    <input type="range" id="imageBrightness" min="0" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="imageContrast" style="margin-top:var(--space-xs)">Image contrast <span class="val" id="imageContrastVal">1.00×</span></label>
+                    <input type="range" id="imageContrast" min="0" max="3" step="0.05" value="1" />
                 </div>
                 <div class="cpop-group">
                     <label class="ui-switch" for="imageColorRangeToggle">
@@ -2737,7 +2822,7 @@
                 <div class="cpop-group cpop-browser">
                     <div class="image-browser-head">
                         <span class="cpop-label">Included defaults</span>
-                        <span class="image-library-help">Clone users can add files to <code>docs/static/webutil/assets/images</code>; <code>npm run dev</code> or <code>npm run build</code> refreshes this list.</span>
+                        <span class="image-library-help">Select an included image to load it into the canvas and generated code.</span>
                     </div>
                     <p class="image-status" id="imageStatus" role="status" aria-live="polite">Loading included images…</p>
                     <section class="image-section" id="localImageSection" hidden>
@@ -2777,7 +2862,7 @@
                         <option value="solid">Solid</option>
                     </select>
                     <p class="image-status" id="modelStatus" role="status" aria-live="polite">No model loaded.</p>
-                    <p class="image-library-help">Local upload accepts GLB because it contains its buffers. A remote .gltf URL may reference sibling .bin files; the server must permit cross-origin requests.</p>
+                    <p class="image-library-help">Local upload accepts GLB because it contains its buffers. A remote .gltf URL may reference sibling .bin files; the server must permit cross-origin requests. <strong>Combining media:</strong> 3D meshes and background images can be used together; when "Color from image" is enabled, active 3D mesh geometry samples colors directly from the loaded image.</p>
                 </div>
                 <div class="cpop-group">
                     <label class="cpop-label row" for="meshScale">Uniform scale <span class="val" id="meshScaleVal">1.00×</span></label>
@@ -2832,15 +2917,15 @@
                     <div class="npm-install-bar">
                         <div class="npm-install-cmd">
                             <span class="npm-prompt">$</span>
-                            <code>git clone https://gitlab.com/staticcanvas/asciiam.git</code>
-                            <span class="npm-ver-badge">source</span>
+                            <code>npm install @staticcanvas/asciiam</code>
+                            <span class="npm-ver-badge">npm</span>
                         </div>
-                        <button class="npm-copy-btn" id="copySourceCommandCode" type="button" aria-label="Copy source clone command">
+                        <button class="npm-copy-btn" id="copySourceCommandCode" type="button" aria-label="Copy npm install command">
                             <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                             <span>copy</span>
                         </button>
-                        <a href="https://gitlab.com/staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View source repository">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0H0zm19.2 19.2H12v-9.6H9.6v9.6H4.8V4.8h14.4v14.4z"/></svg>
+                        <a href="https://gitlab.com/staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View GitLab source repository">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 0 1-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 0 1 5.5 2a.43.43 0 0 1 .39.27L8.1 8.87h7.8l2.21-6.6A.43.43 0 0 1 18.5 2a.42.42 0 0 1 .39.21l2.44 7.51 1.22 3.78a.84.84 0 0 1-.3.94z"/></svg>
                         </a>
                     </div>
                 </div>
@@ -2848,7 +2933,10 @@
                     <div class="code-window" style="margin:0">
                         <div class="code-head">
                             <span class="code-dots"><i></i><i></i><i></i></span>
-                            <span class="code-lang">js</span>
+                            <div class="code-tab-switch" role="tablist" aria-label="Code format">
+                                <button type="button" class="code-tab-btn active" data-code-tab="js" role="tab" aria-selected="true">app.js</button>
+                                <button type="button" class="code-tab-btn" data-code-tab="json" role="tab" aria-selected="false">options.json</button>
+                            </div>
                             <button class="copy-btn" id="copyUsagePopover">copy</button>
                         </div>
                         <pre><code id="usageCodePopover"></code></pre>
@@ -2867,7 +2955,7 @@
                 <p class="performance-policy">Zero runtime dependencies · WebGL2 + Canvas 2D fallback · offscreen auto-pause · reduced-motion aware</p>
             </div>
             <div>
-                <p class="footer-copy">Built with browser-native JavaScript, WebGL2, and Canvas 2D fallback. The demo uses uploaded files or a build-generated local image library.</p>
+                <p class="footer-copy">Browser-native JavaScript with WebGL2 rendering and Canvas 2D fallback. Images remain local to the utility session.</p>
                 <nav class="footer-resources" aria-label="Technology and resource links">
                     <a href="https://developer.mozilla.org/docs/Web/API/Canvas_API" target="_blank" rel="noopener noreferrer">Canvas 2D</a>
                     <a href="https://developer.mozilla.org/docs/Web/API/WebGL_API" target="_blank" rel="noopener noreferrer">WebGL2</a>

@@ -8,6 +8,51 @@ document.querySelectorAll(".prose table").forEach((table) => {
     wrapper.append(table);
 });
 
+const mermaidDiagrams = [...document.querySelectorAll(".mermaid-diagram")];
+if (mermaidDiagrams.length) {
+    import("https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.esm.min.mjs")
+        .then(({ default: mermaid }) => {
+            mermaid.initialize({
+                startOnLoad: false,
+                securityLevel: "strict",
+                theme: "base",
+                themeVariables: {
+                    darkMode: true,
+                    background: "#10141d",
+                    primaryColor: "#141a27",
+                    primaryTextColor: "#dce2ec",
+                    primaryBorderColor: "#4a576f",
+                    secondaryColor: "#1b2333",
+                    secondaryTextColor: "#dce2ec",
+                    secondaryBorderColor: "#62718d",
+                    tertiaryColor: "#090d14",
+                    tertiaryTextColor: "#8491a7",
+                    tertiaryBorderColor: "#4a576f",
+                    lineColor: "#428ef4",
+                    textColor: "#dce2ec",
+                    mainBkg: "#141a27",
+                    nodeBorder: "#4a576f",
+                    clusterBkg: "#10141d",
+                    clusterBorder: "#4a576f",
+                    edgeLabelBackground: "#090d14",
+                    fontFamily: "'JetBrains Mono', 'Cascadia Code', monospace",
+                },
+                themeCSS: ".label, .edgeLabel, .stateLabel { letter-spacing: .01em; }",
+            });
+            return mermaid.run({ nodes: mermaidDiagrams });
+        })
+        .then(() => {
+            mermaidDiagrams.forEach((diagram) => { diagram.dataset.mermaidState = "rendered"; });
+        })
+        .catch(() => {
+            mermaidDiagrams.forEach((diagram) => {
+                diagram.dataset.mermaidState = "error";
+                diagram.setAttribute("role", "img");
+                diagram.setAttribute("aria-label", "Diagram source; Mermaid could not be loaded");
+            });
+        });
+}
+
 const tocLinks = [...document.querySelectorAll(".toc-panel nav a[href^='#']")];
 if (tocLinks.length && "IntersectionObserver" in window) {
     const linksById = new Map(tocLinks.map((link) => [decodeURIComponent(link.hash.slice(1)), link]));

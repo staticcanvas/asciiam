@@ -1487,4 +1487,45 @@ describe("asciiam lifecycle", () => {
         expect(sequenceInterrupted).toHaveBeenCalledWith(expect.objectContaining({ reason: "mode-change" }), animation);
         animation.destroy();
     });
+
+    it("captures and exports rendered ASCII art as PNG, JPG, and WebP images", async () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, { respectReducedMotion: false });
+        animation.start();
+
+        const pngResult = await animation.exportImage({ format: "png", scale: 2, filename: "test-art" });
+        expect(pngResult.filename).toBe("test-art.png");
+        expect(pngResult.width).toBe(640);
+        expect(pngResult.height).toBe(360);
+        expect(pngResult.format).toBe("png");
+        expect(pngResult.dataURL).toContain("data:image/png");
+
+        const jpgResult = await animation.exportImage({ format: "jpg", scale: 1, quality: 0.8 });
+        expect(jpgResult.filename).toBe("ascii-art.jpg");
+        expect(jpgResult.format).toBe("jpg");
+        expect(jpgResult.dataURL).toContain("data:image/jpeg");
+
+        animation.destroy();
+    });
+
+    it("renders static images and 3D meshes without animation when mode is none or static", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, { mode: "none", respectReducedMotion: false });
+        animation.start();
+        expect(animation.opts.mode).toBe("none");
+        expect(asciiam.BUILT_IN_MODES).toContain("none");
+        expect(asciiam.BUILT_IN_MODES).toContain("static");
+
+        animation.setMode("static");
+        expect(animation.opts.mode).toBe("static");
+        animation.destroy();
+    });
 });

@@ -33,6 +33,42 @@ describe('Hugo documentation source', () => {
     expect(template).toContain('?preset=');
   });
 
+  it('renders four live splash canvases including the bundled laptop model', () => {
+    const template = projectFile('docs/layouts/index.html');
+    const script = projectFile('docs/static/js/home.js');
+    const styles = projectFile('docs/static/css/docs.css');
+
+    expect(template.match(/data-example-canvas=/g)).toHaveLength(4);
+    expect(template).toContain('data-example-canvas="mode"');
+    expect(template).toContain('data-example-canvas="sequence"');
+    expect(template).toContain('data-example-canvas="image"');
+    expect(template).toContain('data-example-canvas="mesh"');
+    expect(template).toContain('classic_laptop_2k.gltf.zip.glb');
+    expect(script).toContain('sequenceExample?.setSequence([');
+    expect(script).toContain('{ loop: true }');
+    expect(script).toContain('imageExample?.setImage(exampleBox.dataset.exampleImage)');
+    expect(script).toContain('meshExample?.setModel(exampleBox.dataset.exampleModel)');
+    expect(script).toContain('examples.forEach((instance) => instance.destroy())');
+    expect(styles).toContain('grid-auto-flow: column');
+  });
+
+  it('uses the reclaimed splash width and transfers gallery media into the utility', () => {
+    const template = projectFile('docs/layouts/index.html');
+    const styles = projectFile('docs/static/css/docs.css');
+    const utility = projectFile('docs/static/webutil/js/webutil.js');
+
+    expect(template.match(/class="asset-media-card"/g)).toHaveLength(6);
+    expect(template).toContain('?image=./assets/images/44833-road-166543.jpg');
+    expect(template).toContain('?image=./assets/images/earth-landmask-256-slow.gif');
+    expect(template).toContain('class="asset-media-type">JPG');
+    expect(template).toContain('class="asset-media-type">GIF');
+    expect(template).toContain('class="asset-media-type">SVG');
+    expect(styles).toContain('max-width: 1680px');
+    expect(styles).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
+    expect(utility).toContain('const requestedImageSource = queryParameters.get("image")');
+    expect(utility).toContain('{ image: requestedImageSource, colorFromImage: true }');
+  });
+
   it('contains the required documentation destinations and built output', () => {
     [
       'docs/content/getting-started.md',
@@ -67,7 +103,7 @@ describe('Hugo documentation source', () => {
     expect(config).toContain('name = "Start"');
     expect(config).toContain('name = "API reference"');
     expect(config).toContain('name = "Version and compatibility"');
-    expect(config).toContain('name = "Usage examples"');
+    expect(config).toContain('name = "JSON builder"');
     expect(config).toContain('name = "Attributions"');
     [
       '/guides/rendering',
@@ -108,7 +144,7 @@ describe('Hugo documentation source', () => {
     expect(documentation).not.toContain('pending-tasks.md');
     expect(projectFile('README.md')).toContain('Twenty-seven built-in modes');
     expect(projectFile('README.md')).toContain('| `mesh`');
-    expect(projectFile('docs/content/version.md')).toContain('not yet published to npm or JSR');
+    expect(projectFile('docs/content/version.md')).toContain('distributed as `@staticcanvas/asciiam`');
   });
 
   it('publishes documentation at the root and the application at a relative webutil route', () => {
@@ -205,13 +241,19 @@ describe('Hugo documentation source', () => {
     const script = projectFile('docs/static/js/examples.js');
 
     expect(data.examples[0]).toMatchObject({ id: 'minimum', options: {} });
+    expect(data.examples).toHaveLength(30);
+    expect(data.examples.map((example) => example.level)).toEqual(
+      Array.from({ length: 30 }, (_, index) => String(index + 1).padStart(2, '0'))
+    );
     expect(data.examples.map((example) => example.id)).toEqual(expect.arrayContaining([
-      'spatial-gradient', 'hover-zone', 'click-zone', 'sequence', 'image-source', 'complete'
+      'spatial-gradient', 'hover-zone', 'click-zone', 'sequence', 'image-source',
+      'quality-cap', 'image-range', 'orthographic-mesh', 'complete'
     ]));
     expect(data.examples.find((example) => example.id === 'complete').options).toEqual(expect.objectContaining({
       quality: 'balanced', fontLevels: 5, alphaLevels: 32, useGlyphAtlas: false, imageMaskMode: 'waveSweep'
     }));
     expect(layout).toContain('data-example-editor');
+    expect(layout).toContain('len hugo.Data.examples.examples');
     expect(layout).toContain('data-example-utility');
     expect(script).toContain('instance?.destroy()');
     expect(script).toContain('JSON.parse(editor.value)');

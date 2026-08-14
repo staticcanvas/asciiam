@@ -14,6 +14,7 @@ Modes determine how each frame selects glyph, intensity, opacity, weight, and op
 
 | Mode | Processing model | Primary controls |
 | --- | --- | --- |
+| `none` | static | static rendering for images, 3D meshes, and ASCII grids |
 | `wave` | dense field | `direction`, `ambient`, `bandWidth` |
 | `current` | dense field | `speed`, opacity bounds |
 | `ripple` | cached spatial field | `align`, `speed` |
@@ -95,7 +96,7 @@ animation.triggerInteraction();
 
 Alignment does not affect directional, coordinate-global, or pointer-defined modes where a fixed origin has no meaningful role.
 
-## API reference
+## Reference
 
 | API | Type | Default | Effect |
 | --- | --- | --- | --- |

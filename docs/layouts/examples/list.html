@@ -2,26 +2,25 @@
 {{ define "main" }}
 <header class="hero hero-compact examples-hero">
   <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
-  <p class="hero-eyebrow">One renderer · editable configurations</p>
-  <h1 class="hero-title">Usage <em>examples.</em></h1>
+  <p class="hero-eyebrow">One renderer · live JSON configurations</p>
+  <h1 class="hero-title">JSON <em>builder.</em></h1>
   <p class="hero-desc">{{ .Description }}</p>
 </header>
 <section class="examples-page" data-examples-playground data-utility-url="{{ partial "web-utility-url.html" . }}">
-  <nav class="example-rail" aria-label="Example configurations">
-    <p class="example-rail-label">Configuration range</p>
-    {{ range hugo.Data.examples.examples }}
-    <button type="button" data-example-choice data-example-id="{{ .id }}" data-options="{{ .options | jsonify | base64Encode }}" data-description="{{ .description }}" aria-pressed="{{ if eq .id "minimum" }}true{{ else }}false{{ end }}">
-      <span>{{ .level }}</span>
-      <strong>{{ .title }}</strong>
-    </button>
-    {{ end }}
-  </nav>
   <div class="example-workbench">
     <header class="example-workbench-head">
       <div>
         <p class="section-tag">Live configuration</p>
         <h2 data-example-title>Minimum</h2>
         <p data-example-description>Use library defaults with only a render target.</p>
+      </div>
+      <div class="example-select-wrapper">
+        <label for="example-select" class="example-select-label">Preset configuration ({{ len hugo.Data.examples.examples }})</label>
+        <select id="example-select" class="example-select-dropdown" data-example-select aria-label="Select configuration preset">
+          {{ range hugo.Data.examples.examples }}
+          <option value="{{ .id }}" data-example-id="{{ .id }}" data-options="{{ .options | jsonify | base64Encode }}" data-description="{{ .description }}" data-title="{{ .title }}">{{ .level }} — {{ .title }}</option>
+          {{ end }}
+        </select>
       </div>
       <output class="example-status" data-example-status role="status" aria-live="polite">Ready</output>
     </header>
@@ -31,8 +30,11 @@
           <span>options.json</span>
           <span>JSON · auto-run</span>
         </div>
-        <label class="sr-only" for="example-editor">Editable asciiam options</label>
-        <textarea id="example-editor" data-example-editor spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+        <div class="example-editor-container">
+          <pre class="example-editor-highlight" data-example-highlight aria-hidden="true"><code data-example-highlight-code></code></pre>
+          <label class="sr-only" for="example-editor">Editable asciiam options</label>
+          <textarea id="example-editor" data-example-editor spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+        </div>
         <div class="example-error" data-example-error hidden></div>
       </section>
       <section class="example-preview-panel" aria-label="Live output">

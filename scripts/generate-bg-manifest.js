@@ -8,6 +8,26 @@ const thumbnailDirectory = resolve(utilityDirectory, "assets/thumbnails");
 const manifestPath = resolve(utilityDirectory, "assets/backgrounds.json");
 const utilityPagePath = resolve(utilityDirectory, "index.html");
 const supportedExtensions = new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"]);
+const friendlyNames = Object.freeze({
+    "44833-road-166543.jpg": "Forest Road",
+    "bird-silhouette.svg": "Bird Silhouette",
+    "catlinedigital-cauldron-28104_512.gif": "Animated Cauldron",
+    "domitian-tunnel-5122424_1920.jpg": "Domitian Tunnel",
+    "earth-landmask-256-slow.gif": "Rotating Earth",
+    "kranich17-paving-stones-7655820_1920.jpg": "Paving Stones",
+    "mxj_files-glasses-27527_512.gif": "Animated Glasses",
+    "pexels-asphalt-1867667_1920.jpg": "Asphalt Texture",
+    "pexels-bertellifotografia-38760198.jpg": "Night Heron",
+    "pexels-clive-kim-2523249-6307488.jpg": "Volcano at Night",
+    "pexels-merlin-10874572.jpg": "Iridescent Texture",
+    "pexels-merlin-10874575.jpg": "Prismatic Scales",
+    "pexels-ritam-karmakar-616573342-31064522.jpg": "Dragonfly",
+    "pexels-steve-30018097.jpg": "Violet Reflections",
+    "pexels-thales13-38600221.jpg": "Blue Droplets",
+    "valiphotos-road-1072821_1920.jpg": "Autumn Forest Road",
+    "vilkasss-ai-generated-9599760.jpg": "ASCII Portrait",
+    "wal_172619-bridge-6755233_1920.jpg": "Riverside Bridge",
+});
 
 await mkdir(thumbnailDirectory, { recursive: true });
 
@@ -61,7 +81,7 @@ const sourceEntries = entries
 const images = await Promise.all(sourceEntries.map(async (entry) => {
     const thumbnail = await ensureThumbnail(entry.name);
     return {
-        name: entry.name
+        name: friendlyNames[entry.name] || entry.name
             .replace(/\.[^.]+$/, "")
             .replace(/[-_]+/g, " ")
             .replace(/\b\w/g, (letter) => letter.toUpperCase()),

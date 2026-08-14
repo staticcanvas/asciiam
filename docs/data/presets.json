@@ -1,6 +1,6 @@
 {
   "version": "0.10.0",
-  "builtInModeCount": 27,
+  "builtInModeCount": 29,
   "presets": [
     {
       "name": "heroWave",

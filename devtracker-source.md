@@ -52,6 +52,10 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
+- [x] 🟡🌟✅1️⃣ **Critical** - **Image Brightness & Contrast Controls.** Added `imageBrightness` and `imageContrast` core options, pixel sampling tone mapping in `src/asciiam.js`, TypeScript declarations, and live Web Utility slider controls.
+- [x] 🟡🌟✅1️⃣ **Critical** - **Granular Edge Fade & Trail Spectrum Controls.** Enhanced `edgeFade` range input to 0.01 step precision with percentage readouts, added `trailColor` color picker in Web Utility Motion popover.
+- [x] 🟡🌟✅1️⃣ **Critical** - **Plain Mode & Static Media Rendering.** Renamed static mode to `plain` (aliasing `none` and `static`) for un-animated image and 3D mesh rasterization.
+- [x] 🟡🌟✅1️⃣ **Critical** - **Picture Export Mode & High-Res PNG/JPG/WebP Export.** Added `exportImage()` and `downloadSnapshot()` core methods and Export Picture popover UI in Web Utility.
 - [x] 🟡🪲✅1️⃣ **Critical** - **Web Utility live-control asset integrity.** Reproduced
       logical grid changes in Chromium, replaced static release-version query strings with
       one content-derived revision across the utility runtime graph, and added tests for

@@ -8,9 +8,8 @@ tags: [API, reference, JavaScript, TypeScript, options, methods, events]
 keywords: [asciiam API, configuration reference, animation options, renderer methods, sequence events, callbacks, TypeScript declarations]
 ---
 
-The package build exports the `asciiam` class as its default export and provides TypeScript
-declarations in `src/asciiam.d.ts`. Registry publication is pending; package import
-examples apply after publication or when the generated package is linked locally.
+The package exports the `asciiam` class as its default export and includes TypeScript
+declarations in `src/asciiam.d.ts`.
 
 ## Choose an integration path
 
@@ -69,7 +68,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `mode` | mode string | `wave` | Selects the active animation algorithm. |
+| `mode` | mode string | `wave` | Selects the active animation algorithm or `none` (`static`) for un-animated rendering. |
 | `quality` | `high \| balanced \| performance \| ultra` | `balanced` | Applies one quality tier. |
 | `renderer` | `auto \| webgl2 \| canvas2d` | `auto` when GPU preference is enabled | Selects GPU-first, explicit WebGL2, or Canvas 2D presentation. |
 | `charSet` | string | `asciiExtended` | Supplies glyphs used by procedural modes. |
@@ -238,6 +237,22 @@ Returns the resolved backend: `webgl2` or `canvas2d`. The method replaces the pr
 | `acceleration` | status string | Reports GPU API preference, browser-managed Canvas, or no request. |
 | `desynchronized` | boolean | Resolved or requested low-latency context flag. |
 | `willReadFrequently` | boolean | Readback hint for the presentation context. |
+
+### `exportImage(options?)`
+
+Captures the rendered ASCII art canvas and returns a Data URL, Blob, and image metadata. Accepts `format` (`'png'`, `'jpg'`, `'webp'`), `scale` (`1` through `8` for high-resolution 4K/8K prints), `quality` (`0.1`–`1.0`), and optional `download: true`.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `format` | `'png' \| 'jpg' \| 'webp'` | `'png'` | Output image MIME format. |
+| `scale` | `number` | `1` | Resolution scaling multiplier for high-res exports. |
+| `quality` | `number` | `0.92` | Compression quality for JPEG and WebP. |
+| `filename` | `string` | `'ascii-art'` | File name when downloading. |
+| `download` | `boolean` | `false` | Automatically triggers browser file download when `true`. |
+
+### `downloadSnapshot(format?, filename?, scale?)`
+
+Convenience method to capture and download the current ASCII artwork frame directly to disk.
 
 ### `getStats()`
 

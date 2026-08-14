@@ -16,10 +16,17 @@ asciiam renders an animated glyph grid into a canvas owned by an HTML element or
 - WebGL2 when using the default GPU-first renderer; Canvas 2D is used when WebGL2 is unavailable.
 - A target element with non-zero width and height.
 
-## Build from source
+## Install
 
-The package is not yet published to npm or JSR. Build the current source checkout before
-using it locally:
+Install the package from npm:
+
+`terminal`
+
+```bash
+npm install @staticcanvas/asciiam
+```
+
+To build the repository source locally:
 
 `terminal`
 
@@ -30,9 +37,8 @@ npm ci
 npm run build
 ```
 
-The build writes ESM, CommonJS, and UMD files to `dist/asciiam`. The planned package name
-is `@staticcanvas/asciiam`; use the npm command only after that package is published.
-A source checkout can use the generated module without a bundler:
+The build writes ESM, CommonJS, and UMD files to `dist/asciiam`. A source checkout can
+use the generated module without a bundler:
 
 `index.html`
 
@@ -105,7 +111,7 @@ stateDiagram-v2
 - Preview configurations in the [preset gallery]({{< relref "/gallery" >}}).
 - Consult the [API reference]({{< relref "/api" >}}).
 
-## API reference
+## Reference
 
 | API | Type | Default | Purpose |
 | --- | --- | --- | --- |

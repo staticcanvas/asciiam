@@ -57,8 +57,7 @@ animation.setMode('ripple');
 Procedural, reveal, interaction, sparse-particle, and custom modes can operate while an
 image source is loaded. Dense modes animate sampled glyph cells directly. Sparse modes
 such as `matrix`, `snow`, `fire`, `starfield`, and `orbit` retain their particle geometry
-and are clipped to sampled image cells. `mesh` renders its geometry source instead of the
-loaded image grid.
+and are clipped to sampled image cells. `mesh` renders its 3D geometry source; when `colorFromImage` is enabled alongside a loaded image, 3D mesh characters sample cell colors directly from the background image grid, allowing textured 3D ASCII compositions.
 
 Transparent SVG silhouettes often use black fills. Normal luminance mapping sends black to the first density glyph, which is commonly a space. The default `imageLuminance: 'auto'` detects dark opaque artwork surrounded by transparency and inverts its density mapping. Set `normal` or `invert` when explicit control is required. This affects glyph density only; it does not rotate or transform the source SVG.
 
@@ -85,7 +84,7 @@ The engine creates a byte mask during image sampling. Per-frame image animation 
 | `halftonePulse` | Pulses a spatial halftone pattern. |
 | `fullStatic` | Displays sampled glyphs without mask animation. |
 
-## API reference
+## Reference
 
 | Property or method | Type | Default | Effect |
 | --- | --- | --- | --- |

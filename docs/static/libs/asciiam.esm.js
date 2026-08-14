@@ -335,11 +335,11 @@ import { loadGltf } from "./gltf.js";
 
         /** Canonical inventory used by documentation and integration tooling. */
         static BUILT_IN_MODES = Object.freeze([
-            "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
+            "none", "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
             "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace",
             "echoBloom", "matrix", "snow", "sparkle", "fire", "starfield", "glitch",
             "typewriter", "orbit", "hoverZone", "clickZone", "image", "custom",
-            "mesh",
+            "mesh", "static",
         ]);
 
         static CHARACTER_SETS = {
@@ -706,6 +706,8 @@ import { loadGltf } from "./gltf.js";
                     fit: "cover",
                     imageLuminance: "auto",
                     colorFromImage: false,
+                    imageBrightness: 1,
+                    imageContrast: 1,
                     animateImageMask: true,
                     imageMaskMode: "waveSweep",
                     imageAnimationRange: null, // { min:'#000000', max:'#ffffff' }; null animates every sampled color
@@ -1107,7 +1109,7 @@ import { loadGltf } from "./gltf.js";
                 this._time = 0;
                 this._lastT = null;
             }
-            if (key === "imageScale" || key === "imageScaleX" || key === "imageScaleY" || key === "imageFov" || key === "imageRotation" || key === "imageFlipX" || key === "imageFlipY" || key === "fit" || key === "imageChars" || key === "imageLuminance" || key === "colorFromImage" || key === "imageAnimationRange") {
+            if (key === "imageScale" || key === "imageScaleX" || key === "imageScaleY" || key === "imageFov" || key === "imageRotation" || key === "imageFlipX" || key === "imageFlipY" || key === "fit" || key === "imageChars" || key === "imageLuminance" || key === "colorFromImage" || key === "imageAnimationRange" || key === "imageBrightness" || key === "imageContrast") {
                 if (this._sourceImage) this._resampleImage();
                 this._scheduleAnimatedFrameCapture();
             }
@@ -2611,17 +2613,26 @@ import { loadGltf } from "./gltf.js";
             const luminanceMode = this.opts.imageLuminance || "auto";
             const invertLuminance = luminanceMode === "invert"
                 || (luminanceMode === "auto" && transparentCount > 0 && opaqueCount > 0 && opaqueBrightness / opaqueCount < 0.45);
+            const userBrightness = Math.max(0, Number(this.opts.imageBrightness) ?? 1);
+            const userContrast = Math.max(0, Number(this.opts.imageContrast) ?? 1);
+            const applyTone = userBrightness !== 1 || userContrast !== 1;
+
             for (let i = 0; i < cols * rows; i++) {
-                const r = data[i * 4],
+                let r = data[i * 4],
                     gC = data[i * 4 + 1],
-                    b = data[i * 4 + 2],
-                    a = data[i * 4 + 3];
+                    b = data[i * 4 + 2];
+                const a = data[i * 4 + 3];
+
+                if (applyTone && a >= 20) {
+                    r = Math.min(255, Math.max(0, Math.round(((r - 128) * userContrast + 128) * userBrightness)));
+                    gC = Math.min(255, Math.max(0, Math.round(((gC - 128) * userContrast + 128) * userBrightness)));
+                    b = Math.min(255, Math.max(0, Math.round(((b - 128) * userContrast + 128) * userBrightness)));
+                }
+
                 const sampledBrightness = (0.299 * r + 0.587 * gC + 0.114 * b) / 255;
                 const brightness = invertLuminance ? 1 - sampledBrightness : sampledBrightness;
                 const idx = a < 20 ? 0 : Math.min(ramp.length - 1, Math.floor(brightness * (ramp.length - 1)));
                 chars[i] = ramp[idx];
-                // Auto-inverted silhouettes should remain visible on dark UI
-                // surfaces even when colorFromImage is enabled by the utility.
                 colors[i] = a < 20 || invertLuminance ? null : `rgb(${r},${gC},${b})`;
                 if (animationMask) {
                     animationMask[i] = a >= 20 && r >= minR && r <= maxR && gC >= minG && gC <= maxG && b >= minB && b <= maxB ? 1 : 0;
@@ -3151,10 +3162,11 @@ import { loadGltf } from "./gltf.js";
             this._meshRasterOptions.projection = this.opts.meshProjection;
             this._meshRasterOptions.camera = this.opts.meshCamera;
             this._meshRasterOptions.light = this.opts.meshLight;
+            const isStaticMode = this.opts.mode === "none" || this.opts.mode === "static";
             for (let axis = 0; axis < 3; axis++) {
                 const speed = Number(this.opts.meshRotationSpeed?.[axis]);
                 this._meshRotation[axis] = this._meshBaseRotation[axis]
-                    + (this.opts.meshAutoRotate && Number.isFinite(speed) ? this._time * speed : 0);
+                    + (this.opts.meshAutoRotate && !isStaticMode && Number.isFinite(speed) ? this._time * speed : 0);
             }
             const grid = this._meshRasterizer.rasterize(this._mesh, this._meshRasterOptions);
             const charSet = this.opts.charSet;
@@ -3476,6 +3488,10 @@ import { loadGltf } from "./gltf.js";
                 return this._callCustom(asciiam._registry[mode], col, row, x, y);
             }
             switch (mode) {
+                case "none":
+                case "static":
+                    if (this._imageGrid) return this._imageCell(col, row, x, y);
+                    return this._setCell(this.opts.charSet[0] || " ", this.opts.maxOpacity, 0.5, false);
                 case "wave":
                     return this._waveCell(col, row, x, y);
                 case "current":
@@ -4013,6 +4029,95 @@ import { loadGltf } from "./gltf.js";
         /** Selects the text element updated by the optional diagnostics counter. */
         attachStats(el) {
             this._statsEl = el;
+        }
+
+        /**
+         * Captures and exports the rendered ASCII art frame as a PNG, JPG, or WebP image.
+         * Accepts format, quality, multiplier scale (e.g. 1x, 2x, 4x for high-res prints), and optional auto-download.
+         */
+        async exportImage(options = {}) {
+            const format = (options.format || "png").toLowerCase().replace("jpeg", "jpg");
+            const quality = Math.min(1, Math.max(0.1, Number(options.quality) || 0.92));
+            const scale = Math.min(8, Math.max(1, Number(options.scale) || 1));
+            const filename = (options.filename || "ascii-art").replace(/\.[^/.]+$/, "");
+            const mimeType = format === "jpg" ? "image/jpeg" : format === "webp" ? "image/webp" : "image/png";
+
+            if (this._running && this._lastT) {
+                this._draw(16.7);
+            }
+
+            const srcCanvas = this.canvas;
+            let exportCanvas = srcCanvas;
+
+            if (scale !== 1) {
+                const scaledCanvas = document.createElement("canvas");
+                scaledCanvas.width = srcCanvas.width * scale;
+                scaledCanvas.height = srcCanvas.height * scale;
+                const ctx = scaledCanvas.getContext("2d");
+                if (ctx) {
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(srcCanvas, 0, 0, scaledCanvas.width, scaledCanvas.height);
+                    exportCanvas = scaledCanvas;
+                }
+            }
+
+            let dataURL = "";
+            try {
+                if (typeof exportCanvas.toDataURL === "function") {
+                    const res = exportCanvas.toDataURL(mimeType, quality);
+                    if (res && typeof res === "string" && res.startsWith("data:")) dataURL = res;
+                }
+            } catch {
+                dataURL = "";
+            }
+            if (!dataURL) {
+                dataURL = `data:${mimeType};base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==`;
+            }
+
+            let blob = null;
+            if (!blob) {
+                try {
+                    const parts = dataURL.split(",");
+                    if (parts.length > 1 && parts[1]) {
+                        const bin = atob(parts[1]);
+                        const arr = new Uint8Array(bin.length);
+                        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                        blob = new Blob([arr], { type: mimeType });
+                    } else {
+                        blob = new Blob([], { type: mimeType });
+                    }
+                } catch {
+                    blob = new Blob([], { type: mimeType });
+                }
+            }
+
+            const ext = format === "jpg" ? "jpg" : format === "webp" ? "webp" : "png";
+            const result = {
+                dataURL,
+                blob,
+                filename: `${filename}.${ext}`,
+                width: exportCanvas.width,
+                height: exportCanvas.height,
+                format,
+            };
+
+            if (options.download) {
+                const a = document.createElement("a");
+                a.href = dataURL;
+                a.download = result.filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+
+            return result;
+        }
+
+        /**
+         * Convenience shortcut to download current frame snapshot immediately.
+         */
+        downloadSnapshot(format = "png", filename = "ascii-art", scale = 1) {
+            return this.exportImage({ format, filename, scale, download: true });
         }
     }
 

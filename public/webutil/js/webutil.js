@@ -1,5 +1,5 @@
-import { highlightJavaScript } from "./webutil-code.js?v=260fd3348eb2";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=260fd3348eb2";
+import { highlightJavaScript } from "./webutil-code.js?v=6600fa1bad13";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=6600fa1bad13";
 
 const asciiam = window.asciiam;
 
@@ -10,6 +10,7 @@ const settingsStorageKey = "asciiam:demo-settings:v1";
 const savedPresetsStorageKey = "asciiam:saved-presets:v1";
 const demoDefaults = Object.assign({}, asciiam.presets.heroWave, {
     quality: "ultra",
+    targetFPS: 60,
     resolutionScale: 1,
     renderer: "auto",
     charSet: asciiam.CHARACTER_SETS.asciiExtended,
@@ -66,6 +67,7 @@ try {
 }
 const queryParameters = new URLSearchParams(location.search);
 const requestedPresetName = queryParameters.get("preset");
+const requestedImageSource = queryParameters.get("image")?.trim() || null;
 const requestedPreset = requestedPresetName && Object.prototype.hasOwnProperty.call(asciiam.presets, requestedPresetName)
     ? asciiam.presets[requestedPresetName]
     : null;
@@ -83,11 +85,15 @@ try {
 } catch {
     requestedConfig = null;
 }
-const initialOptions = Object.assign({}, demoDefaults, restoredSettings?.options || {}, requestedPreset || {}, requestedConfig || {});
+const requestedImageOptions = requestedImageSource ? { image: requestedImageSource, colorFromImage: true } : {};
+const initialOptions = Object.assign({}, demoDefaults, restoredSettings?.options || {}, requestedPreset || {}, requestedConfig || {}, requestedImageOptions);
+const rawInitialFps = initialOptions.targetFPS;
+initialOptions.targetFPS = rawInitialFps === null || rawInitialFps === undefined || rawInitialFps === 0 || rawInitialFps === "0" ? 0 : Math.min(540, Math.max(0, Number(rawInitialFps) || 60));
+let activeImageSource = typeof initialOptions.image === "string" ? initialOptions.image : null;
 const anim = new asciiam(document.querySelector('[data-ascii-target="background"]'), initialOptions);
 let settingsReady = false;
 let activePresetSnapshot = null;
-let activePresetLabel = requestedConfig ? "Docs example" : requestedPreset ? requestedPresetName : restoredSettings?.options ? "Custom" : "heroWave";
+let activePresetLabel = requestedImageSource ? "Docs media" : requestedConfig ? "Docs example" : requestedPreset ? requestedPresetName : restoredSettings?.options ? "Custom" : "heroWave";
 let optionHistory = [];
 let historyIndex = -1;
 let historyTimer = null;
@@ -134,7 +140,7 @@ document.querySelectorAll("[data-align]").forEach((button) => {
 });
 
 const modes = [
-    "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
+    "plain", "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
     "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom",
     "matrix", "snow", "sparkle", "fire", "starfield", "glitch", "typewriter", "orbit",
     "hoverZone", "clickZone", "mesh",
@@ -487,7 +493,6 @@ renderSequenceEditor();
 
 /* ── Compact toolbar information architecture ── */
 function organizeToolbarOverflow() {
-    const advancedActions = document.getElementById("moreAdvancedActions");
     const workspaceActions = document.getElementById("moreWorkspaceActions");
     const nestedPopovers = document.getElementById("moreNestedPopovers");
     const moveControl = (triggerId, destination) => {
@@ -499,10 +504,6 @@ function organizeToolbarOverflow() {
         if (popover) nestedPopovers.appendChild(popover);
     };
 
-    // Quality changes are occasional runtime tuning. Charset, alignment, and
-    // backdrop remain in the primary authoring path because procedural, image,
-    // and mesh compositions commonly adjust them while iterating.
-    ["qualityTriggerBtn"].forEach((id) => moveControl(id, advancedActions));
     ["themeToggleBtn", "undoSettingsBtn", "redoSettingsBtn"]
         .forEach((id) => moveControl(id, workspaceActions));
 }
@@ -554,15 +555,36 @@ document.querySelectorAll('.ctrl-pill[popovertarget], .stage-about-trigger[popov
             const rect = pill.getBoundingClientRect();
             const popWidth = popover.offsetWidth || 320;
             const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const isTopAction = pill.closest('.stage-top-actions');
 
-            let left = rect.left;
-            if (left + popWidth > viewportWidth - 16) {
-                left = Math.max(16, viewportWidth - popWidth - 16);
+            if (popover.id === 'pop-sequence') {
+                const gutter = viewportWidth <= 720 ? 'var(--space-sm)' : 'var(--space-md)';
+                popover.style.left = gutter;
+                popover.style.right = gutter;
+                popover.style.bottom = `${viewportHeight - rect.top + 10}px`;
+                popover.style.top = 'auto';
+            } else if (isTopAction) {
+                let left = rect.left;
+                if (left + popWidth > viewportWidth - 16) {
+                    left = Math.max(16, viewportWidth - popWidth - 16);
+                }
+                popover.style.left = `${left}px`;
+                popover.style.top = `${rect.bottom + 8}px`;
+                popover.style.bottom = 'auto';
+                popover.style.right = 'auto';
+                popover.style.maxHeight = `calc(100vh - ${rect.bottom + 24}px)`;
+            } else {
+                let left = rect.left;
+                if (left + popWidth > viewportWidth - 16) {
+                    left = Math.max(16, viewportWidth - popWidth - 16);
+                }
+                popover.style.left = `${left}px`;
+                popover.style.bottom = `${viewportHeight - rect.top + 10}px`;
+                popover.style.top = 'auto';
+                popover.style.right = 'auto';
+                popover.style.maxHeight = `calc(${rect.top - 24}px)`;
             }
-            popover.style.left = `${left}px`;
-            popover.style.bottom = `${window.innerHeight - rect.top + 10}px`;
-            popover.style.top = 'auto';
-            popover.style.right = 'auto';
         }
         pill.setAttribute('aria-expanded', String(e.newState === 'open'));
     });
@@ -583,8 +605,52 @@ if (!hasVisited) {
 function applyDemoOptions(options, presetName = "", referenceLabel = presetName || "Custom") {
     const activeMode = anim.opts.mode || "wave";
     const qualityName = options.quality || "ultra";
-    const quality = asciiam.QUALITY[qualityName] || asciiam.QUALITY.ultra;
     Object.assign(anim.opts, demoDefaults, quality, options, { quality: qualityName });
+    const rawOptFps = options.targetFPS;
+    anim.opts.targetFPS = rawOptFps === null || rawOptFps === undefined || rawOptFps === 0 || rawOptFps === "0" ? 0 : Math.min(540, Math.max(0, Number(rawOptFps) || 60));
+
+    activeImageSource = typeof options.image === "string" ? options.image : null;
+    if (activeImageSource) {
+        anim.setImage(activeImageSource).catch(() => {});
+        const requestedIndex = typeof sequenceImageLibrary !== "undefined" && sequenceImageLibrary
+            ? sequenceImageLibrary.findIndex((img) => new URL(img.image || img.src, location.href).href === new URL(activeImageSource, location.href).href)
+            : -1;
+        const localImagesEl = document.getElementById("localImages");
+        if (requestedIndex >= 0 && localImagesEl) {
+            const selectedButton = localImagesEl.querySelectorAll(".image-select")[requestedIndex];
+            if (typeof markSelectedImage === "function") markSelectedImage(selectedButton);
+        }
+    } else {
+        anim.clearImage();
+        if (typeof markSelectedImage === "function") markSelectedImage(null);
+        const imageInput = document.getElementById("imageInput");
+        if (imageInput) imageInput.value = "";
+        if (typeof setImageStatus === "function") {
+            if (typeof sequenceImageLibrary !== "undefined" && sequenceImageLibrary && sequenceImageLibrary.length) {
+                setImageStatus(`${sequenceImageLibrary.length} included image${sequenceImageLibrary.length === 1 ? "" : "s"} ready. Select one to apply it.`);
+            } else {
+                setImageStatus("No image loaded.");
+            }
+        }
+    }
+
+    if (options.meshPrimitive) {
+        anim.setOption("meshPrimitive", options.meshPrimitive);
+        if (typeof setModelStatus === "function") setModelStatus(`${options.meshPrimitive} primitive active.`);
+    } else if (options.model) {
+        anim.setModel(options.model).catch(() => {});
+        if (typeof setModelStatus === "function") setModelStatus("Model loaded.");
+    } else {
+        anim.clearModel();
+        const meshPrimEl = document.getElementById("meshPrimitive");
+        if (meshPrimEl) meshPrimEl.value = "";
+        const modelInput = document.getElementById("modelInput");
+        if (modelInput) modelInput.value = "";
+        const modelUrl = document.getElementById("modelUrl");
+        if (modelUrl) modelUrl.value = "";
+        if (typeof setModelStatus === "function") setModelStatus("No model loaded.");
+    }
+
     anim.opts.mode = activeMode === "image" ? "wave" : activeMode;
     const requestedRenderer = anim.opts.renderer || "auto";
     if (anim.getRendererInfo().requested !== requestedRenderer) anim.setRenderer(requestedRenderer);
@@ -616,6 +682,16 @@ document.getElementById("preset").onchange = (e) => {
 
 document.getElementById("quality").onchange = (e) => {
     anim.setOption("quality", e.target.value);
+    anim.setOption("targetFPS", Number(document.getElementById("targetFPS").value));
+    document.getElementById("preset").value = "";
+    renderUsage();
+};
+const targetFPS = document.getElementById("targetFPS");
+targetFPS.oninput = (event) => {
+    const value = Number(event.target.value);
+    anim.setOption("targetFPS", value === 0 ? 0 : value);
+    document.getElementById("targetFPSVal").textContent = value === 0 ? "Auto" : `${value} fps`;
+    setRangeFill(event.target);
     document.getElementById("preset").value = "";
     renderUsage();
 };
@@ -702,17 +778,26 @@ document.getElementById("revealDirection").onchange = (e) => {
     renderUsage();
 };
 document.getElementById("edgeFade").oninput = (e) => {
-    anim.setOption("edgeFade", parseFloat(e.target.value));
-    document.getElementById("edgeFadeVal").textContent = e.target.value;
+    const val = parseFloat(e.target.value);
+    anim.setOption("edgeFade", val);
+    document.getElementById("edgeFadeVal").textContent = `${Math.round(val * 100)}%`;
     setRangeFill(e.target);
     renderUsage();
 };
 document.getElementById("trail").oninput = (e) => {
-    anim.setOption("trail", parseFloat(e.target.value));
-    document.getElementById("trailVal").textContent = e.target.value;
+    const val = parseFloat(e.target.value);
+    anim.setOption("trail", val);
+    document.getElementById("trailVal").textContent = val.toFixed(2);
     setRangeFill(e.target);
     renderUsage();
 };
+const trailColorEl = document.getElementById("trailColor");
+if (trailColorEl) {
+    trailColorEl.oninput = (e) => {
+        anim.setOption("trailColor", e.target.value);
+        renderUsage();
+    };
+}
 document.getElementById("pulse").oninput = (e) => {
     const amt = parseFloat(e.target.value);
     document.getElementById("pulseVal").textContent = amt.toFixed(2);
@@ -988,7 +1073,9 @@ async function useLibraryImage(image, button) {
             colorFromImgEl.setAttribute('aria-checked', 'true');
         }
         anim.opts.imageChars = anim.opts.charSet;
-        await anim.setImage(image.image || image.src);
+        const source = image.image || image.src;
+        await anim.setImage(source);
+        activeImageSource = source;
         document.getElementById("preset").value = "";
         markSelectedImage(button);
         renderUsage();
@@ -1053,12 +1140,22 @@ async function loadLocalImages() {
             renderImageGrid(localImages, images);
             renderSequenceEditor();
             localImageSection.hidden = false;
-            setImageStatus(`${images.length} included image${images.length === 1 ? "" : "s"} ready. Select one to apply it.`);
+            const requestedURL = requestedImageSource ? new URL(requestedImageSource, location.href).href : null;
+            const requestedIndex = requestedURL
+                ? images.findIndex((image) => new URL(image.image || image.src, location.href).href === requestedURL)
+                : -1;
+            if (requestedIndex >= 0) {
+                const selectedButton = localImages.querySelectorAll(".image-select")[requestedIndex];
+                markSelectedImage(selectedButton);
+                setImageStatus(`${images[requestedIndex].alt || images[requestedIndex].name} selected from documentation.`);
+            } else {
+                setImageStatus(`${images.length} included image${images.length === 1 ? "" : "s"} ready. Select one to apply it.`);
+            }
         } else {
-            setImageStatus("No included images found. Upload a file, or add images to docs/static/webutil/assets/images and rebuild.");
+            setImageStatus("No included images are available. Upload an image to continue.");
         }
     } catch {
-        setImageStatus("The included image list is unavailable. Upload a file, or run npm run prepare:bg and reload.", true);
+        setImageStatus("The included image library is unavailable. Upload an image to continue.", true);
     }
 }
 
@@ -1244,6 +1341,7 @@ document.getElementById("imageInput").onchange = async (e) => {
     const stopListening = anim.on("imageFramesReady", ({ frameCount }) => { capturedFrames = frameCount || 0; });
     try {
         await anim.setImage(url, { animated: file.type === "image/gif" });
+        activeImageSource = null;
         document.getElementById("preset").value = "";
         markSelectedImage(null);
         renderUsage();
@@ -1308,6 +1406,26 @@ document.getElementById("imageFov").oninput = (e) => {
     setRangeFill(e.target);
     renderUsage();
 };
+const imgBrightEl = document.getElementById("imageBrightness");
+if (imgBrightEl) {
+    imgBrightEl.oninput = (e) => {
+        const val = parseFloat(e.target.value);
+        anim.setOption("imageBrightness", val);
+        document.getElementById("imageBrightnessVal").textContent = `${val.toFixed(2)}×`;
+        setRangeFill(e.target);
+        renderUsage();
+    };
+}
+const imgContrastEl = document.getElementById("imageContrast");
+if (imgContrastEl) {
+    imgContrastEl.oninput = (e) => {
+        const val = parseFloat(e.target.value);
+        anim.setOption("imageContrast", val);
+        document.getElementById("imageContrastVal").textContent = `${val.toFixed(2)}×`;
+        setRangeFill(e.target);
+        renderUsage();
+    };
+}
 document.getElementById("imageLuminance").onchange = (event) => {
     anim.setOption("imageLuminance", event.target.value);
     renderUsage();
@@ -1342,6 +1460,10 @@ function syncControlsFromOpts() {
     setActiveModeButton(anim.opts.mode);
     setAlignment(anim.opts.align || "center");
     document.getElementById("quality").value = anim.opts.quality || "ultra";
+    const rawSyncFps = anim.opts.targetFPS;
+    const fpsVal = rawSyncFps === null || rawSyncFps === undefined || rawSyncFps === 0 || rawSyncFps === "0" ? 0 : Math.min(540, Math.max(0, Number(rawSyncFps) || 0));
+    targetFPS.value = String(fpsVal);
+    document.getElementById("targetFPSVal").textContent = fpsVal === 0 ? "Auto" : `${fpsVal} fps`;
     resolutionScale.value = String(anim.opts.resolutionScale || 1);
     updateResolutionStatus();
     document.getElementById("renderer").value = anim.opts.renderer || "auto";
@@ -1397,7 +1519,7 @@ function syncControlsFromOpts() {
     document.getElementById("interactionDuration").value = String(anim.opts.interactionDuration || 1.1);
     document.getElementById("interactionDurationVal").textContent = `${Number(anim.opts.interactionDuration || 1.1).toFixed(2)}s`;
     // Sync range fills after value update
-    ['resolutionScale','speed','edgeFade','trail','pulse','interactionRadius','interactionDuration','imageScale','imageScaleX','imageScaleY','imageFov','imageRotation','meshScale','meshScaleX','meshScaleY','meshScaleZ','meshRotationX','meshRotationY','meshRotationZ','meshFov','meshRotationSpeed','backdropOpacity','backdropAngle'].forEach((id) => {
+    ['targetFPS','resolutionScale','speed','edgeFade','trail','pulse','interactionRadius','interactionDuration','imageScale','imageScaleX','imageScaleY','imageFov','imageRotation','meshScale','meshScaleX','meshScaleY','meshScaleZ','meshRotationX','meshRotationY','meshRotationZ','meshFov','meshRotationSpeed','backdropOpacity','backdropAngle'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) setRangeFill(el);
     });
@@ -1497,6 +1619,7 @@ function usageSource() {
     const options = {
         mode: anim.opts.mode,
         quality: document.getElementById("quality").value,
+        targetFPS: Number(targetFPS.value),
         resolutionScale: anim.opts.resolutionScale,
         renderer: document.getElementById("renderer").value,
         charSet: anim.opts.charSet,
@@ -1528,8 +1651,8 @@ function usageSource() {
     if (["fadeIn", "fadeOut", "dissolveIn", "dissolveOut"].includes(anim.opts.mode)) {
         options.revealDirection = anim.opts.revealDirection || "center";
     }
-    if (anim._sourceImage || anim.opts.imageAnimationRange) {
-        options.image = "./your-image.png";
+    if (activeImageSource || anim._sourceImage || anim.opts.imageAnimationRange) {
+        options.image = activeImageSource || "./your-image.png";
         options.imageScale = anim.opts.imageScale;
         options.imageScaleX = anim.opts.imageScaleX;
         options.imageScaleY = anim.opts.imageScaleY;
@@ -1550,7 +1673,7 @@ function usageSource() {
     if (colorMode === "hueRotate" || colorMode === "breathe") options.colorAnimation = anim.opts.colorAnimation;
     if (anim.opts.backdrop && anim.opts.backdrop.enabled) options.backdrop = anim.opts.backdrop;
     let source = `const anim = new asciiam("#hero", ${JSON.stringify(options, null, 2)});`;
-    if (anim._sourceImage || anim.opts.imageAnimationRange) source += `\n// Replace ./your-image.png with your image URL or path.`;
+    if ((anim._sourceImage || anim.opts.imageAnimationRange) && !activeImageSource) source += `\n// Replace ./your-image.png with your image URL or path.`;
     if (sequenceDraft.length) {
         source += `\n\nanim.setSequence(${JSON.stringify(serializableSequence(), null, 2)}, { loop: ${sequenceLoop} });`;
         source += `\nanim.on("sequenceStepStart", ({ index, step }) => {`;
@@ -1567,7 +1690,7 @@ function usageSource() {
 }
 function getPersistableOptions() {
     const keys = [
-        "mode", "quality", "resolutionScale", "renderer", "charSet", "align", "color", "gradient", "backdrop",
+        "mode", "quality", "targetFPS", "resolutionScale", "renderer", "charSet", "align", "color", "gradient", "backdrop",
         "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "extendedStats", "colorAnimation",
         "interactionRadius", "interactionDuration",
         "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
@@ -1819,8 +1942,21 @@ document.getElementById("resetSettingsBtn").onclick = () => {
     document.getElementById("deletePresetBtn").disabled = true;
     setSavedPresetStatus("Demo settings reset. Saved presets were kept.");
 };
+let activeCodeTab = "js";
+document.querySelectorAll("[data-code-tab]").forEach((btn) => {
+    btn.onclick = (e) => {
+        activeCodeTab = e.currentTarget.dataset.codeTab || "js";
+        document.querySelectorAll("[data-code-tab]").forEach((b) => {
+            const isMatch = b.dataset.codeTab === activeCodeTab;
+            b.classList.toggle("active", isMatch);
+            b.setAttribute("aria-selected", String(isMatch));
+        });
+        renderUsage();
+    };
+});
+
 function renderUsage() {
-    const code = usageSource();
+    const code = activeCodeTab === "json" ? JSON.stringify(getPersistableOptions(), null, 2) : usageSource();
     const html = highlightJavaScript(code);
     const mainEl = document.getElementById("usageCode");
     if (mainEl) mainEl.innerHTML = html;
@@ -1863,7 +1999,7 @@ const popCopyBtn = document.getElementById("copyUsagePopover");
 if (popCopyBtn) popCopyBtn.onclick = function() { handleCopy(this, "usageCodePopover"); };
 
 async function copySourceCommand(btn) {
-    const cmd = "git clone https://gitlab.com/staticcanvas/asciiam.git";
+    const cmd = "npm install @staticcanvas/asciiam";
     const label = btn.querySelector("span");
     const flash = () => {
         if (label) label.textContent = "✓ copied";
@@ -1886,22 +2022,87 @@ async function copySourceCommand(btn) {
         flash();
     }
 }
-// Registry publication is pending, so the utility copies a command that works now.
 ["copySourceCommandAbout", "copySourceCommandCode"].forEach((id) => {
     const btn = document.getElementById(id);
     if (btn) btn.onclick = function() { copySourceCommand(this); };
 });
+
+const exportFormatEl = document.getElementById("exportFormat");
+const exportScaleEl = document.getElementById("exportScale");
+const exportQualityEl = document.getElementById("exportQuality");
+const exportQualityGroupEl = document.getElementById("exportQualityGroup");
+const downloadPictureBtn = document.getElementById("downloadPictureBtn");
+const copyPictureBtn = document.getElementById("copyPictureBtn");
+const exportStatusEl = document.getElementById("exportStatus");
+
+if (exportFormatEl) {
+    exportFormatEl.onchange = (e) => {
+        const isJpgOrWebp = e.target.value === "jpg" || e.target.value === "webp";
+        if (exportQualityGroupEl) exportQualityGroupEl.style.display = isJpgOrWebp ? "block" : "none";
+    };
+}
+
+if (exportScaleEl) {
+    exportScaleEl.oninput = (e) => {
+        const val = e.target.value;
+        const labels = { "1": "1× (Native)", "2": "2× (HD)", "3": "3× (Super HD)", "4": "4× (Ultra 4K Print)" };
+        const statusVal = document.getElementById("exportScaleVal");
+        if (statusVal) statusVal.textContent = labels[val] || `${val}×`;
+    };
+}
+
+if (exportQualityEl) {
+    exportQualityEl.oninput = (e) => {
+        const pct = Math.round(Number(e.target.value) * 100);
+        const statusVal = document.getElementById("exportQualityVal");
+        if (statusVal) statusVal.textContent = `${pct}%`;
+    };
+}
+
+if (downloadPictureBtn) {
+    downloadPictureBtn.onclick = async () => {
+        const format = exportFormatEl ? exportFormatEl.value : "png";
+        const scale = exportScaleEl ? Number(exportScaleEl.value) : 1;
+        const quality = exportQualityEl ? Number(exportQualityEl.value) : 0.92;
+        if (exportStatusEl) exportStatusEl.textContent = "Exporting picture...";
+        try {
+            const result = await anim.exportImage({ format, scale, quality, download: true, filename: "asciiam-art" });
+            if (exportStatusEl) exportStatusEl.textContent = `Downloaded ${result.filename} (${result.width}×${result.height} px).`;
+        } catch (err) {
+            if (exportStatusEl) exportStatusEl.textContent = `Export failed: ${err.message}`;
+        }
+    };
+}
+
+if (copyPictureBtn) {
+    copyPictureBtn.onclick = async () => {
+        const scale = exportScaleEl ? Number(exportScaleEl.value) : 1;
+        const quality = exportQualityEl ? Number(exportQualityEl.value) : 0.92;
+        if (exportStatusEl) exportStatusEl.textContent = "Copying picture to clipboard...";
+        try {
+            const result = await anim.exportImage({ format: "png", scale, quality });
+            if (navigator.clipboard && window.ClipboardItem) {
+                await navigator.clipboard.write([new ClipboardItem({ [result.blob.type]: result.blob })]);
+                if (exportStatusEl) exportStatusEl.textContent = "Copied ASCII picture to clipboard!";
+            } else {
+                if (exportStatusEl) exportStatusEl.textContent = "Clipboard image copy not supported by browser.";
+            }
+        } catch (err) {
+            if (exportStatusEl) exportStatusEl.textContent = `Copy failed: ${err.message}`;
+        }
+    };
+}
 
 document.querySelectorAll("select, input").forEach((control) => {
     control.addEventListener("input", renderUsage);
     control.addEventListener("change", renderUsage);
 });
 syncControlsFromOpts();
-if (requestedConfig) document.getElementById("preset").value = "";
+if (requestedConfig || requestedImageSource) document.getElementById("preset").value = "";
 else if (requestedPreset) document.getElementById("preset").value = requestedPresetName;
 else if (restoredSettings?.options) document.getElementById("preset").value = "";
 renderSavedPresetList();
-activePresetSnapshot = requestedConfig || requestedPreset || !restoredSettings?.options ? getPersistableOptions() : null;
+activePresetSnapshot = requestedImageSource || requestedConfig || requestedPreset || !restoredSettings?.options ? getPersistableOptions() : null;
 updatePresetDirtyState();
 settingsReady = true;
 optionHistory = [getPersistableOptions()];

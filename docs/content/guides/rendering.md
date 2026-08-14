@@ -118,7 +118,7 @@ format reference for core `.gltf` and `.glb` input. Base-format parsing is depen
 codecs for compressed extensions are not bundled, loaded, or injectable. Files requiring those
 extensions will fail with a format diagnostic.
 
-## API reference
+## Reference
 
 | Property or method | Type | Default | Effect |
 | --- | --- | --- | --- |

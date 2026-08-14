@@ -126,7 +126,7 @@ stateDiagram-v2
 
 Step callbacks receive `(detail, animation)`. The same lifecycle is available through `on()` event subscriptions when configuration should remain serializable.
 
-## API reference
+## Reference
 
 | API | Input | Result |
 | --- | --- | --- |

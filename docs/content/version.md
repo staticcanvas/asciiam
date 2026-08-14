@@ -10,8 +10,8 @@ keywords: [asciiam version, browser compatibility, package exports, ESM bundle, 
 
 The current documented package version is `0.10.0`.
 
-This version is built from the repository but is not yet published to npm or JSR. Registry
-and CDN installation becomes available only after publication of `@staticcanvas/asciiam`.
+The package is distributed as `@staticcanvas/asciiam`, with browser bundles available
+through version-pinned package CDN URLs.
 
 ## Artifacts
 
@@ -41,7 +41,7 @@ use immutable caching.
 
 `package.json` is the version source. The documentation data generator copies that value into Hugo data, and the Hugo templates render it in the navigation and hero. README and release notes are updated at release time.
 
-## API reference
+## Reference
 
 | Source | Version role |
 | --- | --- |

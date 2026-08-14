@@ -10,18 +10,24 @@ keywords: [asciiam web utility, animation configurator, preset editor, generated
 
 The web utility is an authoring surface for asciiam option objects; detailed runtime behavior remains defined by the package API.
 
-## Configure a composition
+## Composition authoring & usage examples
 
-Start with a preset or animation mode, then adjust renderer, quality, character density, spatial origin, motion, color, backdrop, and image controls. Undo and Redo operate on the current browser session. Reset restores utility defaults without deleting named presets.
+The web utility and the [Usage examples]({{< relref "/examples" >}}) playground form a unified composition authoring environment. Start with a preset, an animation mode, or a serializable example from the playground, then adjust renderer, quality, character density, spatial origin, motion, color, backdrop, images, and 3D meshes.
+
+Reset restores default utility settings (including clearing loaded images and 3D meshes to return to the default procedural composition) while preserving named local presets. Undo and Redo operate across the browser session.
+
+### Combined 3D mesh & image compositions
+
+3D meshes and background images can be combined into hybrid compositions. When an image is loaded and **Color from image** (`colorFromImage`) is enabled, active 3D meshes (primitives or imported glTF/GLB models) sample their cell colors directly from the background image grid.
 
 The Character set control includes the documented `asciiExtended` default, ordered density ramps, symbolic palettes, and a custom string editor. Hover Zone and Click Zone expose radius and click-duration controls in Motion. Align provides nine spatial anchors.
 
-The dock keeps Preset, Sequence, Mode, Character set, Motion, Align, Color, Backdrop,
-Reset, Image, 3D, and Code directly available. Advanced contains lower-frequency
-quality, theme, and history controls. Reset intentionally remains outside Advanced.
+The dock keeps Preset, Quality, Sequence, Mode, Character set, Motion, Align, Color,
+Backdrop, Reset, Image, 3D, and Code directly available. Advanced contains theme and
+history controls. Reset intentionally remains outside Advanced.
 Documentation, About, and the FPS switch form one level action row on the stage.
 
-Quality includes a Grid resolution slider. `100%` retains automatic grid measurement;
+Quality includes a 0–540 FPS cap (0 for Auto/uncapped VSync, default 60 FPS) and a Grid resolution slider. `100%` retains automatic grid measurement;
 `50%` reduces cell count for constrained devices, while values up to `200%` increase
 logical detail. The live status reports the resulting columns and rows. This setting
 changes glyph-grid resolution, not canvas DPR.
@@ -57,9 +63,8 @@ For grids and galleries, construct only visible previews and destroy instances t
 
 ## Export and integrate
 
-Open Code to generate a constructor option object from the current controls. Use a locally
-built browser bundle until registry publication. Create the instance after its target has
-measurable dimensions, then call `start()`.
+Open Code to generate a constructor option object from the current controls. Create the
+instance after its target has measurable dimensions, then call `start()`.
 
 `app.js`
 
@@ -102,12 +107,12 @@ or non-object values are ignored.
 - Use [Usage examples]({{< relref "/examples" >}}) for editable configurations.
 - Use the [API reference]({{< relref "/api" >}}) for option and method contracts.
 
-## API reference
+## Reference
 
 | Utility control | Runtime option or API | Default behavior |
 | --- | --- | --- |
 | Renderer | `renderer`, `setRenderer()` | `auto`; WebGL2 first, Canvas 2D fallback. |
-| Quality | `quality`, `resolutionScale`, `maxDPR`, `targetFPS` | Uses the selected quality tier and 100% logical resolution. |
+| Quality | `quality`, `resolutionScale`, `maxDPR`, `targetFPS` | Uses the selected quality tier, a 0–540 FPS cap (default 60 FPS, 0 for Auto), and 100% logical resolution. |
 | Extended diagnostics | `showStats`, `extendedStats`, `getStats()` | Disabled; samples only when explicitly enabled. |
 | Mode | `mode`, `setMode()` | Selects the active cell algorithm. |
 | Motion and Align | `speed`, `edgeFade`, `trail`, `pulse`, `align` | Updates animation and spatial state. |
