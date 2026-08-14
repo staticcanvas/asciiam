@@ -1,7 +1,7 @@
 {
   "name": "@staticcanvas/asciiam",
   "version": "0.26.0",
-  "description": "A dependency-free canvas engine for animated ASCII backgrounds and image-to-ASCII effects",
+  "description": "A dependency-free, efficient HTML5 Canvas and WebGL2 animation engine for animated ASCII backgrounds, real-time image/GIF sampling, 3D GLTF models, and morphing sequence transitions",
   "license": "MIT",
   "type": "module",
   "main": "dist/asciiam.cjs",

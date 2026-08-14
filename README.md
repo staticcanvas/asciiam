@@ -4,28 +4,17 @@
 
 ## Purpose
 
-A dependency-free canvas engine for procedural ASCII media, hero image regions, section
-backgrounds, splash pages, and image-to-ASCII reveals. WebGL2 is selected first by
-default, with Canvas 2D available as an automatic fallback or explicit CPU renderer.
+A dependency-free, efficient HTML5 Canvas and WebGL2 animation engine for procedural ASCII backgrounds, hero section animations, real-time image/GIF sampling, 3D GLTF model rendering, and morphing animation sequences. WebGL2 is selected first by default with instanced quad GPU batching, while Canvas 2D provides an automatic, reliable CPU fallback.
 
 ## Capabilities
 
-- WebGL2 glyph rendering with instanced quad batching and Canvas 2D fallback.
-- Developer-selectable `auto`, `webgl2`, and `canvas2d` rendering policies.
-- Twenty-seven built-in modes, including image and mesh rendering, plus registered and
-  per-instance custom cell callbacks.
-- Ordered animation sequences with delays, durations, looping, interruption, callbacks,
-  and lifecycle events.
-- Image-to-ASCII sampling with cover/contain fitting, field-of-view controls, sampled
-  colors, six animation masks, and inclusive RGB animation ranges.
-- Linear, radial, and cubic multi-stop gradients, animated color, trails, pulse, edge
-  fade, cursor response, solid backgrounds, and backdrop layers.
-- Shared frame scheduling, off-screen pausing, reduced-motion handling, quality tiers,
-  glyph caches, spatial caches, and a static-wave cache.
-- Browser utility with presets, live controls, renderer selection, code generation,
-  history, image upload, hero/splash previews, and ordered sequence editing.
-- Hugo documentation with guides, API reference, release information, and a preset
-  gallery that limits concurrent renderers.
+- **Efficient Dual Backend**: WebGL2 glyph rendering with instanced quad batching, spatial font atlases, zero-allocation cell loops, and automatic Canvas 2D fallback.
+- Twenty-seven built-in modes (including fluid dynamics, atmospheric effects, reveals, 3D GLTF model rendering, image sampling, and pointer interaction zones).
+- **Real-Time Image & Animated GIF Sampling**: Converts raster images (`PNG`, `JPEG`, `WebP`, `AVIF`), `SVG` vectors, and animated `GIF` frames into ASCII glyph matrices with silhouette-aware luminance mapping, tone controls, and inclusive RGB animation range masking.
+- **3D GLTF / Mesh-to-ASCII Renderer**: Built-in 3D software rendering engine supporting `GLTF`/`GLB` models and `OBJ` primitives with perspective/orthographic projections, wireframe, point-cloud, and shaded surface styles.
+- **Playlist Sequencing & Morphing**: Chain multi-step animation sequences (`setSequence()`) with snapshot morph transitions, step-level repeat controls (`repeat: false`), and sequence loop policies (`loop: false`).
+- **Backdrops & Quality Tiers**: Multi-stop linear, radial, and cubic gradients, edge fade (vignette), trails, custom character density palettes, off-screen auto-pausing, and full accessibility (`prefers-reduced-motion` aware).
+- **Interactive Web Utility**: Dedicated composition authoring tool with 27 presets, live controls, multi-column popovers, code export, image uploads, and sequence editing.
 
 ## Releases
 
