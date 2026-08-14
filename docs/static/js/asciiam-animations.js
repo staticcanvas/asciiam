@@ -112,7 +112,7 @@ export function initHeroAnimation(stageElement, options = {}) {
 
 /**
  * Initializes ASCII background animation for page header hero panels (.hero.hero-compact)
- * matching Animation 2 from context-source -> animations-list.md targeting .hero-bg.
+ * using a single-step sequence with repeat disabled.
  *
  * @param {HTMLElement} heroElement Header element (.hero.hero-compact).
  * @param {HeroCompactAnimationOptions} [options={}] Configuration overrides.
@@ -172,7 +172,21 @@ export function initHeroCompactAnimation(heroElement, options = {}) {
         ...options,
     });
 
-    anim.start();
+    anim.setSequence([
+        {
+            id: "compact-hero-reveal",
+            mode: options.mode || "fadeIn",
+            duration: 3,
+            delay: 0,
+            repeat: false,
+            options: {
+                loop: false,
+                revealDirection: "center",
+            },
+        },
+    ], { loop: false });
+
+    anim.playSequence();
     window.addEventListener("pagehide", () => anim.destroy(), { once: true });
     return anim;
 }
