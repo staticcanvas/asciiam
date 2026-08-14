@@ -1041,7 +1041,7 @@
             .image-status[data-error="true"] { color: var(--clr-danger); }
             .image-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
                 gap: var(--space-xs);
             }
             .image-grid:empty { display: none; }
@@ -1589,9 +1589,29 @@
             #pop-code   { left: auto; right: var(--space-md); }
             #pop-more   { left: auto; right: var(--space-md); }
 
-            /* Wide variant for image browser */
+            /* Wide & Multi-column Grid variants for popovers */
             .ctrl-popover--wide {
-                inline-size: clamp(320px, 52vw, 540px);
+                inline-size: clamp(340px, 56vw, 560px);
+            }
+            .ctrl-popover--grid {
+                inline-size: min(440px, calc(100vw - (var(--space-md) * 2)));
+                max-inline-size: min(440px, calc(100vw - (var(--space-md) * 2)));
+            }
+            .btn-row-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 4px !important;
+                margin-block-start: 4px;
+            }
+            @media (min-width: 380px) {
+                .btn-row-grid {
+                    grid-template-columns: repeat(3, 1fr) !important;
+                }
+            }
+            .cpop-grid-2col {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--space-xs);
             }
             #pop-sequence {
                 left: var(--space-md);
@@ -2379,10 +2399,10 @@
                 <span>Mode</span>
                 <span class="ctrl-pill__status" id="modeToolbarStatus">wave</span>
             </button>
-            <div class="ctrl-popover" id="pop-mode" popover>
+            <div class="ctrl-popover ctrl-popover--grid" id="pop-mode" popover>
                 <div class="cpop-group">
                     <span class="cpop-label" id="modeLabel">Animation mode</span>
-                    <div class="btn-row" id="modeButtons" role="group" aria-labelledby="modeLabel"></div>
+                    <div class="btn-row btn-row-grid" id="modeButtons" role="group" aria-labelledby="modeLabel"></div>
                 </div>
             </div>
 
@@ -2999,7 +3019,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=66a3ccaa151e"></script>
-        <script type="module" src="./js/webutil.js?v=66a3ccaa151e"></script>
+        <script src="./libs/asciiam.js?v=b52cbaf28cbe"></script>
+        <script type="module" src="./js/webutil.js?v=b52cbaf28cbe"></script>
     </body>
 </html>
