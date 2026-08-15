@@ -296,7 +296,11 @@ export interface asciiamOptions {
   desynchronized?: boolean;
   renderer?: 'auto' | 'webgl2' | 'canvas2d';
   powerPreference?: 'high-performance' | 'low-power' | 'default';
-  respectReducedMotion?: boolean;
+  chartData?: number[] | { label?: string; value: number; color?: string }[] | number[][] | null;
+  chartType?: 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut';
+  chartTitle?: string;
+  chartShowValues?: boolean;
+  chartShowAxes?: boolean;
   onReady?: ((animation: asciiam) => void) | null;
   onImageError?: ((error: Event) => void) | null;
   onModelError?: ((error: unknown) => void) | null;
@@ -407,4 +411,10 @@ export default class asciiam {
     height: number;
     format: string;
   }>;
+  /** Installs chart data and enables ASCII chart rendering mode. */
+  setChartData(data: number[] | { label?: string; value: number; color?: string }[] | number[][], options?: { type?: 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut'; title?: string; showValues?: boolean; showAxes?: boolean }): this;
+  /** Clears active chart data and resets animation mode. */
+  clearChart(): this;
+  /** Returns metadata for the active ASCII chart. */
+  getChartInfo(): { active: boolean; type: string; dataLength: number; title: string };
 }

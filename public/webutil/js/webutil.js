@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=a1a6f36ad9b3";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=a1a6f36ad9b3";
+import { highlightJavaScript } from "./webutil-code.js?v=acc91cd82953";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=acc91cd82953";
 
 const asciiam = window.asciiam;
 

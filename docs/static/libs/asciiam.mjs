@@ -339,7 +339,7 @@ import { loadGltf } from "./gltf.js";
             "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace",
             "echoBloom", "matrix", "snow", "sparkle", "fire", "starfield", "glitch",
             "typewriter", "orbit", "hoverZone", "clickZone", "image", "custom",
-            "mesh", "static",
+            "mesh", "static", "chart",
         ]);
 
         static CHARACTER_SETS = {
@@ -515,6 +515,13 @@ import { loadGltf } from "./gltf.js";
                 fit: "cover",
                 colorFromImage: true,
                 animateImageMask: true,
+            },
+            telemetryChart: {
+                mode: "chart",
+                color: "#4FA8FF",
+                chartType: "bar",
+                chartTitle: "System Telemetry",
+                chartData: [12, 45, 78, 34, 90, 60, 85, 40],
             },
         };
 
@@ -773,6 +780,13 @@ import { loadGltf } from "./gltf.js";
                     meshMaxVertices: 100000,
                     meshMaxPrimitives: 100000,
                     model: null,
+
+                    // --- dependency-free ASCII chart source ---
+                    chartData: null, // number[] | {label, value, color}[] | number[][]
+                    chartType: "bar", // bar | horizontalBar | line | sparkline | heatmap | donut
+                    chartTitle: "",
+                    chartShowValues: true,
+                    chartShowAxes: true,
 
                     // --- extensibility ---
                     customCell: null, // (api) => ({char,opacity,intensity,bold,color}) | null
@@ -3531,6 +3545,8 @@ import { loadGltf } from "./gltf.js";
                     return this._clickZoneCell(col, row, x, y);
                 case "image":
                     return this._imageCell(col, row, x, y);
+                case "chart":
+                    return this._chartCell(col, row, x, y);
                 default:
                     return this._waveCell(col, row, x, y);
             }
@@ -3915,6 +3931,119 @@ import { loadGltf } from "./gltf.js";
             return this._setCell(charSet[charIdx] || "0", intensity * maxOpacity, intensity, isHead);
         }
 
+        _chartCell(col, row, _x, _y) {
+            const data = this.opts.chartData;
+            if (!data || (Array.isArray(data) && data.length === 0)) {
+                return this._setCell(" ", 0, 0, false);
+            }
+            const type = this.opts.chartType || "bar";
+            const { cols, rows } = this;
+            let values = [];
+
+            if (Array.isArray(data)) {
+                if (typeof data[0] === "number") {
+                    values = data;
+                } else if (typeof data[0] === "object" && data[0] !== null) {
+                    values = data.map((item) => Number(item.value ?? item.val) || 0);
+                }
+            }
+
+            if (values.length === 0) values = [10, 25, 45, 80, 60, 30];
+
+            const title = this.opts.chartTitle;
+            if (title && row === 0) {
+                const startCol = Math.max(0, Math.floor((cols - title.length) / 2));
+                const charIdx = col - startCol;
+                if (charIdx >= 0 && charIdx < title.length) {
+                    return this._setCell(title[charIdx], this.opts.maxOpacity, 1, true, this.opts.color);
+                }
+            }
+
+            const marginRowTop = title ? 2 : 1;
+            const marginRowBottom = this.opts.chartShowAxes ? 2 : 1;
+            const usableRows = Math.max(1, rows - marginRowTop - marginRowBottom);
+            const usableCols = Math.max(1, cols - 4);
+
+            const maxVal = Math.max(1, ...values);
+            const minVal = 0;
+
+            if (type === "bar") {
+                const barWidth = Math.max(1, Math.floor(usableCols / values.length));
+                const barIdx = Math.floor((col - 2) / barWidth);
+
+                if (barIdx >= 0 && barIdx < values.length) {
+                    const val = values[barIdx];
+                    const normVal = (val - minVal) / (maxVal - minVal);
+                    const targetRowHeight = normVal * usableRows;
+                    const currentRowFromBottom = (rows - marginRowBottom) - row;
+
+                    if (currentRowFromBottom > 0 && currentRowFromBottom <= Math.ceil(targetRowHeight)) {
+                        const subFraction = Math.max(0, Math.min(1, targetRowHeight - (currentRowFromBottom - 1)));
+                        const ramp = [" ", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+                        const rampIdx = Math.min(7, Math.floor(subFraction * 8));
+                        return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, subFraction > 0.8, this.opts.color);
+                    }
+                }
+            } else if (type === "horizontalBar") {
+                const barHeight = Math.max(1, Math.floor(usableRows / values.length));
+                const barIdx = Math.floor((row - marginRowTop) / barHeight);
+
+                if (barIdx >= 0 && barIdx < values.length) {
+                    const val = values[barIdx];
+                    const normVal = (val - minVal) / (maxVal - minVal);
+                    const targetColWidth = normVal * usableCols;
+                    const currentColFromLeft = col - 2;
+
+                    if (currentColFromLeft >= 0 && currentColFromLeft <= Math.ceil(targetColWidth)) {
+                        const subFraction = Math.max(0, Math.min(1, targetColWidth - currentColFromLeft));
+                        const ramp = [" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"];
+                        const rampIdx = Math.min(8, Math.floor(subFraction * 9));
+                        return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, subFraction > 0.8, this.opts.color);
+                    }
+                }
+            } else if (type === "line" || type === "sparkline") {
+                const colFraction = col / Math.max(1, cols - 1);
+                const dataIdx = colFraction * (values.length - 1);
+                const i0 = Math.floor(dataIdx);
+                const i1 = Math.min(values.length - 1, i0 + 1);
+                const frac = dataIdx - i0;
+                const val = values[i0] * (1 - frac) + values[i1] * frac;
+                const normVal = (val - minVal) / (maxVal - minVal);
+                const targetRow = Math.round((rows - marginRowBottom - 1) - normVal * (usableRows - 1));
+
+                if (row === targetRow) {
+                    const charRamp = ["_", ".", "-", "‾", "/", "█"];
+                    return this._setCell(charRamp[Math.floor(normVal * 5)] || "*", this.opts.maxOpacity, normVal, true, this.opts.color);
+                }
+            } else if (type === "heatmap") {
+                const nx = col / Math.max(1, cols - 1);
+                const dataIdx = Math.floor(nx * values.length);
+                const val = values[dataIdx % values.length] || 0;
+                const normVal = (val - minVal) / (maxVal - minVal);
+                const charSet = this.opts.charSet;
+                const charIdx = Math.floor(normVal * (charSet.length - 1));
+                return this._setCell(charSet[charIdx] || " ", normVal * this.opts.maxOpacity, normVal, normVal > 0.8, this.opts.color);
+            } else if (type === "donut") {
+                const cx = cols / 2;
+                const cy = rows / 2;
+                const dx = (col - cx) * 1.6;
+                const dy = row - cy;
+                const dist = Math.hypot(dx, dy);
+                const maxR = Math.min(cols, rows) * 0.4;
+                if (dist >= maxR * 0.4 && dist <= maxR) {
+                    const angle = (Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2);
+                    const dataIdx = Math.floor(angle * values.length);
+                    const val = values[dataIdx % values.length] || 0;
+                    const normVal = (val - minVal) / (maxVal - minVal);
+                    const ramp = ["░", "▒", "▓", "█"];
+                    const rampIdx = Math.min(3, Math.floor(normVal * 4));
+                    return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, normVal > 0.7, this.opts.color);
+                }
+            }
+
+            return this._setCell(" ", 0, 0, false);
+        }
+
         /** Lazily allocates diagnostic history only while extended output is enabled. */
         _ensureExtendedStats() {
             if (!this._extendedStats) {
@@ -4119,6 +4248,39 @@ import { loadGltf } from "./gltf.js";
          */
         downloadSnapshot(format = "png", filename = "ascii-art", scale = 1) {
             return this.exportImage({ format, filename, scale, download: true });
+        }
+
+        /** Installs chart data and enables ASCII chart rendering mode. */
+        setChartData(data, options = {}) {
+            this.opts.chartData = data;
+            if (options.type) this.opts.chartType = options.type;
+            if (options.title !== undefined) this.opts.chartTitle = options.title;
+            if (options.showValues !== undefined) this.opts.chartShowValues = options.showValues;
+            if (options.showAxes !== undefined) this.opts.chartShowAxes = options.showAxes;
+            this.setMode("chart");
+            return this;
+        }
+
+        /** Clears active chart data and resets animation mode. */
+        clearChart() {
+            this.opts.chartData = null;
+            this.opts.chartTitle = "";
+            if (this.opts.mode === "chart") {
+                this.setMode("wave");
+            }
+            return this;
+        }
+
+        /** Returns metadata for the active ASCII chart. */
+        getChartInfo() {
+            const data = this.opts.chartData;
+            const isArray = Array.isArray(data);
+            return {
+                active: this.opts.mode === "chart" && !!data,
+                type: this.opts.chartType || "bar",
+                dataLength: isArray ? data.length : 0,
+                title: this.opts.chartTitle || "",
+            };
         }
     }
 

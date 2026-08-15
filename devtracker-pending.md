@@ -23,6 +23,7 @@ strangers with confidence."
 ### **Engineering Backlog (priority-3)**
 
 - [x] 🟠🌟✅3️⃣ **Backlog** - **`fadeIn` and reveal modes expose configurable timing controls** (`revealDuration` sweep duration parameter) via `setOption('revealDuration', ...)` and constructor options.
+- [x] 🟠🌟✅3️⃣ **Backlog** - **Native ASCII Charting & Data Visualization Feature** - Added `mode: 'chart'`, `setChartData()`, `clearChart()`, and `getChartInfo()` with 6 chart styles (`bar`, `horizontalBar`, `line`, `sparkline`, `heatmap`, `donut`), block density character mapping, and automated sub-cell glyph precision.
 - [ ] 🟠🌟⏳3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
       `wave` sweep on top). Currently one mode at a time; layering would mean running
       two instances on stacked canvases, which works but isn't documented as a

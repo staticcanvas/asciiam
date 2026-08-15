@@ -1,0 +1,98 @@
+/**
+ * @jest-environment jsdom
+ */
+
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import asciiam from "../src/asciiam.js";
+
+const makeContext = () => ({
+    clearRect: jest.fn(),
+    createLinearGradient: jest.fn(() => ({ addColorStop: jest.fn() })),
+    createRadialGradient: jest.fn(() => ({ addColorStop: jest.fn() })),
+    drawImage: jest.fn(),
+    fillRect: jest.fn(),
+    fillText: jest.fn(),
+    getImageData: jest.fn(() => ({ data: new Uint8ClampedArray(4) })),
+    measureText: jest.fn(() => ({ width: 8 })),
+    restore: jest.fn(),
+    rotate: jest.fn(),
+    save: jest.fn(),
+    scale: jest.fn(),
+    setTransform: jest.fn(),
+    translate: jest.fn(),
+});
+
+describe("ASCII Charting API", () => {
+    let container;
+    let anim;
+
+    beforeEach(() => {
+        container = document.createElement("div");
+        Object.defineProperty(container, "clientWidth", { value: 640, configurable: true });
+        Object.defineProperty(container, "clientHeight", { value: 360, configurable: true });
+        document.body.appendChild(container);
+
+        HTMLCanvasElement.prototype.getContext = jest.fn((type) => {
+            if (type === "2d") return makeContext();
+            return null;
+        });
+    });
+
+    afterEach(() => {
+        if (anim) {
+            anim.destroy();
+            anim = null;
+        }
+        if (container && container.parentNode) {
+            container.parentNode.removeChild(container);
+        }
+    });
+
+    it("includes 'chart' in BUILT_IN_MODES", () => {
+        expect(asciiam.BUILT_IN_MODES).toContain("chart");
+    });
+
+    it("initializes chart options and accepts setChartData()", () => {
+        anim = new asciiam(container);
+        expect(anim.getChartInfo()).toEqual({
+            active: false,
+            type: "bar",
+            dataLength: 0,
+            title: "",
+        });
+
+        const sampleData = [10, 20, 50, 80, 40];
+        anim.setChartData(sampleData, { type: "bar", title: "Monthly Sales" });
+
+        expect(anim.opts.mode).toBe("chart");
+        expect(anim.getChartInfo()).toEqual({
+            active: true,
+            type: "bar",
+            dataLength: 5,
+            title: "Monthly Sales",
+        });
+    });
+
+    it("renders bar, horizontalBar, line, heatmap, and donut chart types without error", () => {
+        anim = new asciiam(container);
+        const sampleData = [15, 30, 75, 45, 90, 60];
+
+        const chartTypes = ["bar", "horizontalBar", "line", "sparkline", "heatmap", "donut"];
+        chartTypes.forEach((type) => {
+            anim.setChartData(sampleData, { type, title: `Test ${type}` });
+            expect(() => anim._draw(16.7)).not.toThrow();
+            expect(anim.opts.chartType).toBe(type);
+        });
+    });
+
+    it("clears chart data with clearChart()", () => {
+        anim = new asciiam(container);
+        anim.setChartData([5, 10, 15], { title: "Test" });
+        expect(anim.getChartInfo().active).toBe(true);
+
+        anim.clearChart();
+        expect(anim.opts.chartData).toBeNull();
+        expect(anim.opts.mode).toBe("wave");
+        expect(anim.getChartInfo().active).toBe(false);
+    });
+});

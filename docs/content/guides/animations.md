@@ -34,6 +34,7 @@ Modes determine how each frame selects glyph, intensity, opacity, weight, and op
 | `clickZone` | triggered expanding dense field | `interactionRadius`, `interactionDuration`, `triggerInteraction()` |
 | `image` | sampled image grid | image and mask options |
 | `mesh` | projected geometry grid | mesh source, camera, transform, and raster style |
+| `chart` | ASCII data visualization | `chartData`, `chartType`, `chartTitle`, `setChartData()` |
 | `custom` | callback | `customCell` |
 
 ## Change mode

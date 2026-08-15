@@ -288,6 +288,22 @@ await anim.setModel(gltfFile, {
 });
 ```
 
+### ASCII Charting and Data Visualization
+
+`asciiam` includes native, dependency-free ASCII charting and telemetry visualization:
+
+```js
+const chart = new asciiam('#telemetry-stage');
+
+// Render an animated ASCII bar chart
+chart.setChartData([12, 45, 78, 34, 90, 60, 85], {
+  type: 'bar', // 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut'
+  title: 'Server Load Metrics'
+}).start();
+```
+
+Chart types support vertical/horizontal block density bars (` ▂▃▄▅▆▇█` / `█▉▊▋▌▍▎▏`), connected sparkline plots, 2D density heatmaps, and radial percentage rings. Data visualizations integrate directly into `asciiam`'s frame loop with automated sub-cell glyph precision.
+
 ## Quick start: background
 
 ```html

@@ -105,6 +105,18 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 
 `setMesh(mesh)`, `clearMesh()`, and `getMeshInfo()` manage typed-array geometry. `setModel(source, options?)` and `clearModel()` manage abortable glTF/GLB loading. Model sources may be URLs, blobs, byte buffers, or parsed glTF objects. See [3D meshes and models]({{< relref "/guides/3d-models" >}}) for supported format features and explicit exclusions.
 
+## ASCII Chart options
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chartData` | array or `null` | `null` | Array of numbers, series objects, or 2D matrix values for ASCII chart rendering. |
+| `chartType` | `bar \| horizontalBar \| line \| sparkline \| heatmap \| donut` | `bar` | Selects visualization style. |
+| `chartTitle` | string | `""` | Optional chart header title displayed at grid top. |
+| `chartShowValues` | boolean | `true` | Toggles sub-cell numerical value indicators. |
+| `chartShowAxes` | boolean | `true` | Toggles axis baseline margins. |
+
+`setChartData(data, options?)`, `clearChart()`, and `getChartInfo()` manage ASCII chart data and visualization state.
+
 ## Renderer and performance options
 
 | Property | Type | Default | Description |

@@ -1,6 +1,6 @@
 {
   "version": "0.26.0",
-  "builtInModeCount": 29,
+  "builtInModeCount": 30,
   "presets": [
     {
       "name": "heroWave",
@@ -457,6 +457,29 @@
         "fit": "cover",
         "colorFromImage": true,
         "animateImageMask": true
+      }
+    },
+    {
+      "name": "telemetryChart",
+      "title": "Telemetry Chart",
+      "mode": "chart",
+      "category": "fields",
+      "previewable": true,
+      "options": {
+        "mode": "chart",
+        "color": "#4FA8FF",
+        "chartType": "bar",
+        "chartTitle": "System Telemetry",
+        "chartData": [
+          12,
+          45,
+          78,
+          34,
+          90,
+          60,
+          85,
+          40
+        ]
       }
     }
   ]
