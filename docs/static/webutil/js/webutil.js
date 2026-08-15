@@ -1078,8 +1078,21 @@ async function useLibraryImage(image, button) {
             colorFromImgEl.checked = true;
             colorFromImgEl.setAttribute('aria-checked', 'true');
         }
-        anim.opts.imageChars = anim.opts.charSet;
+        anim.setOption("imageScale", 0.5);
+        const scaleEl = document.getElementById("imageScale");
+        if (scaleEl) {
+            scaleEl.value = "0.5";
+            document.getElementById("imageScaleVal").textContent = "0.50×";
+            setRangeFill(scaleEl);
+        }
         const source = image.image || image.src;
+        const isGif = String(source || "").toLowerCase().endsWith(".gif");
+        if (isGif) {
+            anim.setOption("imageLuminance", "normal");
+            const lumSelect = document.getElementById("imageLuminance");
+            if (lumSelect) lumSelect.value = "normal";
+        }
+        anim.opts.imageChars = anim.opts.charSet;
         await anim.setImage(source);
         activeImageSource = source;
         document.getElementById("preset").value = "";
