@@ -689,6 +689,7 @@ import { loadGltf } from "./gltf.js";
                     speed: 1,
                     direction: "horizontal",
                     revealDirection: "center",
+                    revealDuration: 2.2,
                     align: "center",
                     minOpacity: 0.05,
                     maxOpacity: 0.85,
@@ -1105,7 +1106,7 @@ import { loadGltf } from "./gltf.js";
                 this._buildSpatialCache();
                 this._buildCurrentCache();
             }
-            if (key === "revealDirection" && ["fadeIn", "fadeOut", "irisIn", "irisOut", "dissolveIn", "dissolveOut"].includes(this.opts.mode)) {
+            if ((key === "revealDirection" || key === "revealDuration") && ["fadeIn", "fadeOut", "irisIn", "irisOut", "dissolveIn", "dissolveOut"].includes(this.opts.mode)) {
                 this._time = 0;
                 this._lastT = null;
             }
@@ -3685,7 +3686,7 @@ import { loadGltf } from "./gltf.js";
 
         _fadeInCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
-            const totalDuration = 2.2;
+            const totalDuration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
             const index = row * this.cols + col;
             const delay = this._revealProgress(col, row) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
@@ -3698,7 +3699,7 @@ import { loadGltf } from "./gltf.js";
 
         _fadeOutCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
-            const totalDuration = 2.2;
+            const totalDuration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
             const index = row * this.cols + col;
             const delay = this._revealProgress(col, row) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
@@ -3723,7 +3724,7 @@ import { loadGltf } from "./gltf.js";
         }
 
         _irisCell(col, row, x, y, reverse) {
-            const duration = 2.2;
+            const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
             const progress = Math.min(1, cycle / duration);
             const maxDistance = Math.max(1, Math.hypot(this.w, this.h));
@@ -3738,7 +3739,7 @@ import { loadGltf } from "./gltf.js";
         }
 
         _dissolveCell(col, row, reverse) {
-            const duration = 2.1;
+            const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
             const progress = Math.min(1, cycle / duration);
             const index = row * this.cols + col;

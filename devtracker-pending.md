@@ -22,10 +22,7 @@ strangers with confidence."
       hasn't been visually checked there.
 ### **Engineering Backlog (priority-3)**
 
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **`fadeIn` and `image` modes don't expose fine-grained timing controls** (sweep
-      duration, per-character delay curve) — currently hardcoded constants
-      (`totalDuration = 2.2`, etc.). Fine for the presets, limiting if someone wants a
-      slower/faster intro without digging into source.
+- [x] 🟠🌟✅3️⃣ **Backlog** - **`fadeIn` and reveal modes expose configurable timing controls** (`revealDuration` sweep duration parameter) via `setOption('revealDuration', ...)` and constructor options.
 - [ ] 🟠🌟⏳3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
       `wave` sweep on top). Currently one mode at a time; layering would mean running
       two instances on stacked canvases, which works but isn't documented as a
