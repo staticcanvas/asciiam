@@ -110,9 +110,10 @@ Required extensions are rejected with their names before scene mesh allocation. 
 | `meshStyle` | `wireframe` | `points`, `wireframe`, or `solid` cell rasterization. |
 | `meshProjection` | `perspective` | Perspective or orthographic projection. |
 | `meshCamera` | internal camera | Position, target, up vector, field of view, clipping planes, and orthographic scale. |
-| `meshTransform` | identity | Position, Euler rotation in radians, and scale. |
+| `meshTransform` | identity | Position `[x, y, z]`, manual Euler orientation `[rotX, rotY, rotZ]` in radians, and scale `[sx, sy, sz]`. |
 | `meshLight` | one directional light | Direction, ambient contribution, and intensity. |
-| `meshAutoRotate` | `true` | Applies `meshRotationSpeed` against elapsed time. |
+| `meshAutoRotate` | `true` | Enables continuous auto-rotation using `meshRotationSpeed` against elapsed time. |
+| `meshRotationSpeed` | `[0.2, 0.45, 0.1]` | Sets 3-axis auto-rotation speed in radians per second `[speedX, speedY, speedZ]` for X (pitch), Y (yaw), and Z (roll). |
 | `meshMaxVertices` | `100000` | Rejects larger normalized geometry. |
 | `meshMaxPrimitives` | `100000` | Rejects larger point, line, or triangle counts. |
 

@@ -2921,16 +2921,19 @@
                     <input type="range" id="meshFov" min="20" max="120" step="1" value="60" />
                 </div>
                 <div class="cpop-group">
-                    <span class="cpop-label">Mesh rotation</span>
-                    <label class="cpop-label row" for="meshRotationX">X <span class="val" id="meshRotationXVal">0°</span></label>
+                    <span class="cpop-label">Mesh manual orientation</span>
+                    <label class="cpop-label row" for="meshRotationX">Pitch (X) <span class="val" id="meshRotationXVal">0°</span></label>
                     <input type="range" id="meshRotationX" min="-180" max="180" step="1" value="0" />
-                    <label class="cpop-label row" for="meshRotationY" style="margin-block-start:var(--space-xs)">Y <span class="val" id="meshRotationYVal">0°</span></label>
+                    <label class="cpop-label row" for="meshRotationY" style="margin-block-start:var(--space-xs)">Yaw (Y) <span class="val" id="meshRotationYVal">0°</span></label>
                     <input type="range" id="meshRotationY" min="-180" max="180" step="1" value="0" />
-                    <label class="cpop-label row" for="meshRotationZ" style="margin-block-start:var(--space-xs)">Z <span class="val" id="meshRotationZVal">0°</span></label>
+                    <label class="cpop-label row" for="meshRotationZ" style="margin-block-start:var(--space-xs)">Roll (Z) <span class="val" id="meshRotationZVal">0°</span></label>
                     <input type="range" id="meshRotationZ" min="-180" max="180" step="1" value="0" />
                     <div class="btn-row">
                         <button class="mode-btn" id="meshRotateLeftBtn" type="button">Y −90°</button>
                         <button class="mode-btn" id="meshRotateRightBtn" type="button">Y +90°</button>
+                        <button class="mode-btn" id="meshRotateUpBtn" type="button">X −90°</button>
+                        <button class="mode-btn" id="meshRotateDownBtn" type="button">X +90°</button>
+                        <button class="mode-btn" id="meshRotateResetBtn" type="button">Reset</button>
                     </div>
                     <span class="cpop-label" style="margin-block-start:var(--space-sm)">Mirror axes</span>
                     <div class="btn-row">
@@ -2945,8 +2948,12 @@
                         <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
                         <span class="ui-switch__label">Auto rotate</span>
                     </label>
-                    <label class="cpop-label row" for="meshRotationSpeed" style="margin-block-start:var(--space-xs)">Y rotation speed <span class="val" id="meshRotationSpeedVal">0.45 rad/s</span></label>
-                    <input type="range" id="meshRotationSpeed" min="0" max="1.5" step="0.05" value="0.45" />
+                    <label class="cpop-label row" for="meshRotationSpeedY" style="margin-block-start:var(--space-xs)">Horizontal speed (Y) <span class="val" id="meshRotationSpeedYVal">0.45 rad/s</span></label>
+                    <input type="range" id="meshRotationSpeedY" min="-2" max="2" step="0.05" value="0.45" />
+                    <label class="cpop-label row" for="meshRotationSpeedX" style="margin-block-start:var(--space-xs)">Vertical speed (X) <span class="val" id="meshRotationSpeedXVal">0.20 rad/s</span></label>
+                    <input type="range" id="meshRotationSpeedX" min="-2" max="2" step="0.05" value="0.20" />
+                    <label class="cpop-label row" for="meshRotationSpeedZ" style="margin-block-start:var(--space-xs)">Roll speed (Z) <span class="val" id="meshRotationSpeedZVal">0.10 rad/s</span></label>
+                    <input type="range" id="meshRotationSpeedZ" min="-2" max="2" step="0.05" value="0.10" />
                 </div>
             </div>
 
@@ -3019,7 +3026,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=b52cbaf28cbe"></script>
-        <script type="module" src="./js/webutil.js?v=b52cbaf28cbe"></script>
+        <script src="./libs/asciiam.js?v=c37e77e6111e"></script>
+        <script type="module" src="./js/webutil.js?v=c37e77e6111e"></script>
     </body>
 </html>

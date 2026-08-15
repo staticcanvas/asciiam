@@ -1302,6 +1302,19 @@ document.getElementById("meshRotateRightBtn").onclick = () => {
     rotation[1] += Math.PI / 2;
     applyMeshRotation(rotation);
 };
+document.getElementById("meshRotateUpBtn").onclick = () => {
+    const rotation = getMeshRotation();
+    rotation[0] -= Math.PI / 2;
+    applyMeshRotation(rotation);
+};
+document.getElementById("meshRotateDownBtn").onclick = () => {
+    const rotation = getMeshRotation();
+    rotation[0] += Math.PI / 2;
+    applyMeshRotation(rotation);
+};
+document.getElementById("meshRotateResetBtn").onclick = () => {
+    applyMeshRotation([0, 0, 0]);
+};
 ["meshFlipXBtn", "meshFlipYBtn", "meshFlipZBtn"].forEach((id, axis) => {
     const button = document.getElementById(id);
     button.onclick = () => {
@@ -1322,15 +1335,19 @@ document.getElementById("meshAutoRotateToggle").onchange = (event) => {
     event.target.setAttribute("aria-checked", String(event.target.checked));
     renderUsage();
 };
-document.getElementById("meshRotationSpeed").oninput = (event) => {
-    const value = Number(event.target.value);
-    const speed = [...(anim.opts.meshRotationSpeed || [0.2, 0.45, 0.1])];
-    speed[1] = value;
-    anim.setOption("meshRotationSpeed", speed);
-    document.getElementById("meshRotationSpeedVal").textContent = `${value.toFixed(2)} rad/s`;
-    setRangeFill(event.target);
-    renderUsage();
-};
+["meshRotationSpeedX", "meshRotationSpeedY", "meshRotationSpeedZ"].forEach((id, axis) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.oninput = (event) => {
+        const value = Number(event.target.value);
+        const speed = [...(anim.opts.meshRotationSpeed || [0.2, 0.45, 0.1])];
+        speed[axis] = value;
+        anim.setOption("meshRotationSpeed", speed);
+        document.getElementById(`${id}Val`).textContent = `${value.toFixed(2)} rad/s`;
+        setRangeFill(event.target);
+        renderUsage();
+    };
+});
 
 document.getElementById("imageInput").onchange = async (e) => {
     const file = e.target.files[0];
@@ -1497,9 +1514,16 @@ function syncControlsFromOpts() {
     const meshAutoRotate = document.getElementById("meshAutoRotateToggle");
     meshAutoRotate.checked = anim.opts.meshAutoRotate !== false;
     meshAutoRotate.setAttribute("aria-checked", String(meshAutoRotate.checked));
-    const meshRotationSpeed = Number(anim.opts.meshRotationSpeed?.[1]) || 0;
-    document.getElementById("meshRotationSpeed").value = String(meshRotationSpeed);
-    document.getElementById("meshRotationSpeedVal").textContent = `${meshRotationSpeed.toFixed(2)} rad/s`;
+    const speed = anim.opts.meshRotationSpeed || [0.2, 0.45, 0.1];
+    ["meshRotationSpeedX", "meshRotationSpeedY", "meshRotationSpeedZ"].forEach((id, axis) => {
+        const val = Number(speed[axis] ?? 0);
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = String(val);
+            const valEl = document.getElementById(`${id}Val`);
+            if (valEl) valEl.textContent = `${val.toFixed(2)} rad/s`;
+        }
+    });
     const rendererInfo = anim.getRendererInfo();
     document.getElementById("rendererStatus").textContent = rendererInfo.backend === "webgl2"
         ? "WebGL2 GPU renderer active."
@@ -1525,7 +1549,7 @@ function syncControlsFromOpts() {
     document.getElementById("interactionDuration").value = String(anim.opts.interactionDuration || 1.1);
     document.getElementById("interactionDurationVal").textContent = `${Number(anim.opts.interactionDuration || 1.1).toFixed(2)}s`;
     // Sync range fills after value update
-    ['targetFPS','resolutionScale','speed','edgeFade','trail','pulse','interactionRadius','interactionDuration','imageScale','imageScaleX','imageScaleY','imageFov','imageRotation','meshScale','meshScaleX','meshScaleY','meshScaleZ','meshRotationX','meshRotationY','meshRotationZ','meshFov','meshRotationSpeed','backdropOpacity','backdropAngle'].forEach((id) => {
+    ['targetFPS','resolutionScale','speed','edgeFade','trail','pulse','interactionRadius','interactionDuration','imageScale','imageScaleX','imageScaleY','imageFov','imageRotation','meshScale','meshScaleX','meshScaleY','meshScaleZ','meshRotationX','meshRotationY','meshRotationZ','meshFov','meshRotationSpeedX','meshRotationSpeedY','meshRotationSpeedZ','backdropOpacity','backdropAngle'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) setRangeFill(el);
     });
