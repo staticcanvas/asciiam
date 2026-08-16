@@ -149,7 +149,7 @@ const modes = [
     "plain", "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
     "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom",
     "matrix", "snow", "sparkle", "fire", "starfield", "glitch", "typewriter", "orbit",
-    "hoverZone", "clickZone", "chart", "mesh",
+    "hoverZone", "clickZone",
 ];
 let sequenceImageLibrary = [];
 const modeButtonsEl = document.getElementById("modeButtons");
@@ -167,18 +167,14 @@ function setActiveModeButton(mode) {
 const chartTypeEl = document.getElementById("chartType");
 if (chartTypeEl) {
     chartTypeEl.onchange = () => {
-        anim.setMode("chart");
         anim.setOption("chartType", chartTypeEl.value);
-        setActiveModeButton("chart");
         renderUsage();
     };
 }
 const chartTitleEl = document.getElementById("chartTitle");
 if (chartTitleEl) {
     chartTitleEl.oninput = () => {
-        anim.setMode("chart");
         anim.setOption("chartTitle", chartTitleEl.value);
-        setActiveModeButton("chart");
         renderUsage();
     };
 }
@@ -187,9 +183,7 @@ function applyChartDataFromInput() {
     if (!chartDataEl) return;
     const raw = chartDataEl.value.split(",").map((v) => parseFloat(v.trim())).filter((v) => !isNaN(v));
     if (raw.length) {
-        anim.setMode("chart");
         anim.setOption("chartData", raw);
-        setActiveModeButton("chart");
         renderUsage();
     }
 }
@@ -213,13 +207,9 @@ function applyChartLabelsFromInput() {
     if (rawVals.length === 0) return;
     if (rawLabels.length > 0 && rawLabels[0] !== "") {
         const merged = rawVals.map((val, i) => ({ value: val, label: rawLabels[i] ?? "" }));
-        anim.setMode("chart");
         anim.setOption("chartData", merged);
-        setActiveModeButton("chart");
     } else {
-        anim.setMode("chart");
         anim.setOption("chartData", rawVals);
-        setActiveModeButton("chart");
     }
     renderUsage();
 }
@@ -287,7 +277,6 @@ if (chartColorsEl) {
 const setChartPreset = (title, dataStr) => {
     if (chartTitleEl) chartTitleEl.value = title;
     if (chartDataEl) chartDataEl.value = dataStr;
-    anim.setMode("chart");
     anim.setOption("chartTitle", title);
     applyChartDataFromInput();
 };
@@ -300,8 +289,7 @@ document.getElementById("chartPresetFinancialBtn")?.addEventListener("click", ()
 const chartTriggerBtn = document.getElementById("chartTriggerBtn");
 if (chartTriggerBtn) {
     chartTriggerBtn.addEventListener("click", () => {
-        if (anim.opts.mode !== "chart") {
-            anim.setMode("chart");
+        if (!anim.opts.chartData) {
             if (chartTypeEl) anim.setOption("chartType", chartTypeEl.value);
             if (chartTitleEl) anim.setOption("chartTitle", chartTitleEl.value);
             if (chartLabelsEl && chartLabelsEl.value.trim()) {
@@ -309,7 +297,6 @@ if (chartTriggerBtn) {
             } else {
                 applyChartDataFromInput();
             }
-            setActiveModeButton("chart");
             renderUsage();
         }
     });
@@ -1380,8 +1367,6 @@ meshPrimitive.onchange = () => {
         setModelStatus("No model loaded.");
     } else {
         anim.setOption("meshPrimitive", name);
-        anim.setMode("mesh");
-        setActiveModeButton("mesh");
         setModelStatus(`${name} primitive active.`);
     }
     renderUsage();
@@ -1402,8 +1387,6 @@ document.getElementById("modelInput").onchange = async (event) => {
     setModelStatus(`Loading ${file.name}…`);
     try {
         await anim.setModel(file);
-        anim.setMode("mesh");
-        setActiveModeButton("mesh");
         setModelStatus(`${file.name} loaded · ${anim.getMeshInfo().vertexCount} vertices.`);
         renderUsage();
     } catch (error) {
@@ -1428,8 +1411,6 @@ document.getElementById("loadModelUrlBtn").onclick = async () => {
     setModelStatus(`Loading ${url.pathname.split("/").pop()}…`);
     try {
         await anim.setModel(url.href);
-        anim.setMode("mesh");
-        setActiveModeButton("mesh");
         setModelStatus(`${url.pathname.split("/").pop()} loaded · ${anim.getMeshInfo().vertexCount} vertices.`);
         renderUsage();
     } catch (error) {
@@ -2009,7 +1990,7 @@ function updateToolbarSummaries() {
         ? anim.opts.meshPrimitive || (anim.opts.model ? "model" : `${meshInfo.primitiveCount} primitives`)
         : "none";
     setToolbarSummary("meshTriggerBtn", "meshToolbarStatus", "3D", meshLabel);
-    const chartLabel = anim.opts.mode === "chart" ? (anim.opts.chartType || "bar") : "none";
+    const chartLabel = anim.opts.chartData ? (anim.opts.chartType || "bar") : "none";
     setToolbarSummary("chartTriggerBtn", "chartToolbarStatus", "Chart", chartLabel);
 }
 function syncHistoryButtons() {

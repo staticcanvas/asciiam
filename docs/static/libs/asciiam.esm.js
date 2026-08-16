@@ -2374,8 +2374,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
         _getGlyphAtlas() {
             if (!this.opts.useGlyphAtlas || this.opts.gradient || this.opts.colorAnimation || this.opts.colorFromImage) return null;
+            const chartCharacters = (this.opts.mode === "chart" || this.opts.chartData || (this._layers && this._layers.some((l) => l.mode === "chart")))
+                ? this._getChartCharacters()
+                : "";
             const imageCharacters = this._imageGrid ? (this.opts.imageChars || "") : "";
-            const atlasCharacterSet = [...new Set(this.opts.charSet + imageCharacters)].join("");
+            const atlasCharacterSet = [...new Set(this.opts.charSet + imageCharacters + chartCharacters)].join("");
             if (
                 this._glyphAtlas
                 && this._glyphAtlasCharSet === atlasCharacterSet
@@ -3355,9 +3358,28 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._webgl.surface(color, gradient);
         }
 
+        _getChartCharacters() {
+            let chars = " ▂▃▄▅▆▇█▏▎▍▌▋▊▉░▒▓┌└│─┘╱╲0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,:;%+-*·/\\_~!?()[]{}#@$^&=<>|'\"`";
+            if (this.opts.chartTitle) chars += this.opts.chartTitle;
+            const data = this.opts.chartData;
+            if (Array.isArray(data)) {
+                for (let i = 0; i < data.length; i++) {
+                    const item = data[i];
+                    if (item && typeof item === "object") {
+                        if (item.label) chars += String(item.label);
+                        if (item.name) chars += String(item.name);
+                    }
+                }
+            }
+            return chars;
+        }
+
         _getWebGLAtlas() {
+            const chartCharacters = (this.opts.mode === "chart" || this.opts.chartData || (this._layers && this._layers.some((l) => l.mode === "chart")))
+                ? this._getChartCharacters()
+                : "";
             const imageCharacters = this._imageGrid ? (this.opts.imageChars || "") : "";
-            const characters = [...new Set(this.opts.charSet + imageCharacters)];
+            const characters = [...new Set(this.opts.charSet + imageCharacters + chartCharacters)];
             const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.charH]);
             if (this._webglAtlas?.key === key) return this._webglAtlas;
             const padding = 2;

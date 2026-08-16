@@ -25,6 +25,14 @@ strangers with confidence."
   - [x] 🟡🌟✅1️⃣ **WebGL & 2D Atlas Chart Glyphs** - Added `_getChartCharacters()` to include box-drawing (`┌└│─┘`), vertical block ramps (` ▂▃▄▅▆▇█`), horizontal blocks (`▏▎▍▌▋▊▉█`), slope chars (`╱╲`), shading (`░▒▓`), digits, and label text inside both WebGL and 2D canvas glyph atlases so chart mode renders under WebGL.
   - [x] 🟡🌟✅1️⃣ **Code Export Coverage** - All 5 new options flow through `renderUsage()` and `getPersistableOptions()` so generated code snippets remain complete.
 
+- [x] 🟠🌟✅1️⃣ **Epic: Media Layer Mode Separation & Comprehensive Chart Architecture**
+  - [x] 🟡🌟✅1️⃣ **Mode Menu Clean-Up** - Removed `chart` and `mesh` from the primary animation mode selector buttons (`#modeButtons` grid in `#pop-mode`), aligning them strictly with `image` as dedicated composable media layers.
+  - [x] 🟡🌟✅1️⃣ **Animation Mode Access for Media Layers** - Allowed media layers (images, 3D meshes, and charts) to composite over or blend with active ASCII field background animation modes (wave, ripple, vortex, plasma, matrix, etc.) while running their own render passes.
+  - [x] 🟡🌟✅1️⃣ **Complete Chart Suite: Titles & Styling** - Implemented header title rendering with bold emphasis, centering, and theme colors across all chart types.
+  - [x] 🟡🌟✅1️⃣ **Complete Chart Suite: Rich Legends** - Implemented per-series legend rows with colored item labels for vertical bars, horizontal gutter labels, line point series, and donut center hubs.
+  - [x] 🟡🌟✅1️⃣ **Complete Chart Suite: Individual Object Values & Markers** - Render explicit value labels on top of vertical bars, alongside horizontal bars, on line graph peak/data points (`●`), and within donut segments.
+  - [x] 🟡🌟✅1️⃣ **Data Model Completeness** - Supported rich objects (`{ label, value, color }`), multi-series arrays, explicit ranges, and formatted values in both core engine and Web Utility.
+
 
 ### **Distribution Readiness (priority-2)**
 

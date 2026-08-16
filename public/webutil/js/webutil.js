@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=6ffd5015982f";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=6ffd5015982f";
+import { highlightJavaScript } from "./webutil-code.js?v=5c5f2cfff250";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=5c5f2cfff250";
 
 const asciiam = window.asciiam;
 
@@ -296,6 +296,24 @@ document.getElementById("chartPresetGrowthBtn")?.addEventListener("click", () =>
 document.getElementById("chartPresetLoadBtn")?.addEventListener("click", () => setChartPreset("Server Workload", "45, 88, 62, 91, 35, 76, 50"));
 document.getElementById("chartPresetTempBtn")?.addEventListener("click", () => setChartPreset("Temperature", "20, 22, 25, 28, 31, 27, 23"));
 document.getElementById("chartPresetFinancialBtn")?.addEventListener("click", () => setChartPreset("Stock Trend", "100, 110, 105, 125, 140, 135, 160"));
+
+const chartTriggerBtn = document.getElementById("chartTriggerBtn");
+if (chartTriggerBtn) {
+    chartTriggerBtn.addEventListener("click", () => {
+        if (anim.opts.mode !== "chart") {
+            anim.setMode("chart");
+            if (chartTypeEl) anim.setOption("chartType", chartTypeEl.value);
+            if (chartTitleEl) anim.setOption("chartTitle", chartTitleEl.value);
+            if (chartLabelsEl && chartLabelsEl.value.trim()) {
+                applyChartLabelsFromInput();
+            } else {
+                applyChartDataFromInput();
+            }
+            setActiveModeButton("chart");
+            renderUsage();
+        }
+    });
+}
 
 const clearMediaBtn = document.getElementById("clearMediaBtn");
 if (clearMediaBtn) {

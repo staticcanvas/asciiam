@@ -3221,6 +3221,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             } else {
                 drawn = this._drawDense(globalGradient);
             }
+            if (this._mesh && this._meshRasterizer && this.opts.mode !== "mesh") {
+                drawn += this._drawMesh(globalGradient);
+            }
 
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawCanvasBackdrop();
             ctx.globalAlpha = 1;
@@ -3340,6 +3343,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 drawn += this._drawSparse(dt, null);
             } else {
                 drawn = this._drawDense(null);
+            }
+            if (this._mesh && this._meshRasterizer && this.opts.mode !== "mesh") {
+                drawn += this._drawMesh(null);
             }
             this._webgl.flush(this.w, this.h, this._webglGradient);
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawWebGLBackdrop();
@@ -3949,6 +3955,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
         _computeCell(col, row, x, y) {
             const mode = this.opts.mode;
+            if (this.opts.chartData && mode !== "chart") {
+                const chartCell = this._chartCell(col, row, x, y);
+                if (chartCell && chartCell.char !== " " && chartCell.opacity > 0.02) {
+                    return chartCell;
+                }
+            }
             if (mode === "custom" && typeof this.opts.customCell === "function") {
                 return this._callCustom(this.opts.customCell, col, row, x, y);
             }
@@ -4398,13 +4410,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const { cols, rows } = this;
             let values = [];
             let labels = [];
+            let itemColors = [];
 
             if (Array.isArray(data)) {
                 if (typeof data[0] === "number") {
                     values = data;
                 } else if (typeof data[0] === "object" && data[0] !== null) {
-                    values = data.map((item) => Number(item.value ?? item.val) || 0);
-                    labels = data.map((item) => String(item.label ?? item.name ?? ""));
+                    values = data.map((item) => Number(item.value ?? item.val ?? item.v) || 0);
+                    labels = data.map((item) => String(item.label ?? item.name ?? item.title ?? ""));
+                    itemColors = data.map((item) => item.color || null);
                 }
             }
 
@@ -4435,7 +4449,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const scaleRange = Math.max(1, scaleMax - scaleMin);
 
             const palette = Array.isArray(this.opts.chartColors) ? this.opts.chartColors : null;
-            const getColor = (idx) => (palette && palette[idx % palette.length]) || this.opts.color;
+            const getColor = (idx) => (itemColors[idx]) || (palette && palette[idx % palette.length]) || this.opts.color;
 
             const animateItems = this.opts.chartAnimateItems;
             const t = this._time || 0;
@@ -4482,16 +4496,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         const currentRowFromBottom = axisRow - row;
                         const barColor = getColor(barIdx);
 
+                        // Render individual bar object value centered directly above the bar cap
                         if (this.opts.chartShowValues !== false && progress >= 1 &&
                             currentRowFromBottom === Math.ceil(targetRowHeight) + 1) {
                             const valStr = String(Math.round(val));
                             const labelStart = Math.max(0, Math.floor((activeWidth - valStr.length) / 2));
                             const charIdx = offsetInBar - labelStart;
                             if (charIdx >= 0 && charIdx < valStr.length) {
-                                return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.9, 0.9, true, barColor);
+                                return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.95, true, barColor);
                             }
                         }
 
+                        // Render solid backfilled bar body + sub-cell fractional cap
                         if (currentRowFromBottom > 0 && currentRowFromBottom <= Math.ceil(targetRowHeight) && targetRowHeight > 0) {
                             if (currentRowFromBottom === Math.ceil(targetRowHeight)) {
                                 const subFraction = targetRowHeight - Math.floor(targetRowHeight);
@@ -4503,12 +4519,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                             return this._setCell("█", this.opts.maxOpacity, effectiveNorm, true, barColor);
                         }
 
+                        // Render legend label row with per-series badge/text
                         if (showLegend && labels[barIdx] && row === axisRow + legendRows) {
                             const lbl = labels[barIdx].slice(0, activeWidth);
                             const lStart = Math.floor((activeWidth - lbl.length) / 2);
                             const ci = offsetInBar - lStart;
                             if (ci >= 0 && ci < lbl.length) {
-                                return this._setCell(lbl[ci], this.opts.maxOpacity * 0.6, 0.5, false, barColor);
+                                return this._setCell(lbl[ci], this.opts.maxOpacity * 0.75, 0.6, true, barColor);
                             }
                         }
                     }
@@ -4529,14 +4546,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     const currentColFromLeft = col - (axisCol + 1);
                     const barColor = getColor(barIdx);
 
+                    // Render legend label in the left gutter
                     if (col < axisCol && labels[barIdx] && offsetInBar === Math.floor(activeHeight / 2)) {
                         const lbl = labels[barIdx].slice(0, axisCol);
                         const ci = col - (axisCol - lbl.length);
                         if (ci >= 0 && ci < lbl.length) {
-                            return this._setCell(lbl[ci], this.opts.maxOpacity * 0.6, 0.5, false, barColor);
+                            return this._setCell(lbl[ci], this.opts.maxOpacity * 0.8, 0.6, true, barColor);
                         }
                     }
 
+                    // Render horizontal bar body + fractional tip
                     if (currentColFromLeft >= 0 && currentColFromLeft <= Math.ceil(targetColWidth) && targetColWidth > 0) {
                         if (currentColFromLeft === Math.ceil(targetColWidth)) {
                             const subFraction = targetColWidth - Math.floor(targetColWidth);
@@ -4548,12 +4567,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         return this._setCell("█", this.opts.maxOpacity, effectiveNorm, true, barColor);
                     }
 
+                    // Render individual value label at the right tip of the horizontal bar
                     if (this.opts.chartShowValues !== false && progress >= 1 &&
                         currentColFromLeft === Math.ceil(targetColWidth) + 1) {
                         const valStr = ` ${Math.round(val)}`;
                         const charIdx = col - (axisCol + 1 + Math.ceil(targetColWidth));
                         if (charIdx >= 0 && charIdx < valStr.length) {
-                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.9, 0.9, true, barColor);
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.95, true, barColor);
                         }
                     }
                 }
@@ -4569,9 +4589,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     const progress = animateItems ? Math.min(1, Math.max(0, t * 1.2 - colFraction * 0.6)) : 1;
                     const effectiveNorm = normVal * progress;
                     const targetRow = Math.round((axisRow - 1) - effectiveNorm * (usableRows - 1));
-                    const lineColor = getColor(0);
+                    const lineColor = getColor(i0);
+
+                    // Vertex marker and value display for discrete line data points
+                    const isNearVertex = Math.abs(dataIdx - Math.round(dataIdx)) < (0.5 / Math.max(1, usableCols));
+                    const vertexIdx = Math.round(dataIdx);
+
+                    if (this.opts.chartShowValues !== false && isNearVertex && row === targetRow - 1 && progress >= 1) {
+                        const valStr = String(Math.round(values[vertexIdx] || 0));
+                        const charIdx = col - (Math.round(axisCol + (vertexIdx / Math.max(1, values.length - 1)) * usableCols) - Math.floor(valStr.length / 2));
+                        if (charIdx >= 0 && charIdx < valStr.length) {
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.9, 0.9, true, getColor(vertexIdx));
+                        }
+                    }
 
                     if (row === targetRow && progress > 0) {
+                        if (isNearVertex) {
+                            return this._setCell("●", this.opts.maxOpacity, 1, true, getColor(vertexIdx));
+                        }
                         const prevVal = i0 > 0 ? values[i0 - 1] : values[i0];
                         const nextVal = i1 < values.length - 1 ? values[i1 + 1] : values[i1];
                         const diff = nextVal - prevVal;
@@ -4583,6 +4618,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         const rampIdx = Math.min(3, Math.floor(depthFraction * 4));
                         const opacity = Math.max(0.2, depthFraction * 0.8) * this.opts.maxOpacity;
                         return this._setCell(backfillRamp[rampIdx], opacity, effectiveNorm * depthFraction, false, lineColor);
+                    }
+
+                    // Legend label row below line axis
+                    if (showLegend && row === axisRow + legendRows && isNearVertex && labels[vertexIdx]) {
+                        const lbl = labels[vertexIdx].slice(0, 4);
+                        const charIdx = col - (Math.round(axisCol + (vertexIdx / Math.max(1, values.length - 1)) * usableCols) - Math.floor(lbl.length / 2));
+                        if (charIdx >= 0 && charIdx < lbl.length) {
+                            return this._setCell(lbl[charIdx], this.opts.maxOpacity * 0.75, 0.6, true, getColor(vertexIdx));
+                        }
                     }
                 }
             } else if (type === "heatmap") {
@@ -4641,7 +4685,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         const startCol = Math.floor(cx - legendText.length / 2);
                         const ci = col - startCol;
                         if (ci >= 0 && ci < legendText.length) {
-                            return this._setCell(legendText[ci], this.opts.maxOpacity * 0.6, 0.5, false, this.opts.color);
+                            return this._setCell(legendText[ci], this.opts.maxOpacity * 0.75, 0.6, true, this.opts.color);
                         }
                     }
                 }
