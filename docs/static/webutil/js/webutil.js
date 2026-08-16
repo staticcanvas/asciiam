@@ -107,6 +107,12 @@ let historyReady = false;
 let applyingHistory = false;
 anim.attachStats(statsEl);
 anim.start();
+if (activeImageSource) {
+    anim.setImage(activeImageSource).catch(() => {});
+}
+if (initialOptions.model) {
+    anim.setModel(initialOptions.model).catch(() => {});
+}
 
 const previewButtons = [...document.querySelectorAll("[data-preview-type]")];
 const previewScenes = [...document.querySelectorAll("[data-preview-scene]")];
@@ -867,7 +873,17 @@ function applyDemoOptions(options, presetName = "", referenceLabel = presetName 
         if (typeof setModelStatus === "function") setModelStatus("No model loaded.");
     }
 
-    anim.opts.mode = activeMode === "image" ? "wave" : activeMode;
+    if (options.chartData !== undefined) {
+        anim.setOption("chartData", options.chartData);
+        anim.setOption("chartEnabled", options.chartEnabled !== undefined ? options.chartEnabled : !!options.chartData);
+    } else if (options.chartEnabled !== undefined) {
+        anim.setOption("chartEnabled", options.chartEnabled);
+    }
+    if (options.imageEnabled !== undefined) anim.setOption("imageEnabled", options.imageEnabled);
+    if (options.meshEnabled !== undefined) anim.setOption("meshEnabled", options.meshEnabled);
+
+    const targetMode = presetName ? activeMode : (options.mode || activeMode);
+    anim.opts.mode = targetMode === "image" ? "wave" : targetMode;
     const requestedRenderer = anim.opts.renderer || "auto";
     if (anim.getRendererInfo().requested !== requestedRenderer) anim.setRenderer(requestedRenderer);
     anim.setMode(anim.opts.mode);
@@ -1875,6 +1891,45 @@ function syncControlsFromOpts() {
         control.checked = !!anim.opts[option];
         control.setAttribute("aria-checked", String(control.checked));
     });
+    if (imageEnabledToggle) {
+        imageEnabledToggle.checked = anim.opts.imageEnabled !== false;
+        imageEnabledToggle.setAttribute("aria-checked", String(imageEnabledToggle.checked));
+    }
+    if (meshEnabledToggle) {
+        meshEnabledToggle.checked = anim.opts.meshEnabled !== false;
+        meshEnabledToggle.setAttribute("aria-checked", String(meshEnabledToggle.checked));
+    }
+    if (chartEnabledToggle) {
+        chartEnabledToggle.checked = !!anim.opts.chartEnabled;
+        chartEnabledToggle.setAttribute("aria-checked", String(chartEnabledToggle.checked));
+    }
+    if (chartTypeEl) chartTypeEl.value = anim.opts.chartType || "bar";
+    if (chartTitleEl) chartTitleEl.value = anim.opts.chartTitle || "";
+    if (chartDataEl && anim.opts.chartData) {
+        if (Array.isArray(anim.opts.chartData)) {
+            if (typeof anim.opts.chartData[0] === "object" && anim.opts.chartData[0] !== null) {
+                chartDataEl.value = anim.opts.chartData.map((d) => d.value ?? d.val ?? 0).join(", ");
+                if (chartLabelsEl) chartLabelsEl.value = anim.opts.chartData.map((d) => d.label ?? "").join(", ");
+            } else {
+                chartDataEl.value = anim.opts.chartData.join(", ");
+            }
+        }
+    }
+    if (chartShowAxesToggle) {
+        chartShowAxesToggle.checked = anim.opts.chartShowAxes !== false;
+        chartShowAxesToggle.setAttribute("aria-checked", String(chartShowAxesToggle.checked));
+    }
+    if (chartShowLegendToggle) {
+        chartShowLegendToggle.checked = anim.opts.chartShowLegend !== false;
+        chartShowLegendToggle.setAttribute("aria-checked", String(chartShowLegendToggle.checked));
+    }
+    if (chartAnimateItemsToggle) {
+        chartAnimateItemsToggle.checked = !!anim.opts.chartAnimateItems;
+        chartAnimateItemsToggle.setAttribute("aria-checked", String(chartAnimateItemsToggle.checked));
+    }
+    if (chartScaleMinEl) chartScaleMinEl.value = anim.opts.chartScaleMin ?? "";
+    if (chartScaleMaxEl) chartScaleMaxEl.value = anim.opts.chartScaleMax ?? "";
+    if (chartColorsEl) chartColorsEl.value = Array.isArray(anim.opts.chartColors) ? anim.opts.chartColors.join(" ") : "";
     syncSequenceEditorFromOpts();
 }
 function usageSource() {
@@ -1970,18 +2025,18 @@ function getPersistableOptions() {
         "mode", "quality", "targetFPS", "resolutionScale", "renderer", "charSet", "align", "color", "gradient", "backdrop",
         "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "extendedStats", "colorAnimation",
         "interactionRadius", "interactionDuration", "sweepDuration", "delayCurve",
-        "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
+        "imageEnabled", "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
         "fireDensity", "starfieldDensity", "orbitDensity", "glitchIntensity", "typewriterDuration",
-        "meshPrimitive", "meshStyle", "meshProjection", "meshCamera", "meshTransform", "meshAutoRotate", "meshRotationSpeed",
-        "chartData", "chartType", "chartTitle", "chartShowValues", "chartShowAxes", "chartShowLegend", "chartColors", "chartScaleMin", "chartScaleMax", "chartAnimateItems", "layers",
+        "meshEnabled", "meshPrimitive", "meshStyle", "meshProjection", "meshCamera", "meshTransform", "meshAutoRotate", "meshRotationSpeed",
+        "chartEnabled", "chartData", "chartType", "chartTitle", "chartShowValues", "chartShowAxes", "chartShowLegend", "chartColors", "chartScaleMin", "chartScaleMax", "chartAnimateItems", "layers",
         "sequence", "sequenceOptions",
     ];
     const options = {};
     keys.forEach((key) => {
         if (anim.opts[key] !== undefined) options[key] = anim.opts[key];
     });
+    if (activeImageSource) options.image = activeImageSource;
     options.quality = document.getElementById("quality").value;
-    delete options.mode;
     return JSON.parse(JSON.stringify(options));
 }
 function snapshotKey(options) {
