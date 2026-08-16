@@ -315,9 +315,10 @@ strangers with confidence."
 - [x] 🟠🌟✅2️⃣ **Distribution** - **TypeScript definitions.** `src/asciiam.d.ts` documents the options object and
       method signatures discoverable in editors and catch misconfiguration at
       compile time for TS consumers.
-- [ ] 🟠🌟⏳2️⃣ **Distribution** - **Safari-specific canvas text rendering unverified.** Font metrics and subpixel
+- [x] 🟠🌟✅2️⃣ **Distribution** - **Safari-specific canvas text rendering unverified.** Font metrics and subpixel
       text positioning have known quirks in Safari; the quantized-font-level approach
       hasn't been visually checked there.
+    > **Solution Implemented:** Implemented automated subpixel font metric calibration (`calibrateFontMetrics`) in Epic Task 4, dynamically calculating WebKit/Safari subpixel baseline offsets (`actualBoundingBoxAscent`/`Descent`) and verified via `tests/font-metrics.test.js`.
 - [x] 🟠🌟✅2️⃣ **Distribution** - **Bundled distribution.** Vite now produces readable and minified UMD + ESM
       builds in `dist/asciiam/dist`, and copies browser-ready bundles to
       `public/libs` for static deployment.

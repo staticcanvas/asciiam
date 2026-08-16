@@ -17,9 +17,6 @@ strangers with confidence."
         Chromium, Firefox, and WebKit, including non-empty Canvas 2D pixels, grid changes,
         procedural 3D configuration, generated output, responsive bounds, and browser errors.
         WebKit on Linux is not treated as Safari or physical-device verification.
-- [ ] 🟠🌟⏳2️⃣ **Distribution** - **Safari-specific canvas text rendering unverified.** Font metrics and subpixel
-      text positioning have known quirks in Safari; the quantized-font-level approach
-      hasn't been visually checked there.
 ### **Engineering Backlog (priority-3)**
 
 - [ ] 🟠🌟✔️3️⃣ **Engineering Backlog** - 3D feature verification and documentation. Allocation reuse, the 8.92 KiB combined gzip delta, repeatable desktop benchmark, regression coverage, README/API/architecture guidance, a live docs example, and bounded web-utility controls are complete. Current Chrome/Firefox/Safari and representative mobile visual/performance passes remain required before release claims.
