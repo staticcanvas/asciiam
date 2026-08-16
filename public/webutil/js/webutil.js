@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=43076529cdd1";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=43076529cdd1";
+import { highlightJavaScript } from "./webutil-code.js?v=1bc795e5b37c";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=1bc795e5b37c";
 
 const asciiam = window.asciiam;
 
@@ -149,7 +149,7 @@ const modes = [
     "plain", "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
     "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom",
     "matrix", "snow", "sparkle", "fire", "starfield", "glitch", "typewriter", "orbit",
-    "hoverZone", "clickZone", "mesh",
+    "hoverZone", "clickZone", "chart", "mesh",
 ];
 let sequenceImageLibrary = [];
 const modeButtonsEl = document.getElementById("modeButtons");
@@ -162,6 +162,48 @@ function setActiveModeButton(mode) {
     if (revealDirectionGroup) revealDirectionGroup.hidden = !["fadeIn", "fadeOut", "dissolveIn", "dissolveOut"].includes(mode);
     const interactionControls = document.getElementById("interactionControlsGroup");
     if (interactionControls) interactionControls.hidden = !["hoverZone", "clickZone"].includes(mode);
+    const chartControls = document.getElementById("chartControlsGroup");
+    if (chartControls) chartControls.hidden = mode !== "chart";
+}
+
+const chartTypeEl = document.getElementById("chartType");
+if (chartTypeEl) {
+    chartTypeEl.onchange = () => {
+        anim.setOption("chartType", chartTypeEl.value);
+        renderUsage();
+    };
+}
+const chartTitleEl = document.getElementById("chartTitle");
+if (chartTitleEl) {
+    chartTitleEl.oninput = () => {
+        anim.setOption("chartTitle", chartTitleEl.value);
+        renderUsage();
+    };
+}
+const chartDataEl = document.getElementById("chartData");
+if (chartDataEl) {
+    chartDataEl.oninput = () => {
+        const raw = chartDataEl.value.split(",").map((v) => parseFloat(v.trim())).filter((v) => !isNaN(v));
+        if (raw.length) anim.setOption("chartData", raw);
+        renderUsage();
+    };
+}
+const sweepDurationEl = document.getElementById("sweepDuration");
+const sweepDurationVal = document.getElementById("sweepDurationVal");
+if (sweepDurationEl) {
+    sweepDurationEl.oninput = () => {
+        const val = parseFloat(sweepDurationEl.value);
+        if (sweepDurationVal) sweepDurationVal.textContent = val.toFixed(1) + "s";
+        anim.setOption("sweepDuration", val);
+        renderUsage();
+    };
+}
+const delayCurveEl = document.getElementById("delayCurve");
+if (delayCurveEl) {
+    delayCurveEl.onchange = () => {
+        anim.setOption("delayCurve", delayCurveEl.value);
+        renderUsage();
+    };
 }
 modes.forEach((m) => {
     const b = document.createElement("button");

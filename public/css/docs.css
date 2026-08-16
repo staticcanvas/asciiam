@@ -58,22 +58,24 @@
   --z-sidebar: 30;
   --z-topbar: 20;
 }
+:root[data-theme="light"],
+html[data-theme="light"],
 [data-theme="light"] {
   color-scheme: light;
-  --void: #f5f7fc;
-  --ink: #eaf0f8;
-  --surface: #e0e7f3;
-  --surface-hi: #d2dceb;
-  --glass: rgb(0 0 0 / 0.05);
-  --border: rgb(170 185 210 / 0.75);
-  --border-bright: rgb(120 140 170 / 0.85);
-  --plasma: #1e6bd6;
-  --plasma-dim: rgb(30 107 214 / 0.12);
-  --accent: #7c3aed;
-  --white: #0f172a;
-  --muted: #475569;
-  --dim: #64748b;
-  --code-bg: #e2e8f4;
+  --void: #f5f7fc !important;
+  --ink: #eaf0f8 !important;
+  --surface: #e0e7f3 !important;
+  --surface-hi: #d2dceb !important;
+  --glass: rgb(0 0 0 / 0.05) !important;
+  --border: rgb(170 185 210 / 0.75) !important;
+  --border-bright: rgb(120 140 170 / 0.85) !important;
+  --plasma: #1e6bd6 !important;
+  --plasma-dim: rgb(30 107 214 / 0.12) !important;
+  --accent: #7c3aed !important;
+  --white: #0f172a !important;
+  --muted: #475569 !important;
+  --dim: #64748b !important;
+  --code-bg: #e2e8f4 !important;
 }
 @supports (color: oklch(0 0 0)) {
   :root {
@@ -92,26 +94,39 @@
     --dim: oklch(0.42 0.04 250);
     --code-bg: oklch(0.08 0.015 250);
   }
+  :root[data-theme="light"],
+  html[data-theme="light"],
   [data-theme="light"] {
-    --void: oklch(0.97 0.01 250);
-    --ink: oklch(0.93 0.015 250);
-    --surface: oklch(0.91 0.02 260);
-    --surface-hi: oklch(0.85 0.025 260);
-    --glass: oklch(0 0 0 / 0.05);
-    --border: oklch(0.76 0.03 255 / 0.75);
-    --border-bright: oklch(0.64 0.04 255 / 0.85);
-    --plasma: oklch(0.48 0.22 250);
-    --plasma-dim: oklch(0.48 0.22 250 / 0.12);
-    --accent: oklch(0.52 0.25 310);
-    --white: oklch(0.12 0.03 250);
-    --muted: oklch(0.38 0.04 250);
-    --dim: oklch(0.52 0.04 250);
-    --code-bg: oklch(0.92 0.015 250);
+    --void: oklch(0.97 0.01 250) !important;
+    --ink: oklch(0.93 0.015 250) !important;
+    --surface: oklch(0.91 0.02 260) !important;
+    --surface-hi: oklch(0.85 0.025 260) !important;
+    --glass: oklch(0 0 0 / 0.05) !important;
+    --border: oklch(0.76 0.03 255 / 0.75) !important;
+    --border-bright: oklch(0.64 0.04 255 / 0.85) !important;
+    --plasma: oklch(0.48 0.22 250) !important;
+    --plasma-dim: oklch(0.48 0.22 250 / 0.12) !important;
+    --accent: oklch(0.52 0.25 310) !important;
+    --white: oklch(0.12 0.03 250) !important;
+    --muted: oklch(0.38 0.04 250) !important;
+    --dim: oklch(0.52 0.04 250) !important;
+    --code-bg: oklch(0.92 0.015 250) !important;
   }
 }
+html[data-theme="light"] body::after,
 [data-theme="light"] body::after {
   display: none;
 }
+html[data-theme="light"] .logo-lockup img,
+[data-theme="light"] .logo-lockup img {
+  filter: invert(0.85) hue-rotate(180deg) brightness(0.2);
+}
+html[data-theme="light"] .hero-example-box,
+html[data-theme="light"] .showcase-card,
+html[data-theme="light"] .hero-card,
+html[data-theme="light"] .card,
+html[data-theme="light"] .feature-card,
+html[data-theme="light"] .asset-media-card,
 [data-theme="light"] .hero-example-box,
 [data-theme="light"] .showcase-card,
 [data-theme="light"] .hero-card,
@@ -121,12 +136,16 @@
   background: rgb(255 255 255 / 0.9);
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.08);
 }
+html[data-theme="light"] .hero-example-cell figcaption,
+html[data-theme="light"] .showcase-card figcaption,
 [data-theme="light"] .hero-example-cell figcaption,
 [data-theme="light"] .showcase-card figcaption {
   background: rgb(255 255 255 / 0.94);
   color: var(--white);
   border-color: var(--border);
 }
+html[data-theme="light"] .hero-example-label,
+html[data-theme="light"] .hero-example-action,
 [data-theme="light"] .hero-example-label,
 [data-theme="light"] .hero-example-action {
   background: rgb(255 255 255 / 0.94);

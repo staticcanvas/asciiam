@@ -2472,6 +2472,32 @@
                         <option value="center">Center out</option>
                         <option value="edges">Edges inward</option>
                     </select>
+                    <label class="cpop-label row" for="sweepDuration" style="margin-top:var(--space-xs)">Sweep duration <span class="val" id="sweepDurationVal">1.5s</span></label>
+                    <input type="range" id="sweepDuration" min="0.2" max="5.0" step="0.1" value="1.5" />
+                    <label class="cpop-label" for="delayCurve" style="margin-top:var(--space-xs)">Delay curve</label>
+                    <select id="delayCurve">
+                        <option value="linear">Linear</option>
+                        <option value="easeIn">Ease In</option>
+                        <option value="easeOut">Ease Out</option>
+                        <option value="easeInOut">Ease In Out</option>
+                        <option value="stagger">Stagger</option>
+                    </select>
+                </div>
+                <div class="cpop-group" id="chartControlsGroup" hidden>
+                    <span class="cpop-label">Chart settings</span>
+                    <label class="cpop-label" for="chartType">Chart type</label>
+                    <select id="chartType">
+                        <option value="bar">Bar (Vertical)</option>
+                        <option value="horizontalBar">Horizontal Bar</option>
+                        <option value="line">Line Graph</option>
+                        <option value="sparkline">Sparkline</option>
+                        <option value="heatmap">Heatmap Matrix</option>
+                        <option value="donut">Donut Ring</option>
+                    </select>
+                    <label class="cpop-label" for="chartTitle" style="margin-top:var(--space-xs)">Chart title</label>
+                    <input class="code-export__textarea" type="text" id="chartTitle" value="System Metrics" style="height:32px;" />
+                    <label class="cpop-label" for="chartData" style="margin-top:var(--space-xs)">Data values (CSV)</label>
+                    <input class="code-export__textarea" type="text" id="chartData" value="12, 45, 78, 34, 90, 60, 85" style="height:32px;" />
                 </div>
                 <div class="cpop-group">
                     <label class="cpop-label row" for="edgeFade">Edge fade <span class="val" id="edgeFadeVal">0%</span></label>
@@ -3026,7 +3052,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=43076529cdd1"></script>
-        <script type="module" src="./js/webutil.js?v=43076529cdd1"></script>
+        <script src="./libs/asciiam.js?v=1bc795e5b37c"></script>
+        <script type="module" src="./js/webutil.js?v=1bc795e5b37c"></script>
     </body>
 </html>
