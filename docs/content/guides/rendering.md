@@ -103,6 +103,10 @@ and the limited-availability [WebGL timer-query extension](https://developer.moz
 
 All running instances share one `requestAnimationFrame` scheduler. Each instance retains independent timing, visibility, renderer, and target state. For galleries or grids, construct only visible previews and destroy off-screen instances after a short delay. Browsers limit the number of simultaneous WebGL contexts.
 
+## State preservation on grid resizing
+
+Dynamic container resizing and option changes (such as `density`, `fontSize`, or `resolutionScale`) trigger a logical grid recalculation. Stateful animation modes (`matrix`, `snow`, `sparkle`, `fire`, `starfield`, `orbit`) preserve active particle and rain-column coordinates during resizes by scaling positions relative to the new grid dimensions. This prevents animation drops from restarting at position zero when responsive viewports change.
+
 ## 3D rendering boundary
 
 The `mesh` mode projects bounded geometry into cell-resolution depth and luminance buffers,
@@ -110,13 +114,7 @@ then uses the existing WebGL2 or Canvas 2D glyph presentation path. It does not 
 WebGL2 backend into a general scene renderer. See [3D meshes and models]({{< relref "/guides/3d-models" >}})
 for geometry contracts, glTF/GLB input, controls, and limits.
 
-[Poly Haven models](https://polyhaven.com/models) are recorded as a CC0 candidate source
-for optional demonstrations. [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)
-are recorded for format fixtures, with per-model license verification required. The
-[glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) is the
-format reference for core `.gltf` and `.glb` input. Base-format parsing is dependency-free;
-codecs for compressed extensions are not bundled, loaded, or injectable. Files requiring those
-extensions will fail with a format diagnostic.
+Base-format glTF 2.0 and GLB v2 parsing is dependency-free. Custom decoders for compressed GLTF extensions (such as `KHR_draco_mesh_compression` or `EXT_meshopt_compression`) can be registered via `asciiam.registerGltfDecoder(name, fn)`.
 
 ## Reference
 

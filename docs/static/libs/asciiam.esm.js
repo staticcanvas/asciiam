@@ -10,7 +10,7 @@ import {
     MeshCellRasterizer,
     normalizeMeshData,
 } from "./mesh.js";
-import { loadGltf } from "./gltf.js";
+import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
 "use strict";
 
@@ -563,6 +563,16 @@ import { loadGltf } from "./gltf.js";
             return loadGltf(source, options);
         }
 
+        /** Register a custom decoder callback for a compressed glTF extension (e.g. KHR_draco_mesh_compression). */
+        static registerGltfDecoder(name, decoderFn) {
+            return registerGltfDecoder(name, decoderFn);
+        }
+
+        /** Returns list of registered glTF extension decoders. */
+        static getGltfDecoders() {
+            return getGltfDecoders();
+        }
+
         /** Feature-detect before constructing, for graceful fallback in older browsers. */
         static isSupported() {
             try {
@@ -588,7 +598,8 @@ import { loadGltf } from "./gltf.js";
                 this._disabled = true;
                 this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.clearImage = this.setMesh = this.clearMesh = this.clearModel =
                     this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
-                    this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
+                    this.seekSequence = this.nextSequenceStep = this.setRenderer = this.setLayers = () => {};
+                this.getLayers = () => [];
                 this.getSequenceState = () => ({ configured: false, running: false, completed: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false, loading: false, morphing: false, morphProgress: 0 });
                 this.getRendererInfo = () => ({ requested: "canvas2d", backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
                 this.getStats = () => ({ fps: 0, estimatedRefreshRate: null, frameWorkMs: null, cells: 0, drawn: 0, occupancy: 0, renderer: this.getRendererInfo(), quality: null, dpr: 1, mesh: this.getMeshInfo() });
@@ -666,7 +677,8 @@ import { loadGltf } from "./gltf.js";
                 this._disabled = true;
                 this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.setMesh = this.clearMesh = this.clearModel =
                     this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
-                    this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
+                    this.seekSequence = this.nextSequenceStep = this.setRenderer = this.setLayers = () => {};
+                this.getLayers = () => [];
                 this.getSequenceState = () => ({ configured: false, running: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false });
                 this.getRendererInfo = () => ({ requested: this._rendererRequested, backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
                 this.getStats = () => ({ fps: 0, estimatedRefreshRate: null, frameWorkMs: null, cells: 0, drawn: 0, occupancy: 0, renderer: this.getRendererInfo(), quality: null, dpr: 1, mesh: this.getMeshInfo() });
@@ -740,6 +752,7 @@ import { loadGltf } from "./gltf.js";
                     onModelError: null,
                     sequence: null,
                     sequenceOptions: null,
+                    layers: Array.isArray(opts.layers) ? opts.layers : null,
 
                     // --- wave tuning (previously hardcoded) ---
                     ambient: 0.35, // 0..1, base noise level between wave passes
@@ -888,6 +901,7 @@ import { loadGltf } from "./gltf.js";
 
             this._bindLifecycle();
             this._bindCursor();
+            this._layers = this._normalizeLayers(this.opts.layers);
             this._buildFontCache();
             this._resize();
 
@@ -1071,6 +1085,10 @@ import { loadGltf } from "./gltf.js";
         }
         /** Updates one option and rebuilds only its dependent state or caches. */
         setOption(key, value) {
+            if (key === "layers") {
+                this.setLayers(value);
+                return;
+            }
             if (key === "mode") {
                 this.setMode(value);
                 return;
@@ -1174,6 +1192,33 @@ import { loadGltf } from "./gltf.js";
                     this._draw(16.7);
                 }
             }
+        }
+
+        /** Sets an array of layer configurations to composite in order during frame rendering. */
+        setLayers(layers) {
+            this._layers = this._normalizeLayers(layers);
+            this.opts.layers = this._layers;
+            return this;
+        }
+
+        /** Returns the current list of active composition layers. */
+        getLayers() {
+            return this._layers ? this._layers.map((l) => ({
+                mode: l.mode,
+                options: l.options ? Object.assign({}, l.options) : null,
+                opacity: l.opacity,
+                blendMode: l.blendMode,
+            })) : [];
+        }
+
+        _normalizeLayers(layers) {
+            if (!Array.isArray(layers) || layers.length === 0) return null;
+            return layers.map((layer) => ({
+                mode: typeof layer.mode === "string" ? layer.mode : "wave",
+                options: layer.options && typeof layer.options === "object" ? Object.assign({}, layer.options) : null,
+                opacity: typeof layer.opacity === "number" ? Math.max(0, Math.min(1, layer.opacity)) : 1.0,
+                blendMode: typeof layer.blendMode === "string" ? layer.blendMode : "source-over",
+            }));
         }
 
         /** Validate and retain typed-array geometry for the mesh animation mode. */
@@ -2194,6 +2239,8 @@ import { loadGltf } from "./gltf.js";
 
         /** Re-measures the grid and invalidates geometry-dependent state and caches. */
         _resize() {
+            const oldCols = this.cols || 0;
+            const oldRows = this.rows || 0;
             const dpr = Math.min(window.devicePixelRatio || 1, this.opts.maxDPR);
             this._dpr = dpr;
             const parent = this.canvas.parentElement || this.canvas;
@@ -2240,15 +2287,127 @@ import { loadGltf } from "./gltf.js";
             this._canvasRect = this.canvas.getBoundingClientRect();
             if (this._sourceImage) this._resampleImage();
             this._scheduleAnimatedFrameCapture();
-            if (this.opts.mode === "matrix") this._initMatrix();
-            if (this.opts.mode === "snow") this._initSnow();
-            if (this.opts.mode === "sparkle") this._initSparkle();
-            if (this.opts.mode === "fire") this._initFire();
-            if (this.opts.mode === "starfield") this._initStarfield();
-            if (this.opts.mode === "orbit") this._initOrbit();
+
+            if (oldCols > 0 && oldRows > 0) {
+                this._adaptStateOnResize(oldCols, oldRows, this.cols, this.rows);
+            } else {
+                if (this.opts.mode === "matrix") this._initMatrix();
+                if (this.opts.mode === "snow") this._initSnow();
+                if (this.opts.mode === "sparkle") this._initSparkle();
+                if (this.opts.mode === "fire") this._initFire();
+                if (this.opts.mode === "starfield") this._initStarfield();
+                if (this.opts.mode === "orbit") this._initOrbit();
+            }
+
             if (this._reduced) this._draw(16.7);
             if (this._events.get("resize")?.size) {
                 this._emit("resize", { width: this.w, height: this.h, cols: this.cols, rows: this.rows });
+            }
+        }
+
+        _adaptStateOnResize(oldCols, oldRows, newCols, newRows) {
+            const colScale = newCols / oldCols;
+            const rowScale = newRows / oldRows;
+
+            if (this._matrix) {
+                if (newCols > oldCols) {
+                    for (let c = oldCols; c < newCols; c++) {
+                        this._matrix[c] = {
+                            y: -Math.random() * newRows,
+                            speed: 8 + Math.random() * 14,
+                            length: 6 + Math.floor(Math.random() * 10),
+                        };
+                    }
+                } else if (newCols < oldCols) {
+                    this._matrix.length = newCols;
+                }
+                for (let c = 0; c < this._matrix.length; c++) {
+                    if (this._matrix[c]) this._matrix[c].y *= rowScale;
+                }
+            } else if (this.opts.mode === "matrix") {
+                this._initMatrix();
+            }
+
+            if (this._snow) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.snowDensity));
+                for (let i = 0; i < this._snow.length; i++) {
+                    const p = this._snow[i];
+                    p.col = Math.min(newCols - 1, Math.max(0, Math.floor(p.col * colScale)));
+                    p.y *= rowScale;
+                }
+                while (this._snow.length < targetCount) {
+                    this._snow.push({
+                        col: Math.floor(Math.random() * newCols),
+                        y: Math.random() * newRows,
+                        speed: 2 + Math.random() * 5,
+                        phase: Math.random() * Math.PI * 2,
+                        drift: 0.3 + Math.random() * 0.6,
+                    });
+                }
+                if (this._snow.length > targetCount) this._snow.length = targetCount;
+            } else if (this.opts.mode === "snow") {
+                this._initSnow();
+            }
+
+            if (this._sparkle) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.sparkleDensity));
+                for (let i = 0; i < this._sparkle.length; i++) {
+                    const p = this._sparkle[i];
+                    p.col = Math.min(newCols - 1, Math.max(0, Math.floor(p.col * colScale)));
+                    p.row = Math.min(newRows - 1, Math.max(0, Math.floor(p.row * rowScale)));
+                }
+                while (this._sparkle.length < targetCount) {
+                    this._sparkle.push({
+                        col: Math.floor(Math.random() * newCols),
+                        row: Math.floor(Math.random() * newRows),
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.6 + Math.random() * 1.4,
+                    });
+                }
+                if (this._sparkle.length > targetCount) this._sparkle.length = targetCount;
+            } else if (this.opts.mode === "sparkle") {
+                this._initSparkle();
+            }
+
+            if (this._fire) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.fireDensity));
+                for (let i = 0; i < this._fire.length; i++) {
+                    const p = this._fire[i];
+                    p.col *= colScale;
+                    p.y *= rowScale;
+                }
+                while (this._fire.length < targetCount) {
+                    this._resetFireParticle({}, true);
+                }
+                if (this._fire.length > targetCount) this._fire.length = targetCount;
+            } else if (this.opts.mode === "fire") {
+                this._initFire();
+            }
+
+            if (this._starfield) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.starfieldDensity));
+                while (this._starfield.length < targetCount) {
+                    this._resetStar({}, true);
+                }
+                if (this._starfield.length > targetCount) this._starfield.length = targetCount;
+            } else if (this.opts.mode === "starfield") {
+                this._initStarfield();
+            }
+
+            if (this._orbit) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.orbitDensity));
+                const radiusLimit = Math.min(newCols, newRows) * 0.45;
+                while (this._orbit.length < targetCount) {
+                    this._orbit.push({
+                        angle: Math.random() * Math.PI * 2,
+                        radius: radiusLimit * (0.12 + Math.random() * 0.82),
+                        speed: (0.28 + Math.random() * 0.7) * (Math.random() > 0.2 ? 1 : -1),
+                        phase: Math.random() * Math.PI * 2,
+                    });
+                }
+                if (this._orbit.length > targetCount) this._orbit.length = targetCount;
+            } else if (this.opts.mode === "orbit") {
+                this._initOrbit();
             }
         }
 
@@ -2742,43 +2901,14 @@ import { loadGltf } from "./gltf.js";
 
         // ---- main draw loop ----
         /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
+        // ---- main draw loop ----
+        /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
         _draw(dt) {
             if (this._webgl) {
                 this._drawWebGL(dt);
                 return;
             }
             const ctx = this.ctx;
-
-            if (this.opts.mode === "wave") {
-                const extent = this.opts.direction === "diagonal" ? this.w + this.h : this.opts.direction === "vertical" ? this.h : this.w;
-                const travel = this.opts.direction === "diagonal" ? 160 : 140;
-                this._wavePosition = ((this._time * travel) % (extent + 300)) - 150;
-                this._waveBand = extent * this.opts.bandWidth;
-            } else if (this.opts.mode === "current") {
-                this._currentTimeSinX = Math.sin(this._time * 1.1);
-                this._currentTimeCosX = Math.cos(this._time * 1.1);
-                this._currentTimeSinY = Math.sin(-this._time * 0.8);
-                this._currentTimeCosY = Math.cos(-this._time * 0.8);
-                this._currentTimeSinXY = Math.sin(this._time * 1.6);
-                this._currentTimeCosXY = Math.cos(this._time * 1.6);
-            } else if (this.opts.mode === "ripple") {
-                this._rippleTimeSin = Math.sin(-this._time * 2.4);
-                this._rippleTimeCos = Math.cos(-this._time * 2.4);
-            } else if (this.opts.mode === "vortex") {
-                this._vortexTimeSin = Math.sin(-this._time * 2);
-                this._vortexTimeCos = Math.cos(-this._time * 2);
-            } else if (this.opts.mode === "plasma") {
-                this._plasmaTimeSinA = Math.sin(this._time * 0.9);
-                this._plasmaTimeCosA = Math.cos(this._time * 0.9);
-                this._plasmaTimeSinB = Math.sin(-this._time * 1.3);
-                this._plasmaTimeCosB = Math.cos(-this._time * 1.3);
-                this._plasmaTimeSinC = Math.sin(this._time * 0.55);
-                this._plasmaTimeCosC = Math.cos(this._time * 0.55);
-            } else if (this.opts.mode === "image") {
-                const imageRippleTime = -this._time * 2.2;
-                this._imageRippleTimeSin = Math.sin(imageRippleTime);
-                this._imageRippleTimeCos = Math.cos(imageRippleTime);
-            }
 
             if (this.opts.trail > 0) {
                 ctx.save();
@@ -2795,6 +2925,59 @@ import { loadGltf } from "./gltf.js";
             }
 
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawCanvasBackdrop();
+
+            if (this._layers && this._layers.length > 0) {
+                const origMode = this.opts.mode;
+                let totalDrawn = 0;
+                for (let i = 0; i < this._layers.length; i++) {
+                    const layer = this._layers[i];
+                    ctx.save();
+                    ctx.globalAlpha = layer.opacity ?? 1;
+                    if (layer.blendMode) ctx.globalCompositeOperation = layer.blendMode;
+
+                    this.opts.mode = layer.mode;
+                    this._prepareModeFrame();
+                    ctx.textBaseline = "alphabetic";
+                    this._lastFillStyle = null;
+                    this._lastFont = null;
+                    this._lastAlpha = -1;
+
+                    this._pulseFactor = this.opts.pulse
+                        ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                        : 1;
+                    this._updateAnimatedColor();
+
+                    const globalGradient = (layer.options?.gradient || this.opts.gradient) && !this.opts.colorFromImage ? this._getGradient() : null;
+                    this._activeGlyphAtlas = this._getGlyphAtlas();
+                    const waveBase = layer.mode === "wave" ? this._getWaveBaseLayer() : null;
+                    if (waveBase) {
+                        ctx.drawImage(waveBase.canvas, 0, 0, waveBase.canvas.width, waveBase.canvas.height, 0, 0, this.w, this.h);
+                    }
+                    this._drawFillStyle = globalGradient;
+                    let drawn = 0;
+
+                    if (layer.mode === "mesh") {
+                        drawn = this._drawMesh(globalGradient);
+                    } else if (waveBase) {
+                        drawn = this._drawCachedHorizontalWave(waveBase, globalGradient);
+                    } else if (SPARSE_MODES.has(layer.mode)) {
+                        if (this._imageGrid) drawn += this._drawImageSourceBase(globalGradient);
+                        drawn += this._drawSparse(dt, globalGradient);
+                    } else {
+                        drawn = this._drawDense(globalGradient);
+                    }
+                    totalDrawn += drawn;
+                    ctx.restore();
+                }
+                if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawCanvasBackdrop();
+                ctx.globalAlpha = 1;
+                ctx.globalCompositeOperation = "source-over";
+                this.opts.mode = origMode;
+                this._lastDrawnCount = totalDrawn;
+                return;
+            }
+
+            this._prepareModeFrame();
             ctx.textBaseline = "alphabetic";
             this._lastFillStyle = null;
             this._lastFont = null;
@@ -2807,7 +2990,7 @@ import { loadGltf } from "./gltf.js";
 
             const globalGradient = this.opts.gradient && !this.opts.colorFromImage ? this._getGradient() : null;
             this._activeGlyphAtlas = this._getGlyphAtlas();
-            const waveBase = this._getWaveBaseLayer();
+            const waveBase = this.opts.mode === "wave" ? this._getWaveBaseLayer() : null;
             if (waveBase) {
                 ctx.drawImage(waveBase.canvas, 0, 0, waveBase.canvas.width, waveBase.canvas.height, 0, 0, this.w, this.h);
             }
@@ -2879,15 +3062,6 @@ import { loadGltf } from "./gltf.js";
         }
 
         _drawWebGL(dt) {
-            this._prepareModeFrame();
-            this._pulseFactor = this.opts.pulse
-                ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
-                : 1;
-            this._updateAnimatedColor();
-            const atlas = this._getWebGLAtlas();
-            this._webgl.setAtlas(atlas.canvas, atlas.key);
-            this._activeWebGLAtlas = atlas;
-
             const background = this._colorToRgba(this.opts.background === "transparent" ? "transparent" : this.opts.background);
             const preserve = this.opts.trail > 0;
             this._webgl.begin(background, preserve);
@@ -2897,6 +3071,52 @@ import { loadGltf } from "./gltf.js";
                 this._webgl.surface(trail);
             }
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawWebGLBackdrop();
+
+            if (this._layers && this._layers.length > 0) {
+                const origMode = this.opts.mode;
+                let totalDrawn = 0;
+                for (let i = 0; i < this._layers.length; i++) {
+                    const layer = this._layers[i];
+                    this.opts.mode = layer.mode;
+                    this._prepareModeFrame();
+                    this._pulseFactor = this.opts.pulse
+                        ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                        : 1;
+                    this._updateAnimatedColor();
+                    const atlas = this._getWebGLAtlas();
+                    this._webgl.setAtlas(atlas.canvas, atlas.key);
+                    this._activeWebGLAtlas = atlas;
+
+                    this._webglGradient = (layer.options?.gradient || this.opts.gradient) && !this.opts.colorFromImage ? this._prepareWebGLGradient(layer.options?.gradient || this.opts.gradient) : null;
+                    let drawn = 0;
+                    if (layer.mode === "mesh") {
+                        drawn = this._drawMesh(null);
+                    } else if (SPARSE_MODES.has(layer.mode)) {
+                        if (this._imageGrid) drawn += this._drawImageSourceBase(null);
+                        drawn += this._drawSparse(dt, null);
+                    } else {
+                        drawn = this._drawDense(null);
+                    }
+                    totalDrawn += drawn;
+                }
+                this._webgl.flush(this.w, this.h, this._webglGradient);
+                if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawWebGLBackdrop();
+                this.opts.mode = origMode;
+                this._lastDrawnCount = totalDrawn;
+                this._activeWebGLAtlas = null;
+                this._webglGradient = null;
+                return;
+            }
+
+            this._prepareModeFrame();
+            this._pulseFactor = this.opts.pulse
+                ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                : 1;
+            this._updateAnimatedColor();
+            const atlas = this._getWebGLAtlas();
+            this._webgl.setAtlas(atlas.canvas, atlas.key);
+            this._activeWebGLAtlas = atlas;
+
             this._webglGradient = this.opts.gradient && !this.opts.colorFromImage ? this._prepareWebGLGradient(this.opts.gradient) : null;
             let drawn = 0;
             if (this.opts.mode === "mesh") {

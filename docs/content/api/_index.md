@@ -63,12 +63,15 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `asciiam.registerMode(name, fn)` | method | Registers a named custom cell callback. |
 | `asciiam.createMeshPrimitive(name, options?)` | method | Creates a cube, plane, icosphere, or torus `MeshData`. |
 | `asciiam.loadModel(source, options?)` | async method | Decodes glTF 2.0 or GLB v2 without constructing a renderer. |
+| `asciiam.registerGltfDecoder(name, fn)` | method | Registers a custom glTF extension decoder (e.g., Draco / Meshopt). |
+| `asciiam.getGltfDecoders()` | method | Returns an array of registered glTF extension decoders. |
 
 ## Core options
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `mode` | mode string | `wave` | Selects the active animation algorithm or `none` (`static`) for un-animated rendering. |
+| `layers` | layer array or `null` | `null` | Configures multi-pass layer composition array (`[{ mode, options, opacity, blendMode }]`). |
 | `quality` | `high \| balanced \| performance \| ultra` | `balanced` | Applies one quality tier. |
 | `renderer` | `auto \| webgl2 \| canvas2d` | `auto` when GPU preference is enabled | Selects GPU-first, explicit WebGL2, or Canvas 2D presentation. |
 | `charSet` | string | `asciiExtended` | Supplies glyphs used by procedural modes. |
@@ -215,6 +218,8 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `stop()` | `void` | Stops scheduling and retains state. |
 | `destroy()` | `void` | Releases renderer, canvas, observers, event listeners, and scheduler membership. |
 | `setMode(mode)` | `void` | Selects a mode, resets local time, and interrupts manual sequence playback. |
+| `setLayers(layers)` | `this` | Configures multi-pass composition layers for zero-allocation per-frame rendering. |
+| `getLayers()` | `LayerConfig[]` | Returns active composition layers array. |
 | `setOption(key, value)` | `void` | Updates an option and rebuilds affected caches or state. |
 | `setTarget(target)` | `void` | Moves the presentation canvas and target bindings. |
 | `setImage(source, options?)` | `Promise<HTMLImageElement \| null>` | Decodes an image; `ImageDecoder` captures GIF frames and delays when available. |

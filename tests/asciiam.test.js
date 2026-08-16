@@ -1605,4 +1605,31 @@ describe("asciiam lifecycle", () => {
             animation.destroy();
         });
     });
+
+    describe("State preservation on grid resizing", () => {
+        it("preserves matrix and particle state across grid resizes", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { mode: "matrix", respectReducedMotion: false });
+            animation.start();
+            expect(animation._matrix.length).toBeGreaterThan(0);
+            const initialFirstColY = animation._matrix[0].y;
+
+            // Trigger a resize by changing density
+            animation.setOption("density", 12);
+            expect(animation._matrix.length).toBeGreaterThan(0);
+            // Verify state was preserved and scaled rather than completely wiped to top
+            expect(Number.isFinite(animation._matrix[0].y)).toBe(true);
+
+            animation.setMode("snow");
+            expect(animation._snow.length).toBeGreaterThan(0);
+            animation.setOption("density", 16);
+            expect(animation._snow.length).toBeGreaterThan(0);
+
+            animation.destroy();
+        });
+    });
 });

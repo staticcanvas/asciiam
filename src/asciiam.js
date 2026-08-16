@@ -2239,6 +2239,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
         /** Re-measures the grid and invalidates geometry-dependent state and caches. */
         _resize() {
+            const oldCols = this.cols || 0;
+            const oldRows = this.rows || 0;
             const dpr = Math.min(window.devicePixelRatio || 1, this.opts.maxDPR);
             this._dpr = dpr;
             const parent = this.canvas.parentElement || this.canvas;
@@ -2285,15 +2287,127 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._canvasRect = this.canvas.getBoundingClientRect();
             if (this._sourceImage) this._resampleImage();
             this._scheduleAnimatedFrameCapture();
-            if (this.opts.mode === "matrix") this._initMatrix();
-            if (this.opts.mode === "snow") this._initSnow();
-            if (this.opts.mode === "sparkle") this._initSparkle();
-            if (this.opts.mode === "fire") this._initFire();
-            if (this.opts.mode === "starfield") this._initStarfield();
-            if (this.opts.mode === "orbit") this._initOrbit();
+
+            if (oldCols > 0 && oldRows > 0) {
+                this._adaptStateOnResize(oldCols, oldRows, this.cols, this.rows);
+            } else {
+                if (this.opts.mode === "matrix") this._initMatrix();
+                if (this.opts.mode === "snow") this._initSnow();
+                if (this.opts.mode === "sparkle") this._initSparkle();
+                if (this.opts.mode === "fire") this._initFire();
+                if (this.opts.mode === "starfield") this._initStarfield();
+                if (this.opts.mode === "orbit") this._initOrbit();
+            }
+
             if (this._reduced) this._draw(16.7);
             if (this._events.get("resize")?.size) {
                 this._emit("resize", { width: this.w, height: this.h, cols: this.cols, rows: this.rows });
+            }
+        }
+
+        _adaptStateOnResize(oldCols, oldRows, newCols, newRows) {
+            const colScale = newCols / oldCols;
+            const rowScale = newRows / oldRows;
+
+            if (this._matrix) {
+                if (newCols > oldCols) {
+                    for (let c = oldCols; c < newCols; c++) {
+                        this._matrix[c] = {
+                            y: -Math.random() * newRows,
+                            speed: 8 + Math.random() * 14,
+                            length: 6 + Math.floor(Math.random() * 10),
+                        };
+                    }
+                } else if (newCols < oldCols) {
+                    this._matrix.length = newCols;
+                }
+                for (let c = 0; c < this._matrix.length; c++) {
+                    if (this._matrix[c]) this._matrix[c].y *= rowScale;
+                }
+            } else if (this.opts.mode === "matrix") {
+                this._initMatrix();
+            }
+
+            if (this._snow) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.snowDensity));
+                for (let i = 0; i < this._snow.length; i++) {
+                    const p = this._snow[i];
+                    p.col = Math.min(newCols - 1, Math.max(0, Math.floor(p.col * colScale)));
+                    p.y *= rowScale;
+                }
+                while (this._snow.length < targetCount) {
+                    this._snow.push({
+                        col: Math.floor(Math.random() * newCols),
+                        y: Math.random() * newRows,
+                        speed: 2 + Math.random() * 5,
+                        phase: Math.random() * Math.PI * 2,
+                        drift: 0.3 + Math.random() * 0.6,
+                    });
+                }
+                if (this._snow.length > targetCount) this._snow.length = targetCount;
+            } else if (this.opts.mode === "snow") {
+                this._initSnow();
+            }
+
+            if (this._sparkle) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.sparkleDensity));
+                for (let i = 0; i < this._sparkle.length; i++) {
+                    const p = this._sparkle[i];
+                    p.col = Math.min(newCols - 1, Math.max(0, Math.floor(p.col * colScale)));
+                    p.row = Math.min(newRows - 1, Math.max(0, Math.floor(p.row * rowScale)));
+                }
+                while (this._sparkle.length < targetCount) {
+                    this._sparkle.push({
+                        col: Math.floor(Math.random() * newCols),
+                        row: Math.floor(Math.random() * newRows),
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.6 + Math.random() * 1.4,
+                    });
+                }
+                if (this._sparkle.length > targetCount) this._sparkle.length = targetCount;
+            } else if (this.opts.mode === "sparkle") {
+                this._initSparkle();
+            }
+
+            if (this._fire) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.fireDensity));
+                for (let i = 0; i < this._fire.length; i++) {
+                    const p = this._fire[i];
+                    p.col *= colScale;
+                    p.y *= rowScale;
+                }
+                while (this._fire.length < targetCount) {
+                    this._resetFireParticle({}, true);
+                }
+                if (this._fire.length > targetCount) this._fire.length = targetCount;
+            } else if (this.opts.mode === "fire") {
+                this._initFire();
+            }
+
+            if (this._starfield) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.starfieldDensity));
+                while (this._starfield.length < targetCount) {
+                    this._resetStar({}, true);
+                }
+                if (this._starfield.length > targetCount) this._starfield.length = targetCount;
+            } else if (this.opts.mode === "starfield") {
+                this._initStarfield();
+            }
+
+            if (this._orbit) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.orbitDensity));
+                const radiusLimit = Math.min(newCols, newRows) * 0.45;
+                while (this._orbit.length < targetCount) {
+                    this._orbit.push({
+                        angle: Math.random() * Math.PI * 2,
+                        radius: radiusLimit * (0.12 + Math.random() * 0.82),
+                        speed: (0.28 + Math.random() * 0.7) * (Math.random() > 0.2 ? 1 : -1),
+                        phase: Math.random() * Math.PI * 2,
+                    });
+                }
+                if (this._orbit.length > targetCount) this._orbit.length = targetCount;
+            } else if (this.opts.mode === "orbit") {
+                this._initOrbit();
             }
         }
 
