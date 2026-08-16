@@ -4390,23 +4390,37 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 }
             }
 
+            const showAxes = this.opts.chartShowAxes !== false;
             const marginRowTop = title ? 2 : 1;
-            const marginRowBottom = this.opts.chartShowAxes ? 2 : 1;
+            const marginRowBottom = showAxes ? 2 : 1;
             const usableRows = Math.max(1, rows - marginRowTop - marginRowBottom);
             const usableCols = Math.max(1, cols - 4);
+            const axisCol = 2;
+            const axisRow = rows - marginRowBottom;
 
             const maxVal = Math.max(1, ...values);
             const minVal = 0;
 
             if (type === "bar") {
                 const barWidth = Math.max(1, Math.floor(usableCols / values.length));
-                const barIdx = Math.floor((col - 2) / barWidth);
+                const barIdx = Math.floor((col - (axisCol + 1)) / barWidth);
 
                 if (barIdx >= 0 && barIdx < values.length) {
                     const val = values[barIdx];
                     const normVal = (val - minVal) / (maxVal - minVal);
                     const targetRowHeight = normVal * usableRows;
-                    const currentRowFromBottom = (rows - marginRowBottom) - row;
+                    const currentRowFromBottom = axisRow - row;
+
+                    // Bar value top cap label
+                    if (this.opts.chartShowValues !== false && currentRowFromBottom === Math.ceil(targetRowHeight) + 1) {
+                        const valStr = String(Math.round(val));
+                        const cellInBar = col - (axisCol + 1 + barIdx * barWidth);
+                        const labelStart = Math.max(0, Math.floor((barWidth - valStr.length) / 2));
+                        const charIdx = cellInBar - labelStart;
+                        if (charIdx >= 0 && charIdx < valStr.length) {
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.9, 0.9, true, this.opts.color);
+                        }
+                    }
 
                     if (currentRowFromBottom > 0 && currentRowFromBottom <= Math.ceil(targetRowHeight)) {
                         const subFraction = Math.max(0, Math.min(1, targetRowHeight - (currentRowFromBottom - 1)));
@@ -4423,7 +4437,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     const val = values[barIdx];
                     const normVal = (val - minVal) / (maxVal - minVal);
                     const targetColWidth = normVal * usableCols;
-                    const currentColFromLeft = col - 2;
+                    const currentColFromLeft = col - (axisCol + 1);
 
                     if (currentColFromLeft >= 0 && currentColFromLeft <= Math.ceil(targetColWidth)) {
                         const subFraction = Math.max(0, Math.min(1, targetColWidth - currentColFromLeft));
@@ -4431,37 +4445,58 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         const rampIdx = Math.min(8, Math.floor(subFraction * 9));
                         return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, subFraction > 0.8, this.opts.color);
                     }
+
+                    // Value label to the right of horizontal bar
+                    if (this.opts.chartShowValues !== false && currentColFromLeft === Math.ceil(targetColWidth) + 1) {
+                        const valStr = ` ${Math.round(val)}`;
+                        const charIdx = col - (axisCol + 1 + Math.ceil(targetColWidth));
+                        if (charIdx >= 0 && charIdx < valStr.length) {
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.9, true, this.opts.color);
+                        }
+                    }
                 }
             } else if (type === "line" || type === "sparkline") {
-                const colFraction = col / Math.max(1, cols - 1);
-                const dataIdx = colFraction * (values.length - 1);
-                const i0 = Math.floor(dataIdx);
-                const i1 = Math.min(values.length - 1, i0 + 1);
-                const frac = dataIdx - i0;
-                const val = values[i0] * (1 - frac) + values[i1] * frac;
-                const normVal = (val - minVal) / (maxVal - minVal);
-                const targetRow = Math.round((rows - marginRowBottom - 1) - normVal * (usableRows - 1));
+                const colFraction = (col - axisCol) / Math.max(1, usableCols);
+                if (col >= axisCol && col <= axisCol + usableCols) {
+                    const dataIdx = Math.max(0, Math.min(values.length - 1, colFraction * (values.length - 1)));
+                    const i0 = Math.floor(dataIdx);
+                    const i1 = Math.min(values.length - 1, i0 + 1);
+                    const frac = dataIdx - i0;
+                    const val = values[i0] * (1 - frac) + values[i1] * frac;
+                    const normVal = (val - minVal) / (maxVal - minVal);
+                    const targetRow = Math.round((axisRow - 1) - normVal * (usableRows - 1));
 
-                if (row === targetRow) {
-                    const charRamp = ["_", ".", "-", "‾", "/", "█"];
-                    return this._setCell(charRamp[Math.floor(normVal * 5)] || "*", this.opts.maxOpacity, normVal, true, this.opts.color);
+                    if (row === targetRow) {
+                        const prevVal = i0 > 0 ? values[i0 - 1] : values[i0];
+                        const nextVal = i1 < values.length - 1 ? values[i1 + 1] : values[i1];
+                        const diff = nextVal - prevVal;
+                        const char = diff > 2 ? "╱" : diff < -2 ? "╲" : "─";
+                        return this._setCell(char, this.opts.maxOpacity, normVal, true, this.opts.color);
+                    } else if (type === "line" && row > targetRow && row < axisRow) {
+                        // Area shading under the line
+                        const opacity = Math.max(0.05, (1 - (row - targetRow) / usableRows) * 0.35);
+                        return this._setCell("░", opacity * this.opts.maxOpacity, normVal * 0.5, false, this.opts.color);
+                    }
                 }
             } else if (type === "heatmap") {
-                const nx = col / Math.max(1, cols - 1);
-                const dataIdx = Math.floor(nx * values.length);
-                const val = values[dataIdx % values.length] || 0;
-                const normVal = (val - minVal) / (maxVal - minVal);
-                const charSet = this.opts.charSet;
-                const charIdx = Math.floor(normVal * (charSet.length - 1));
-                return this._setCell(charSet[charIdx] || " ", normVal * this.opts.maxOpacity, normVal, normVal > 0.8, this.opts.color);
+                const nx = (col - axisCol) / Math.max(1, usableCols);
+                if (col >= axisCol && col <= axisCol + usableCols && row >= marginRowTop && row < axisRow) {
+                    const dataIdx = Math.floor(nx * values.length);
+                    const val = values[dataIdx % values.length] || 0;
+                    const normVal = (val - minVal) / (maxVal - minVal);
+                    const charSet = this.opts.charSet || " .:-=+*#%@";
+                    const charIdx = Math.floor(normVal * (charSet.length - 1));
+                    return this._setCell(charSet[charIdx] || " ", normVal * this.opts.maxOpacity, normVal, normVal > 0.8, this.opts.color);
+                }
             } else if (type === "donut") {
                 const cx = cols / 2;
                 const cy = rows / 2;
                 const dx = (col - cx) * 1.6;
                 const dy = row - cy;
                 const dist = Math.hypot(dx, dy);
-                const maxR = Math.min(cols, rows) * 0.4;
-                if (dist >= maxR * 0.4 && dist <= maxR) {
+                const maxR = Math.min(cols, rows) * 0.38;
+
+                if (dist >= maxR * 0.45 && dist <= maxR) {
                     const angle = (Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2);
                     const dataIdx = Math.floor(angle * values.length);
                     const val = values[dataIdx % values.length] || 0;
@@ -4469,6 +4504,28 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     const ramp = ["░", "▒", "▓", "█"];
                     const rampIdx = Math.min(3, Math.floor(normVal * 4));
                     return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, normVal > 0.7, this.opts.color);
+                }
+
+                // Center label in donut ring
+                if (dist < maxR * 0.4 && row === Math.floor(cy)) {
+                    const label = title || "DONUT";
+                    const startCol = Math.floor(cx - label.length / 2);
+                    const charIdx = col - startCol;
+                    if (charIdx >= 0 && charIdx < label.length) {
+                        return this._setCell(label[charIdx], this.opts.maxOpacity, 1, true, this.opts.color);
+                    }
+                }
+            }
+
+            // Draw axis lines when showAxes is true
+            if (showAxes && type !== "donut") {
+                if (col === axisCol && row >= marginRowTop && row <= axisRow) {
+                    const char = row === marginRowTop ? "┌" : row === axisRow ? "└" : "│";
+                    return this._setCell(char, this.opts.maxOpacity * 0.5, 0.4, false, this.opts.color);
+                }
+                if (row === axisRow && col >= axisCol && col <= axisCol + usableCols) {
+                    const char = col === axisCol ? "└" : col === axisCol + usableCols ? "┘" : "─";
+                    return this._setCell(char, this.opts.maxOpacity * 0.5, 0.4, false, this.opts.color);
                 }
             }
 

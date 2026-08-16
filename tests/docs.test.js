@@ -241,9 +241,9 @@ describe('Hugo documentation source', () => {
     const script = projectFile('docs/static/js/examples.js');
 
     expect(data.examples[0]).toMatchObject({ id: 'minimum', options: {} });
-    expect(data.examples).toHaveLength(30);
+    expect(data.examples).toHaveLength(32);
     expect(data.examples.map((example) => example.level)).toEqual(
-      Array.from({ length: 30 }, (_, index) => String(index + 1).padStart(2, '0'))
+      Array.from({ length: 32 }, (_, index) => String(index + 1).padStart(2, '0'))
     );
     expect(data.examples.map((example) => example.id)).toEqual(expect.arrayContaining([
       'spatial-gradient', 'hover-zone', 'click-zone', 'sequence', 'image-source',

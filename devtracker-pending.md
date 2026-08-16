@@ -13,6 +13,7 @@ strangers with confidence."
   - [x] 🟡🌟✅1️⃣ **Chart Option Consolidation** - Remove duplicate chart controls from `pop-motion` and consolidate all chart settings exclusively inside `pop-chart`.
   - [x] 🟡🌟✅1️⃣ **Toolbar Column Grouping** - Group toolbar pills into distinct visual columns (Authoring, Media Layers: Image, 3D, Chart, None, and Actions) with subtle rounded container styling.
   - [x] 🟡🌟✅1️⃣ **Option Coverage Audit** - Audit and expose all 48 `asciiam` options across the Web Utility toolbar, JSON Builder, and code exporter without duplicate handlers.
+  - [x] 🟡🌟✅1️⃣ **High-Fidelity ASCII Charting** - Added chart axis guides (`chartShowAxes`), top bar caps (`chartShowValues`), line slope characters & area shading, donut center labels, and JSON builder preset entries.
 
 
 ### **Distribution Readiness (priority-2)**
