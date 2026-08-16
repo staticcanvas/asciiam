@@ -162,8 +162,6 @@ function setActiveModeButton(mode) {
     if (revealDirectionGroup) revealDirectionGroup.hidden = !["fadeIn", "fadeOut", "dissolveIn", "dissolveOut"].includes(mode);
     const interactionControls = document.getElementById("interactionControlsGroup");
     if (interactionControls) interactionControls.hidden = !["hoverZone", "clickZone"].includes(mode);
-    const chartControls = document.getElementById("chartControlsGroup");
-    if (chartControls) chartControls.hidden = mode !== "chart";
 }
 
 const chartTypeEl = document.getElementById("chartType");
@@ -219,6 +217,18 @@ document.getElementById("chartPresetGrowthBtn")?.addEventListener("click", () =>
 document.getElementById("chartPresetLoadBtn")?.addEventListener("click", () => setChartPreset("Server Workload", "45, 88, 62, 91, 35, 76, 50"));
 document.getElementById("chartPresetTempBtn")?.addEventListener("click", () => setChartPreset("Temperature", "20, 22, 25, 28, 31, 27, 23"));
 document.getElementById("chartPresetFinancialBtn")?.addEventListener("click", () => setChartPreset("Stock Trend", "100, 110, 105, 125, 140, 135, 160"));
+
+const clearMediaBtn = document.getElementById("clearMediaBtn");
+if (clearMediaBtn) {
+    clearMediaBtn.onclick = () => {
+        if (typeof anim.clearImage === "function") anim.clearImage();
+        if (typeof anim.clearModel === "function") anim.clearModel();
+        anim.setOption("chartData", null);
+        anim.setMode("wave");
+        setActiveModeButton("wave");
+        renderUsage();
+    };
+}
 
 const sweepDurationEl = document.getElementById("sweepDuration");
 const sweepDurationVal = document.getElementById("sweepDurationVal");
@@ -1786,6 +1796,16 @@ function usageSource() {
         options.animateImageMask = anim.opts.animateImageMask;
         if (anim.opts.imageAnimationRange) options.imageAnimationRange = anim.opts.imageAnimationRange;
     }
+    if (anim.opts.mode === "chart" || anim.opts.chartData) {
+        options.mode = "chart";
+        if (anim.opts.chartType) options.chartType = anim.opts.chartType;
+        if (anim.opts.chartTitle) options.chartTitle = anim.opts.chartTitle;
+        if (anim.opts.chartData) options.chartData = anim.opts.chartData;
+        if (anim.opts.chartShowAxes !== undefined) options.chartShowAxes = anim.opts.chartShowAxes;
+    }
+    if (anim.opts.sweepDuration) options.sweepDuration = anim.opts.sweepDuration;
+    if (anim.opts.delayCurve) options.delayCurve = anim.opts.delayCurve;
+    if (Array.isArray(anim.opts.layers) && anim.opts.layers.length) options.layers = anim.opts.layers;
     if (colorMode === "gradient" && anim.opts.gradient) options.gradient = anim.opts.gradient;
     if (colorMode === "hueRotate" || colorMode === "breathe") options.colorAnimation = anim.opts.colorAnimation;
     if (anim.opts.backdrop && anim.opts.backdrop.enabled) options.backdrop = anim.opts.backdrop;
@@ -1809,10 +1829,11 @@ function getPersistableOptions() {
     const keys = [
         "mode", "quality", "targetFPS", "resolutionScale", "renderer", "charSet", "align", "color", "gradient", "backdrop",
         "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "extendedStats", "colorAnimation",
-        "interactionRadius", "interactionDuration",
+        "interactionRadius", "interactionDuration", "sweepDuration", "delayCurve",
         "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
         "fireDensity", "starfieldDensity", "orbitDensity", "glitchIntensity", "typewriterDuration",
         "meshPrimitive", "meshStyle", "meshProjection", "meshCamera", "meshTransform", "meshAutoRotate", "meshRotationSpeed",
+        "chartData", "chartType", "chartTitle", "chartShowValues", "chartShowAxes", "layers",
         "sequence", "sequenceOptions",
     ];
     const options = {};

@@ -8,6 +8,13 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
+- [x] 🟠🌟✅1️⃣ **Epic: Toolbar Restructuring, Option Consolidation & DX Servicing**
+  - [x] 🟡🌟✅1️⃣ **Serve:Example DX Pipeline** - Add `-c-1` cache-busting and build step to `npm run serve:example` in `package.json` to prevent stale browser caching during local development.
+  - [x] 🟡🌟✅1️⃣ **Chart Option Consolidation** - Remove duplicate chart controls from `pop-motion` and consolidate all chart settings exclusively inside `pop-chart`.
+  - [x] 🟡🌟✅1️⃣ **Toolbar Column Grouping** - Group toolbar pills into distinct visual columns (Authoring, Media Layers: Image, 3D, Chart, None, and Actions) with subtle rounded container styling.
+  - [x] 🟡🌟✅1️⃣ **Option Coverage Audit** - Audit and expose all 48 `asciiam` options across the Web Utility toolbar, JSON Builder, and code exporter without duplicate handlers.
+
+
 ### **Distribution Readiness (priority-2)**
 
 - [ ] 🟠🌟⏳2️⃣ **Distribution** - **Real-browser verification.** Run a manual visual pass in current

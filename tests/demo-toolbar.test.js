@@ -173,7 +173,7 @@ describe('demo toolbar quality-of-life controls', () => {
     const advanced = document.getElementById('moreAdvancedActions');
     const workspace = document.getElementById('moreWorkspaceActions');
 
-    expect(primaryLabels).toHaveLength(15);
+    expect(primaryLabels).toHaveLength(16);
     expect(primaryLabels.join(' ')).toContain('Preset');
     expect(primaryLabels.join(' ')).toContain('Quality');
     expect(primaryLabels.join(' ')).toContain('Sequence');
@@ -187,6 +187,7 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(primaryLabels.join(' ')).toContain('Image');
     expect(primaryLabels.join(' ')).toContain('3D');
     expect(primaryLabels.join(' ')).toContain('Chart');
+    expect(primaryLabels.join(' ')).toContain('None');
     expect(primaryLabels.join(' ')).toContain('Reset');
     expect(primaryLabels.join(' ')).toContain('Code');
     expect(primaryLabels.indexOf('Image none')).toBeLessThan(primaryLabels.indexOf('3D none'));
