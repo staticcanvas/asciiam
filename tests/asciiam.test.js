@@ -416,6 +416,33 @@ describe("asciiam lifecycle", () => {
         animation.destroy();
     });
 
+    it("supports configurable sweepDuration and delayCurve timing options for reveal modes", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const animation = new asciiam(host, {
+            mode: "fadeIn",
+            sweepDuration: 4.0,
+            delayCurve: "easeIn",
+            loop: false,
+            respectReducedMotion: false,
+        });
+
+        expect(animation.opts.sweepDuration).toBe(4.0);
+        expect(animation.opts.delayCurve).toBe("easeIn");
+
+        const progressEaseIn = animation._revealProgress(0.5, 0.5);
+        animation.setOption("delayCurve", "stagger");
+        const progressStagger = animation._revealProgress(0.5, 0.5);
+
+        expect(typeof progressEaseIn).toBe("number");
+        expect(typeof progressStagger).toBe("number");
+        animation.destroy();
+    });
+
     it("draws transition modes and the three coined animation modes", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {

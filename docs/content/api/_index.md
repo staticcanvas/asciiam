@@ -207,6 +207,8 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `starfieldDensity` | number | `0.018` | `starfield` |
 | `orbitDensity` | number | `0.014` | `orbit` |
 | `glitchIntensity` | number | `0.32` | `glitch` |
+| `sweepDuration` | seconds | `2.2` | `fadeIn`, `fadeOut`, `image` |
+| `delayCurve` | `linear \| easeIn \| easeOut \| easeInOut \| stagger` | `linear` | `fadeIn`, `fadeOut`, `image` |
 | `typewriterDuration` | seconds | `4.5` | `typewriter` |
 | `customCell` | function or `null` | `null` | `custom` |
 

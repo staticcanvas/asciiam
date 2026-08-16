@@ -879,6 +879,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     direction: "horizontal",
                     revealDirection: "center",
                     revealDuration: 2.2,
+                    sweepDuration: 2.2,
+                    delayCurve: "linear",
                     align: "center",
                     minOpacity: 0.05,
                     maxOpacity: 0.85,
@@ -4121,7 +4123,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
         _fadeInCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
-            const totalDuration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
+            const totalDuration = Math.max(0.1, Number(this.opts.sweepDuration || this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
             const index = row * this.cols + col;
             const delay = this._revealProgress(col, row) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
@@ -4134,7 +4136,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
         _fadeOutCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
-            const totalDuration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
+            const totalDuration = Math.max(0.1, Number(this.opts.sweepDuration || this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
             const index = row * this.cols + col;
             const delay = this._revealProgress(col, row) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
@@ -4149,13 +4151,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         _revealProgress(col, row = 0) {
             const position = col / Math.max(1, this.cols - 1);
             const vertical = row / Math.max(1, this.rows - 1);
-            if (this.opts.revealDirection === "left-to-right") return position;
-            if (this.opts.revealDirection === "right-to-left") return 1 - position;
-            if (this.opts.revealDirection === "top-to-bottom") return vertical;
-            if (this.opts.revealDirection === "bottom-to-top") return 1 - vertical;
-            if (this.opts.revealDirection === "diagonal") return (position + vertical) * 0.5;
-            if (this.opts.revealDirection === "edges") return 1 - Math.min(1, Math.abs(position - 0.5) * 2);
-            return Math.min(1, Math.abs(position - 0.5) * 2);
+            let p = 0;
+            if (this.opts.revealDirection === "left-to-right") p = position;
+            else if (this.opts.revealDirection === "right-to-left") p = 1 - position;
+            else if (this.opts.revealDirection === "top-to-bottom") p = vertical;
+            else if (this.opts.revealDirection === "bottom-to-top") p = 1 - vertical;
+            else if (this.opts.revealDirection === "diagonal") p = (position + vertical) * 0.5;
+            else if (this.opts.revealDirection === "edges") p = 1 - Math.min(1, Math.abs(position - 0.5) * 2);
+            else p = Math.min(1, Math.abs(position - 0.5) * 2);
+
+            const curve = this.opts.delayCurve;
+            if (curve === "easeIn") return p * p;
+            if (curve === "easeOut") return p * (2 - p);
+            if (curve === "easeInOut") return p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+            if (curve === "stagger") return Math.max(0, Math.min(1, p + Math.sin(p * Math.PI * 4) * 0.08));
+            return p;
         }
 
         _irisCell(col, row, x, y, reverse) {

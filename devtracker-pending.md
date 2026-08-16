@@ -22,14 +22,6 @@ strangers with confidence."
       hasn't been visually checked there.
 ### **Engineering Backlog (priority-3)**
 
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **`fadeIn` and `image` modes don't expose fine-grained timing controls** (sweep
-      duration, per-character delay curve) — currently hardcoded constants
-      (`totalDuration = 2.2`, etc.). Fine for the presets, limiting if someone wants a
-      slower/faster intro without digging into source.
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
-      `wave` sweep on top). Currently one mode at a time; layering would mean running
-      two instances on stacked canvases, which works but isn't documented as a
-      pattern.
 - [ ] 🟠🌟⏳3️⃣ **Backlog** - **Matrix mode column state doesn't survive a `setOption('density', …)` change**
       cleanly mid-run — it reinitializes via `_resize()`, so an in-progress rain
       column resets rather than continuing at the new density. Minor visual hitch,

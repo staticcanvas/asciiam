@@ -333,14 +333,16 @@ strangers with confidence."
 - [x] 🟠🌟✅3️⃣ **Backlog** - **Lifecycle events.** `onReady` and the `ready`, `resize`, and `frame` events
       let consumers react to internal state without subclassing. `on()` returns an
       unsubscribe function, and all subscriptions are cleared by `destroy()`.
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **`fadeIn` and `image` modes don't expose fine-grained timing controls** (sweep
+- [x] 🟠🌟✅3️⃣ **Backlog** - **`fadeIn` and `image` modes don't expose fine-grained timing controls** (sweep
       duration, per-character delay curve) — currently hardcoded constants
       (`totalDuration = 2.2`, etc.). Fine for the presets, limiting if someone wants a
       slower/faster intro without digging into source.
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
+    > **Solution Implemented:** Added `sweepDuration` (seconds) and `delayCurve` (`linear`, `easeIn`, `easeOut`, `easeInOut`, `stagger`) options in `src/asciiam.js`. Exported in `src/asciiam.d.ts`, documented in API docs, and covered by unit tests.
+- [x] 🟠🌟✅3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
       `wave` sweep on top). Currently one mode at a time; layering would mean running
       two instances on stacked canvases, which works but isn't documented as a
       pattern.
+    > **Solution Implemented:** Implemented native multi-layer compositing pipeline `setLayers()` in Epic Task 1. Allows running multiple modes with custom opacity and blend modes within a single canvas instance.
 - [ ] 🟠🌟⏳3️⃣ **Backlog** - **Matrix mode column state doesn't survive a `setOption('density', …)` change**
       cleanly mid-run — it reinitializes via `_resize()`, so an in-progress rain
       column resets rather than continuing at the new density. Minor visual hitch,

@@ -293,6 +293,9 @@ export interface asciiamOptions {
   speed?: number;
   direction?: 'horizontal' | 'vertical' | 'diagonal';
   revealDirection?: 'left-to-right' | 'right-to-left' | 'top-to-bottom' | 'bottom-to-top' | 'diagonal' | 'center' | 'edges';
+  revealDuration?: number;
+  sweepDuration?: number;
+  delayCurve?: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'stagger';
   align?: 'center' | 'top' | 'top-left' | 'top-right' | 'left' | 'right' | 'bottom' | 'bottom-left' | 'bottom-right';
   minOpacity?: number;
   maxOpacity?: number;
