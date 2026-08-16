@@ -66,6 +66,14 @@ export interface asciiamLayerConfig {
   blendMode?: GlobalCompositeOperation | string;
 }
 
+export interface asciiamFontMetrics {
+  charW: number;
+  charH: number;
+  ascent: number;
+  descent: number;
+  baselineOffset: number;
+}
+
 export interface asciiamMeshData {
   positions: Float32Array | Float64Array;
   indices?: Uint8Array | Uint16Array | Uint32Array | null;
@@ -358,6 +366,7 @@ export default class asciiam {
   static loadModel(source: asciiamModelSource, options?: asciiamModelLoadOptions): Promise<asciiamMeshData>;
   static registerGltfDecoder(name: string, decoderFn: (extensionData: unknown, context: Record<string, unknown>) => unknown): void;
   static getGltfDecoders(): string[];
+  static calibrateFontMetrics(target?: CanvasRenderingContext2D | string, fontFamily?: string, fontSize?: number): asciiamFontMetrics;
   constructor(target: string | HTMLCanvasElement | HTMLElement, options?: asciiamOptions);
   start(): void;
   stop(): void;

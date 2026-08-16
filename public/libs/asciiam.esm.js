@@ -36,6 +36,51 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
+     * Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision.
+     * Works with 2D canvas context or creates a temporary offscreen measurement canvas.
+     */
+    function calibrateFontMetrics(target, fontFamily = "monospace", fontSize = 14) {
+        let ctx = target && typeof target.measureText === "function" ? target : null;
+        if (!ctx && typeof target === "string") {
+            fontSize = typeof fontFamily === "number" ? fontFamily : fontSize;
+            fontFamily = target;
+        }
+        if (!ctx) {
+            const charW = Math.ceil(fontSize * 0.6);
+            const charH = Math.ceil(fontSize * 1.2);
+            return { charW, charH, ascent: fontSize * 0.8, descent: fontSize * 0.2, baselineOffset: fontSize * 0.8 };
+        }
+
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        const sampleText = "M|g@";
+        const mSample = ctx.measureText(sampleText);
+        const mM = ctx.measureText("M");
+
+        const charW = Math.max(1, mM.width);
+        let ascent = fontSize * 0.8;
+        let descent = fontSize * 0.2;
+
+        if (typeof mSample.actualBoundingBoxAscent === "number" && typeof mSample.actualBoundingBoxDescent === "number" && (mSample.actualBoundingBoxAscent > 0 || mSample.actualBoundingBoxDescent > 0)) {
+            ascent = mSample.actualBoundingBoxAscent;
+            descent = Math.max(0, mSample.actualBoundingBoxDescent);
+        } else if (typeof mSample.fontBoundingBoxAscent === "number" && typeof mSample.fontBoundingBoxDescent === "number") {
+            ascent = mSample.fontBoundingBoxAscent;
+            descent = mSample.fontBoundingBoxDescent;
+        }
+
+        const charH = Math.max(1, Math.ceil(ascent + descent));
+        const baselineOffset = ascent;
+
+        return {
+            charW,
+            charH,
+            ascent,
+            descent,
+            baselineOffset,
+        };
+    }
+
+    /**
      * Private WebGL2 presentation backend.
      * Animation state remains in asciiam; this class owns GPU resources only.
      */
@@ -571,6 +616,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         /** Returns list of registered glTF extension decoders. */
         static getGltfDecoders() {
             return getGltfDecoders();
+        }
+
+        /** Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision. */
+        static calibrateFontMetrics(target, fontFamily, fontSize) {
+            return calibrateFontMetrics(target, fontFamily, fontSize);
         }
 
         /** Feature-detect before constructing, for graceful fallback in older browsers. */
@@ -2143,9 +2193,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const effectiveFontSize = this.opts.fontSize / resolutionScale;
             this._effectiveFontSize = effectiveFontSize;
             this.ctx.font = `${effectiveFontSize}px ${this.opts.fontFamily}`;
-            const m = this.ctx.measureText("M");
-            this.charW = Math.max(4, m.width * this.opts.density);
+            const metrics = calibrateFontMetrics(this.ctx, this.opts.fontFamily, effectiveFontSize);
+            this.charW = Math.max(4, metrics.charW * this.opts.density);
             this.charH = Math.max(6, effectiveFontSize * 1.2 * this.opts.density);
+            this._fontBaselineOffset = (metrics.baselineOffset || (effectiveFontSize * 0.8)) * this.opts.density;
 
             const steps = Math.max(2, Math.round(this.opts.fontLevels || 2));
             this.opts.fontLevels = steps;
@@ -2268,7 +2319,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._columnX = new Float32Array(this.cols);
             this._rowY = new Float32Array(this.rows);
             this._rowBaseline = new Float32Array(this.rows);
-            const baselineOffset = this.charH * 0.78;
+            const baselineOffset = this._fontBaselineOffset || (this.charH * 0.78);
             for (let col = 0; col < this.cols; col++) this._columnX[col] = col * this.charW;
             for (let row = 0; row < this.rows; row++) {
                 const y = row * this.charH;
