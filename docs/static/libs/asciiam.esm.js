@@ -3777,7 +3777,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * the active backend while minimizing repeated Canvas state changes.
          */
         _paintCell(cell, col, row, x, y, globalGradient, baselineY, applyImageSource = true) {
-            if (applyImageSource && this._imageGrid && this.opts.mode !== "image") {
+            if (applyImageSource && this._imageGrid && this.opts.mode !== "image" && this.opts.mode !== "chart") {
                 cell = this._applyImageSource(cell, col, row);
             }
             if (!cell || cell.char === " ") return false;
@@ -3813,7 +3813,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 const variant = (cell.bold ? this._fontRegular.length : 0) + cell.level;
                 const tile = variant * atlas.characters + character;
                 let color = cell.color;
-                if (!color && this.opts.colorFromImage && this._imageGrid) color = this._imageGrid.colors[row * this.cols + col];
+                if (!color && this.opts.colorFromImage && this._imageGrid && this.opts.mode !== "chart") color = this._imageGrid.colors[row * this.cols + col];
                 if (!color) color = this._animatedColor || this.opts.color;
                 const rgba = this._colorToRgba(color);
                 const uvOffset = tile * 4;
@@ -3855,7 +3855,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
 
             let fillStyle = cell.color;
-            if (!fillStyle && this.opts.colorFromImage && this._imageGrid) {
+            if (!fillStyle && this.opts.colorFromImage && this._imageGrid && this.opts.mode !== "chart") {
                 const imgColor = this._imageGrid.colors[row * this.cols + col];
                 if (imgColor) fillStyle = imgColor;
             }

@@ -922,6 +922,29 @@
                 outline-offset: 2px;
             }
 
+            /* Popover text / number inputs (chart title, labels, scale, colors) */
+            .code-export__textarea {
+                display: block;
+                inline-size: 100%;
+                box-sizing: border-box;
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                color: var(--clr-text-main);
+                font: inherit;
+                font-size: var(--font-sm);
+                padding-block: 6px;
+                padding-inline: var(--space-sm);
+                transition: border-color var(--time-fast) var(--ease-fluid);
+                appearance: textfield;
+            }
+            .code-export__textarea:hover { border-color: var(--clr-border-hi); }
+            .code-export__textarea:focus { border-color: var(--clr-primary); outline: none; }
+            .code-export__textarea::placeholder { color: var(--clr-text-muted); opacity: 0.6; }
+            /* Remove number spinner arrows */
+            .code-export__textarea::-webkit-outer-spin-button,
+            .code-export__textarea::-webkit-inner-spin-button { appearance: none; margin: 0; }
+
             /* ── §10 Value display + layout helpers ── */
             .val { color: var(--clr-primary); font-size: var(--font-xs); margin-inline-start: 6px; }
             .row { display: flex; align-items: center; justify-content: space-between; }
@@ -3114,7 +3137,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=e8ec6eaa1c5c"></script>
-        <script type="module" src="./js/webutil.js?v=e8ec6eaa1c5c"></script>
+        <script src="./libs/asciiam.js?v=6ffd5015982f"></script>
+        <script type="module" src="./js/webutil.js?v=6ffd5015982f"></script>
     </body>
 </html>

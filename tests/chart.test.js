@@ -105,4 +105,27 @@ describe("ASCII Charting API", () => {
         expect(anim.opts.mode).toBe("wave");
         expect(anim.getChartInfo().active).toBe(false);
     });
+
+    it("includes chart block characters and labels in atlas character generation", () => {
+        anim = new asciiam(container);
+        anim.setChartData([
+            { label: "Alpha", value: 40 },
+            { label: "Beta", value: 80 },
+        ], { type: "bar", title: "Metrics" });
+
+        const chartChars = anim._getChartCharacters();
+        expect(chartChars).toContain("█");
+        expect(chartChars).toContain("┌");
+        expect(chartChars).toContain("│");
+        expect(chartChars).toContain("─");
+        expect(chartChars).toContain("Metrics");
+        expect(chartChars).toContain("Alpha");
+        expect(chartChars).toContain("Beta");
+
+        const webglAtlas = anim._getWebGLAtlas();
+        expect(webglAtlas.characterIndex.has("█")).toBe(true);
+        expect(webglAtlas.characterIndex.has("│")).toBe(true);
+        expect(webglAtlas.characterIndex.has("─")).toBe(true);
+        expect(webglAtlas.characterIndex.has("M")).toBe(true);
+    });
 });

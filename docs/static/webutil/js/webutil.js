@@ -297,6 +297,24 @@ document.getElementById("chartPresetLoadBtn")?.addEventListener("click", () => s
 document.getElementById("chartPresetTempBtn")?.addEventListener("click", () => setChartPreset("Temperature", "20, 22, 25, 28, 31, 27, 23"));
 document.getElementById("chartPresetFinancialBtn")?.addEventListener("click", () => setChartPreset("Stock Trend", "100, 110, 105, 125, 140, 135, 160"));
 
+const chartTriggerBtn = document.getElementById("chartTriggerBtn");
+if (chartTriggerBtn) {
+    chartTriggerBtn.addEventListener("click", () => {
+        if (anim.opts.mode !== "chart") {
+            anim.setMode("chart");
+            if (chartTypeEl) anim.setOption("chartType", chartTypeEl.value);
+            if (chartTitleEl) anim.setOption("chartTitle", chartTitleEl.value);
+            if (chartLabelsEl && chartLabelsEl.value.trim()) {
+                applyChartLabelsFromInput();
+            } else {
+                applyChartDataFromInput();
+            }
+            setActiveModeButton("chart");
+            renderUsage();
+        }
+    });
+}
+
 const clearMediaBtn = document.getElementById("clearMediaBtn");
 if (clearMediaBtn) {
     clearMediaBtn.onclick = () => {
