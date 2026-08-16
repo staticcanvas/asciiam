@@ -80,6 +80,11 @@ byte buffer, or alternate URL.</p><div class=highlight><pre tabindex=0 class=chr
 </span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=nx>resources</span><span class=p>.</span><span class=nx>get</span><span class=p>(</span><span class=nx>uri</span><span class=p>);</span>
 </span></span><span class=line><span class=cl>  <span class=p>}</span>
 </span></span><span class=line><span class=cl><span class=p>});</span>
+</span></span></code></pre></div><p>Custom decoders for compressed glTF extensions (such as <code>KHR_draco_mesh_compression</code> or <code>EXT_meshopt_compression</code>) can be registered via <code>asciiam.registerGltfDecoder(name, decoderFn)</code>:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-js data-lang=js><span class=line><span class=cl><span class=c1>// Register a custom Draco or Meshopt extension decoder
+</span></span></span><span class=line><span class=cl><span class=nx>asciiam</span><span class=p>.</span><span class=nx>registerGltfDecoder</span><span class=p>(</span><span class=s1>&#39;KHR_draco_mesh_compression&#39;</span><span class=p>,</span> <span class=kr>async</span> <span class=p>(</span><span class=nx>extensionData</span><span class=p>,</span> <span class=nx>context</span><span class=p>)</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// Decode compressed buffer view into Float32Array positions/normals
+</span></span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=nx>decodedGeometry</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>});</span>
 </span></span></code></pre></div><p>The utility’s scale and field-of-view controls are 3D equivalents of the image
 controls, but they update <code>meshTransform.scale</code> and <code>meshCamera.fov</code>.
 The same <code>meshTransform.rotation</code> and signed scale controls rotate or mirror procedural

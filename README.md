@@ -304,6 +304,43 @@ chart.setChartData([12, 45, 78, 34, 90, 60, 85], {
 
 Chart types support vertical/horizontal block density bars (` ▂▃▄▅▆▇█` / `█▉▊▋▌▍▎▏`), connected sparkline plots, 2D density heatmaps, and radial percentage rings. Data visualizations integrate directly into `asciiam`'s frame loop with automated sub-cell glyph precision.
 
+### Multi-Pass Layer Compositing
+
+`asciiam` supports in-memory multi-pass composition via `setLayers()`. Stacking multiple animation passes with custom opacity and blend modes allows rich visual layering (e.g. background flow + ambient wave + foreground sparkles) on a single canvas surface with zero per-frame allocation:
+
+```js
+const anim = new asciiam('#hero');
+
+// Configure multi-pass compositing layers
+anim.setLayers([
+  { mode: 'current', opacity: 0.5, color: '#005fff' },
+  { mode: 'wave', opacity: 0.4, speed: 1.2, color: '#00ffff' },
+  { mode: 'sparkle', opacity: 0.3, color: '#ffffff' }
+]);
+
+anim.start();
+```
+
+### Headless Server-Side Rendering (SSR) & CLI Output
+
+For Node.js, Bun, Deno, Next.js/Nuxt SSR, or terminal CLI tools, `asciiam.renderToString(options)` and `asciiam.renderFrame(options)` rasterize pure JavaScript ASCII text grids without requiring DOM Canvas or JSDOM:
+
+```js
+import asciiam from '@staticcanvas/asciiam';
+
+// Render a multi-line ASCII frame with 24-bit ANSI color formatting for terminal CLI
+const asciiArt = asciiam.renderToString({
+  cols: 80,
+  rows: 24,
+  mode: 'plasma',
+  time: 2.5,
+  ansi: true,
+  color: '#00ff66'
+});
+
+console.log(asciiArt);
+```
+
 ## Quick start: background
 
 ```html
@@ -464,6 +501,10 @@ new asciiam(target, {
   speed: 1,
   direction: 'horizontal', // wave mode: horizontal | vertical | diagonal
   revealDirection: 'center', // horizontal, vertical, diagonal, center-out, or edges-in
+  revealDuration: 2.2, // seconds for reveal animation sweep
+  sweepDuration: 2.2, // seconds for custom reveal animation sweep
+  delayCurve: 'linear', // linear | easeIn | easeOut | easeInOut | stagger
+  layers: null, // array of multi-pass compositing layer objects [{ mode, opacity, blendMode }]
   minOpacity: 0.05,
   maxOpacity: 0.85,
   boldOnPeak: true,

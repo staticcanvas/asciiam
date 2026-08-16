@@ -116,6 +116,53 @@ for geometry contracts, glTF/GLB input, controls, and limits.
 
 Base-format glTF 2.0 and GLB v2 parsing is dependency-free. Custom decoders for compressed GLTF extensions (such as `KHR_draco_mesh_compression` or `EXT_meshopt_compression`) can be registered via `asciiam.registerGltfDecoder(name, fn)`.
 
+## Headless Server-Side Rendering (SSR) & Terminal Output
+
+`asciiam.renderToString(options)` and `asciiam.renderFrame(options)` provide pure JavaScript text rasterizers for Node.js, Bun, Deno, Next.js/Nuxt SSR frameworks, or terminal CLI outputs without DOM Canvas or JSDOM requirements.
+
+`cli.js`
+
+```js
+import asciiam from '@staticcanvas/asciiam';
+
+// Render a multi-line ASCII frame with 24-bit ANSI color formatting for terminal CLI
+const output = asciiam.renderToString({
+  cols: 80,
+  rows: 24,
+  mode: 'matrix',
+  time: 2.5,
+  ansi: true,
+  color: '#00ff66'
+});
+
+console.log(output);
+```
+
+`renderFrame(options)` returns a 2D array of cell objects containing `{ char, r, g, b, a }` for custom text formatting or server-side canvas compositing.
+
+## Multi-pass layer compositing
+
+`setLayers()` allows stacking and blending multiple animation modes with per-layer opacity and composition blend modes on a single canvas surface with zero per-frame buffer allocation.
+
+`app.js`
+
+```js
+const anim = new asciiam('#hero');
+
+// Blend multiple animation modes on a single canvas
+anim.setLayers([
+  { mode: 'current', opacity: 0.5, color: '#005fff' },
+  { mode: 'wave', opacity: 0.4, speed: 1.2, color: '#00ffff' },
+  { mode: 'sparkle', opacity: 0.3, color: '#ffffff' }
+]);
+
+anim.start();
+```
+
+## Subpixel font metric calibration
+
+Safari and WebKit engines exhibit known subpixel baseline text offsets. `calibrateFontMetrics(target, fontFamily, fontSize)` and static `asciiam.calibrateFontMetrics()` measure exact 2D `TextMetrics` (`actualBoundingBoxAscent`/`Descent`) to compute subpixel baseline alignment offsets (`baselineOffset`), eliminating vertical glyph clipping across cross-browser viewports.
+
 ## Reference
 
 | Property or method | Type | Default | Effect |
@@ -131,5 +178,9 @@ Base-format glTF 2.0 and GLB v2 parsing is dependency-free. Custom decoders for 
 | `setRenderer(value)` | method | — | Replaces the presentation canvas while retaining instance state. |
 | `getRendererInfo()` | method | — | Returns requested and resolved renderer information. |
 | `getStats()` | method | — | Returns a structured diagnostics snapshot. |
+| `setLayers(layers)` | method | — | Configures zero-allocation multi-mode composition layers. |
+| `renderToString(options)` | static / method | — | Generates multi-line ASCII text for SSR, Node.js, or terminal output. |
+| `renderFrame(options)` | static / method | — | Generates a 2D cell array of character and RGBA color data. |
+| `calibrateFontMetrics(target)` | static / method | — | Measures exact subpixel glyph baselines across WebKit and Blink. |
 | `mesh` mode | built in | — | Projects points, wireframes, or solid triangles into ASCII cells. |
 | `setModel(source)` | async method | — | Loads core glTF 2.0 or GLB v2; required compression extensions are rejected. |
