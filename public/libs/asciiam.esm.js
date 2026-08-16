@@ -972,6 +972,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     chartTitle: "",
                     chartShowValues: true,
                     chartShowAxes: true,
+                    chartShowLegend: true,     // render per-series label legend below chart
+                    chartColors: null,          // string[] | null  — per-bar/series color overrides
+                    chartScaleMin: null,        // number | null  — explicit Y-axis minimum (null = auto 0)
+                    chartScaleMax: null,        // number | null  — explicit Y-axis maximum (null = auto max)
+                    chartAnimateItems: false,   // stagger-reveal individual bars/segments on entry
 
                     // --- extensibility ---
                     customCell: null, // (api) => ({char,opacity,intensity,bold,color}) | null
@@ -4370,12 +4375,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const type = this.opts.chartType || "bar";
             const { cols, rows } = this;
             let values = [];
+            let labels = [];
 
             if (Array.isArray(data)) {
                 if (typeof data[0] === "number") {
                     values = data;
                 } else if (typeof data[0] === "object" && data[0] !== null) {
                     values = data.map((item) => Number(item.value ?? item.val) || 0);
+                    labels = data.map((item) => String(item.label ?? item.name ?? ""));
                 }
             }
 
@@ -4391,52 +4398,97 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
 
             const showAxes = this.opts.chartShowAxes !== false;
+            const showLegend = this.opts.chartShowLegend !== false && labels.length > 0;
             const marginRowTop = title ? 2 : 1;
-            const marginRowBottom = showAxes ? 2 : 1;
+            const legendRows = showLegend && type !== "donut" ? 1 : 0;
+            const marginRowBottom = (showAxes ? 2 : 1) + legendRows;
             const usableRows = Math.max(1, rows - marginRowTop - marginRowBottom);
-            const usableCols = Math.max(1, cols - 4);
-            const axisCol = 2;
+            const axisCol = 3;
+            const axisColEnd = cols - 2;
+            const usableCols = Math.max(1, axisColEnd - axisCol - 1);
             const axisRow = rows - marginRowBottom;
 
-            const maxVal = Math.max(1, ...values);
-            const minVal = 0;
+            const scaleMin = this.opts.chartScaleMin != null ? this.opts.chartScaleMin : 0;
+            const scaleMax = this.opts.chartScaleMax != null ? this.opts.chartScaleMax : Math.max(1, ...values);
+            const scaleRange = Math.max(1, scaleMax - scaleMin);
+
+            const palette = Array.isArray(this.opts.chartColors) ? this.opts.chartColors : null;
+            const getColor = (idx) => (palette && palette[idx % palette.length]) || this.opts.color;
+
+            const animateItems = this.opts.chartAnimateItems;
+            const t = this._time || 0;
+            const getItemProgress = (idx, total) => {
+                if (!animateItems) return 1;
+                const delay = (idx / Math.max(1, total)) * 1.2;
+                return Math.min(1, Math.max(0, (t - delay) / 0.6));
+            };
+
+            if (showAxes && type !== "donut" && col < axisCol) {
+                const maxLabel = String(Math.round(scaleMax)).slice(0, 2);
+                const midLabel = String(Math.round(scaleMin + scaleRange / 2)).slice(0, 2);
+                const midRow = Math.floor(marginRowTop + usableRows / 2);
+                if (row === marginRowTop) {
+                    const charIdx = col - (axisCol - maxLabel.length);
+                    if (charIdx >= 0 && charIdx < maxLabel.length) {
+                        return this._setCell(maxLabel[charIdx], this.opts.maxOpacity * 0.55, 0.4, false, this.opts.color);
+                    }
+                }
+                if (row === midRow && usableRows > 4) {
+                    const charIdx = col - (axisCol - midLabel.length);
+                    if (charIdx >= 0 && charIdx < midLabel.length) {
+                        return this._setCell(midLabel[charIdx], this.opts.maxOpacity * 0.4, 0.3, false, this.opts.color);
+                    }
+                }
+                return this._setCell(" ", 0, 0, false);
+            }
 
             if (type === "bar") {
                 const barWidth = Math.max(1, Math.floor(usableCols / values.length));
-                const cellInBar = col - (axisCol + 1);
-                const barIdx = Math.floor(cellInBar / barWidth);
-                const offsetInBar = cellInBar % barWidth;
+                const plotStart = axisCol + 1;
+                const cellInBar = col - plotStart;
+                if (cellInBar >= 0) {
+                    const barIdx = Math.floor(cellInBar / barWidth);
+                    const offsetInBar = cellInBar % barWidth;
+                    const activeWidth = barWidth >= 3 ? barWidth - 1 : barWidth;
 
-                // Leave 1-cell gap between bars if barWidth >= 3 for distinct columns
-                const activeWidth = barWidth >= 3 ? barWidth - 1 : barWidth;
+                    if (barIdx >= 0 && barIdx < values.length && offsetInBar < activeWidth) {
+                        const progress = getItemProgress(barIdx, values.length);
+                        const val = values[barIdx];
+                        const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                        const effectiveNorm = normVal * progress;
+                        const targetRowHeight = effectiveNorm * usableRows;
+                        const currentRowFromBottom = axisRow - row;
+                        const barColor = getColor(barIdx);
 
-                if (barIdx >= 0 && barIdx < values.length && offsetInBar < activeWidth) {
-                    const val = values[barIdx];
-                    const normVal = (val - minVal) / (maxVal - minVal);
-                    const targetRowHeight = normVal * usableRows;
-                    const currentRowFromBottom = axisRow - row;
-
-                    // Bar value top cap label
-                    if (this.opts.chartShowValues !== false && currentRowFromBottom === Math.ceil(targetRowHeight) + 1) {
-                        const valStr = String(Math.round(val));
-                        const labelStart = Math.max(0, Math.floor((activeWidth - valStr.length) / 2));
-                        const charIdx = offsetInBar - labelStart;
-                        if (charIdx >= 0 && charIdx < valStr.length) {
-                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.95, true, this.opts.color);
+                        if (this.opts.chartShowValues !== false && progress >= 1 &&
+                            currentRowFromBottom === Math.ceil(targetRowHeight) + 1) {
+                            const valStr = String(Math.round(val));
+                            const labelStart = Math.max(0, Math.floor((activeWidth - valStr.length) / 2));
+                            const charIdx = offsetInBar - labelStart;
+                            if (charIdx >= 0 && charIdx < valStr.length) {
+                                return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.9, 0.9, true, barColor);
+                            }
                         }
-                    }
 
-                    if (currentRowFromBottom > 0 && currentRowFromBottom <= Math.ceil(targetRowHeight)) {
-                        // Top cap cell uses partial sub-block character; body cells below cap are fully backfilled with solid block █
-                        if (currentRowFromBottom === Math.ceil(targetRowHeight)) {
-                            const subFraction = targetRowHeight - Math.floor(targetRowHeight);
-                            const capFraction = subFraction === 0 ? 1 : subFraction;
-                            const ramp = ["▂", "▃", "▄", "▅", "▆", "▇", "█"];
-                            const rampIdx = Math.min(6, Math.floor(capFraction * 7));
-                            return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, capFraction > 0.7, this.opts.color);
+                        if (currentRowFromBottom > 0 && currentRowFromBottom <= Math.ceil(targetRowHeight) && targetRowHeight > 0) {
+                            if (currentRowFromBottom === Math.ceil(targetRowHeight)) {
+                                const subFraction = targetRowHeight - Math.floor(targetRowHeight);
+                                const capFraction = subFraction === 0 ? 1 : subFraction;
+                                const ramp = ["▂", "▃", "▄", "▅", "▆", "▇", "█"];
+                                const rampIdx = Math.min(6, Math.floor(capFraction * 7));
+                                return this._setCell(ramp[rampIdx], this.opts.maxOpacity, effectiveNorm, capFraction > 0.7, barColor);
+                            }
+                            return this._setCell("█", this.opts.maxOpacity, effectiveNorm, true, barColor);
                         }
-                        // Full backfill body cell below top cap
-                        return this._setCell("█", this.opts.maxOpacity, normVal, true, this.opts.color);
+
+                        if (showLegend && labels[barIdx] && row === axisRow + legendRows) {
+                            const lbl = labels[barIdx].slice(0, activeWidth);
+                            const lStart = Math.floor((activeWidth - lbl.length) / 2);
+                            const ci = offsetInBar - lStart;
+                            if (ci >= 0 && ci < lbl.length) {
+                                return this._setCell(lbl[ci], this.opts.maxOpacity * 0.6, 0.5, false, barColor);
+                            }
+                        }
                     }
                 }
             } else if (type === "horizontalBar") {
@@ -4444,32 +4496,42 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 const cellInBar = row - marginRowTop;
                 const barIdx = Math.floor(cellInBar / barHeight);
                 const offsetInBar = cellInBar % barHeight;
-
                 const activeHeight = barHeight >= 3 ? barHeight - 1 : barHeight;
 
                 if (barIdx >= 0 && barIdx < values.length && offsetInBar < activeHeight) {
+                    const progress = getItemProgress(barIdx, values.length);
                     const val = values[barIdx];
-                    const normVal = (val - minVal) / (maxVal - minVal);
-                    const targetColWidth = normVal * usableCols;
+                    const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                    const effectiveNorm = normVal * progress;
+                    const targetColWidth = effectiveNorm * usableCols;
                     const currentColFromLeft = col - (axisCol + 1);
+                    const barColor = getColor(barIdx);
 
-                    if (currentColFromLeft >= 0 && currentColFromLeft <= Math.ceil(targetColWidth)) {
+                    if (col < axisCol && labels[barIdx] && offsetInBar === Math.floor(activeHeight / 2)) {
+                        const lbl = labels[barIdx].slice(0, axisCol);
+                        const ci = col - (axisCol - lbl.length);
+                        if (ci >= 0 && ci < lbl.length) {
+                            return this._setCell(lbl[ci], this.opts.maxOpacity * 0.6, 0.5, false, barColor);
+                        }
+                    }
+
+                    if (currentColFromLeft >= 0 && currentColFromLeft <= Math.ceil(targetColWidth) && targetColWidth > 0) {
                         if (currentColFromLeft === Math.ceil(targetColWidth)) {
                             const subFraction = targetColWidth - Math.floor(targetColWidth);
                             const capFraction = subFraction === 0 ? 1 : subFraction;
                             const ramp = ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"];
                             const rampIdx = Math.min(7, Math.floor(capFraction * 8));
-                            return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, capFraction > 0.7, this.opts.color);
+                            return this._setCell(ramp[rampIdx], this.opts.maxOpacity, effectiveNorm, capFraction > 0.7, barColor);
                         }
-                        return this._setCell("█", this.opts.maxOpacity, normVal, true, this.opts.color);
+                        return this._setCell("█", this.opts.maxOpacity, effectiveNorm, true, barColor);
                     }
 
-                    // Value label to the right of horizontal bar
-                    if (this.opts.chartShowValues !== false && currentColFromLeft === Math.ceil(targetColWidth) + 1) {
+                    if (this.opts.chartShowValues !== false && progress >= 1 &&
+                        currentColFromLeft === Math.ceil(targetColWidth) + 1) {
                         const valStr = ` ${Math.round(val)}`;
                         const charIdx = col - (axisCol + 1 + Math.ceil(targetColWidth));
                         if (charIdx >= 0 && charIdx < valStr.length) {
-                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.95, true, this.opts.color);
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.9, 0.9, true, barColor);
                         }
                     }
                 }
@@ -4481,22 +4543,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     const i1 = Math.min(values.length - 1, i0 + 1);
                     const frac = dataIdx - i0;
                     const val = values[i0] * (1 - frac) + values[i1] * frac;
-                    const normVal = (val - minVal) / (maxVal - minVal);
-                    const targetRow = Math.round((axisRow - 1) - normVal * (usableRows - 1));
+                    const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                    const progress = animateItems ? Math.min(1, Math.max(0, t * 1.2 - colFraction * 0.6)) : 1;
+                    const effectiveNorm = normVal * progress;
+                    const targetRow = Math.round((axisRow - 1) - effectiveNorm * (usableRows - 1));
+                    const lineColor = getColor(0);
 
-                    if (row === targetRow) {
+                    if (row === targetRow && progress > 0) {
                         const prevVal = i0 > 0 ? values[i0 - 1] : values[i0];
                         const nextVal = i1 < values.length - 1 ? values[i1 + 1] : values[i1];
                         const diff = nextVal - prevVal;
                         const char = diff > 2 ? "╱" : diff < -2 ? "╲" : "─";
-                        return this._setCell(char, this.opts.maxOpacity, normVal, true, this.opts.color);
-                    } else if (row > targetRow && row <= axisRow) {
-                        // Rich backfill below the line curve down to axisRow
+                        return this._setCell(char, this.opts.maxOpacity, effectiveNorm, true, lineColor);
+                    } else if (row > targetRow && row <= axisRow && progress > 0) {
                         const depthFraction = (axisRow - row) / Math.max(1, axisRow - targetRow);
                         const backfillRamp = ["░", "▒", "▓", "█"];
                         const rampIdx = Math.min(3, Math.floor(depthFraction * 4));
-                        const opacity = Math.max(0.25, depthFraction * 0.85) * this.opts.maxOpacity;
-                        return this._setCell(backfillRamp[rampIdx], opacity, normVal * depthFraction, false, this.opts.color);
+                        const opacity = Math.max(0.2, depthFraction * 0.8) * this.opts.maxOpacity;
+                        return this._setCell(backfillRamp[rampIdx], opacity, effectiveNorm * depthFraction, false, lineColor);
                     }
                 }
             } else if (type === "heatmap") {
@@ -4504,15 +4568,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 if (col >= axisCol && col <= axisCol + usableCols && row >= marginRowTop && row <= axisRow) {
                     const dataIdx = Math.floor(nx * values.length);
                     const val = values[dataIdx % values.length] || 0;
-                    const normVal = (val - minVal) / (maxVal - minVal);
-                    const targetRowHeight = normVal * usableRows;
+                    const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                    const progress = getItemProgress(dataIdx, values.length);
+                    const targetRowHeight = normVal * progress * usableRows;
                     const currentRowFromBottom = axisRow - row;
+                    const heatColor = getColor(dataIdx);
 
                     if (currentRowFromBottom >= 0 && currentRowFromBottom <= Math.ceil(targetRowHeight)) {
                         const depthFraction = (currentRowFromBottom + 1) / Math.max(1, targetRowHeight);
                         const backfillRamp = ["░", "▒", "▓", "█"];
                         const rampIdx = Math.min(3, Math.floor(depthFraction * 4));
-                        return this._setCell(backfillRamp[rampIdx], this.opts.maxOpacity * depthFraction, normVal, depthFraction > 0.8, this.opts.color);
+                        return this._setCell(backfillRamp[rampIdx], this.opts.maxOpacity * depthFraction, normVal, depthFraction > 0.8, heatColor);
                     }
                 }
             } else if (type === "donut") {
@@ -4527,13 +4593,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     const angle = (Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2);
                     const dataIdx = Math.floor(angle * values.length);
                     const val = values[dataIdx % values.length] || 0;
-                    const normVal = (val - minVal) / (maxVal - minVal);
-                    const ramp = ["░", "▒", "▓", "█"];
-                    const rampIdx = Math.min(3, Math.floor(normVal * 4));
-                    return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, normVal > 0.7, this.opts.color);
+                    const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                    const progress = animateItems ? Math.min(1, Math.max(0, t * 1.5 - angle * 0.8)) : 1;
+                    const donutColor = getColor(dataIdx);
+                    if (progress > 0) {
+                        const ramp = ["░", "▒", "▓", "█"];
+                        const rampIdx = Math.min(3, Math.floor(normVal * 4));
+                        return this._setCell(ramp[rampIdx], this.opts.maxOpacity * progress, normVal, normVal > 0.7, donutColor);
+                    }
                 }
 
-                // Center label in donut ring
                 if (dist < maxR * 0.4 && row === Math.floor(cy)) {
                     const label = title || "DONUT";
                     const startCol = Math.floor(cx - label.length / 2);
@@ -4542,16 +4611,27 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         return this._setCell(label[charIdx], this.opts.maxOpacity, 1, true, this.opts.color);
                     }
                 }
+
+                if (showLegend && labels.length > 0 && dist < maxR * 0.35) {
+                    const legendRow = Math.floor(cy) + 2;
+                    if (row === legendRow) {
+                        const legendText = labels.slice(0, 4).join(" · ");
+                        const startCol = Math.floor(cx - legendText.length / 2);
+                        const ci = col - startCol;
+                        if (ci >= 0 && ci < legendText.length) {
+                            return this._setCell(legendText[ci], this.opts.maxOpacity * 0.6, 0.5, false, this.opts.color);
+                        }
+                    }
+                }
             }
 
-            // Draw axis lines when showAxes is true
             if (showAxes && type !== "donut") {
                 if (col === axisCol && row >= marginRowTop && row <= axisRow) {
                     const char = row === marginRowTop ? "┌" : row === axisRow ? "└" : "│";
                     return this._setCell(char, this.opts.maxOpacity * 0.5, 0.4, false, this.opts.color);
                 }
-                if (row === axisRow && col >= axisCol && col <= axisCol + usableCols) {
-                    const char = col === axisCol ? "└" : col === axisCol + usableCols ? "┘" : "─";
+                if (row === axisRow && col >= axisCol && col <= axisColEnd) {
+                    const char = col === axisCol ? "└" : col === axisColEnd ? "┘" : "─";
                     return this._setCell(char, this.opts.maxOpacity * 0.5, 0.4, false, this.opts.color);
                 }
             }
@@ -4772,6 +4852,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (options.title !== undefined) this.opts.chartTitle = options.title;
             if (options.showValues !== undefined) this.opts.chartShowValues = options.showValues;
             if (options.showAxes !== undefined) this.opts.chartShowAxes = options.showAxes;
+            if (options.showLegend !== undefined) this.opts.chartShowLegend = options.showLegend;
+            if (options.colors !== undefined) this.opts.chartColors = options.colors;
+            if (options.scaleMin !== undefined) this.opts.chartScaleMin = options.scaleMin;
+            if (options.scaleMax !== undefined) this.opts.chartScaleMax = options.scaleMax;
+            if (options.animateItems !== undefined) this.opts.chartAnimateItems = options.animateItems;
             this.setMode("chart");
             return this;
         }
@@ -4780,6 +4865,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         clearChart() {
             this.opts.chartData = null;
             this.opts.chartTitle = "";
+            this.opts.chartAnimateItems = false;
             if (this.opts.mode === "chart") {
                 this.setMode("wave");
             }
@@ -4795,6 +4881,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 type: this.opts.chartType || "bar",
                 dataLength: isArray ? data.length : 0,
                 title: this.opts.chartTitle || "",
+                showLegend: this.opts.chartShowLegend !== false,
+                hasColors: Array.isArray(this.opts.chartColors),
+                scaleMin: this.opts.chartScaleMin ?? null,
+                scaleMax: this.opts.chartScaleMax ?? null,
+                animateItems: this.opts.chartAnimateItems === true,
             };
         }
     }

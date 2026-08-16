@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=4d2ab331ea24";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=4d2ab331ea24";
+import { highlightJavaScript } from "./webutil-code.js?v=e8ec6eaa1c5c";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=e8ec6eaa1c5c";
 
 const asciiam = window.asciiam;
 
@@ -204,6 +204,85 @@ if (chartShowAxesToggle) {
     };
 }
 
+// Chart labels — when set, merge into {label, value}[] data format
+const chartLabelsEl = document.getElementById("chartLabels");
+function applyChartLabelsFromInput() {
+    if (!chartLabelsEl || !chartDataEl) return;
+    const rawVals = chartDataEl.value.split(",").map((v) => parseFloat(v.trim())).filter((v) => !isNaN(v));
+    const rawLabels = chartLabelsEl.value.split(",").map((l) => l.trim());
+    if (rawVals.length === 0) return;
+    if (rawLabels.length > 0 && rawLabels[0] !== "") {
+        const merged = rawVals.map((val, i) => ({ value: val, label: rawLabels[i] ?? "" }));
+        anim.setMode("chart");
+        anim.setOption("chartData", merged);
+        setActiveModeButton("chart");
+    } else {
+        anim.setMode("chart");
+        anim.setOption("chartData", rawVals);
+        setActiveModeButton("chart");
+    }
+    renderUsage();
+}
+if (chartLabelsEl) {
+    chartLabelsEl.oninput = applyChartLabelsFromInput;
+    // Override applyChartDataFromInput to also re-merge labels
+    const origApply = applyChartDataFromInput;
+    chartDataEl.oninput = () => {
+        if (chartLabelsEl.value.trim()) {
+            applyChartLabelsFromInput();
+        } else {
+            origApply();
+        }
+    };
+}
+
+// Scale range inputs
+const chartScaleMinEl = document.getElementById("chartScaleMin");
+const chartScaleMaxEl = document.getElementById("chartScaleMax");
+if (chartScaleMinEl) {
+    chartScaleMinEl.oninput = () => {
+        const v = chartScaleMinEl.value.trim();
+        anim.setOption("chartScaleMin", v === "" ? null : parseFloat(v));
+        renderUsage();
+    };
+}
+if (chartScaleMaxEl) {
+    chartScaleMaxEl.oninput = () => {
+        const v = chartScaleMaxEl.value.trim();
+        anim.setOption("chartScaleMax", v === "" ? null : parseFloat(v));
+        renderUsage();
+    };
+}
+
+// Legend toggle
+const chartShowLegendToggle = document.getElementById("chartShowLegendToggle");
+if (chartShowLegendToggle) {
+    chartShowLegendToggle.onchange = () => {
+        anim.setOption("chartShowLegend", chartShowLegendToggle.checked);
+        renderUsage();
+    };
+}
+
+// Animate items stagger toggle
+const chartAnimateItemsToggle = document.getElementById("chartAnimateItemsToggle");
+if (chartAnimateItemsToggle) {
+    chartAnimateItemsToggle.onchange = () => {
+        anim.setOption("chartAnimateItems", chartAnimateItemsToggle.checked);
+        renderUsage();
+    };
+}
+
+// Per-series color palette
+const chartColorsEl = document.getElementById("chartColors");
+if (chartColorsEl) {
+    chartColorsEl.oninput = () => {
+        const raw = chartColorsEl.value.trim();
+        const colors = raw ? raw.split(/\s+/).filter(Boolean) : null;
+        anim.setOption("chartColors", colors && colors.length > 0 ? colors : null);
+        renderUsage();
+    };
+}
+
 // Chart sample data presets
 const setChartPreset = (title, dataStr) => {
     if (chartTitleEl) chartTitleEl.value = title;
@@ -224,6 +303,10 @@ if (clearMediaBtn) {
         if (typeof anim.clearImage === "function") anim.clearImage();
         if (typeof anim.clearModel === "function") anim.clearModel();
         anim.setOption("chartData", null);
+        anim.setOption("chartScaleMin", null);
+        anim.setOption("chartScaleMax", null);
+        anim.setOption("chartColors", null);
+        anim.setOption("chartAnimateItems", false);
         anim.setMode("wave");
         setActiveModeButton("wave");
         renderUsage();
@@ -1802,6 +1885,11 @@ function usageSource() {
         if (anim.opts.chartTitle) options.chartTitle = anim.opts.chartTitle;
         if (anim.opts.chartData) options.chartData = anim.opts.chartData;
         if (anim.opts.chartShowAxes !== undefined) options.chartShowAxes = anim.opts.chartShowAxes;
+        if (anim.opts.chartShowLegend === false) options.chartShowLegend = false;
+        if (Array.isArray(anim.opts.chartColors)) options.chartColors = anim.opts.chartColors;
+        if (anim.opts.chartScaleMin != null) options.chartScaleMin = anim.opts.chartScaleMin;
+        if (anim.opts.chartScaleMax != null) options.chartScaleMax = anim.opts.chartScaleMax;
+        if (anim.opts.chartAnimateItems) options.chartAnimateItems = true;
     }
     if (anim.opts.sweepDuration) options.sweepDuration = anim.opts.sweepDuration;
     if (anim.opts.delayCurve) options.delayCurve = anim.opts.delayCurve;
@@ -1833,7 +1921,7 @@ function getPersistableOptions() {
         "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
         "fireDensity", "starfieldDensity", "orbitDensity", "glitchIntensity", "typewriterDuration",
         "meshPrimitive", "meshStyle", "meshProjection", "meshCamera", "meshTransform", "meshAutoRotate", "meshRotationSpeed",
-        "chartData", "chartType", "chartTitle", "chartShowValues", "chartShowAxes", "layers",
+        "chartData", "chartType", "chartTitle", "chartShowValues", "chartShowAxes", "chartShowLegend", "chartColors", "chartScaleMin", "chartScaleMax", "chartAnimateItems", "layers",
         "sequence", "sequenceOptions",
     ];
     const options = {};

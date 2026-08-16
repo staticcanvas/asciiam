@@ -2990,11 +2990,40 @@
                     <input class="code-export__textarea" type="text" id="chartTitle" value="System Metrics" style="height:34px;" />
                     <label class="cpop-label" for="chartData" style="margin-block-start:var(--space-xs)">Series data (comma separated)</label>
                     <textarea class="custom-charset-input" id="chartData" spellcheck="false" rows="3" placeholder="e.g. 15, 32, 48, 72, 95, 60, 84">15, 32, 48, 72, 95, 60, 84</textarea>
+                    <label class="cpop-label" for="chartLabels" style="margin-block-start:var(--space-xs)">Series labels (comma separated, optional)</label>
+                    <input class="code-export__textarea" type="text" id="chartLabels" placeholder="e.g. Jan, Feb, Mar, Apr" style="height:34px;" />
+                </div>
+                <div class="cpop-group">
+                    <span class="cpop-label">Scale &amp; display</span>
+                    <div class="btn-row" style="gap:10px;align-items:center;">
+                        <div style="flex:1">
+                            <label class="cpop-label" for="chartScaleMin" style="margin-block-start:0">Y-axis min</label>
+                            <input class="code-export__textarea" type="number" id="chartScaleMin" placeholder="auto (0)" style="height:32px;width:100%;" />
+                        </div>
+                        <div style="flex:1">
+                            <label class="cpop-label" for="chartScaleMax" style="margin-block-start:0">Y-axis max</label>
+                            <input class="code-export__textarea" type="number" id="chartScaleMax" placeholder="auto (max)" style="height:32px;width:100%;" />
+                        </div>
+                    </div>
                     <label class="ui-switch" for="chartShowAxesToggle" style="margin-block-start:var(--space-xs)">
                         <input class="ui-switch__control" type="checkbox" id="chartShowAxesToggle" role="switch" aria-checked="true" checked />
                         <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
-                        <span class="ui-switch__label">Show chart axes & margins</span>
+                        <span class="ui-switch__label">Show chart axes &amp; scale labels</span>
                     </label>
+                    <label class="ui-switch" for="chartShowLegendToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartShowLegendToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Show series legend labels</span>
+                    </label>
+                    <label class="ui-switch" for="chartAnimateItemsToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartAnimateItemsToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Stagger-reveal per item on entry</span>
+                    </label>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="chartColors">Per-series color palette (space separated hex/named, optional)</label>
+                    <input class="code-export__textarea" type="text" id="chartColors" placeholder="e.g. #00ff99 #ff6633 #33aaff" style="height:34px;" />
                 </div>
                 <div class="cpop-group">
                     <span class="cpop-label">Quick sample data presets</span>
@@ -3006,7 +3035,7 @@
                     </div>
                 </div>
                 <div class="cpop-group">
-                    <p class="image-library-help">Configuring Chart automatically switches to chart rendering mode. Charts render dynamically using ASCII sub-cell block characters and can be combined with custom character sets, spatial alignment, and background compositing.</p>
+                    <p class="image-library-help">Charts render dynamically using ASCII sub-cell block characters with full-column backfill, scale labels, optional legend, and per-item stagger animation. Use <strong>{label, value}</strong> objects in the API for automatic legend support.</p>
                 </div>
             </div>
 
@@ -3085,7 +3114,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=4d2ab331ea24"></script>
-        <script type="module" src="./js/webutil.js?v=4d2ab331ea24"></script>
+        <script src="./libs/asciiam.js?v=e8ec6eaa1c5c"></script>
+        <script type="module" src="./js/webutil.js?v=e8ec6eaa1c5c"></script>
     </body>
 </html>
