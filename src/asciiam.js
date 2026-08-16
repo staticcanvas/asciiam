@@ -4403,9 +4403,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
             if (type === "bar") {
                 const barWidth = Math.max(1, Math.floor(usableCols / values.length));
-                const barIdx = Math.floor((col - (axisCol + 1)) / barWidth);
+                const cellInBar = col - (axisCol + 1);
+                const barIdx = Math.floor(cellInBar / barWidth);
+                const offsetInBar = cellInBar % barWidth;
 
-                if (barIdx >= 0 && barIdx < values.length) {
+                // Leave 1-cell gap between bars if barWidth >= 3 for distinct columns
+                const activeWidth = barWidth >= 3 ? barWidth - 1 : barWidth;
+
+                if (barIdx >= 0 && barIdx < values.length && offsetInBar < activeWidth) {
                     const val = values[barIdx];
                     const normVal = (val - minVal) / (maxVal - minVal);
                     const targetRowHeight = normVal * usableRows;
@@ -4414,36 +4419,49 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     // Bar value top cap label
                     if (this.opts.chartShowValues !== false && currentRowFromBottom === Math.ceil(targetRowHeight) + 1) {
                         const valStr = String(Math.round(val));
-                        const cellInBar = col - (axisCol + 1 + barIdx * barWidth);
-                        const labelStart = Math.max(0, Math.floor((barWidth - valStr.length) / 2));
-                        const charIdx = cellInBar - labelStart;
+                        const labelStart = Math.max(0, Math.floor((activeWidth - valStr.length) / 2));
+                        const charIdx = offsetInBar - labelStart;
                         if (charIdx >= 0 && charIdx < valStr.length) {
-                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.9, 0.9, true, this.opts.color);
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.95, true, this.opts.color);
                         }
                     }
 
                     if (currentRowFromBottom > 0 && currentRowFromBottom <= Math.ceil(targetRowHeight)) {
-                        const subFraction = Math.max(0, Math.min(1, targetRowHeight - (currentRowFromBottom - 1)));
-                        const ramp = [" ", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
-                        const rampIdx = Math.min(7, Math.floor(subFraction * 8));
-                        return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, subFraction > 0.8, this.opts.color);
+                        // Top cap cell uses partial sub-block character; body cells below cap are fully backfilled with solid block █
+                        if (currentRowFromBottom === Math.ceil(targetRowHeight)) {
+                            const subFraction = targetRowHeight - Math.floor(targetRowHeight);
+                            const capFraction = subFraction === 0 ? 1 : subFraction;
+                            const ramp = ["▂", "▃", "▄", "▅", "▆", "▇", "█"];
+                            const rampIdx = Math.min(6, Math.floor(capFraction * 7));
+                            return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, capFraction > 0.7, this.opts.color);
+                        }
+                        // Full backfill body cell below top cap
+                        return this._setCell("█", this.opts.maxOpacity, normVal, true, this.opts.color);
                     }
                 }
             } else if (type === "horizontalBar") {
                 const barHeight = Math.max(1, Math.floor(usableRows / values.length));
-                const barIdx = Math.floor((row - marginRowTop) / barHeight);
+                const cellInBar = row - marginRowTop;
+                const barIdx = Math.floor(cellInBar / barHeight);
+                const offsetInBar = cellInBar % barHeight;
 
-                if (barIdx >= 0 && barIdx < values.length) {
+                const activeHeight = barHeight >= 3 ? barHeight - 1 : barHeight;
+
+                if (barIdx >= 0 && barIdx < values.length && offsetInBar < activeHeight) {
                     const val = values[barIdx];
                     const normVal = (val - minVal) / (maxVal - minVal);
                     const targetColWidth = normVal * usableCols;
                     const currentColFromLeft = col - (axisCol + 1);
 
                     if (currentColFromLeft >= 0 && currentColFromLeft <= Math.ceil(targetColWidth)) {
-                        const subFraction = Math.max(0, Math.min(1, targetColWidth - currentColFromLeft));
-                        const ramp = [" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"];
-                        const rampIdx = Math.min(8, Math.floor(subFraction * 9));
-                        return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, subFraction > 0.8, this.opts.color);
+                        if (currentColFromLeft === Math.ceil(targetColWidth)) {
+                            const subFraction = targetColWidth - Math.floor(targetColWidth);
+                            const capFraction = subFraction === 0 ? 1 : subFraction;
+                            const ramp = ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"];
+                            const rampIdx = Math.min(7, Math.floor(capFraction * 8));
+                            return this._setCell(ramp[rampIdx], this.opts.maxOpacity, normVal, capFraction > 0.7, this.opts.color);
+                        }
+                        return this._setCell("█", this.opts.maxOpacity, normVal, true, this.opts.color);
                     }
 
                     // Value label to the right of horizontal bar
@@ -4451,7 +4469,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         const valStr = ` ${Math.round(val)}`;
                         const charIdx = col - (axisCol + 1 + Math.ceil(targetColWidth));
                         if (charIdx >= 0 && charIdx < valStr.length) {
-                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.9, true, this.opts.color);
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.95, true, this.opts.color);
                         }
                     }
                 }
@@ -4472,21 +4490,30 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         const diff = nextVal - prevVal;
                         const char = diff > 2 ? "╱" : diff < -2 ? "╲" : "─";
                         return this._setCell(char, this.opts.maxOpacity, normVal, true, this.opts.color);
-                    } else if (type === "line" && row > targetRow && row < axisRow) {
-                        // Area shading under the line
-                        const opacity = Math.max(0.05, (1 - (row - targetRow) / usableRows) * 0.35);
-                        return this._setCell("░", opacity * this.opts.maxOpacity, normVal * 0.5, false, this.opts.color);
+                    } else if (row > targetRow && row <= axisRow) {
+                        // Rich backfill below the line curve down to axisRow
+                        const depthFraction = (axisRow - row) / Math.max(1, axisRow - targetRow);
+                        const backfillRamp = ["░", "▒", "▓", "█"];
+                        const rampIdx = Math.min(3, Math.floor(depthFraction * 4));
+                        const opacity = Math.max(0.25, depthFraction * 0.85) * this.opts.maxOpacity;
+                        return this._setCell(backfillRamp[rampIdx], opacity, normVal * depthFraction, false, this.opts.color);
                     }
                 }
             } else if (type === "heatmap") {
                 const nx = (col - axisCol) / Math.max(1, usableCols);
-                if (col >= axisCol && col <= axisCol + usableCols && row >= marginRowTop && row < axisRow) {
+                if (col >= axisCol && col <= axisCol + usableCols && row >= marginRowTop && row <= axisRow) {
                     const dataIdx = Math.floor(nx * values.length);
                     const val = values[dataIdx % values.length] || 0;
                     const normVal = (val - minVal) / (maxVal - minVal);
-                    const charSet = this.opts.charSet || " .:-=+*#%@";
-                    const charIdx = Math.floor(normVal * (charSet.length - 1));
-                    return this._setCell(charSet[charIdx] || " ", normVal * this.opts.maxOpacity, normVal, normVal > 0.8, this.opts.color);
+                    const targetRowHeight = normVal * usableRows;
+                    const currentRowFromBottom = axisRow - row;
+
+                    if (currentRowFromBottom >= 0 && currentRowFromBottom <= Math.ceil(targetRowHeight)) {
+                        const depthFraction = (currentRowFromBottom + 1) / Math.max(1, targetRowHeight);
+                        const backfillRamp = ["░", "▒", "▓", "█"];
+                        const rampIdx = Math.min(3, Math.floor(depthFraction * 4));
+                        return this._setCell(backfillRamp[rampIdx], this.opts.maxOpacity * depthFraction, normVal, depthFraction > 0.8, this.opts.color);
+                    }
                 }
             } else if (type === "donut") {
                 const cx = cols / 2;
