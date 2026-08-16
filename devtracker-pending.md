@@ -22,6 +22,7 @@ strangers with confidence."
   - [x] 🟡🌟✅1️⃣ **Legend Labels** - Added `chartShowLegend` toggle. When `chartData` is `{label, value}[]` format, labels render below bars (vertical), in gutter (horizontal bar), or inside donut center area. Web Utility exposes a "Series labels" input that merges with data values.
   - [x] 🟡🌟✅1️⃣ **Per-Item Stagger Animation** - Added `chartAnimateItems: boolean` option. Bars reveal staggered from left→right, donut sweeps clockwise, line slides in from left. Uses `this._time` clock so animation loops on each restart. Toggle exposed in Web Utility chart popover.
   - [x] 🟡🌟✅1️⃣ **API Expansion** - Updated `setChartData(data, options)` to accept all new options, extended `getChartInfo()` to return `showLegend`, `hasColors`, `scaleMin`, `scaleMax`, `animateItems`.
+  - [x] 🟡🌟✅1️⃣ **WebGL & 2D Atlas Chart Glyphs** - Added `_getChartCharacters()` to include box-drawing (`┌└│─┘`), vertical block ramps (` ▂▃▄▅▆▇█`), horizontal blocks (`▏▎▍▌▋▊▉█`), slope chars (`╱╲`), shading (`░▒▓`), digits, and label text inside both WebGL and 2D canvas glyph atlases so chart mode renders under WebGL.
   - [x] 🟡🌟✅1️⃣ **Code Export Coverage** - All 5 new options flow through `renderUsage()` and `getPersistableOptions()` so generated code snippets remain complete.
 
 
