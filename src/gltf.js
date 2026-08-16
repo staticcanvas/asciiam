@@ -428,13 +428,31 @@ function buildSceneMesh(gltf, buffers, options) {
     return normalizeMeshData({ positions, indices, normals, colors, primitive }, options.limits);
 }
 
+const gltfDecoders = new Map();
+
+/** Register a custom decoder callback for a compressed glTF extension (e.g. KHR_draco_mesh_compression, EXT_meshopt_compression). */
+export function registerGltfDecoder(name, decoderFn) {
+    if (typeof name !== "string" || typeof decoderFn !== "function") {
+        throw new TypeError("asciiam: registerGltfDecoder requires an extension name string and a decoder function");
+    }
+    gltfDecoders.set(name, decoderFn);
+}
+
+/** Returns list of registered glTF extension decoders. */
+export function getGltfDecoders() {
+    return Array.from(gltfDecoders.keys());
+}
+
 /** Reject incompatible documents before fetching buffers or allocating accessor arrays. */
 function validateDocumentHeader(gltf) {
     if (gltf.asset?.version !== "2.0" && !String(gltf.asset?.minVersion || "").startsWith("2.")) {
         throw new TypeError("asciiam: only glTF 2.x assets are supported");
     }
     if (gltf.extensionsRequired?.length) {
-        throw new TypeError(`asciiam: unsupported required glTF extensions: ${gltf.extensionsRequired.join(", ")}`);
+        const unsupported = gltf.extensionsRequired.filter((ext) => !gltfDecoders.has(ext));
+        if (unsupported.length > 0) {
+            throw new TypeError(`asciiam: unsupported required glTF extensions: ${unsupported.join(", ")}. Register a custom decoder via asciiam.registerGltfDecoder().`);
+        }
     }
 }
 

@@ -356,6 +356,8 @@ export default class asciiam {
   static registerMode(name: string, fn: (api: Record<string, unknown>) => unknown): void;
   static createMeshPrimitive(name: 'cube' | 'plane' | 'icosphere' | 'torus', options?: Record<string, number>): asciiamMeshData;
   static loadModel(source: asciiamModelSource, options?: asciiamModelLoadOptions): Promise<asciiamMeshData>;
+  static registerGltfDecoder(name: string, decoderFn: (extensionData: unknown, context: Record<string, unknown>) => unknown): void;
+  static getGltfDecoders(): string[];
   constructor(target: string | HTMLCanvasElement | HTMLElement, options?: asciiamOptions);
   start(): void;
   stop(): void;

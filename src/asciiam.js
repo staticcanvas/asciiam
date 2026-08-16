@@ -10,7 +10,7 @@ import {
     MeshCellRasterizer,
     normalizeMeshData,
 } from "./mesh.js";
-import { loadGltf } from "./gltf.js";
+import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
 "use strict";
 
@@ -561,6 +561,16 @@ import { loadGltf } from "./gltf.js";
         /** Decode a glTF 2.0 or GLB v2 source without constructing a renderer. */
         static loadModel(source, options) {
             return loadGltf(source, options);
+        }
+
+        /** Register a custom decoder callback for a compressed glTF extension (e.g. KHR_draco_mesh_compression). */
+        static registerGltfDecoder(name, decoderFn) {
+            return registerGltfDecoder(name, decoderFn);
+        }
+
+        /** Returns list of registered glTF extension decoders. */
+        static getGltfDecoders() {
+            return getGltfDecoders();
         }
 
         /** Feature-detect before constructing, for graceful fallback in older browsers. */
