@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=1bc795e5b37c";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=1bc795e5b37c";
+import { highlightJavaScript } from "./webutil-code.js?v=f0fc012dbf17";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=f0fc012dbf17";
 
 const asciiam = window.asciiam;
 
@@ -169,25 +169,57 @@ function setActiveModeButton(mode) {
 const chartTypeEl = document.getElementById("chartType");
 if (chartTypeEl) {
     chartTypeEl.onchange = () => {
+        anim.setMode("chart");
         anim.setOption("chartType", chartTypeEl.value);
+        setActiveModeButton("chart");
         renderUsage();
     };
 }
 const chartTitleEl = document.getElementById("chartTitle");
 if (chartTitleEl) {
     chartTitleEl.oninput = () => {
+        anim.setMode("chart");
         anim.setOption("chartTitle", chartTitleEl.value);
+        setActiveModeButton("chart");
         renderUsage();
     };
 }
 const chartDataEl = document.getElementById("chartData");
+function applyChartDataFromInput() {
+    if (!chartDataEl) return;
+    const raw = chartDataEl.value.split(",").map((v) => parseFloat(v.trim())).filter((v) => !isNaN(v));
+    if (raw.length) {
+        anim.setMode("chart");
+        anim.setOption("chartData", raw);
+        setActiveModeButton("chart");
+        renderUsage();
+    }
+}
 if (chartDataEl) {
-    chartDataEl.oninput = () => {
-        const raw = chartDataEl.value.split(",").map((v) => parseFloat(v.trim())).filter((v) => !isNaN(v));
-        if (raw.length) anim.setOption("chartData", raw);
+    chartDataEl.oninput = applyChartDataFromInput;
+}
+const chartShowAxesToggle = document.getElementById("chartShowAxesToggle");
+if (chartShowAxesToggle) {
+    chartShowAxesToggle.onchange = () => {
+        anim.setOption("chartShowAxes", chartShowAxesToggle.checked);
         renderUsage();
     };
 }
+
+// Chart sample data presets
+const setChartPreset = (title, dataStr) => {
+    if (chartTitleEl) chartTitleEl.value = title;
+    if (chartDataEl) chartDataEl.value = dataStr;
+    anim.setMode("chart");
+    anim.setOption("chartTitle", title);
+    applyChartDataFromInput();
+};
+
+document.getElementById("chartPresetGrowthBtn")?.addEventListener("click", () => setChartPreset("Revenue Growth", "15, 32, 48, 72, 95, 60, 84"));
+document.getElementById("chartPresetLoadBtn")?.addEventListener("click", () => setChartPreset("Server Workload", "45, 88, 62, 91, 35, 76, 50"));
+document.getElementById("chartPresetTempBtn")?.addEventListener("click", () => setChartPreset("Temperature", "20, 22, 25, 28, 31, 27, 23"));
+document.getElementById("chartPresetFinancialBtn")?.addEventListener("click", () => setChartPreset("Stock Trend", "100, 110, 105, 125, 140, 135, 160"));
+
 const sweepDurationEl = document.getElementById("sweepDuration");
 const sweepDurationVal = document.getElementById("sweepDurationVal");
 if (sweepDurationEl) {
@@ -1850,6 +1882,8 @@ function updateToolbarSummaries() {
         ? anim.opts.meshPrimitive || (anim.opts.model ? "model" : `${meshInfo.primitiveCount} primitives`)
         : "none";
     setToolbarSummary("meshTriggerBtn", "meshToolbarStatus", "3D", meshLabel);
+    const chartLabel = anim.opts.mode === "chart" ? (anim.opts.chartType || "bar") : "none";
+    setToolbarSummary("chartTriggerBtn", "chartToolbarStatus", "Chart", chartLabel);
 }
 function syncHistoryButtons() {
     document.getElementById("undoSettingsBtn").disabled = historyIndex <= 0 && historyTimer === null;

@@ -2983,6 +2983,49 @@
                 </div>
             </div>
 
+            <!-- Chart -->
+            <button class="ctrl-pill ctrl-pill--media" id="chartTriggerBtn" type="button" title="Data chart configuration and series input"
+                    popovertarget="pop-chart" aria-expanded="false" aria-controls="pop-chart">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Chart</span>
+                <span class="ctrl-pill__status" id="chartToolbarStatus">none</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-chart" popover>
+                <div class="cpop-group">
+                    <span class="cpop-label">Chart configuration</span>
+                    <label class="cpop-label" for="chartType">Chart type</label>
+                    <select id="chartType">
+                        <option value="bar" selected>Bar (Vertical)</option>
+                        <option value="horizontalBar">Horizontal Bar</option>
+                        <option value="line">Line Graph</option>
+                        <option value="sparkline">Sparkline</option>
+                        <option value="heatmap">Heatmap Matrix</option>
+                        <option value="donut">Donut Ring</option>
+                    </select>
+                    <label class="cpop-label" for="chartTitle" style="margin-block-start:var(--space-xs)">Chart header title</label>
+                    <input class="code-export__textarea" type="text" id="chartTitle" value="System Metrics" style="height:34px;" />
+                    <label class="cpop-label" for="chartData" style="margin-block-start:var(--space-xs)">Series data (comma separated)</label>
+                    <textarea class="custom-charset-input" id="chartData" spellcheck="false" rows="3" placeholder="e.g. 15, 32, 48, 72, 95, 60, 84">15, 32, 48, 72, 95, 60, 84</textarea>
+                    <label class="ui-switch" for="chartShowAxesToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartShowAxesToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Show chart axes & margins</span>
+                    </label>
+                </div>
+                <div class="cpop-group">
+                    <span class="cpop-label">Quick sample data presets</span>
+                    <div class="btn-row" style="flex-wrap:wrap;gap:6px;">
+                        <button class="mode-btn" id="chartPresetGrowthBtn" type="button">Revenue Growth</button>
+                        <button class="mode-btn" id="chartPresetLoadBtn" type="button">Server Workload</button>
+                        <button class="mode-btn" id="chartPresetTempBtn" type="button">Temperature</button>
+                        <button class="mode-btn" id="chartPresetFinancialBtn" type="button">Stock Trend</button>
+                    </div>
+                </div>
+                <div class="cpop-group">
+                    <p class="image-library-help">Configuring Chart automatically switches to chart rendering mode. Charts render dynamically using ASCII sub-cell block characters and can be combined with custom character sets, spatial alignment, and background compositing.</p>
+                </div>
+            </div>
+
             <!-- Code -->
             <button class="ctrl-pill ctrl-pill--code ctrl-pill--primary" type="button" title="Copy the current configuration as code"
                     popovertarget="pop-code" aria-expanded="false" aria-controls="pop-code">
@@ -3052,7 +3095,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=1bc795e5b37c"></script>
-        <script type="module" src="./js/webutil.js?v=1bc795e5b37c"></script>
+        <script src="./libs/asciiam.js?v=f0fc012dbf17"></script>
+        <script type="module" src="./js/webutil.js?v=f0fc012dbf17"></script>
     </body>
 </html>
