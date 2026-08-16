@@ -4366,10 +4366,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         _chartCell(col, row, _x, _y) {
-            const data = this.opts.chartData;
-            if (!data || (Array.isArray(data) && data.length === 0)) {
-                return this._setCell(" ", 0, 0, false);
-            }
+            const data = this.opts.chartData || [12, 45, 78, 34, 90, 60, 85, 40];
             const type = this.opts.chartType || "bar";
             const { cols, rows } = this;
             let values = [];
@@ -4382,7 +4379,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 }
             }
 
-            if (values.length === 0) values = [10, 25, 45, 80, 60, 30];
+            if (values.length === 0) values = [12, 45, 78, 34, 90, 60, 85, 40];
 
             const title = this.opts.chartTitle;
             if (title && row === 0) {
