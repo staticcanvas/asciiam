@@ -59,6 +59,13 @@ export type asciiamEvent =
   | 'modelClear'
   | (string & {});
 
+export interface asciiamLayerConfig {
+  mode: asciiamMode;
+  options?: Record<string, unknown> | null;
+  opacity?: number;
+  blendMode?: GlobalCompositeOperation | string;
+}
+
 export interface asciiamMeshData {
   positions: Float32Array | Float64Array;
   indices?: Uint8Array | Uint16Array | Uint32Array | null;
@@ -306,6 +313,7 @@ export interface asciiamOptions {
   onModelError?: ((error: unknown) => void) | null;
   sequence?: asciiamSequenceStep[] | null;
   sequenceOptions?: asciiamSequenceOptions | null;
+  layers?: asciiamLayerConfig[] | null;
   ambient?: number;
   bandWidth?: number;
   trail?: number;
@@ -374,6 +382,8 @@ export default class asciiam {
     willReadFrequently: boolean;
   };
   setRenderer(renderer: 'auto' | 'webgl2' | 'canvas2d'): 'webgl2' | 'canvas2d';
+  setLayers(layers: asciiamLayerConfig[] | null): this;
+  getLayers(): asciiamLayerConfig[];
   /** Decodes and samples an image. Animated GIFs capture every frame when ImageDecoder is available. */
   setImage(source: string, options?: { animated?: boolean }): Promise<HTMLImageElement | null>;
   clearImage(): this;

@@ -1528,4 +1528,81 @@ describe("asciiam lifecycle", () => {
         expect(animation.opts.mode).toBe("static");
         animation.destroy();
     });
+
+    describe("Multi-mode layer compositing", () => {
+        it("configures and retrieves layer configurations via setLayers and getLayers", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { mode: "wave", respectReducedMotion: false });
+            expect(animation.getLayers()).toEqual([]);
+
+            animation.setLayers([
+                { mode: "current", opacity: 0.8, blendMode: "source-over" },
+                { mode: "fire", opacity: 0.5, blendMode: "screen" },
+            ]);
+
+            const layers = animation.getLayers();
+            expect(layers.length).toBe(2);
+            expect(layers[0]).toEqual({
+                mode: "current",
+                options: null,
+                opacity: 0.8,
+                blendMode: "source-over",
+            });
+            expect(layers[1]).toEqual({
+                mode: "fire",
+                options: null,
+                opacity: 0.5,
+                blendMode: "screen",
+            });
+
+            animation.setLayers(null);
+            expect(animation.getLayers()).toEqual([]);
+            animation.destroy();
+        });
+
+        it("updates layers through setOption('layers', ...)", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, {
+                mode: "wave",
+                layers: [{ mode: "plasma", opacity: 0.7 }],
+                respectReducedMotion: false,
+            });
+
+            expect(animation.getLayers().length).toBe(1);
+            expect(animation.getLayers()[0].mode).toBe("plasma");
+
+            animation.setOption("layers", [{ mode: "vortex", opacity: 0.9 }]);
+            expect(animation.getLayers()[0].mode).toBe("vortex");
+
+            animation.destroy();
+        });
+
+        it("renders frame through multi-layer pass without throwing", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, {
+                mode: "wave",
+                layers: [
+                    { mode: "current", opacity: 0.6 },
+                    { mode: "sparkle", opacity: 0.4 },
+                ],
+                respectReducedMotion: false,
+            });
+            animation.start();
+            expect(() => animation._draw(16.7)).not.toThrow();
+            expect(animation.getStats().drawn).toBeGreaterThanOrEqual(0);
+            animation.destroy();
+        });
+    });
 });

@@ -22,8 +22,10 @@ strangers with confidence."
       hasn't been visually checked there.
 ### **Engineering Backlog (priority-3)**
 
-- [x] 🟠🌟✅3️⃣ **Backlog** - **`fadeIn` and reveal modes expose configurable timing controls** (`revealDuration` sweep duration parameter) via `setOption('revealDuration', ...)` and constructor options.
-- [x] 🟠🌟✅3️⃣ **Backlog** - **Native ASCII Charting & Data Visualization Feature** - Added `mode: 'chart'`, `setChartData()`, `clearChart()`, and `getChartInfo()` with 6 chart styles (`bar`, `horizontalBar`, `line`, `sparkline`, `heatmap`, `donut`), block density character mapping, and automated sub-cell glyph precision.
+- [ ] 🟠🌟⏳3️⃣ **Backlog** - **`fadeIn` and `image` modes don't expose fine-grained timing controls** (sweep
+      duration, per-character delay curve) — currently hardcoded constants
+      (`totalDuration = 2.2`, etc.). Fine for the presets, limiting if someone wants a
+      slower/faster intro without digging into source.
 - [ ] 🟠🌟⏳3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
       `wave` sweep on top). Currently one mode at a time; layering would mean running
       two instances on stacked canvases, which works but isn't documented as a
@@ -36,6 +38,15 @@ strangers with confidence."
 - [ ] 🟠🌟✔️3️⃣ **Engineering Backlog** - 3D feature verification and documentation. Allocation reuse, the 8.92 KiB combined gzip delta, repeatable desktop benchmark, regression coverage, README/API/architecture guidance, a live docs example, and bounded web-utility controls are complete. Current Chrome/Firefox/Safari and representative mobile visual/performance passes remain required before release claims.
   > **Note!** - `npm run benchmark:mesh` measures the cell raster stage in Node. It does not replace browser glyph-raster, GPU-driver, font-metric, or mobile thermal verification.
   > **Note!** - Headless Chromium, Firefox, and WebKit configure a torus through the built utility and validate its generated output. Interactive current Chrome/Firefox, Safari on Apple hardware, and representative physical-mobile passes remain outstanding.
+- [ ] 🔴🌟⏳3️⃣ **3D Engine / Optimization** - **3D Software Renderer Acceleration & Draco/Meshopt Compression.** Optimize 3D vertex processing, matrix transformation, and face rasterization with TypedArray batching, optional Web Worker thread offloading, and compressed 3D model parsing (Draco / Meshopt).
+  - [ ] 🟠🌟⏳3️⃣ **3D Engine / Optimization** - SIMD/TypedArray vertex transformation pipeline reducing CPU main-thread frame time for >20,000 vertex GLTF/GLB models.
+  - [ ] 🟡🌟⏳3️⃣ **3D Engine / Feature** - Optional Draco / Meshopt GLTF extension decoder support with progressive asynchronous decoding and light shading (Lambertian / Normal mapping ASCII glyphs).
+- [ ] 🟠🌟⏳3️⃣ **Engine / State** - **State Preservation & Seamless Grid Resizing.** Implement seamless state migration for stateful procedural modes (Matrix rain columns, particle positions, fluid velocity fields) during dynamic canvas resizing or `density` shifts.
+  - [ ] 🟡🌟⏳3️⃣ **Engine / State** - Coordinate-scaling and state interpolation algorithms on `_resize()` preventing jarring animation restarts for stateful modes.
+- [ ] 🟠🌟⏳3️⃣ **Rendering / Compatibility** - **Automated Font Metric Calibration & Safari Rendering Verification.** Develop an automated subpixel font metric calibration system and end-to-end visual testing harness targeting Safari/WebKit canvas quirks.
+  - [ ] 🟡🌟⏳3️⃣ **Rendering / Compatibility** - Font-metric baseline measurement helper in WebGL font atlas generator and cross-browser visual snapshot regression test suite.
+- [ ] 🟠🌟⏳3️⃣ **DX / SSR** - **Headless ASCII String & Frame Generator.** Create a pure JavaScript text/string rasterizer mode (`asciiam.renderToString()` / `asciiam.renderFrame()`) that operates natively in Node.js, Bun, and Deno without requiring DOM Canvas or JSDOM.
+  - [ ] 🟡🌟⏳3️⃣ **DX / SSR** - Light-weight headless text renderer for CLI tools, terminal outputs, SSR frameworks (Next.js, Nuxt), and static site generation.
 - [ ] 🟠💡⏳4️⃣ **Engineering Backlog** - Deferred mesh-compression research. After uncompressed glTF/GLB support has production measurements, benchmark Draco and Meshopt transfer size, decoder payload, initialization, decode time, peak memory, retained memory, and render-ready latency on desktop and mobile. Keep all codec code and dependencies out of released artifacts unless a later evidence-based architecture review explicitly approves a change.
   > **Note!** - `architecture/mesh-compression-evaluation.md` and `npm run benchmark:model` define the isolated corpus, baseline, measurements, and decision rule. The evaluation remains deferred until production uncompressed-model data exists.
 
