@@ -1656,6 +1656,12 @@ describe("asciiam lifecycle", () => {
             animation.setOption("density", 16);
             expect(animation._snow.length).toBeGreaterThan(0);
 
+            animation.setOption("density", 1);
+            animation.setMode("snow");
+            const initialSnowCount = animation._snow.length;
+            animation.setOption("snowDensity", 0.08);
+            expect(animation._snow.length).toBeGreaterThan(initialSnowCount);
+
             animation.destroy();
         });
     });

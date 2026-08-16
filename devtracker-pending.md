@@ -22,11 +22,6 @@ strangers with confidence."
       hasn't been visually checked there.
 ### **Engineering Backlog (priority-3)**
 
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **Matrix mode column state doesn't survive a `setOption('density', …)` change**
-      cleanly mid-run — it reinitializes via `_resize()`, so an in-progress rain
-      column resets rather than continuing at the new density. Minor visual hitch,
-      not a bug.
-
 - [ ] 🟠🌟✔️3️⃣ **Engineering Backlog** - 3D feature verification and documentation. Allocation reuse, the 8.92 KiB combined gzip delta, repeatable desktop benchmark, regression coverage, README/API/architecture guidance, a live docs example, and bounded web-utility controls are complete. Current Chrome/Firefox/Safari and representative mobile visual/performance passes remain required before release claims.
   > **Note!** - `npm run benchmark:mesh` measures the cell raster stage in Node. It does not replace browser glyph-raster, GPU-driver, font-metric, or mobile thermal verification.
   > **Note!** - Headless Chromium, Firefox, and WebKit configure a torus through the built utility and validate its generated output. Interactive current Chrome/Firefox, Safari on Apple hardware, and representative physical-mobile passes remain outstanding.

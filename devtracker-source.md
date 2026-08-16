@@ -343,10 +343,11 @@ strangers with confidence."
       two instances on stacked canvases, which works but isn't documented as a
       pattern.
     > **Solution Implemented:** Implemented native multi-layer compositing pipeline `setLayers()` in Epic Task 1. Allows running multiple modes with custom opacity and blend modes within a single canvas instance.
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **Matrix mode column state doesn't survive a `setOption('density', …)` change**
+- [x] 🟠🌟✅3️⃣ **Backlog** - **Matrix mode column state doesn't survive a `setOption('density', …)` change**
       cleanly mid-run — it reinitializes via `_resize()`, so an in-progress rain
       column resets rather than continuing at the new density. Minor visual hitch,
       not a bug.
+    > **Solution Implemented:** Added live density state preservation in `setOption` in `src/asciiam.js`. Automatically invokes `_adaptStateOnResize` when `matrixDensity`, `snowDensity`, `sparkleDensity`, `fireDensity`, `starfieldDensity`, or `orbitDensity` options are updated mid-run, preserving existing particle trajectories while scaling array lengths.
 
 - [x] 🟠💡✅2️⃣ **Engineering Backlog** - WebGL2 3D feasibility gate. A reusable typed-array prototype projects points, edges, and flat triangles into cell-resolution depth and luminance buffers without per-frame buffer allocation after warm-up. A 960-vertex, 1,920-triangle torus at 60×45 cells measured 0.399 ms median and 0.479 ms p95 across 1,200 frames on the development machine, below the 4 ms and 8 ms desktop gates. Mobile and real-browser presentation remain part of feature verification.
 - [x] 🔴🌟✅3️⃣ **Engineering Backlog** - Dependency-free 3D-to-ASCII mesh mode. MeshData validation, camera and transform controls, points/wireframe/solid styles, four procedural primitives, Canvas/WebGL2 presentation parity, reusable raster buffers, lifecycle cleanup, and TypeScript contracts are implemented.

@@ -1306,6 +1306,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 this._buildEdgeFadeCache();
                 this._waveBaseLayer = null;
             }
+            if (key === "matrixDensity" || key === "snowDensity" || key === "sparkleDensity" || key === "fireDensity" || key === "starfieldDensity" || key === "orbitDensity") {
+                if (this.cols > 0 && this.rows > 0) {
+                    this._adaptStateOnResize(this.cols, this.rows, this.cols, this.rows);
+                }
+            }
             if (key === "align") {
                 this._buildSpatialCache();
                 this._buildCurrentCache();
