@@ -80,6 +80,116 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         };
     }
 
+    /** Headless cell frame generator for Node.js/Bun/Deno SSR or CLI rasterization. */
+    function renderFrame(options = {}) {
+        const cols = Math.max(1, options.cols || 80);
+        const rows = Math.max(1, options.rows || 24);
+        const mode = options.mode || "matrix";
+        const t = typeof options.time === "number" ? options.time : 0;
+        const rawCharSet = options.charSet || "ascii-extended";
+        const charSetStr = typeof rawCharSet === "string" 
+            ? (asciiam.CHARACTER_SETS?.[rawCharSet] || rawCharSet)
+            : " .:-=+*#%@";
+        const invert = !!options.invert;
+
+        const baseColor = options.color || "#00ff66";
+        let baseR = 0, baseG = 255, baseB = 102;
+        if (typeof baseColor === "string" && baseColor.startsWith("#")) {
+            const hex = baseColor.slice(1);
+            if (hex.length === 3) {
+                baseR = parseInt(hex[0] + hex[0], 16) || 0;
+                baseG = parseInt(hex[1] + hex[1], 16) || 255;
+                baseB = parseInt(hex[2] + hex[2], 16) || 102;
+            } else if (hex.length >= 6) {
+                baseR = parseInt(hex.slice(0, 2), 16) || 0;
+                baseG = parseInt(hex.slice(2, 4), 16) || 255;
+                baseB = parseInt(hex.slice(4, 6), 16) || 102;
+            }
+        }
+
+        const charCount = Math.max(1, charSetStr.length);
+        const grid = [];
+
+        for (let row = 0; row < rows; row++) {
+            const rowData = [];
+            const ny = (row / Math.max(1, rows - 1)) * 2 - 1;
+
+            for (let col = 0; col < cols; col++) {
+                const nx = (col / Math.max(1, cols - 1)) * 2 - 1;
+                let val = 0;
+
+                if (mode === "plasma") {
+                    val = 0.5 + 0.5 * (Math.sin(nx * 4 + t * 2) + Math.cos(ny * 4 + t * 1.5) + Math.sin((nx + ny) * 3 + t * 2.5)) / 3;
+                } else if (mode === "wave") {
+                    val = 0.5 + 0.5 * Math.sin(nx * 5 + t * 3) * Math.cos(ny * 5 + t * 2);
+                } else if (mode === "vortex") {
+                    const angle = Math.atan2(ny, nx);
+                    const r = Math.sqrt(nx * nx + ny * ny);
+                    val = 0.5 + 0.5 * Math.sin(angle * 4 + r * 10 - t * 4);
+                } else if (mode === "fire") {
+                    const noiseVal = Math.sin(col * 0.4 + row * 0.2 + t * 5.0) * 0.5 + 0.5;
+                    const heat = Math.max(0, 1 - (row / rows) - noiseVal * 0.3);
+                    val = Math.min(1, Math.max(0, heat));
+                } else if (mode === "snow") {
+                    const dropRow = Math.floor((t * 8 + col * 3.7) % rows);
+                    val = row === dropRow ? 0.95 : (row === (dropRow + 1) % rows ? 0.4 : 0.05);
+                } else if (mode === "matrix") {
+                    const dropRow = Math.floor((t * 12 + col * 5.3) % (rows + 10));
+                    const dist = dropRow - row;
+                    if (dist === 0) val = 1.0;
+                    else if (dist > 0 && dist < 8) val = (8 - dist) / 8;
+                    else val = 0.02;
+                } else if (mode === "starfield") {
+                    const r = Math.sqrt(nx * nx + ny * ny);
+                    val = (Math.sin(r * 12 - t * 6) > 0.8) ? 0.9 : 0.05;
+                } else if (mode === "ripple") {
+                    const r = Math.sqrt(nx * nx + ny * ny);
+                    val = 0.5 + 0.5 * Math.sin(r * 16 - t * 5);
+                } else if (mode === "sparkle") {
+                    const p = Math.sin(col * 12.3 + row * 45.6 + t * 4);
+                    val = p > 0.7 ? (p - 0.7) / 0.3 : 0.05;
+                } else if (mode === "orbit") {
+                    const angle = Math.atan2(ny, nx);
+                    const r = Math.sqrt(nx * nx + ny * ny);
+                    val = Math.abs(r - 0.5 - 0.1 * Math.sin(angle * 3 + t * 2)) < 0.15 ? 0.85 : 0.05;
+                } else {
+                    val = 0.5 + 0.5 * Math.sin(nx * 2 + ny * 2 + t);
+                }
+
+                val = Math.max(0, Math.min(1, val));
+                if (invert) val = 1 - val;
+
+                const charIndex = Math.min(charCount - 1, Math.floor(val * charCount));
+                const char = charSetStr[charIndex] || " ";
+
+                rowData.push({
+                    char,
+                    r: Math.round(baseR * val),
+                    g: Math.round(baseG * val),
+                    b: Math.round(baseB * val),
+                    a: val,
+                });
+            }
+            grid.push(rowData);
+        }
+        return grid;
+    }
+
+    /** Headless multi-line ASCII string generator for SSR, terminal, or CLI rendering. */
+    function renderToString(options = {}) {
+        const grid = renderFrame(options);
+        const ansi = !!options.ansi;
+
+        return grid
+            .map((row) => {
+                if (!ansi) return row.map((cell) => cell.char).join("");
+                return row
+                    .map((cell) => `\x1b[38;2;${cell.r};${cell.g};${cell.b}m${cell.char}\x1b[0m`)
+                    .join("");
+            })
+            .join("\n");
+    }
+
     /**
      * Private WebGL2 presentation backend.
      * Animation state remains in asciiam; this class owns GPU resources only.
@@ -621,6 +731,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         /** Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision. */
         static calibrateFontMetrics(target, fontFamily, fontSize) {
             return calibrateFontMetrics(target, fontFamily, fontSize);
+        }
+
+        /** Headless cell frame generator for Node.js, Bun, Deno, or CLI text outputs. */
+        static renderFrame(options) {
+            return renderFrame(options);
+        }
+
+        /** Headless ASCII multi-line text generator for SSR, terminal, or CLI output. */
+        static renderToString(options) {
+            return renderToString(options);
         }
 
         /** Feature-detect before constructing, for graceful fallback in older browsers. */
@@ -1382,6 +1502,34 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._meshRasterOptions.projection = this.opts.meshProjection;
             this._meshRasterOptions.camera = this.opts.meshCamera;
             this._meshRasterOptions.light = this.opts.meshLight;
+        }
+
+        /** Generates a 2D grid of cell character and color data for the current state or specified options. */
+        renderFrame(options = {}) {
+            return renderFrame({
+                cols: this.cols || 80,
+                rows: this.rows || 24,
+                mode: this.opts.mode || "matrix",
+                charSet: this.opts.charSet,
+                invert: this.opts.invert,
+                color: this.opts.color,
+                align: this.opts.align,
+                ...options,
+            });
+        }
+
+        /** Generates a multi-line ASCII string for the current state or specified options without requiring DOM canvas. */
+        renderToString(options = {}) {
+            return renderToString({
+                cols: this.cols || 80,
+                rows: this.rows || 24,
+                mode: this.opts.mode || "matrix",
+                charSet: this.opts.charSet,
+                invert: this.opts.invert,
+                color: this.opts.color,
+                align: this.opts.align,
+                ...options,
+            });
         }
 
         /** Move the existing renderer to another container without creating a second animation loop. */

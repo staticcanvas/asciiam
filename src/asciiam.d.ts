@@ -74,6 +74,29 @@ export interface asciiamFontMetrics {
   baselineOffset: number;
 }
 
+export interface asciiamHeadlessCell {
+  char: string;
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
+export interface asciiamHeadlessOptions {
+  cols?: number;
+  rows?: number;
+  mode?: asciiamMode | string;
+  time?: number;
+  charSet?: string;
+  invert?: boolean;
+  density?: number;
+  ansi?: boolean;
+  color?: string;
+  background?: string | null;
+  align?: asciiamAlign;
+  layers?: asciiamLayerConfig[];
+}
+
 export interface asciiamMeshData {
   positions: Float32Array | Float64Array;
   indices?: Uint8Array | Uint16Array | Uint32Array | null;
@@ -367,10 +390,14 @@ export default class asciiam {
   static registerGltfDecoder(name: string, decoderFn: (extensionData: unknown, context: Record<string, unknown>) => unknown): void;
   static getGltfDecoders(): string[];
   static calibrateFontMetrics(target?: CanvasRenderingContext2D | string, fontFamily?: string, fontSize?: number): asciiamFontMetrics;
+  static renderFrame(options?: asciiamHeadlessOptions): asciiamHeadlessCell[][];
+  static renderToString(options?: asciiamHeadlessOptions): string;
   constructor(target: string | HTMLCanvasElement | HTMLElement, options?: asciiamOptions);
   start(): void;
   stop(): void;
   destroy(): void;
+  renderFrame(options?: asciiamHeadlessOptions): asciiamHeadlessCell[][];
+  renderToString(options?: asciiamHeadlessOptions): string;
   on(event: asciiamEvent, listener: (detail: asciiamEventDetail, animation: asciiam) => void): () => void;
   off(event: asciiamEvent, listener: (detail: asciiamEventDetail, animation: asciiam) => void): void;
   setMode(mode: asciiamMode): void;

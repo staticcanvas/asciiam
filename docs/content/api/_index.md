@@ -271,6 +271,21 @@ Captures the rendered ASCII art canvas and returns a Data URL, Blob, and image m
 
 Convenience method to capture and download the current ASCII artwork frame directly to disk.
 
+### `renderToString(options?)` & `renderFrame(options?)`
+
+Headless pure-JavaScript text rasterizers for Node.js, Bun, Deno, SSR, terminals, or CLI text output without DOM Canvas or JSDOM requirements.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `cols` | `number` | `80` | Grid column width. |
+| `rows` | `number` | `24` | Grid row height. |
+| `mode` | `string` | `'matrix'` | Animation mode name (`'matrix'`, `'plasma'`, `'wave'`, `'fire'`, `'snow'`, etc.). |
+| `time` | `number` | `0` | Time offset in seconds for deterministic frame rendering. |
+| `charSet` | `string` | `'ascii-extended'` | Character set preset or explicit glyph string. |
+| `invert` | `boolean` | `false` | Inverts glyph intensity mapping. |
+| `ansi` | `boolean` | `false` | Injects 24-bit ANSI color escape codes (`\x1b[38;2;R;G;Bm`) into string output. |
+| `color` | `string` | `'#00ff66'` | Base hex foreground color used for ANSI escape sequences. |
+
 ### `getStats()`
 
 Extended timing fields remain `null` until `showStats` and `extendedStats` are active and
