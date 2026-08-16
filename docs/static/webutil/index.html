@@ -2819,7 +2819,12 @@
             </button>
             <div class="ctrl-popover ctrl-popover--wide" id="pop-image" popover>
                 <div class="cpop-group">
-                    <label class="cpop-label" for="imageInput">Upload image</label>
+                    <label class="ui-switch" for="imageEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="imageEnabledToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable image layer</strong></span>
+                    </label>
+                    <label class="cpop-label" for="imageInput" style="margin-block-start:var(--space-xs)">Upload image</label>
                     <input type="file" id="imageInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/avif" />
                 </div>
                 <div class="cpop-group">
@@ -2918,7 +2923,12 @@
             </button>
             <div class="ctrl-popover ctrl-popover--wide" id="pop-mesh" popover>
                 <div class="cpop-group">
-                    <span class="cpop-label">3D mesh source</span>
+                    <label class="ui-switch" for="meshEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="meshEnabledToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable 3D mesh layer</strong></span>
+                    </label>
+                    <span class="cpop-label" style="margin-block-start:var(--space-xs)">3D mesh source</span>
                     <label class="cpop-label" for="meshPrimitive">Procedural primitive</label>
                     <select id="meshPrimitive">
                         <option value="">None</option>
@@ -2999,7 +3009,12 @@
             </button>
             <div class="ctrl-popover ctrl-popover--wide" id="pop-chart" popover>
                 <div class="cpop-group">
-                    <span class="cpop-label">Chart configuration</span>
+                    <label class="ui-switch" for="chartEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="chartEnabledToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable chart layer</strong></span>
+                    </label>
+                    <span class="cpop-label" style="margin-block-start:var(--space-xs)">Chart configuration</span>
                     <label class="cpop-label" for="chartType">Chart type</label>
                     <select id="chartType">
                         <option value="bar" selected>Bar (Vertical)</option>

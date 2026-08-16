@@ -56,6 +56,7 @@ describe("ASCII Charting API", () => {
         anim = new asciiam(container);
         expect(anim.getChartInfo()).toEqual({
             active: false,
+            enabled: false,
             type: "bar",
             dataLength: 0,
             title: "",
@@ -69,9 +70,10 @@ describe("ASCII Charting API", () => {
         const sampleData = [10, 20, 50, 80, 40];
         anim.setChartData(sampleData, { type: "bar", title: "Monthly Sales" });
 
-        expect(anim.opts.mode).toBe("chart");
+        expect(anim.opts.chartEnabled).toBe(true);
         expect(anim.getChartInfo()).toEqual({
             active: true,
+            enabled: true,
             type: "bar",
             dataLength: 5,
             title: "Monthly Sales",
@@ -102,8 +104,23 @@ describe("ASCII Charting API", () => {
 
         anim.clearChart();
         expect(anim.opts.chartData).toBeNull();
-        expect(anim.opts.mode).toBe("wave");
+        expect(anim.opts.chartEnabled).toBe(false);
         expect(anim.getChartInfo().active).toBe(false);
+    });
+
+    it("respects chartEnabled toggle switch", () => {
+        anim = new asciiam(container);
+        anim.setChartData([20, 40, 60], { type: "bar" });
+        expect(anim.opts.chartEnabled).toBe(true);
+
+        anim.setOption("chartEnabled", false);
+        const cell = anim._chartCell(5, 5, 50, 50);
+        expect(cell.char).toBe(" ");
+        expect(cell.opacity).toBe(0);
+
+        anim.setOption("chartEnabled", true);
+        const cellOn = anim._chartCell(5, 5, 50, 50);
+        expect(cellOn).toBeDefined();
     });
 
     it("includes chart block characters and labels in atlas character generation", () => {

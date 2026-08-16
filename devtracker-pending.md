@@ -32,6 +32,7 @@ strangers with confidence."
   - [x] 🟡🌟✅1️⃣ **Complete Chart Suite: Rich Legends** - Implemented per-series legend rows with colored item labels for vertical bars, horizontal gutter labels, line point series, and donut center hubs.
   - [x] 🟡🌟✅1️⃣ **Complete Chart Suite: Individual Object Values & Markers** - Render explicit value labels on top of vertical bars, alongside horizontal bars, on line graph peak/data points (`●`), and within donut segments.
   - [x] 🟡🌟✅1️⃣ **Data Model Completeness** - Supported rich objects (`{ label, value, color }`), multi-series arrays, explicit ranges, and formatted values in both core engine and Web Utility.
+  - [x] 🟡🌟✅1️⃣ **Media Layer Enable/Disable Toggles** - Added `imageEnabled`, `meshEnabled`, and `chartEnabled` options with dedicated UI switch toggles in Image, 3D, and Chart popovers; updated toolbar summaries to report active/off/none cleanly.
 
 
 ### **Distribution Readiness (priority-2)**

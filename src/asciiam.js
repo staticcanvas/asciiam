@@ -953,6 +953,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     typewriterDuration: 4.5,
 
                     // --- dependency-free 3D-to-ASCII source ---
+                    meshEnabled: true,
                     mesh: null,
                     meshPrimitive: null,
                     meshStyle: "wireframe",
@@ -966,7 +967,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     meshMaxPrimitives: 100000,
                     model: null,
 
+                    // --- sampled image source ---
+                    imageEnabled: true,
+
                     // --- dependency-free ASCII chart source ---
+                    chartEnabled: false,
                     chartData: null, // number[] | {label, value, color}[] | number[][]
                     chartType: "bar", // bar | horizontalBar | line | sparkline | heatmap | donut
                     chartTitle: "",
@@ -4405,7 +4410,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         _chartCell(col, row, _x, _y) {
-            const data = this.opts.chartData || [12, 45, 78, 34, 90, 60, 85, 40];
+            if (this.opts.chartEnabled === false) return this._setCell(" ", 0, 0, false);
+            const data = this.opts.chartData;
+            if (!data && this.opts.mode !== "chart") return this._setCell(" ", 0, 0, false);
             const type = this.opts.chartType || "bar";
             const { cols, rows } = this;
             let values = [];
@@ -4914,6 +4921,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         /** Installs chart data and enables ASCII chart rendering mode. */
         setChartData(data, options = {}) {
             this.opts.chartData = data;
+            this.opts.chartEnabled = options.enabled !== undefined ? options.enabled : true;
             if (options.type) this.opts.chartType = options.type;
             if (options.title !== undefined) this.opts.chartTitle = options.title;
             if (options.showValues !== undefined) this.opts.chartShowValues = options.showValues;
@@ -4923,13 +4931,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (options.scaleMin !== undefined) this.opts.chartScaleMin = options.scaleMin;
             if (options.scaleMax !== undefined) this.opts.chartScaleMax = options.scaleMax;
             if (options.animateItems !== undefined) this.opts.chartAnimateItems = options.animateItems;
-            this.setMode("chart");
             return this;
         }
 
         /** Clears active chart data and resets animation mode. */
         clearChart() {
             this.opts.chartData = null;
+            this.opts.chartEnabled = false;
             this.opts.chartTitle = "";
             this.opts.chartAnimateItems = false;
             if (this.opts.mode === "chart") {
@@ -4943,7 +4951,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const data = this.opts.chartData;
             const isArray = Array.isArray(data);
             return {
-                active: this.opts.mode === "chart" && !!data,
+                active: (this.opts.chartEnabled !== false && !!data) || this.opts.mode === "chart",
+                enabled: this.opts.chartEnabled !== false && !!data,
                 type: this.opts.chartType || "bar",
                 dataLength: isArray ? data.length : 0,
                 title: this.opts.chartTitle || "",

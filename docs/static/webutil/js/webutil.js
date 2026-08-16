@@ -164,6 +164,16 @@ function setActiveModeButton(mode) {
     if (interactionControls) interactionControls.hidden = !["hoverZone", "clickZone"].includes(mode);
 }
 
+const chartEnabledToggle = document.getElementById("chartEnabledToggle");
+if (chartEnabledToggle) {
+    chartEnabledToggle.onchange = () => {
+        anim.setOption("chartEnabled", chartEnabledToggle.checked);
+        if (chartEnabledToggle.checked && !anim.opts.chartData) {
+            applyChartDataFromInput();
+        }
+        renderUsage();
+    };
+}
 const chartTypeEl = document.getElementById("chartType");
 if (chartTypeEl) {
     chartTypeEl.onchange = () => {
@@ -277,7 +287,12 @@ if (chartColorsEl) {
 const setChartPreset = (title, dataStr) => {
     if (chartTitleEl) chartTitleEl.value = title;
     if (chartDataEl) chartDataEl.value = dataStr;
+    if (chartEnabledToggle) {
+        chartEnabledToggle.checked = true;
+        chartEnabledToggle.setAttribute("aria-checked", "true");
+    }
     anim.setOption("chartTitle", title);
+    anim.setOption("chartEnabled", true);
     applyChartDataFromInput();
 };
 
@@ -297,6 +312,11 @@ if (chartTriggerBtn) {
             } else {
                 applyChartDataFromInput();
             }
+            if (chartEnabledToggle) {
+                chartEnabledToggle.checked = true;
+                chartEnabledToggle.setAttribute("aria-checked", "true");
+            }
+            anim.setOption("chartEnabled", true);
             renderUsage();
         }
     });
@@ -307,11 +327,29 @@ if (clearMediaBtn) {
     clearMediaBtn.onclick = () => {
         if (typeof anim.clearImage === "function") anim.clearImage();
         if (typeof anim.clearModel === "function") anim.clearModel();
-        anim.setOption("chartData", null);
-        anim.setOption("chartScaleMin", null);
-        anim.setOption("chartScaleMax", null);
-        anim.setOption("chartColors", null);
-        anim.setOption("chartAnimateItems", false);
+        if (typeof anim.clearChart === "function") anim.clearChart();
+        else {
+            anim.setOption("chartData", null);
+            anim.setOption("chartEnabled", false);
+            anim.setOption("chartScaleMin", null);
+            anim.setOption("chartScaleMax", null);
+            anim.setOption("chartColors", null);
+            anim.setOption("chartAnimateItems", false);
+        }
+        if (chartEnabledToggle) {
+            chartEnabledToggle.checked = false;
+            chartEnabledToggle.setAttribute("aria-checked", "false");
+        }
+        anim.setOption("imageEnabled", true);
+        anim.setOption("meshEnabled", true);
+        if (imageEnabledToggle) {
+            imageEnabledToggle.checked = true;
+            imageEnabledToggle.setAttribute("aria-checked", "true");
+        }
+        if (meshEnabledToggle) {
+            meshEnabledToggle.checked = true;
+            meshEnabledToggle.setAttribute("aria-checked", "true");
+        }
         anim.setMode("wave");
         setActiveModeButton("wave");
         renderUsage();
@@ -1352,6 +1390,22 @@ async function loadLocalImages() {
 
 loadLocalImages();
 
+const imageEnabledToggle = document.getElementById("imageEnabledToggle");
+if (imageEnabledToggle) {
+    imageEnabledToggle.onchange = () => {
+        anim.setOption("imageEnabled", imageEnabledToggle.checked);
+        renderUsage();
+    };
+}
+
+const meshEnabledToggle = document.getElementById("meshEnabledToggle");
+if (meshEnabledToggle) {
+    meshEnabledToggle.onchange = () => {
+        anim.setOption("meshEnabled", meshEnabledToggle.checked);
+        renderUsage();
+    };
+}
+
 const modelStatus = document.getElementById("modelStatus");
 const meshPrimitive = document.getElementById("meshPrimitive");
 const meshStyle = document.getElementById("meshStyle");
@@ -1842,8 +1896,7 @@ function usageSource() {
         pulse: anim.opts.pulse,
         cursor: anim.opts.cursor,
     };
-    if (anim.opts.mode === "mesh" || anim.opts.meshPrimitive) {
-        options.mode = "mesh";
+    if (anim.opts.meshPrimitive || typeof anim.opts.model === "string") {
         if (anim.opts.meshPrimitive) options.meshPrimitive = anim.opts.meshPrimitive;
         else if (typeof anim.opts.model === "string") options.model = anim.opts.model;
         options.meshStyle = anim.opts.meshStyle;
@@ -1878,8 +1931,8 @@ function usageSource() {
         options.animateImageMask = anim.opts.animateImageMask;
         if (anim.opts.imageAnimationRange) options.imageAnimationRange = anim.opts.imageAnimationRange;
     }
-    if (anim.opts.mode === "chart" || anim.opts.chartData) {
-        options.mode = "chart";
+    if (anim.opts.chartEnabled && anim.opts.chartData) {
+        options.chartEnabled = true;
         if (anim.opts.chartType) options.chartType = anim.opts.chartType;
         if (anim.opts.chartTitle) options.chartTitle = anim.opts.chartTitle;
         if (anim.opts.chartData) options.chartData = anim.opts.chartData;
@@ -1983,14 +2036,19 @@ function updateToolbarSummaries() {
     setToolbarSummary("motionTriggerBtn", "motionToolbarStatus", "Motion", motion);
     setToolbarSummary("alignTriggerBtn", "alignToolbarStatus", "Alignment", anim.opts.align || "center");
     setToolbarSummary("colorTriggerBtn", "colorToolbarStatus", "Color", colorMode);
-    setToolbarSummary("backdropTriggerBtn", "backdropToolbarStatus", "Backdrop", backdropLabel);
-    setToolbarSummary("imageTriggerBtn", "imageToolbarStatus", "Image", anim._sourceImage ? "active" : "none");
+    const imageLabel = anim._sourceImage
+        ? anim.opts.imageEnabled !== false ? "active" : "off"
+        : "none";
+    setToolbarSummary("imageTriggerBtn", "imageToolbarStatus", "Image", imageLabel);
     const meshInfo = anim.getMeshInfo();
     const meshLabel = meshInfo.loaded
-        ? anim.opts.meshPrimitive || (anim.opts.model ? "model" : `${meshInfo.primitiveCount} primitives`)
+        ? anim.opts.meshEnabled !== false ? (anim.opts.meshPrimitive || (anim.opts.model ? "model" : `${meshInfo.primitiveCount} primitives`)) : "off"
         : "none";
     setToolbarSummary("meshTriggerBtn", "meshToolbarStatus", "3D", meshLabel);
-    const chartLabel = anim.opts.chartData ? (anim.opts.chartType || "bar") : "none";
+    const chartInfo = anim.getChartInfo();
+    const chartLabel = chartInfo.dataLength > 0
+        ? anim.opts.chartEnabled ? (anim.opts.chartType || "bar") : "off"
+        : "none";
     setToolbarSummary("chartTriggerBtn", "chartToolbarStatus", "Chart", chartLabel);
 }
 function syncHistoryButtons() {
