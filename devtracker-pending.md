@@ -15,6 +15,15 @@ strangers with confidence."
   - [x] 🟡🌟✅1️⃣ **Option Coverage Audit** - Audit and expose all 48 `asciiam` options across the Web Utility toolbar, JSON Builder, and code exporter without duplicate handlers.
   - [x] 🟡🌟✅1️⃣ **High-Fidelity ASCII Charting** - Added chart axis guides (`chartShowAxes`), top bar caps (`chartShowValues`), line slope characters & area shading, donut center labels, and JSON builder preset entries.
 
+- [x] 🟠🌟✅1️⃣ **Epic: Chart Mode Full Enhancement**
+  - [x] 🟡🌟✅1️⃣ **Backfill Fix** - Rewrote `_chartCell()` to ensure all bars and chart types backfill solid block characters from axis baseline to full data height. Corrected Y-axis gutter from 2→3 columns so plotStart aligns correctly with all data values.
+  - [x] 🟡🌟✅1️⃣ **Y-Axis Scale Range** - Added `chartScaleMin` / `chartScaleMax` options for explicit Y-axis bounds. Auto-defaults to 0→data max. Scale labels (top + mid) rendered in left gutter with `showAxes`.
+  - [x] 🟡🌟✅1️⃣ **Per-Series Color Palette** - Added `chartColors: string[]` option. Each bar/segment/series picks its color cyclically from the array. Exposed in Web Utility chart popover as space-separated hex/named color input.
+  - [x] 🟡🌟✅1️⃣ **Legend Labels** - Added `chartShowLegend` toggle. When `chartData` is `{label, value}[]` format, labels render below bars (vertical), in gutter (horizontal bar), or inside donut center area. Web Utility exposes a "Series labels" input that merges with data values.
+  - [x] 🟡🌟✅1️⃣ **Per-Item Stagger Animation** - Added `chartAnimateItems: boolean` option. Bars reveal staggered from left→right, donut sweeps clockwise, line slides in from left. Uses `this._time` clock so animation loops on each restart. Toggle exposed in Web Utility chart popover.
+  - [x] 🟡🌟✅1️⃣ **API Expansion** - Updated `setChartData(data, options)` to accept all new options, extended `getChartInfo()` to return `showLegend`, `hasColors`, `scaleMin`, `scaleMax`, `animateItems`.
+  - [x] 🟡🌟✅1️⃣ **Code Export Coverage** - All 5 new options flow through `renderUsage()` and `getPersistableOptions()` so generated code snippets remain complete.
+
 
 ### **Distribution Readiness (priority-2)**
 

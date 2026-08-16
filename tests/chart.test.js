@@ -59,6 +59,11 @@ describe("ASCII Charting API", () => {
             type: "bar",
             dataLength: 0,
             title: "",
+            showLegend: true,
+            hasColors: false,
+            scaleMin: null,
+            scaleMax: null,
+            animateItems: false,
         });
 
         const sampleData = [10, 20, 50, 80, 40];
@@ -70,6 +75,11 @@ describe("ASCII Charting API", () => {
             type: "bar",
             dataLength: 5,
             title: "Monthly Sales",
+            showLegend: true,
+            hasColors: false,
+            scaleMin: null,
+            scaleMax: null,
+            animateItems: false,
         });
     });
 
