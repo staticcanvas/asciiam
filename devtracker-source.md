@@ -307,6 +307,8 @@ strangers with confidence."
         Chromium, Firefox, and WebKit, including non-empty Canvas 2D pixels, grid changes,
         procedural 3D configuration, generated output, responsive bounds, and browser errors.
         WebKit on Linux is not treated as Safari or physical-device verification.
+        Latest local run: Chromium, Firefox, and WebKit smoke checks passed after the Hugo
+        compatibility build; physical current-browser and mobile passes remain outstanding.
 - [x] 🟠🌟✅2️⃣ **Distribution** - **TypeScript definitions.** `src/asciiam.d.ts` documents the options object and
       method signatures discoverable in editors and catch misconfiguration at
       compile time for TS consumers.

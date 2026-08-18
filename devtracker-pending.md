@@ -45,6 +45,8 @@ strangers with confidence."
         Chromium, Firefox, and WebKit, including non-empty Canvas 2D pixels, grid changes,
         procedural 3D configuration, generated output, responsive bounds, and browser errors.
         WebKit on Linux is not treated as Safari or physical-device verification.
+        Latest local run: Chromium, Firefox, and WebKit smoke checks passed after the Hugo
+        compatibility build; physical current-browser and mobile passes remain outstanding.
 ### **Engineering Backlog (priority-3)**
 
 - [ ] 🟠🌟✔️3️⃣ **Engineering Backlog** - 3D feature verification and documentation. Allocation reuse, the 8.92 KiB combined gzip delta, repeatable desktop benchmark, regression coverage, README/API/architecture guidance, a live docs example, and bounded web-utility controls are complete. Current Chrome/Firefox/Safari and representative mobile visual/performance passes remain required before release claims.
