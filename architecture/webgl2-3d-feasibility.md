@@ -71,6 +71,11 @@ frames at 0.399 ms median and 0.479 ms 95th percentile on the development machin
 measurement excludes browser glyph rasterization and does not replace the required mobile
 or real-browser verification.
 
+The same benchmark was rerun on 19 August 2026 after the renderer updates: 0.245 ms median,
+0.435 ms p95, and 309 drawn cells over 1,200 iterations. The 4 ms median and 8 ms p95 gates
+still pass. This remains a JavaScript cell-raster measurement rather than a physical-device
+presentation result.
+
 A 2026-08-14 built-site suite configures the torus and validates generated output in
 headless Chromium, Firefox, and WebKit alongside non-empty Canvas 2D pixels and responsive
 layout bounds. This is browser-engine integration coverage, not an interactive Safari or

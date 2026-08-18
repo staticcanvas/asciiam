@@ -141,6 +141,8 @@ collecting them does not traverse vertex or index buffers per frame.
 
 Run `npm run benchmark:mesh` after changing projection or rasterization code. The benchmark reference scene contains 960 vertices and 1,920 triangles at a 60×45 cell grid; the enforced desktop gate is 4 ms median and 8 ms p95.
 
+Local benchmark on 2026-08-19: 1,200 iterations measured 0.245 ms median and 0.435 ms p95, with 309 cells drawn. This is the cell-raster stage only; browser glyph rasterization, GPU presentation, and physical-device thermal behavior require separate verification.
+
 ## Reference
 
 | Diagnostic | Type | Meaning |

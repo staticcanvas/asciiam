@@ -280,6 +280,11 @@ URL through the remote field or `setModel()` when its JSON references sibling `.
 files; relative buffer paths resolve from the `.gltf` URL. Every remote response must
 permit browser CORS access. The 3D utility controls expose model X/Y/Z scale, uniform
 scale, perspective field of view, auto-rotation, and Y-axis rotation speed.
+
+The repeatable mesh benchmark uses a 960-vertex, 1,920-triangle torus at 60×45 cells.
+The 2026-08-19 run measured 0.245 ms median and 0.435 ms p95 for 1,200 cell-raster
+iterations against 4 ms median and 8 ms p95 desktop gates. The result excludes browser
+glyph rasterization, GPU presentation, and physical-device measurements.
 Images can be rotated in degrees and flipped horizontally or vertically during the
 bounded sampling pass. Procedural primitives and imported models use the same mesh
 transform controls for X/Y/Z rotation and axis mirroring.
