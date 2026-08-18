@@ -491,7 +491,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         /** Canonical inventory used by documentation and integration tooling. */
         static BUILT_IN_MODES = Object.freeze([
             "none", "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
-            "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace",
+            "irisIn", "irisOut", "dissolveIn", "dissolveOut", "assemble", "breakApart", "lumaFold", "riftLace",
             "echoBloom", "matrix", "snow", "sparkle", "fire", "starfield", "glitch",
             "typewriter", "orbit", "hoverZone", "clickZone", "image", "custom",
             "mesh", "static", "chart",
@@ -1325,7 +1325,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 this._buildSpatialCache();
                 this._buildCurrentCache();
             }
-            if ((key === "revealDirection" || key === "revealDuration") && ["fadeIn", "fadeOut", "irisIn", "irisOut", "dissolveIn", "dissolveOut"].includes(this.opts.mode)) {
+            if ((key === "revealDirection" || key === "revealDuration") && ["fadeIn", "fadeOut", "irisIn", "irisOut", "dissolveIn", "dissolveOut", "assemble", "breakApart"].includes(this.opts.mode)) {
                 this._time = 0;
                 this._lastT = null;
             }
@@ -4003,6 +4003,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     return this._dissolveCell(col, row, false);
                 case "dissolveOut":
                     return this._dissolveCell(col, row, true);
+                case "assemble":
+                    return this._assembleCell(col, row);
+                case "breakApart":
+                    return this._breakApartCell(col, row);
                 case "lumaFold":
                     return this._lumaFoldCell(col, row, x, y);
                 case "riftLace":
@@ -4242,6 +4246,37 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (reverse) visible = 1 - visible;
             const charIdx = Math.floor((0.25 + this._seedNextRowCache[index] * 0.75) * (this.opts.charSet.length - 1));
             return this._setCell(this.opts.charSet[charIdx] || " ", visible * this.opts.maxOpacity, visible, visible > 0.82);
+        }
+
+        _assembleCell(col, row) {
+            const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
+            const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
+            const progress = Math.min(1, cycle / duration);
+            const index = row * this.cols + col;
+            const seed = this._seedCache[index];
+            const directional = this._revealProgress(col, row);
+            const threshold = seed * 0.72 + directional * 0.28;
+            const local = Math.max(0, Math.min(1, (progress - threshold + 0.16) / 0.16));
+            const fragment = this._seedNextRowCache[index];
+            const intensity = local * (0.58 + fragment * 0.42);
+            const charIdx = Math.floor((local * 0.72 + fragment * 0.28) * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.78);
+        }
+
+        _breakApartCell(col, row) {
+            const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
+            const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
+            const progress = Math.min(1, cycle / duration);
+            const index = row * this.cols + col;
+            const seed = this._seedCache[index];
+            const directional = this._revealProgress(col, row);
+            const threshold = seed * 0.72 + directional * 0.28;
+            const local = Math.max(0, Math.min(1, (progress - threshold + 0.16) / 0.16));
+            const remaining = 1 - local;
+            const fragment = this._seedNextRowCache[index];
+            const intensity = remaining * (0.45 + fragment * 0.55);
+            const charIdx = Math.floor((fragment * 0.65 + remaining * 0.35) * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.8);
         }
 
         _lumaFoldCell(col, row, x, y) {

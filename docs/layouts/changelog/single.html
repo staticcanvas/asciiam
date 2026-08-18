@@ -6,7 +6,7 @@
   <h1 class="hero-title">{{ .Title }}</h1>
   {{ with .Description }}<p class="hero-desc">{{ . }}</p>{{ end }}
   <dl class="release-summary" aria-label="Current release summary">
-    <div><dt>Current</dt><dd>v{{ hugo.Data.presets.version }}</dd></div>
+    <div><dt>Current</dt><dd>v{{ site.Data.presets.version }}</dd></div>
     <div><dt>API status</dt><dd>Documented baseline</dd></div>
     <div><dt>License</dt><dd>MIT</dd></div>
   </dl>

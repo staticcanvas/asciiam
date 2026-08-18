@@ -7,7 +7,7 @@
   <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb"></div></div>
   <div class="hero-layout">
     <div class="hero-content">
-      <p class="hero-eyebrow">Asciiam Release v{{ hugo.Data.presets.version }}</p>
+      <p class="hero-eyebrow">Asciiam Release v{{ site.Data.presets.version }}</p>
       <h1 class="hero-title">ASCII Multi-Purpose<br><em>Animation Engine.</em></h1>
       <p class="hero-desc">An efficient, dependency-free HTML5 Canvas & WebGL2 animation engine for dynamic ASCII backgrounds, real-time image/GIF sampling, 3D GLTF model rendering, and morphing sequence transitions.</p>
       <div class="hero-actions">
@@ -61,8 +61,8 @@
       <p>Animation modes, sequences, glyph selection, and image masks share one public API. WebGL2 batches visible glyphs into an instanced draw. Canvas 2D remains available for explicit CPU rendering and automatic fallback.</p>
       <div class="stats-row" aria-label="Project characteristics">
         <div class="stat"><strong>0</strong><span>Runtime dependencies</span></div>
-        <div class="stat"><strong>{{ hugo.Data.presets.builtInModeCount }}</strong><span>Built-in modes</span></div>
-        <div class="stat"><strong>{{ len hugo.Data.presets.presets }}</strong><span>Included presets</span></div>
+        <div class="stat"><strong>{{ site.Data.presets.builtInModeCount }}</strong><span>Built-in modes</span></div>
+        <div class="stat"><strong>{{ len site.Data.presets.presets }}</strong><span>Included presets</span></div>
       </div>
     </section>
     <section class="doc-section" data-reveal>
@@ -83,7 +83,7 @@
       <p>The engine, package outputs, and browser utility cover the following development paths.</p>
       <div class="feature-grid" aria-label="asciiam feature overview">
         <article class="feature-card"><span>Render</span><h3>GPU and CPU backends</h3><p>WebGL2 instanced glyph rendering with automatic or explicit Canvas 2D fallback.</p></article>
-        <article class="feature-card"><span>Compose</span><h3>{{ hugo.Data.presets.builtInModeCount }} built-in modes</h3><p>Fields, reveals, particles, pointer interactions, sampled images, meshes, and custom callbacks.</p></article>
+        <article class="feature-card"><span>Compose</span><h3>{{ site.Data.presets.builtInModeCount }} built-in modes</h3><p>Fields, reveals, particles, pointer interactions, sampled images, meshes, and custom callbacks.</p></article>
         <article class="feature-card"><span>Sequence</span><h3>Ordered playback</h3><p>Per-step delays, durations, repeat rules, transitions, media sources, callbacks, and lifecycle events.</p></article>
         <article class="feature-card"><span>Images</span><h3>Image-to-ASCII sampling</h3><p>Cover and contain fitting, animation masks, source color, luminance mapping, RGB ranges, rotation, and mirroring.</p></article>
         <article class="feature-card"><span>3D</span><h3>Meshes and glTF/GLB</h3><p>Procedural primitives, typed-array geometry, model loading, transforms, camera controls, and raster styles.</p></article>
@@ -168,7 +168,7 @@
         </a>
       </div>
       <nav class="asset-links" aria-label="Asset documentation">
-        <a href="{{ "/gallery/" | relURL }}"><strong>{{ len hugo.Data.presets.presets }} presets</strong><span>Preview and copy configurations</span></a>
+        <a href="{{ "/gallery/" | relURL }}"><strong>{{ len site.Data.presets.presets }} presets</strong><span>Preview and copy configurations</span></a>
         <a href="{{ "/guides/images/" | relURL }}"><strong>Image inputs</strong><span>Raster, SVG, GIF, fitting, and masks</span></a>
         <a href="{{ "/guides/3d-models/" | relURL }}"><strong>3D inputs</strong><span>Primitives, typed arrays, glTF, and GLB</span></a>
         <a href="{{ "/version/" | relURL }}"><strong>Package artifacts</strong><span>ESM, CommonJS, UMD, types, and maps</span></a>

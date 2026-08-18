@@ -16,9 +16,9 @@
         <p data-example-description>Use library defaults with only a render target.</p>
       </div>
       <div class="example-select-wrapper">
-        <label for="example-select" class="example-select-label">Preset configuration ({{ len hugo.Data.examples.examples }})</label>
+        <label for="example-select" class="example-select-label">Preset configuration ({{ len site.Data.examples.examples }})</label>
         <select id="example-select" class="example-select-dropdown" data-example-select aria-label="Select configuration preset">
-          {{ range hugo.Data.examples.examples }}
+          {{ range site.Data.examples.examples }}
           <option value="{{ .id }}" data-example-id="{{ .id }}" data-options="{{ .options | jsonify | base64Encode }}" data-description="{{ .description }}" data-title="{{ .title }}">{{ .level }} — {{ .title }}</option>
           {{ end }}
         </select>

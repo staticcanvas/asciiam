@@ -142,7 +142,7 @@ describe('Hugo documentation source', () => {
     expect(documentation).not.toContain('complete control surface');
     expect(documentation).not.toContain('package-version query');
     expect(documentation).not.toContain('pending-tasks.md');
-    expect(projectFile('README.md')).toContain('Twenty-seven built-in modes');
+    expect(projectFile('README.md')).toContain('Built-in modes including fluid dynamics');
     expect(projectFile('README.md')).toContain('| `mesh`');
     expect(projectFile('docs/content/version.md')).toContain('distributed as `@staticcanvas/asciiam`');
   });
@@ -253,7 +253,7 @@ describe('Hugo documentation source', () => {
       quality: 'balanced', fontLevels: 5, alphaLevels: 32, useGlyphAtlas: false, imageMaskMode: 'waveSweep'
     }));
     expect(layout).toContain('data-example-editor');
-    expect(layout).toContain('len hugo.Data.examples.examples');
+    expect(layout).toContain('len site.Data.examples.examples');
     expect(layout).toContain('data-example-utility');
     expect(script).toContain('instance?.destroy()');
     expect(script).toContain('JSON.parse(editor.value)');

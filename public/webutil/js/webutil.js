@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=__ASSET_REVISION__";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=__ASSET_REVISION__";
+import { highlightJavaScript } from "./webutil-code.js?v=61b9d46fb0b0";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=61b9d46fb0b0";
 
 const asciiam = window.asciiam;
 
@@ -153,7 +153,7 @@ document.querySelectorAll("[data-align]").forEach((button) => {
 
 const modes = [
     "plain", "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
-    "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom",
+    "irisIn", "irisOut", "dissolveIn", "dissolveOut", "assemble", "breakApart", "lumaFold", "riftLace", "echoBloom",
     "matrix", "snow", "sparkle", "fire", "starfield", "glitch", "typewriter", "orbit",
     "hoverZone", "clickZone",
 ];
@@ -165,7 +165,7 @@ function setActiveModeButton(mode) {
         button.setAttribute("aria-pressed", String(isActive));
     });
     const revealDirectionGroup = document.getElementById("revealDirectionGroup");
-    if (revealDirectionGroup) revealDirectionGroup.hidden = !["fadeIn", "fadeOut", "dissolveIn", "dissolveOut"].includes(mode);
+    if (revealDirectionGroup) revealDirectionGroup.hidden = !["fadeIn", "fadeOut", "dissolveIn", "dissolveOut", "assemble", "breakApart"].includes(mode);
     const interactionControls = document.getElementById("interactionControlsGroup");
     if (interactionControls) interactionControls.hidden = !["hoverZone", "clickZone"].includes(mode);
 }

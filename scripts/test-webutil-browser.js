@@ -133,7 +133,7 @@ async function verifyBrowser(browserType, browserName) {
         for (const id of directAuthoringControls) {
             assert.equal(await page.locator(`#${id}`).evaluate((element) => element.parentElement?.classList.contains("ctrl-bar")), true);
         }
-        assert.equal(await page.locator("#qualityTriggerBtn").evaluate((element) => element.parentElement?.id), "moreAdvancedActions");
+        assert.equal(await page.locator("#qualityTriggerBtn").evaluate((element) => element.parentElement?.classList.contains("ctrl-bar")), true);
 
         await page.setViewportSize({ width: 390, height: 844 });
         const mobileToolbar = await page.locator(".ctrl-bar").evaluate((element) => ({

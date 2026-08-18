@@ -21,7 +21,7 @@
   </div>
   <p class="gallery-status" role="status" aria-live="polite"></p>
   <div class="gallery-grid">
-    {{ range hugo.Data.presets.presets }}
+    {{ range site.Data.presets.presets }}
     <article class="preset-card card" data-preset-card data-name="{{ .name }}" data-mode="{{ .mode }}" data-category="{{ .category }}" data-previewable="{{ .previewable }}" data-options="{{ .options | jsonify | base64Encode }}">
       <div class="preset-preview" data-preset-preview data-state="queued" aria-label="Animated preview of {{ .title }}"></div>
       <header><div><h2>{{ .title }}</h2><span class="preset-mode">{{ .name }}</span></div><span class="preset-mode">{{ .mode }}</span></header>

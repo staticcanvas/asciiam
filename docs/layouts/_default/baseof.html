@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ site.Language.Locale }}">
+<html lang="{{ site.Language.Lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -36,7 +36,7 @@
           <img src="{{ "branding/asciiam-logo.svg" | relURL }}" alt="" aria-hidden="true">
           <span><span class="logo-word">ASCIIAM</span><span class="logo-sub">staticcanvas docs</span></span>
         </a>
-        <span class="version-chip">v{{ hugo.Data.presets.version }}</span>
+        <span class="version-chip">v{{ site.Data.presets.version }}</span>
       </div>
       <nav class="nav-section" aria-label="Primary documentation">
         <span class="nav-label">Documentation</span>
@@ -64,7 +64,7 @@
       </nav>
       <div class="sidebar-footer">
         <div><span class="status-dot"></span>WebGL2 / Canvas 2D</div>
-        <div class="sidebar-update">Documentation v{{ hugo.Data.presets.version }}</div>
+        <div class="sidebar-update">Documentation v{{ site.Data.presets.version }}</div>
       </div>
     </aside>
     {{ end }}
