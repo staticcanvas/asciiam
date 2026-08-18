@@ -531,6 +531,35 @@
         "sequence": null,
         "sequenceOptions": null
       }
+    },
+    {
+      "id": "bar-chart",
+      "title": "ASCII bar chart",
+      "level": "31",
+      "description": "Dependency-free real-time vertical bar chart with sub-cell block characters, top values, and axis guides.",
+      "options": {
+        "mode": "chart",
+        "chartType": "bar",
+        "chartTitle": "Server Workload",
+        "chartData": [45, 88, 62, 91, 35, 76, 50, 82],
+        "chartShowAxes": true,
+        "chartShowValues": true,
+        "color": "#72F1B8"
+      }
+    },
+    {
+      "id": "donut-chart",
+      "title": "ASCII donut chart",
+      "level": "32",
+      "description": "Render interactive donut rings and sparkline trends using ASCII matrix shading.",
+      "options": {
+        "mode": "chart",
+        "chartType": "donut",
+        "chartTitle": "Revenue Distribution",
+        "chartData": [15, 32, 48, 72, 95, 60, 84],
+        "chartShowAxes": true,
+        "color": "#C04FFF"
+      }
     }
   ]
 }

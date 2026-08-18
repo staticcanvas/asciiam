@@ -173,7 +173,7 @@ describe('demo toolbar quality-of-life controls', () => {
     const advanced = document.getElementById('moreAdvancedActions');
     const workspace = document.getElementById('moreWorkspaceActions');
 
-    expect(primaryLabels).toHaveLength(14);
+    expect(primaryLabels).toHaveLength(16);
     expect(primaryLabels.join(' ')).toContain('Preset');
     expect(primaryLabels.join(' ')).toContain('Quality');
     expect(primaryLabels.join(' ')).toContain('Sequence');
@@ -186,6 +186,8 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(primaryLabels.join(' ')).toContain('Advanced');
     expect(primaryLabels.join(' ')).toContain('Image');
     expect(primaryLabels.join(' ')).toContain('3D');
+    expect(primaryLabels.join(' ')).toContain('Chart');
+    expect(primaryLabels.join(' ')).toContain('None');
     expect(primaryLabels.join(' ')).toContain('Reset');
     expect(primaryLabels.join(' ')).toContain('Code');
     expect(primaryLabels.indexOf('Image none')).toBeLessThan(primaryLabels.indexOf('3D none'));
@@ -238,7 +240,7 @@ describe('demo toolbar quality-of-life controls', () => {
   it('offers transition-focused and coined animation modes', () => {
     activeDom = createDemo();
     const { document } = activeDom.window;
-    ['irisIn', 'irisOut', 'dissolveIn', 'dissolveOut', 'lumaFold', 'riftLace', 'echoBloom'].forEach((mode) => {
+    ['irisIn', 'irisOut', 'dissolveIn', 'dissolveOut', 'assemble', 'breakApart', 'lumaFold', 'riftLace', 'echoBloom'].forEach((mode) => {
       const button = document.querySelector(`[data-mode="${mode}"]`);
       expect(button).not.toBeNull();
       button.click();

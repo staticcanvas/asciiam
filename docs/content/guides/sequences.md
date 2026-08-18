@@ -14,7 +14,7 @@ web utility displays nodes left to right in playback order; its image selector c
 retain the current source, clear it, or load one of the included images.
 
 `repeat` and sequence `loop` control different boundaries. A step with `repeat: true`
-restarts a finite mode such as `fadeIn`, `fadeOut`, `irisIn`, `dissolveOut`, or
+restarts a finite mode such as `fadeIn`, `fadeOut`, `irisIn`, `dissolveOut`, `assemble`, or
 `typewriter` while that step remains active. It defaults to `false`, so a finite mode
 reaches its final frame and holds it until the next step. Sequence `loop` controls
 whether playback returns to the first step after the final step.

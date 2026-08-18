@@ -10,7 +10,7 @@ import {
     MeshCellRasterizer,
     normalizeMeshData,
 } from "./mesh.js";
-import { loadGltf } from "./gltf.js";
+import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
 "use strict";
 
@@ -33,6 +33,161 @@ import { loadGltf } from "./gltf.js";
             chart += SPARKLINE_LEVELS[level];
         }
         return chart;
+    }
+
+    /**
+     * Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision.
+     * Works with 2D canvas context or creates a temporary offscreen measurement canvas.
+     */
+    function calibrateFontMetrics(target, fontFamily = "monospace", fontSize = 14) {
+        let ctx = target && typeof target.measureText === "function" ? target : null;
+        if (!ctx && typeof target === "string") {
+            fontSize = typeof fontFamily === "number" ? fontFamily : fontSize;
+            fontFamily = target;
+        }
+        if (!ctx) {
+            const charW = Math.ceil(fontSize * 0.6);
+            const charH = Math.ceil(fontSize * 1.2);
+            return { charW, charH, ascent: fontSize * 0.8, descent: fontSize * 0.2, baselineOffset: fontSize * 0.8 };
+        }
+
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        const sampleText = "M|g@";
+        const mSample = ctx.measureText(sampleText);
+        const mM = ctx.measureText("M");
+
+        const charW = Math.max(1, mM.width);
+        let ascent = fontSize * 0.8;
+        let descent = fontSize * 0.2;
+
+        if (typeof mSample.actualBoundingBoxAscent === "number" && typeof mSample.actualBoundingBoxDescent === "number" && (mSample.actualBoundingBoxAscent > 0 || mSample.actualBoundingBoxDescent > 0)) {
+            ascent = mSample.actualBoundingBoxAscent;
+            descent = Math.max(0, mSample.actualBoundingBoxDescent);
+        } else if (typeof mSample.fontBoundingBoxAscent === "number" && typeof mSample.fontBoundingBoxDescent === "number") {
+            ascent = mSample.fontBoundingBoxAscent;
+            descent = mSample.fontBoundingBoxDescent;
+        }
+
+        const charH = Math.max(1, Math.ceil(ascent + descent));
+        const baselineOffset = ascent;
+
+        return {
+            charW,
+            charH,
+            ascent,
+            descent,
+            baselineOffset,
+        };
+    }
+
+    /** Headless cell frame generator for Node.js/Bun/Deno SSR or CLI rasterization. */
+    function renderFrame(options = {}) {
+        const cols = Math.max(1, options.cols || 80);
+        const rows = Math.max(1, options.rows || 24);
+        const mode = options.mode || "matrix";
+        const t = typeof options.time === "number" ? options.time : 0;
+        const rawCharSet = options.charSet || "ascii-extended";
+        const charSetStr = typeof rawCharSet === "string" 
+            ? (asciiam.CHARACTER_SETS?.[rawCharSet] || rawCharSet)
+            : " .:-=+*#%@";
+        const invert = !!options.invert;
+
+        const baseColor = options.color || "#00ff66";
+        let baseR = 0, baseG = 255, baseB = 102;
+        if (typeof baseColor === "string" && baseColor.startsWith("#")) {
+            const hex = baseColor.slice(1);
+            if (hex.length === 3) {
+                baseR = parseInt(hex[0] + hex[0], 16) || 0;
+                baseG = parseInt(hex[1] + hex[1], 16) || 255;
+                baseB = parseInt(hex[2] + hex[2], 16) || 102;
+            } else if (hex.length >= 6) {
+                baseR = parseInt(hex.slice(0, 2), 16) || 0;
+                baseG = parseInt(hex.slice(2, 4), 16) || 255;
+                baseB = parseInt(hex.slice(4, 6), 16) || 102;
+            }
+        }
+
+        const charCount = Math.max(1, charSetStr.length);
+        const grid = [];
+
+        for (let row = 0; row < rows; row++) {
+            const rowData = [];
+            const ny = (row / Math.max(1, rows - 1)) * 2 - 1;
+
+            for (let col = 0; col < cols; col++) {
+                const nx = (col / Math.max(1, cols - 1)) * 2 - 1;
+                let val = 0;
+
+                if (mode === "plasma") {
+                    val = 0.5 + 0.5 * (Math.sin(nx * 4 + t * 2) + Math.cos(ny * 4 + t * 1.5) + Math.sin((nx + ny) * 3 + t * 2.5)) / 3;
+                } else if (mode === "wave") {
+                    val = 0.5 + 0.5 * Math.sin(nx * 5 + t * 3) * Math.cos(ny * 5 + t * 2);
+                } else if (mode === "vortex") {
+                    const angle = Math.atan2(ny, nx);
+                    const r = Math.sqrt(nx * nx + ny * ny);
+                    val = 0.5 + 0.5 * Math.sin(angle * 4 + r * 10 - t * 4);
+                } else if (mode === "fire") {
+                    const noiseVal = Math.sin(col * 0.4 + row * 0.2 + t * 5.0) * 0.5 + 0.5;
+                    const heat = Math.max(0, 1 - (row / rows) - noiseVal * 0.3);
+                    val = Math.min(1, Math.max(0, heat));
+                } else if (mode === "snow") {
+                    const dropRow = Math.floor((t * 8 + col * 3.7) % rows);
+                    val = row === dropRow ? 0.95 : (row === (dropRow + 1) % rows ? 0.4 : 0.05);
+                } else if (mode === "matrix") {
+                    const dropRow = Math.floor((t * 12 + col * 5.3) % (rows + 10));
+                    const dist = dropRow - row;
+                    if (dist === 0) val = 1.0;
+                    else if (dist > 0 && dist < 8) val = (8 - dist) / 8;
+                    else val = 0.02;
+                } else if (mode === "starfield") {
+                    const r = Math.sqrt(nx * nx + ny * ny);
+                    val = (Math.sin(r * 12 - t * 6) > 0.8) ? 0.9 : 0.05;
+                } else if (mode === "ripple") {
+                    const r = Math.sqrt(nx * nx + ny * ny);
+                    val = 0.5 + 0.5 * Math.sin(r * 16 - t * 5);
+                } else if (mode === "sparkle") {
+                    const p = Math.sin(col * 12.3 + row * 45.6 + t * 4);
+                    val = p > 0.7 ? (p - 0.7) / 0.3 : 0.05;
+                } else if (mode === "orbit") {
+                    const angle = Math.atan2(ny, nx);
+                    const r = Math.sqrt(nx * nx + ny * ny);
+                    val = Math.abs(r - 0.5 - 0.1 * Math.sin(angle * 3 + t * 2)) < 0.15 ? 0.85 : 0.05;
+                } else {
+                    val = 0.5 + 0.5 * Math.sin(nx * 2 + ny * 2 + t);
+                }
+
+                val = Math.max(0, Math.min(1, val));
+                if (invert) val = 1 - val;
+
+                const charIndex = Math.min(charCount - 1, Math.floor(val * charCount));
+                const char = charSetStr[charIndex] || " ";
+
+                rowData.push({
+                    char,
+                    r: Math.round(baseR * val),
+                    g: Math.round(baseG * val),
+                    b: Math.round(baseB * val),
+                    a: val,
+                });
+            }
+            grid.push(rowData);
+        }
+        return grid;
+    }
+
+    /** Headless multi-line ASCII string generator for SSR, terminal, or CLI rendering. */
+    function renderToString(options = {}) {
+        const grid = renderFrame(options);
+        const ansi = !!options.ansi;
+
+        return grid
+            .map((row) => {
+                if (!ansi) return row.map((cell) => cell.char).join("");
+                return row
+                    .map((cell) => `\x1b[38;2;${cell.r};${cell.g};${cell.b}m${cell.char}\x1b[0m`)
+                    .join("");
+            })
+            .join("\n");
     }
 
     /**
@@ -336,10 +491,10 @@ import { loadGltf } from "./gltf.js";
         /** Canonical inventory used by documentation and integration tooling. */
         static BUILT_IN_MODES = Object.freeze([
             "none", "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
-            "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace",
+            "irisIn", "irisOut", "dissolveIn", "dissolveOut", "assemble", "breakApart", "lumaFold", "riftLace",
             "echoBloom", "matrix", "snow", "sparkle", "fire", "starfield", "glitch",
             "typewriter", "orbit", "hoverZone", "clickZone", "image", "custom",
-            "mesh", "static",
+            "mesh", "static", "chart",
         ]);
 
         static CHARACTER_SETS = {
@@ -516,6 +671,13 @@ import { loadGltf } from "./gltf.js";
                 colorFromImage: true,
                 animateImageMask: true,
             },
+            telemetryChart: {
+                mode: "chart",
+                color: "#4FA8FF",
+                chartType: "bar",
+                chartTitle: "System Telemetry",
+                chartData: [12, 45, 78, 34, 90, 60, 85, 40],
+            },
         };
 
         // Registry for user-defined named modes: asciiam.registerMode('name', fn)
@@ -556,6 +718,31 @@ import { loadGltf } from "./gltf.js";
             return loadGltf(source, options);
         }
 
+        /** Register a custom decoder callback for a compressed glTF extension (e.g. KHR_draco_mesh_compression). */
+        static registerGltfDecoder(name, decoderFn) {
+            return registerGltfDecoder(name, decoderFn);
+        }
+
+        /** Returns list of registered glTF extension decoders. */
+        static getGltfDecoders() {
+            return getGltfDecoders();
+        }
+
+        /** Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision. */
+        static calibrateFontMetrics(target, fontFamily, fontSize) {
+            return calibrateFontMetrics(target, fontFamily, fontSize);
+        }
+
+        /** Headless cell frame generator for Node.js, Bun, Deno, or CLI text outputs. */
+        static renderFrame(options) {
+            return renderFrame(options);
+        }
+
+        /** Headless ASCII multi-line text generator for SSR, terminal, or CLI output. */
+        static renderToString(options) {
+            return renderToString(options);
+        }
+
         /** Feature-detect before constructing, for graceful fallback in older browsers. */
         static isSupported() {
             try {
@@ -581,7 +768,8 @@ import { loadGltf } from "./gltf.js";
                 this._disabled = true;
                 this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.clearImage = this.setMesh = this.clearMesh = this.clearModel =
                     this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
-                    this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
+                    this.seekSequence = this.nextSequenceStep = this.setRenderer = this.setLayers = () => {};
+                this.getLayers = () => [];
                 this.getSequenceState = () => ({ configured: false, running: false, completed: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false, loading: false, morphing: false, morphProgress: 0 });
                 this.getRendererInfo = () => ({ requested: "canvas2d", backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
                 this.getStats = () => ({ fps: 0, estimatedRefreshRate: null, frameWorkMs: null, cells: 0, drawn: 0, occupancy: 0, renderer: this.getRendererInfo(), quality: null, dpr: 1, mesh: this.getMeshInfo() });
@@ -659,7 +847,8 @@ import { loadGltf } from "./gltf.js";
                 this._disabled = true;
                 this.start = this.stop = this.destroy = this.setMode = this.setOption = this.setTarget = this.setCursor = this.triggerInteraction = this.setMesh = this.clearMesh = this.clearModel =
                     this.setSequence = this.playSequence = this.pauseSequence = this.stopSequence = this.clearSequence =
-                    this.seekSequence = this.nextSequenceStep = this.setRenderer = () => {};
+                    this.seekSequence = this.nextSequenceStep = this.setRenderer = this.setLayers = () => {};
+                this.getLayers = () => [];
                 this.getSequenceState = () => ({ configured: false, running: false, index: -1, length: 0, loop: false, elapsed: 0, waiting: false });
                 this.getRendererInfo = () => ({ requested: this._rendererRequested, backend: "canvas2d", gpuPreferred: false, acceleration: "not-requested", desynchronized: false, willReadFrequently: false });
                 this.getStats = () => ({ fps: 0, estimatedRefreshRate: null, frameWorkMs: null, cells: 0, drawn: 0, occupancy: 0, renderer: this.getRendererInfo(), quality: null, dpr: 1, mesh: this.getMeshInfo() });
@@ -690,6 +879,8 @@ import { loadGltf } from "./gltf.js";
                     direction: "horizontal",
                     revealDirection: "center",
                     revealDuration: 2.2,
+                    sweepDuration: 2.2,
+                    delayCurve: "linear",
                     align: "center",
                     minOpacity: 0.05,
                     maxOpacity: 0.85,
@@ -733,6 +924,7 @@ import { loadGltf } from "./gltf.js";
                     onModelError: null,
                     sequence: null,
                     sequenceOptions: null,
+                    layers: Array.isArray(opts.layers) ? opts.layers : null,
 
                     // --- wave tuning (previously hardcoded) ---
                     ambient: 0.35, // 0..1, base noise level between wave passes
@@ -761,6 +953,7 @@ import { loadGltf } from "./gltf.js";
                     typewriterDuration: 4.5,
 
                     // --- dependency-free 3D-to-ASCII source ---
+                    meshEnabled: true,
                     mesh: null,
                     meshPrimitive: null,
                     meshStyle: "wireframe",
@@ -773,6 +966,22 @@ import { loadGltf } from "./gltf.js";
                     meshMaxVertices: 100000,
                     meshMaxPrimitives: 100000,
                     model: null,
+
+                    // --- sampled image source ---
+                    imageEnabled: true,
+
+                    // --- dependency-free ASCII chart source ---
+                    chartEnabled: false,
+                    chartData: null, // number[] | {label, value, color}[] | number[][]
+                    chartType: "bar", // bar | horizontalBar | line | sparkline | heatmap | donut
+                    chartTitle: "",
+                    chartShowValues: true,
+                    chartShowAxes: true,
+                    chartShowLegend: true,     // render per-series label legend below chart
+                    chartColors: null,          // string[] | null  — per-bar/series color overrides
+                    chartScaleMin: null,        // number | null  — explicit Y-axis minimum (null = auto 0)
+                    chartScaleMax: null,        // number | null  — explicit Y-axis maximum (null = auto max)
+                    chartAnimateItems: false,   // stagger-reveal individual bars/segments on entry
 
                     // --- extensibility ---
                     customCell: null, // (api) => ({char,opacity,intensity,bold,color}) | null
@@ -874,6 +1083,7 @@ import { loadGltf } from "./gltf.js";
 
             this._bindLifecycle();
             this._bindCursor();
+            this._layers = this._normalizeLayers(this.opts.layers);
             this._buildFontCache();
             this._resize();
 
@@ -1057,6 +1267,10 @@ import { loadGltf } from "./gltf.js";
         }
         /** Updates one option and rebuilds only its dependent state or caches. */
         setOption(key, value) {
+            if (key === "layers") {
+                this.setLayers(value);
+                return;
+            }
             if (key === "mode") {
                 this.setMode(value);
                 return;
@@ -1102,11 +1316,16 @@ import { loadGltf } from "./gltf.js";
                 this._buildEdgeFadeCache();
                 this._waveBaseLayer = null;
             }
+            if (key === "matrixDensity" || key === "snowDensity" || key === "sparkleDensity" || key === "fireDensity" || key === "starfieldDensity" || key === "orbitDensity") {
+                if (this.cols > 0 && this.rows > 0) {
+                    this._adaptStateOnResize(this.cols, this.rows, this.cols, this.rows);
+                }
+            }
             if (key === "align") {
                 this._buildSpatialCache();
                 this._buildCurrentCache();
             }
-            if ((key === "revealDirection" || key === "revealDuration") && ["fadeIn", "fadeOut", "irisIn", "irisOut", "dissolveIn", "dissolveOut"].includes(this.opts.mode)) {
+            if ((key === "revealDirection" || key === "revealDuration") && ["fadeIn", "fadeOut", "irisIn", "irisOut", "dissolveIn", "dissolveOut", "assemble", "breakApart"].includes(this.opts.mode)) {
                 this._time = 0;
                 this._lastT = null;
             }
@@ -1160,6 +1379,33 @@ import { loadGltf } from "./gltf.js";
                     this._draw(16.7);
                 }
             }
+        }
+
+        /** Sets an array of layer configurations to composite in order during frame rendering. */
+        setLayers(layers) {
+            this._layers = this._normalizeLayers(layers);
+            this.opts.layers = this._layers;
+            return this;
+        }
+
+        /** Returns the current list of active composition layers. */
+        getLayers() {
+            return this._layers ? this._layers.map((l) => ({
+                mode: l.mode,
+                options: l.options ? Object.assign({}, l.options) : null,
+                opacity: l.opacity,
+                blendMode: l.blendMode,
+            })) : [];
+        }
+
+        _normalizeLayers(layers) {
+            if (!Array.isArray(layers) || layers.length === 0) return null;
+            return layers.map((layer) => ({
+                mode: typeof layer.mode === "string" ? layer.mode : "wave",
+                options: layer.options && typeof layer.options === "object" ? Object.assign({}, layer.options) : null,
+                opacity: typeof layer.opacity === "number" ? Math.max(0, Math.min(1, layer.opacity)) : 1.0,
+                blendMode: typeof layer.blendMode === "string" ? layer.blendMode : "source-over",
+            }));
         }
 
         /** Validate and retain typed-array geometry for the mesh animation mode. */
@@ -1273,6 +1519,34 @@ import { loadGltf } from "./gltf.js";
             this._meshRasterOptions.projection = this.opts.meshProjection;
             this._meshRasterOptions.camera = this.opts.meshCamera;
             this._meshRasterOptions.light = this.opts.meshLight;
+        }
+
+        /** Generates a 2D grid of cell character and color data for the current state or specified options. */
+        renderFrame(options = {}) {
+            return renderFrame({
+                cols: this.cols || 80,
+                rows: this.rows || 24,
+                mode: this.opts.mode || "matrix",
+                charSet: this.opts.charSet,
+                invert: this.opts.invert,
+                color: this.opts.color,
+                align: this.opts.align,
+                ...options,
+            });
+        }
+
+        /** Generates a multi-line ASCII string for the current state or specified options without requiring DOM canvas. */
+        renderToString(options = {}) {
+            return renderToString({
+                cols: this.cols || 80,
+                rows: this.rows || 24,
+                mode: this.opts.mode || "matrix",
+                charSet: this.opts.charSet,
+                invert: this.opts.invert,
+                color: this.opts.color,
+                align: this.opts.align,
+                ...options,
+            });
         }
 
         /** Move the existing renderer to another container without creating a second animation loop. */
@@ -2084,9 +2358,10 @@ import { loadGltf } from "./gltf.js";
             const effectiveFontSize = this.opts.fontSize / resolutionScale;
             this._effectiveFontSize = effectiveFontSize;
             this.ctx.font = `${effectiveFontSize}px ${this.opts.fontFamily}`;
-            const m = this.ctx.measureText("M");
-            this.charW = Math.max(4, m.width * this.opts.density);
+            const metrics = calibrateFontMetrics(this.ctx, this.opts.fontFamily, effectiveFontSize);
+            this.charW = Math.max(4, metrics.charW * this.opts.density);
             this.charH = Math.max(6, effectiveFontSize * 1.2 * this.opts.density);
+            this._fontBaselineOffset = (metrics.baselineOffset || (effectiveFontSize * 0.8)) * this.opts.density;
 
             const steps = Math.max(2, Math.round(this.opts.fontLevels || 2));
             this.opts.fontLevels = steps;
@@ -2104,8 +2379,11 @@ import { loadGltf } from "./gltf.js";
 
         _getGlyphAtlas() {
             if (!this.opts.useGlyphAtlas || this.opts.gradient || this.opts.colorAnimation || this.opts.colorFromImage) return null;
+            const chartCharacters = (this.opts.mode === "chart" || this.opts.chartData || (this._layers && this._layers.some((l) => l.mode === "chart")))
+                ? this._getChartCharacters()
+                : "";
             const imageCharacters = this._imageGrid ? (this.opts.imageChars || "") : "";
-            const atlasCharacterSet = [...new Set(this.opts.charSet + imageCharacters)].join("");
+            const atlasCharacterSet = [...new Set(this.opts.charSet + imageCharacters + chartCharacters)].join("");
             if (
                 this._glyphAtlas
                 && this._glyphAtlasCharSet === atlasCharacterSet
@@ -2180,6 +2458,8 @@ import { loadGltf } from "./gltf.js";
 
         /** Re-measures the grid and invalidates geometry-dependent state and caches. */
         _resize() {
+            const oldCols = this.cols || 0;
+            const oldRows = this.rows || 0;
             const dpr = Math.min(window.devicePixelRatio || 1, this.opts.maxDPR);
             this._dpr = dpr;
             const parent = this.canvas.parentElement || this.canvas;
@@ -2207,7 +2487,7 @@ import { loadGltf } from "./gltf.js";
             this._columnX = new Float32Array(this.cols);
             this._rowY = new Float32Array(this.rows);
             this._rowBaseline = new Float32Array(this.rows);
-            const baselineOffset = this.charH * 0.78;
+            const baselineOffset = this._fontBaselineOffset || (this.charH * 0.78);
             for (let col = 0; col < this.cols; col++) this._columnX[col] = col * this.charW;
             for (let row = 0; row < this.rows; row++) {
                 const y = row * this.charH;
@@ -2226,15 +2506,127 @@ import { loadGltf } from "./gltf.js";
             this._canvasRect = this.canvas.getBoundingClientRect();
             if (this._sourceImage) this._resampleImage();
             this._scheduleAnimatedFrameCapture();
-            if (this.opts.mode === "matrix") this._initMatrix();
-            if (this.opts.mode === "snow") this._initSnow();
-            if (this.opts.mode === "sparkle") this._initSparkle();
-            if (this.opts.mode === "fire") this._initFire();
-            if (this.opts.mode === "starfield") this._initStarfield();
-            if (this.opts.mode === "orbit") this._initOrbit();
+
+            if (oldCols > 0 && oldRows > 0) {
+                this._adaptStateOnResize(oldCols, oldRows, this.cols, this.rows);
+            } else {
+                if (this.opts.mode === "matrix") this._initMatrix();
+                if (this.opts.mode === "snow") this._initSnow();
+                if (this.opts.mode === "sparkle") this._initSparkle();
+                if (this.opts.mode === "fire") this._initFire();
+                if (this.opts.mode === "starfield") this._initStarfield();
+                if (this.opts.mode === "orbit") this._initOrbit();
+            }
+
             if (this._reduced) this._draw(16.7);
             if (this._events.get("resize")?.size) {
                 this._emit("resize", { width: this.w, height: this.h, cols: this.cols, rows: this.rows });
+            }
+        }
+
+        _adaptStateOnResize(oldCols, oldRows, newCols, newRows) {
+            const colScale = newCols / oldCols;
+            const rowScale = newRows / oldRows;
+
+            if (this._matrix) {
+                if (newCols > oldCols) {
+                    for (let c = oldCols; c < newCols; c++) {
+                        this._matrix[c] = {
+                            y: -Math.random() * newRows,
+                            speed: 8 + Math.random() * 14,
+                            length: 6 + Math.floor(Math.random() * 10),
+                        };
+                    }
+                } else if (newCols < oldCols) {
+                    this._matrix.length = newCols;
+                }
+                for (let c = 0; c < this._matrix.length; c++) {
+                    if (this._matrix[c]) this._matrix[c].y *= rowScale;
+                }
+            } else if (this.opts.mode === "matrix") {
+                this._initMatrix();
+            }
+
+            if (this._snow) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.snowDensity));
+                for (let i = 0; i < this._snow.length; i++) {
+                    const p = this._snow[i];
+                    p.col = Math.min(newCols - 1, Math.max(0, Math.floor(p.col * colScale)));
+                    p.y *= rowScale;
+                }
+                while (this._snow.length < targetCount) {
+                    this._snow.push({
+                        col: Math.floor(Math.random() * newCols),
+                        y: Math.random() * newRows,
+                        speed: 2 + Math.random() * 5,
+                        phase: Math.random() * Math.PI * 2,
+                        drift: 0.3 + Math.random() * 0.6,
+                    });
+                }
+                if (this._snow.length > targetCount) this._snow.length = targetCount;
+            } else if (this.opts.mode === "snow") {
+                this._initSnow();
+            }
+
+            if (this._sparkle) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.sparkleDensity));
+                for (let i = 0; i < this._sparkle.length; i++) {
+                    const p = this._sparkle[i];
+                    p.col = Math.min(newCols - 1, Math.max(0, Math.floor(p.col * colScale)));
+                    p.row = Math.min(newRows - 1, Math.max(0, Math.floor(p.row * rowScale)));
+                }
+                while (this._sparkle.length < targetCount) {
+                    this._sparkle.push({
+                        col: Math.floor(Math.random() * newCols),
+                        row: Math.floor(Math.random() * newRows),
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.6 + Math.random() * 1.4,
+                    });
+                }
+                if (this._sparkle.length > targetCount) this._sparkle.length = targetCount;
+            } else if (this.opts.mode === "sparkle") {
+                this._initSparkle();
+            }
+
+            if (this._fire) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.fireDensity));
+                for (let i = 0; i < this._fire.length; i++) {
+                    const p = this._fire[i];
+                    p.col *= colScale;
+                    p.y *= rowScale;
+                }
+                while (this._fire.length < targetCount) {
+                    this._resetFireParticle({}, true);
+                }
+                if (this._fire.length > targetCount) this._fire.length = targetCount;
+            } else if (this.opts.mode === "fire") {
+                this._initFire();
+            }
+
+            if (this._starfield) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.starfieldDensity));
+                while (this._starfield.length < targetCount) {
+                    this._resetStar({}, true);
+                }
+                if (this._starfield.length > targetCount) this._starfield.length = targetCount;
+            } else if (this.opts.mode === "starfield") {
+                this._initStarfield();
+            }
+
+            if (this._orbit) {
+                const targetCount = Math.max(1, Math.round(newCols * newRows * this.opts.orbitDensity));
+                const radiusLimit = Math.min(newCols, newRows) * 0.45;
+                while (this._orbit.length < targetCount) {
+                    this._orbit.push({
+                        angle: Math.random() * Math.PI * 2,
+                        radius: radiusLimit * (0.12 + Math.random() * 0.82),
+                        speed: (0.28 + Math.random() * 0.7) * (Math.random() > 0.2 ? 1 : -1),
+                        phase: Math.random() * Math.PI * 2,
+                    });
+                }
+                if (this._orbit.length > targetCount) this._orbit.length = targetCount;
+            } else if (this.opts.mode === "orbit") {
+                this._initOrbit();
             }
         }
 
@@ -2728,43 +3120,14 @@ import { loadGltf } from "./gltf.js";
 
         // ---- main draw loop ----
         /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
+        // ---- main draw loop ----
+        /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
         _draw(dt) {
             if (this._webgl) {
                 this._drawWebGL(dt);
                 return;
             }
             const ctx = this.ctx;
-
-            if (this.opts.mode === "wave") {
-                const extent = this.opts.direction === "diagonal" ? this.w + this.h : this.opts.direction === "vertical" ? this.h : this.w;
-                const travel = this.opts.direction === "diagonal" ? 160 : 140;
-                this._wavePosition = ((this._time * travel) % (extent + 300)) - 150;
-                this._waveBand = extent * this.opts.bandWidth;
-            } else if (this.opts.mode === "current") {
-                this._currentTimeSinX = Math.sin(this._time * 1.1);
-                this._currentTimeCosX = Math.cos(this._time * 1.1);
-                this._currentTimeSinY = Math.sin(-this._time * 0.8);
-                this._currentTimeCosY = Math.cos(-this._time * 0.8);
-                this._currentTimeSinXY = Math.sin(this._time * 1.6);
-                this._currentTimeCosXY = Math.cos(this._time * 1.6);
-            } else if (this.opts.mode === "ripple") {
-                this._rippleTimeSin = Math.sin(-this._time * 2.4);
-                this._rippleTimeCos = Math.cos(-this._time * 2.4);
-            } else if (this.opts.mode === "vortex") {
-                this._vortexTimeSin = Math.sin(-this._time * 2);
-                this._vortexTimeCos = Math.cos(-this._time * 2);
-            } else if (this.opts.mode === "plasma") {
-                this._plasmaTimeSinA = Math.sin(this._time * 0.9);
-                this._plasmaTimeCosA = Math.cos(this._time * 0.9);
-                this._plasmaTimeSinB = Math.sin(-this._time * 1.3);
-                this._plasmaTimeCosB = Math.cos(-this._time * 1.3);
-                this._plasmaTimeSinC = Math.sin(this._time * 0.55);
-                this._plasmaTimeCosC = Math.cos(this._time * 0.55);
-            } else if (this.opts.mode === "image") {
-                const imageRippleTime = -this._time * 2.2;
-                this._imageRippleTimeSin = Math.sin(imageRippleTime);
-                this._imageRippleTimeCos = Math.cos(imageRippleTime);
-            }
 
             if (this.opts.trail > 0) {
                 ctx.save();
@@ -2781,6 +3144,59 @@ import { loadGltf } from "./gltf.js";
             }
 
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawCanvasBackdrop();
+
+            if (this._layers && this._layers.length > 0) {
+                const origMode = this.opts.mode;
+                let totalDrawn = 0;
+                for (let i = 0; i < this._layers.length; i++) {
+                    const layer = this._layers[i];
+                    ctx.save();
+                    ctx.globalAlpha = layer.opacity ?? 1;
+                    if (layer.blendMode) ctx.globalCompositeOperation = layer.blendMode;
+
+                    this.opts.mode = layer.mode;
+                    this._prepareModeFrame();
+                    ctx.textBaseline = "alphabetic";
+                    this._lastFillStyle = null;
+                    this._lastFont = null;
+                    this._lastAlpha = -1;
+
+                    this._pulseFactor = this.opts.pulse
+                        ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                        : 1;
+                    this._updateAnimatedColor();
+
+                    const globalGradient = (layer.options?.gradient || this.opts.gradient) && !this.opts.colorFromImage ? this._getGradient() : null;
+                    this._activeGlyphAtlas = this._getGlyphAtlas();
+                    const waveBase = layer.mode === "wave" ? this._getWaveBaseLayer() : null;
+                    if (waveBase) {
+                        ctx.drawImage(waveBase.canvas, 0, 0, waveBase.canvas.width, waveBase.canvas.height, 0, 0, this.w, this.h);
+                    }
+                    this._drawFillStyle = globalGradient;
+                    let drawn = 0;
+
+                    if (layer.mode === "mesh") {
+                        drawn = this._drawMesh(globalGradient);
+                    } else if (waveBase) {
+                        drawn = this._drawCachedHorizontalWave(waveBase, globalGradient);
+                    } else if (SPARSE_MODES.has(layer.mode)) {
+                        if (this._imageGrid) drawn += this._drawImageSourceBase(globalGradient);
+                        drawn += this._drawSparse(dt, globalGradient);
+                    } else {
+                        drawn = this._drawDense(globalGradient);
+                    }
+                    totalDrawn += drawn;
+                    ctx.restore();
+                }
+                if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawCanvasBackdrop();
+                ctx.globalAlpha = 1;
+                ctx.globalCompositeOperation = "source-over";
+                this.opts.mode = origMode;
+                this._lastDrawnCount = totalDrawn;
+                return;
+            }
+
+            this._prepareModeFrame();
             ctx.textBaseline = "alphabetic";
             this._lastFillStyle = null;
             this._lastFont = null;
@@ -2793,7 +3209,7 @@ import { loadGltf } from "./gltf.js";
 
             const globalGradient = this.opts.gradient && !this.opts.colorFromImage ? this._getGradient() : null;
             this._activeGlyphAtlas = this._getGlyphAtlas();
-            const waveBase = this._getWaveBaseLayer();
+            const waveBase = this.opts.mode === "wave" ? this._getWaveBaseLayer() : null;
             if (waveBase) {
                 ctx.drawImage(waveBase.canvas, 0, 0, waveBase.canvas.width, waveBase.canvas.height, 0, 0, this.w, this.h);
             }
@@ -2809,6 +3225,9 @@ import { loadGltf } from "./gltf.js";
                 drawn += this._drawSparse(dt, globalGradient);
             } else {
                 drawn = this._drawDense(globalGradient);
+            }
+            if (this._mesh && this._meshRasterizer && this.opts.mode !== "mesh") {
+                drawn += this._drawMesh(globalGradient);
             }
 
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawCanvasBackdrop();
@@ -2865,15 +3284,6 @@ import { loadGltf } from "./gltf.js";
         }
 
         _drawWebGL(dt) {
-            this._prepareModeFrame();
-            this._pulseFactor = this.opts.pulse
-                ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
-                : 1;
-            this._updateAnimatedColor();
-            const atlas = this._getWebGLAtlas();
-            this._webgl.setAtlas(atlas.canvas, atlas.key);
-            this._activeWebGLAtlas = atlas;
-
             const background = this._colorToRgba(this.opts.background === "transparent" ? "transparent" : this.opts.background);
             const preserve = this.opts.trail > 0;
             this._webgl.begin(background, preserve);
@@ -2883,6 +3293,52 @@ import { loadGltf } from "./gltf.js";
                 this._webgl.surface(trail);
             }
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement !== "over") this._drawWebGLBackdrop();
+
+            if (this._layers && this._layers.length > 0) {
+                const origMode = this.opts.mode;
+                let totalDrawn = 0;
+                for (let i = 0; i < this._layers.length; i++) {
+                    const layer = this._layers[i];
+                    this.opts.mode = layer.mode;
+                    this._prepareModeFrame();
+                    this._pulseFactor = this.opts.pulse
+                        ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                        : 1;
+                    this._updateAnimatedColor();
+                    const atlas = this._getWebGLAtlas();
+                    this._webgl.setAtlas(atlas.canvas, atlas.key);
+                    this._activeWebGLAtlas = atlas;
+
+                    this._webglGradient = (layer.options?.gradient || this.opts.gradient) && !this.opts.colorFromImage ? this._prepareWebGLGradient(layer.options?.gradient || this.opts.gradient) : null;
+                    let drawn = 0;
+                    if (layer.mode === "mesh") {
+                        drawn = this._drawMesh(null);
+                    } else if (SPARSE_MODES.has(layer.mode)) {
+                        if (this._imageGrid) drawn += this._drawImageSourceBase(null);
+                        drawn += this._drawSparse(dt, null);
+                    } else {
+                        drawn = this._drawDense(null);
+                    }
+                    totalDrawn += drawn;
+                }
+                this._webgl.flush(this.w, this.h, this._webglGradient);
+                if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawWebGLBackdrop();
+                this.opts.mode = origMode;
+                this._lastDrawnCount = totalDrawn;
+                this._activeWebGLAtlas = null;
+                this._webglGradient = null;
+                return;
+            }
+
+            this._prepareModeFrame();
+            this._pulseFactor = this.opts.pulse
+                ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                : 1;
+            this._updateAnimatedColor();
+            const atlas = this._getWebGLAtlas();
+            this._webgl.setAtlas(atlas.canvas, atlas.key);
+            this._activeWebGLAtlas = atlas;
+
             this._webglGradient = this.opts.gradient && !this.opts.colorFromImage ? this._prepareWebGLGradient(this.opts.gradient) : null;
             let drawn = 0;
             if (this.opts.mode === "mesh") {
@@ -2892,6 +3348,9 @@ import { loadGltf } from "./gltf.js";
                 drawn += this._drawSparse(dt, null);
             } else {
                 drawn = this._drawDense(null);
+            }
+            if (this._mesh && this._meshRasterizer && this.opts.mode !== "mesh") {
+                drawn += this._drawMesh(null);
             }
             this._webgl.flush(this.w, this.h, this._webglGradient);
             if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawWebGLBackdrop();
@@ -2910,9 +3369,28 @@ import { loadGltf } from "./gltf.js";
             this._webgl.surface(color, gradient);
         }
 
+        _getChartCharacters() {
+            let chars = " ▂▃▄▅▆▇█▏▎▍▌▋▊▉░▒▓┌└│─┘╱╲0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,:;%+-*·/\\_~!?()[]{}#@$^&=<>|'\"`";
+            if (this.opts.chartTitle) chars += this.opts.chartTitle;
+            const data = this.opts.chartData;
+            if (Array.isArray(data)) {
+                for (let i = 0; i < data.length; i++) {
+                    const item = data[i];
+                    if (item && typeof item === "object") {
+                        if (item.label) chars += String(item.label);
+                        if (item.name) chars += String(item.name);
+                    }
+                }
+            }
+            return chars;
+        }
+
         _getWebGLAtlas() {
+            const chartCharacters = (this.opts.mode === "chart" || this.opts.chartData || (this._layers && this._layers.some((l) => l.mode === "chart")))
+                ? this._getChartCharacters()
+                : "";
             const imageCharacters = this._imageGrid ? (this.opts.imageChars || "") : "";
-            const characters = [...new Set(this.opts.charSet + imageCharacters)];
+            const characters = [...new Set(this.opts.charSet + imageCharacters + chartCharacters)];
             const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.charH]);
             if (this._webglAtlas?.key === key) return this._webglAtlas;
             const padding = 2;
@@ -3332,7 +3810,7 @@ import { loadGltf } from "./gltf.js";
          * the active backend while minimizing repeated Canvas state changes.
          */
         _paintCell(cell, col, row, x, y, globalGradient, baselineY, applyImageSource = true) {
-            if (applyImageSource && this._imageGrid && this.opts.mode !== "image") {
+            if (applyImageSource && this._imageGrid && this.opts.mode !== "image" && this.opts.mode !== "chart") {
                 cell = this._applyImageSource(cell, col, row);
             }
             if (!cell || cell.char === " ") return false;
@@ -3368,7 +3846,7 @@ import { loadGltf } from "./gltf.js";
                 const variant = (cell.bold ? this._fontRegular.length : 0) + cell.level;
                 const tile = variant * atlas.characters + character;
                 let color = cell.color;
-                if (!color && this.opts.colorFromImage && this._imageGrid) color = this._imageGrid.colors[row * this.cols + col];
+                if (!color && this.opts.colorFromImage && this._imageGrid && this.opts.mode !== "chart") color = this._imageGrid.colors[row * this.cols + col];
                 if (!color) color = this._animatedColor || this.opts.color;
                 const rgba = this._colorToRgba(color);
                 const uvOffset = tile * 4;
@@ -3410,7 +3888,7 @@ import { loadGltf } from "./gltf.js";
             }
 
             let fillStyle = cell.color;
-            if (!fillStyle && this.opts.colorFromImage && this._imageGrid) {
+            if (!fillStyle && this.opts.colorFromImage && this._imageGrid && this.opts.mode !== "chart") {
                 const imgColor = this._imageGrid.colors[row * this.cols + col];
                 if (imgColor) fillStyle = imgColor;
             }
@@ -3482,6 +3960,12 @@ import { loadGltf } from "./gltf.js";
 
         _computeCell(col, row, x, y) {
             const mode = this.opts.mode;
+            if (this.opts.chartData && mode !== "chart") {
+                const chartCell = this._chartCell(col, row, x, y);
+                if (chartCell && chartCell.char !== " " && chartCell.opacity > 0.02) {
+                    return chartCell;
+                }
+            }
             if (mode === "custom" && typeof this.opts.customCell === "function") {
                 return this._callCustom(this.opts.customCell, col, row, x, y);
             }
@@ -3519,6 +4003,10 @@ import { loadGltf } from "./gltf.js";
                     return this._dissolveCell(col, row, false);
                 case "dissolveOut":
                     return this._dissolveCell(col, row, true);
+                case "assemble":
+                    return this._assembleCell(col, row);
+                case "breakApart":
+                    return this._breakApartCell(col, row);
                 case "lumaFold":
                     return this._lumaFoldCell(col, row, x, y);
                 case "riftLace":
@@ -3531,6 +4019,8 @@ import { loadGltf } from "./gltf.js";
                     return this._clickZoneCell(col, row, x, y);
                 case "image":
                     return this._imageCell(col, row, x, y);
+                case "chart":
+                    return this._chartCell(col, row, x, y);
                 default:
                     return this._waveCell(col, row, x, y);
             }
@@ -3686,7 +4176,7 @@ import { loadGltf } from "./gltf.js";
 
         _fadeInCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
-            const totalDuration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
+            const totalDuration = Math.max(0.1, Number(this.opts.sweepDuration || this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
             const index = row * this.cols + col;
             const delay = this._revealProgress(col, row) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
@@ -3699,7 +4189,7 @@ import { loadGltf } from "./gltf.js";
 
         _fadeOutCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
-            const totalDuration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
+            const totalDuration = Math.max(0.1, Number(this.opts.sweepDuration || this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (totalDuration + 1.2) : Math.min(this._time, totalDuration + 0.6);
             const index = row * this.cols + col;
             const delay = this._revealProgress(col, row) * totalDuration * 0.8 + this._seedCache[index] * 0.4;
@@ -3714,13 +4204,21 @@ import { loadGltf } from "./gltf.js";
         _revealProgress(col, row = 0) {
             const position = col / Math.max(1, this.cols - 1);
             const vertical = row / Math.max(1, this.rows - 1);
-            if (this.opts.revealDirection === "left-to-right") return position;
-            if (this.opts.revealDirection === "right-to-left") return 1 - position;
-            if (this.opts.revealDirection === "top-to-bottom") return vertical;
-            if (this.opts.revealDirection === "bottom-to-top") return 1 - vertical;
-            if (this.opts.revealDirection === "diagonal") return (position + vertical) * 0.5;
-            if (this.opts.revealDirection === "edges") return 1 - Math.min(1, Math.abs(position - 0.5) * 2);
-            return Math.min(1, Math.abs(position - 0.5) * 2);
+            let p = 0;
+            if (this.opts.revealDirection === "left-to-right") p = position;
+            else if (this.opts.revealDirection === "right-to-left") p = 1 - position;
+            else if (this.opts.revealDirection === "top-to-bottom") p = vertical;
+            else if (this.opts.revealDirection === "bottom-to-top") p = 1 - vertical;
+            else if (this.opts.revealDirection === "diagonal") p = (position + vertical) * 0.5;
+            else if (this.opts.revealDirection === "edges") p = 1 - Math.min(1, Math.abs(position - 0.5) * 2);
+            else p = Math.min(1, Math.abs(position - 0.5) * 2);
+
+            const curve = this.opts.delayCurve;
+            if (curve === "easeIn") return p * p;
+            if (curve === "easeOut") return p * (2 - p);
+            if (curve === "easeInOut") return p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+            if (curve === "stagger") return Math.max(0, Math.min(1, p + Math.sin(p * Math.PI * 4) * 0.08));
+            return p;
         }
 
         _irisCell(col, row, x, y, reverse) {
@@ -3748,6 +4246,37 @@ import { loadGltf } from "./gltf.js";
             if (reverse) visible = 1 - visible;
             const charIdx = Math.floor((0.25 + this._seedNextRowCache[index] * 0.75) * (this.opts.charSet.length - 1));
             return this._setCell(this.opts.charSet[charIdx] || " ", visible * this.opts.maxOpacity, visible, visible > 0.82);
+        }
+
+        _assembleCell(col, row) {
+            const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
+            const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
+            const progress = Math.min(1, cycle / duration);
+            const index = row * this.cols + col;
+            const seed = this._seedCache[index];
+            const directional = this._revealProgress(col, row);
+            const threshold = seed * 0.72 + directional * 0.28;
+            const local = Math.max(0, Math.min(1, (progress - threshold + 0.16) / 0.16));
+            const fragment = this._seedNextRowCache[index];
+            const intensity = local * (0.58 + fragment * 0.42);
+            const charIdx = Math.floor((local * 0.72 + fragment * 0.28) * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.78);
+        }
+
+        _breakApartCell(col, row) {
+            const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
+            const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
+            const progress = Math.min(1, cycle / duration);
+            const index = row * this.cols + col;
+            const seed = this._seedCache[index];
+            const directional = this._revealProgress(col, row);
+            const threshold = seed * 0.72 + directional * 0.28;
+            const local = Math.max(0, Math.min(1, (progress - threshold + 0.16) / 0.16));
+            const remaining = 1 - local;
+            const fragment = this._seedNextRowCache[index];
+            const intensity = remaining * (0.45 + fragment * 0.55);
+            const charIdx = Math.floor((fragment * 0.65 + remaining * 0.35) * (this.opts.charSet.length - 1));
+            return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.8);
         }
 
         _lumaFoldCell(col, row, x, y) {
@@ -3913,6 +4442,309 @@ import { loadGltf } from "./gltf.js";
             const charIdx = Math.floor(flicker * (charSet.length - 1));
             const isHead = dist < 1;
             return this._setCell(charSet[charIdx] || "0", intensity * maxOpacity, intensity, isHead);
+        }
+
+        _chartCell(col, row, _x, _y) {
+            if (this.opts.chartEnabled === false) return this._setCell(" ", 0, 0, false);
+            const data = this.opts.chartData;
+            if (!data && this.opts.mode !== "chart") return this._setCell(" ", 0, 0, false);
+            const type = this.opts.chartType || "bar";
+            const { cols, rows } = this;
+            let values = [];
+            let labels = [];
+            let itemColors = [];
+
+            if (Array.isArray(data)) {
+                if (typeof data[0] === "number") {
+                    values = data;
+                } else if (typeof data[0] === "object" && data[0] !== null) {
+                    values = data.map((item) => Number(item.value ?? item.val ?? item.v) || 0);
+                    labels = data.map((item) => String(item.label ?? item.name ?? item.title ?? ""));
+                    itemColors = data.map((item) => item.color || null);
+                }
+            }
+
+            if (values.length === 0) values = [12, 45, 78, 34, 90, 60, 85, 40];
+
+            const title = this.opts.chartTitle;
+            if (title && row === 0) {
+                const startCol = Math.max(0, Math.floor((cols - title.length) / 2));
+                const charIdx = col - startCol;
+                if (charIdx >= 0 && charIdx < title.length) {
+                    return this._setCell(title[charIdx], this.opts.maxOpacity, 1, true, this.opts.color);
+                }
+            }
+
+            const showAxes = this.opts.chartShowAxes !== false;
+            const showLegend = this.opts.chartShowLegend !== false && labels.length > 0;
+            const marginRowTop = title ? 2 : 1;
+            const legendRows = showLegend && type !== "donut" ? 1 : 0;
+            const marginRowBottom = (showAxes ? 2 : 1) + legendRows;
+            const usableRows = Math.max(1, rows - marginRowTop - marginRowBottom);
+            const axisCol = 3;
+            const axisColEnd = cols - 2;
+            const usableCols = Math.max(1, axisColEnd - axisCol - 1);
+            const axisRow = rows - marginRowBottom;
+
+            const scaleMin = this.opts.chartScaleMin != null ? this.opts.chartScaleMin : 0;
+            const scaleMax = this.opts.chartScaleMax != null ? this.opts.chartScaleMax : Math.max(1, ...values);
+            const scaleRange = Math.max(1, scaleMax - scaleMin);
+
+            const palette = Array.isArray(this.opts.chartColors) ? this.opts.chartColors : null;
+            const getColor = (idx) => (itemColors[idx]) || (palette && palette[idx % palette.length]) || this.opts.color;
+
+            const animateItems = this.opts.chartAnimateItems;
+            const t = this._time || 0;
+            const getItemProgress = (idx, total) => {
+                if (!animateItems) return 1;
+                const delay = (idx / Math.max(1, total)) * 1.2;
+                return Math.min(1, Math.max(0, (t - delay) / 0.6));
+            };
+
+            if (showAxes && type !== "donut" && col < axisCol) {
+                const maxLabel = String(Math.round(scaleMax)).slice(0, 2);
+                const midLabel = String(Math.round(scaleMin + scaleRange / 2)).slice(0, 2);
+                const midRow = Math.floor(marginRowTop + usableRows / 2);
+                if (row === marginRowTop) {
+                    const charIdx = col - (axisCol - maxLabel.length);
+                    if (charIdx >= 0 && charIdx < maxLabel.length) {
+                        return this._setCell(maxLabel[charIdx], this.opts.maxOpacity * 0.55, 0.4, false, this.opts.color);
+                    }
+                }
+                if (row === midRow && usableRows > 4) {
+                    const charIdx = col - (axisCol - midLabel.length);
+                    if (charIdx >= 0 && charIdx < midLabel.length) {
+                        return this._setCell(midLabel[charIdx], this.opts.maxOpacity * 0.4, 0.3, false, this.opts.color);
+                    }
+                }
+                return this._setCell(" ", 0, 0, false);
+            }
+
+            if (type === "bar") {
+                const barWidth = Math.max(1, Math.floor(usableCols / values.length));
+                const plotStart = axisCol + 1;
+                const cellInBar = col - plotStart;
+                if (cellInBar >= 0) {
+                    const barIdx = Math.floor(cellInBar / barWidth);
+                    const offsetInBar = cellInBar % barWidth;
+                    const activeWidth = barWidth >= 3 ? barWidth - 1 : barWidth;
+
+                    if (barIdx >= 0 && barIdx < values.length && offsetInBar < activeWidth) {
+                        const progress = getItemProgress(barIdx, values.length);
+                        const val = values[barIdx];
+                        const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                        const effectiveNorm = normVal * progress;
+                        const targetRowHeight = effectiveNorm * usableRows;
+                        const currentRowFromBottom = axisRow - row;
+                        const barColor = getColor(barIdx);
+
+                        // Render individual bar object value centered directly above the bar cap
+                        if (this.opts.chartShowValues !== false && progress >= 1 &&
+                            currentRowFromBottom === Math.ceil(targetRowHeight) + 1) {
+                            const valStr = String(Math.round(val));
+                            const labelStart = Math.max(0, Math.floor((activeWidth - valStr.length) / 2));
+                            const charIdx = offsetInBar - labelStart;
+                            if (charIdx >= 0 && charIdx < valStr.length) {
+                                return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.95, true, barColor);
+                            }
+                        }
+
+                        // Render solid backfilled bar body + sub-cell fractional cap
+                        if (currentRowFromBottom > 0 && currentRowFromBottom <= Math.ceil(targetRowHeight) && targetRowHeight > 0) {
+                            if (currentRowFromBottom === Math.ceil(targetRowHeight)) {
+                                const subFraction = targetRowHeight - Math.floor(targetRowHeight);
+                                const capFraction = subFraction === 0 ? 1 : subFraction;
+                                const ramp = ["▂", "▃", "▄", "▅", "▆", "▇", "█"];
+                                const rampIdx = Math.min(6, Math.floor(capFraction * 7));
+                                return this._setCell(ramp[rampIdx], this.opts.maxOpacity, effectiveNorm, capFraction > 0.7, barColor);
+                            }
+                            return this._setCell("█", this.opts.maxOpacity, effectiveNorm, true, barColor);
+                        }
+
+                        // Render legend label row with per-series badge/text
+                        if (showLegend && labels[barIdx] && row === axisRow + legendRows) {
+                            const lbl = labels[barIdx].slice(0, activeWidth);
+                            const lStart = Math.floor((activeWidth - lbl.length) / 2);
+                            const ci = offsetInBar - lStart;
+                            if (ci >= 0 && ci < lbl.length) {
+                                return this._setCell(lbl[ci], this.opts.maxOpacity * 0.75, 0.6, true, barColor);
+                            }
+                        }
+                    }
+                }
+            } else if (type === "horizontalBar") {
+                const barHeight = Math.max(1, Math.floor(usableRows / values.length));
+                const cellInBar = row - marginRowTop;
+                const barIdx = Math.floor(cellInBar / barHeight);
+                const offsetInBar = cellInBar % barHeight;
+                const activeHeight = barHeight >= 3 ? barHeight - 1 : barHeight;
+
+                if (barIdx >= 0 && barIdx < values.length && offsetInBar < activeHeight) {
+                    const progress = getItemProgress(barIdx, values.length);
+                    const val = values[barIdx];
+                    const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                    const effectiveNorm = normVal * progress;
+                    const targetColWidth = effectiveNorm * usableCols;
+                    const currentColFromLeft = col - (axisCol + 1);
+                    const barColor = getColor(barIdx);
+
+                    // Render legend label in the left gutter
+                    if (col < axisCol && labels[barIdx] && offsetInBar === Math.floor(activeHeight / 2)) {
+                        const lbl = labels[barIdx].slice(0, axisCol);
+                        const ci = col - (axisCol - lbl.length);
+                        if (ci >= 0 && ci < lbl.length) {
+                            return this._setCell(lbl[ci], this.opts.maxOpacity * 0.8, 0.6, true, barColor);
+                        }
+                    }
+
+                    // Render horizontal bar body + fractional tip
+                    if (currentColFromLeft >= 0 && currentColFromLeft <= Math.ceil(targetColWidth) && targetColWidth > 0) {
+                        if (currentColFromLeft === Math.ceil(targetColWidth)) {
+                            const subFraction = targetColWidth - Math.floor(targetColWidth);
+                            const capFraction = subFraction === 0 ? 1 : subFraction;
+                            const ramp = ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"];
+                            const rampIdx = Math.min(7, Math.floor(capFraction * 8));
+                            return this._setCell(ramp[rampIdx], this.opts.maxOpacity, effectiveNorm, capFraction > 0.7, barColor);
+                        }
+                        return this._setCell("█", this.opts.maxOpacity, effectiveNorm, true, barColor);
+                    }
+
+                    // Render individual value label at the right tip of the horizontal bar
+                    if (this.opts.chartShowValues !== false && progress >= 1 &&
+                        currentColFromLeft === Math.ceil(targetColWidth) + 1) {
+                        const valStr = ` ${Math.round(val)}`;
+                        const charIdx = col - (axisCol + 1 + Math.ceil(targetColWidth));
+                        if (charIdx >= 0 && charIdx < valStr.length) {
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.95, 0.95, true, barColor);
+                        }
+                    }
+                }
+            } else if (type === "line" || type === "sparkline") {
+                const colFraction = (col - axisCol) / Math.max(1, usableCols);
+                if (col >= axisCol && col <= axisCol + usableCols) {
+                    const dataIdx = Math.max(0, Math.min(values.length - 1, colFraction * (values.length - 1)));
+                    const i0 = Math.floor(dataIdx);
+                    const i1 = Math.min(values.length - 1, i0 + 1);
+                    const frac = dataIdx - i0;
+                    const val = values[i0] * (1 - frac) + values[i1] * frac;
+                    const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                    const progress = animateItems ? Math.min(1, Math.max(0, t * 1.2 - colFraction * 0.6)) : 1;
+                    const effectiveNorm = normVal * progress;
+                    const targetRow = Math.round((axisRow - 1) - effectiveNorm * (usableRows - 1));
+                    const lineColor = getColor(i0);
+
+                    // Vertex marker and value display for discrete line data points
+                    const isNearVertex = Math.abs(dataIdx - Math.round(dataIdx)) < (0.5 / Math.max(1, usableCols));
+                    const vertexIdx = Math.round(dataIdx);
+
+                    if (this.opts.chartShowValues !== false && isNearVertex && row === targetRow - 1 && progress >= 1) {
+                        const valStr = String(Math.round(values[vertexIdx] || 0));
+                        const charIdx = col - (Math.round(axisCol + (vertexIdx / Math.max(1, values.length - 1)) * usableCols) - Math.floor(valStr.length / 2));
+                        if (charIdx >= 0 && charIdx < valStr.length) {
+                            return this._setCell(valStr[charIdx], this.opts.maxOpacity * 0.9, 0.9, true, getColor(vertexIdx));
+                        }
+                    }
+
+                    if (row === targetRow && progress > 0) {
+                        if (isNearVertex) {
+                            return this._setCell("●", this.opts.maxOpacity, 1, true, getColor(vertexIdx));
+                        }
+                        const prevVal = i0 > 0 ? values[i0 - 1] : values[i0];
+                        const nextVal = i1 < values.length - 1 ? values[i1 + 1] : values[i1];
+                        const diff = nextVal - prevVal;
+                        const char = diff > 2 ? "╱" : diff < -2 ? "╲" : "─";
+                        return this._setCell(char, this.opts.maxOpacity, effectiveNorm, true, lineColor);
+                    } else if (row > targetRow && row <= axisRow && progress > 0) {
+                        const depthFraction = (axisRow - row) / Math.max(1, axisRow - targetRow);
+                        const backfillRamp = ["░", "▒", "▓", "█"];
+                        const rampIdx = Math.min(3, Math.floor(depthFraction * 4));
+                        const opacity = Math.max(0.2, depthFraction * 0.8) * this.opts.maxOpacity;
+                        return this._setCell(backfillRamp[rampIdx], opacity, effectiveNorm * depthFraction, false, lineColor);
+                    }
+
+                    // Legend label row below line axis
+                    if (showLegend && row === axisRow + legendRows && isNearVertex && labels[vertexIdx]) {
+                        const lbl = labels[vertexIdx].slice(0, 4);
+                        const charIdx = col - (Math.round(axisCol + (vertexIdx / Math.max(1, values.length - 1)) * usableCols) - Math.floor(lbl.length / 2));
+                        if (charIdx >= 0 && charIdx < lbl.length) {
+                            return this._setCell(lbl[charIdx], this.opts.maxOpacity * 0.75, 0.6, true, getColor(vertexIdx));
+                        }
+                    }
+                }
+            } else if (type === "heatmap") {
+                const nx = (col - axisCol) / Math.max(1, usableCols);
+                if (col >= axisCol && col <= axisCol + usableCols && row >= marginRowTop && row <= axisRow) {
+                    const dataIdx = Math.floor(nx * values.length);
+                    const val = values[dataIdx % values.length] || 0;
+                    const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                    const progress = getItemProgress(dataIdx, values.length);
+                    const targetRowHeight = normVal * progress * usableRows;
+                    const currentRowFromBottom = axisRow - row;
+                    const heatColor = getColor(dataIdx);
+
+                    if (currentRowFromBottom >= 0 && currentRowFromBottom <= Math.ceil(targetRowHeight)) {
+                        const depthFraction = (currentRowFromBottom + 1) / Math.max(1, targetRowHeight);
+                        const backfillRamp = ["░", "▒", "▓", "█"];
+                        const rampIdx = Math.min(3, Math.floor(depthFraction * 4));
+                        return this._setCell(backfillRamp[rampIdx], this.opts.maxOpacity * depthFraction, normVal, depthFraction > 0.8, heatColor);
+                    }
+                }
+            } else if (type === "donut") {
+                const cx = cols / 2;
+                const cy = rows / 2;
+                const dx = (col - cx) * 1.6;
+                const dy = row - cy;
+                const dist = Math.hypot(dx, dy);
+                const maxR = Math.min(cols, rows) * 0.38;
+
+                if (dist >= maxR * 0.45 && dist <= maxR) {
+                    const angle = (Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2);
+                    const dataIdx = Math.floor(angle * values.length);
+                    const val = values[dataIdx % values.length] || 0;
+                    const normVal = Math.max(0, Math.min(1, (val - scaleMin) / scaleRange));
+                    const progress = animateItems ? Math.min(1, Math.max(0, t * 1.5 - angle * 0.8)) : 1;
+                    const donutColor = getColor(dataIdx);
+                    if (progress > 0) {
+                        const ramp = ["░", "▒", "▓", "█"];
+                        const rampIdx = Math.min(3, Math.floor(normVal * 4));
+                        return this._setCell(ramp[rampIdx], this.opts.maxOpacity * progress, normVal, normVal > 0.7, donutColor);
+                    }
+                }
+
+                if (dist < maxR * 0.4 && row === Math.floor(cy)) {
+                    const label = title || "DONUT";
+                    const startCol = Math.floor(cx - label.length / 2);
+                    const charIdx = col - startCol;
+                    if (charIdx >= 0 && charIdx < label.length) {
+                        return this._setCell(label[charIdx], this.opts.maxOpacity, 1, true, this.opts.color);
+                    }
+                }
+
+                if (showLegend && labels.length > 0 && dist < maxR * 0.35) {
+                    const legendRow = Math.floor(cy) + 2;
+                    if (row === legendRow) {
+                        const legendText = labels.slice(0, 4).join(" · ");
+                        const startCol = Math.floor(cx - legendText.length / 2);
+                        const ci = col - startCol;
+                        if (ci >= 0 && ci < legendText.length) {
+                            return this._setCell(legendText[ci], this.opts.maxOpacity * 0.75, 0.6, true, this.opts.color);
+                        }
+                    }
+                }
+            }
+
+            if (showAxes && type !== "donut") {
+                if (col === axisCol && row >= marginRowTop && row <= axisRow) {
+                    const char = row === marginRowTop ? "┌" : row === axisRow ? "└" : "│";
+                    return this._setCell(char, this.opts.maxOpacity * 0.5, 0.4, false, this.opts.color);
+                }
+                if (row === axisRow && col >= axisCol && col <= axisColEnd) {
+                    const char = col === axisCol ? "└" : col === axisColEnd ? "┘" : "─";
+                    return this._setCell(char, this.opts.maxOpacity * 0.5, 0.4, false, this.opts.color);
+                }
+            }
+
+            return this._setCell(" ", 0, 0, false);
         }
 
         /** Lazily allocates diagnostic history only while extended output is enabled. */
@@ -4119,6 +4951,52 @@ import { loadGltf } from "./gltf.js";
          */
         downloadSnapshot(format = "png", filename = "ascii-art", scale = 1) {
             return this.exportImage({ format, filename, scale, download: true });
+        }
+
+        /** Installs chart data and enables ASCII chart rendering mode. */
+        setChartData(data, options = {}) {
+            this.opts.chartData = data;
+            this.opts.chartEnabled = options.enabled !== undefined ? options.enabled : true;
+            if (options.type) this.opts.chartType = options.type;
+            if (options.title !== undefined) this.opts.chartTitle = options.title;
+            if (options.showValues !== undefined) this.opts.chartShowValues = options.showValues;
+            if (options.showAxes !== undefined) this.opts.chartShowAxes = options.showAxes;
+            if (options.showLegend !== undefined) this.opts.chartShowLegend = options.showLegend;
+            if (options.colors !== undefined) this.opts.chartColors = options.colors;
+            if (options.scaleMin !== undefined) this.opts.chartScaleMin = options.scaleMin;
+            if (options.scaleMax !== undefined) this.opts.chartScaleMax = options.scaleMax;
+            if (options.animateItems !== undefined) this.opts.chartAnimateItems = options.animateItems;
+            return this;
+        }
+
+        /** Clears active chart data and resets animation mode. */
+        clearChart() {
+            this.opts.chartData = null;
+            this.opts.chartEnabled = false;
+            this.opts.chartTitle = "";
+            this.opts.chartAnimateItems = false;
+            if (this.opts.mode === "chart") {
+                this.setMode("wave");
+            }
+            return this;
+        }
+
+        /** Returns metadata for the active ASCII chart. */
+        getChartInfo() {
+            const data = this.opts.chartData;
+            const isArray = Array.isArray(data);
+            return {
+                active: (this.opts.chartEnabled !== false && !!data) || this.opts.mode === "chart",
+                enabled: this.opts.chartEnabled !== false && !!data,
+                type: this.opts.chartType || "bar",
+                dataLength: isArray ? data.length : 0,
+                title: this.opts.chartTitle || "",
+                showLegend: this.opts.chartShowLegend !== false,
+                hasColors: Array.isArray(this.opts.chartColors),
+                scaleMin: this.opts.chartScaleMin ?? null,
+                scaleMax: this.opts.chartScaleMax ?? null,
+                animateItems: this.opts.chartAnimateItems === true,
+            };
         }
     }
 

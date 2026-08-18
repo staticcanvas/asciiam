@@ -4,7 +4,7 @@
  * @module home
  */
 
-import { initHeroAnimation, initExampleCards } from "./asciiam-animations.js";
+import { initHeroAnimation, initExampleCards, initShowcaseCards } from "./asciiam-animations.js";
 
 /**
  * Initializes homepage animations when the DOM is ready.
@@ -22,6 +22,11 @@ function initHomePage() {
     const exampleBox = hero?.querySelector("[data-hero-examples]");
     if (exampleBox) {
         initExampleCards(exampleBox);
+    }
+
+    const showcaseBox = document.querySelector("[data-showcase-container]");
+    if (showcaseBox) {
+        initShowcaseCards(showcaseBox);
     }
 }
 

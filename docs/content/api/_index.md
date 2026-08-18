@@ -63,12 +63,15 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `asciiam.registerMode(name, fn)` | method | Registers a named custom cell callback. |
 | `asciiam.createMeshPrimitive(name, options?)` | method | Creates a cube, plane, icosphere, or torus `MeshData`. |
 | `asciiam.loadModel(source, options?)` | async method | Decodes glTF 2.0 or GLB v2 without constructing a renderer. |
+| `asciiam.registerGltfDecoder(name, fn)` | method | Registers a custom glTF extension decoder (e.g., Draco / Meshopt). |
+| `asciiam.getGltfDecoders()` | method | Returns an array of registered glTF extension decoders. |
 
 ## Core options
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `mode` | mode string | `wave` | Selects the active animation algorithm or `none` (`static`) for un-animated rendering. |
+| `layers` | layer array or `null` | `null` | Configures multi-pass layer composition array (`[{ mode, options, opacity, blendMode }]`). |
 | `quality` | `high \| balanced \| performance \| ultra` | `balanced` | Applies one quality tier. |
 | `renderer` | `auto \| webgl2 \| canvas2d` | `auto` when GPU preference is enabled | Selects GPU-first, explicit WebGL2, or Canvas 2D presentation. |
 | `charSet` | string | `asciiExtended` | Supplies glyphs used by procedural modes. |
@@ -80,7 +83,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `background` | CSS color string | `transparent` | Sets the renderer clear color. |
 | `speed` | number | `1` | Scales the animation timeline. |
 | `direction` | `horizontal \| vertical \| diagonal` | `horizontal` | Sets wave travel direction. |
-| `revealDirection` | reveal direction string | `center` | Sets horizontal, vertical, diagonal, center-out, or edge-in reveal order. |
+| `revealDirection` | reveal direction string | `center` | Sets horizontal, vertical, diagonal, center-out, or edge-in reveal order for reveal and fragment modes. |
 | `align` | nine-position spatial alignment | `center` | Sets the origin for compatible spatial modes. |
 | `minOpacity` | number | `0.05` | Sets the lower procedural opacity bound. |
 | `maxOpacity` | number | `0.85` | Sets the upper procedural opacity bound. |
@@ -104,6 +107,18 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `meshMaxPrimitives` | positive integer | `100000` | Rejects larger normalized geometry. |
 
 `setMesh(mesh)`, `clearMesh()`, and `getMeshInfo()` manage typed-array geometry. `setModel(source, options?)` and `clearModel()` manage abortable glTF/GLB loading. Model sources may be URLs, blobs, byte buffers, or parsed glTF objects. See [3D meshes and models]({{< relref "/guides/3d-models" >}}) for supported format features and explicit exclusions.
+
+## ASCII Chart options
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chartData` | array or `null` | `null` | Array of numbers, series objects, or 2D matrix values for ASCII chart rendering. |
+| `chartType` | `bar \| horizontalBar \| line \| sparkline \| heatmap \| donut` | `bar` | Selects visualization style. |
+| `chartTitle` | string | `""` | Optional chart header title displayed at grid top. |
+| `chartShowValues` | boolean | `true` | Toggles sub-cell numerical value indicators. |
+| `chartShowAxes` | boolean | `true` | Toggles axis baseline margins. |
+
+`setChartData(data, options?)`, `clearChart()`, and `getChartInfo()` manage ASCII chart data and visualization state.
 
 ## Renderer and performance options
 
@@ -192,6 +207,8 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `starfieldDensity` | number | `0.018` | `starfield` |
 | `orbitDensity` | number | `0.014` | `orbit` |
 | `glitchIntensity` | number | `0.32` | `glitch` |
+| `sweepDuration` | seconds | `2.2` | `fadeIn`, `fadeOut`, `image` |
+| `delayCurve` | `linear \| easeIn \| easeOut \| easeInOut \| stagger` | `linear` | `fadeIn`, `fadeOut`, `image` |
 | `typewriterDuration` | seconds | `4.5` | `typewriter` |
 | `customCell` | function or `null` | `null` | `custom` |
 
@@ -203,6 +220,8 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `stop()` | `void` | Stops scheduling and retains state. |
 | `destroy()` | `void` | Releases renderer, canvas, observers, event listeners, and scheduler membership. |
 | `setMode(mode)` | `void` | Selects a mode, resets local time, and interrupts manual sequence playback. |
+| `setLayers(layers)` | `this` | Configures multi-pass composition layers for zero-allocation per-frame rendering. |
+| `getLayers()` | `LayerConfig[]` | Returns active composition layers array. |
 | `setOption(key, value)` | `void` | Updates an option and rebuilds affected caches or state. |
 | `setTarget(target)` | `void` | Moves the presentation canvas and target bindings. |
 | `setImage(source, options?)` | `Promise<HTMLImageElement \| null>` | Decodes an image; `ImageDecoder` captures GIF frames and delays when available. |
@@ -253,6 +272,21 @@ Captures the rendered ASCII art canvas and returns a Data URL, Blob, and image m
 ### `downloadSnapshot(format?, filename?, scale?)`
 
 Convenience method to capture and download the current ASCII artwork frame directly to disk.
+
+### `renderToString(options?)` & `renderFrame(options?)`
+
+Headless pure-JavaScript text rasterizers for Node.js, Bun, Deno, SSR, terminals, or CLI text output without DOM Canvas or JSDOM requirements.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `cols` | `number` | `80` | Grid column width. |
+| `rows` | `number` | `24` | Grid row height. |
+| `mode` | `string` | `'matrix'` | Animation mode name (`'matrix'`, `'plasma'`, `'wave'`, `'fire'`, `'snow'`, etc.). |
+| `time` | `number` | `0` | Time offset in seconds for deterministic frame rendering. |
+| `charSet` | `string` | `'ascii-extended'` | Character set preset or explicit glyph string. |
+| `invert` | `boolean` | `false` | Inverts glyph intensity mapping. |
+| `ansi` | `boolean` | `false` | Injects 24-bit ANSI color escape codes (`\x1b[38;2;R;G;Bm`) into string output. |
+| `color` | `string` | `'#00ff66'` | Base hex foreground color used for ANSI escape sequences. |
 
 ### `getStats()`
 

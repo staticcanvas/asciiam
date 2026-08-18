@@ -324,15 +324,18 @@ export function initExampleCards(exampleBox) {
         .then(() => { if (!isDisposed) imageExample.start(); })
         .catch(() => markError("image"));
 
-    // Card 4: 3D Mesh animation
+    // Card 4: 3D Mesh animation (High fidelity grid detail)
     const meshExample = createCard("mesh", {
         mode: "mesh",
         color: "#C04FFF",
         charSet: " .:+*#%@",
+        fontSize: 5,
+        density: 0.35,
+        resolutionScale: 1.6,
         meshStyle: "wireframe",
         meshProjection: "perspective",
         meshAutoRotate: true,
-        meshRotationSpeed: [0.12, 0.42, 0.06],
+        meshRotationSpeed: [0.15, 0.45, 0.08],
     });
     meshExample?.setModel(exampleBox.dataset.exampleModel)
         .then(() => { if (!isDisposed) meshExample.start(); })
@@ -348,6 +351,135 @@ export function initExampleCards(exampleBox) {
 
     window.addEventListener("pagehide", destroy, { once: true });
     return { examples, destroy };
+}
+
+/**
+ * Initializes the 8-element interactive showcase grid on the homepage.
+ *
+ * @param {HTMLElement} container Parent container element holding the 8 showcase cards.
+ * @returns {{ instances: asciiam[], destroy: Function }} Object containing instances and cleanup.
+ */
+export function initShowcaseCards(container) {
+    if (!container || !asciiam.isSupported()) return { instances: [], destroy: () => {} };
+
+    const instances = [];
+    const configs = [
+        {
+            kind: "vortex",
+            options: {
+                mode: "vortex",
+                color: "#4FA8FF",
+                speed: 0.8,
+                fontSize: 7,
+                density: 0.6,
+                gradient: { type: "radial", center: [0.5, 0.5], radius: 0.8, stops: ["#4FFFF3", "#C04FFF"], steps: 2 },
+            },
+        },
+        {
+            kind: "matrix",
+            options: {
+                mode: "matrix",
+                color: "#3CF07A",
+                speed: 1.2,
+                fontSize: 8,
+                density: 0.7,
+                charSet: " 01アイウエオカキクケコ",
+            },
+        },
+        {
+            kind: "fire",
+            options: {
+                mode: "fire",
+                color: "#FF7B54",
+                speed: 1.0,
+                fontSize: 7,
+                density: 0.6,
+                fireDensity: 0.04,
+                charSet: " .:-=+*#%@",
+            },
+        },
+        {
+            kind: "starfield",
+            options: {
+                mode: "starfield",
+                color: "#78B7FF",
+                speed: 1.1,
+                fontSize: 7,
+                density: 0.65,
+                starfieldDensity: 0.025,
+            },
+        },
+        {
+            kind: "compositing",
+            options: {
+                mode: "current",
+                fontSize: 7,
+                density: 0.6,
+                layers: [
+                    { mode: "current", opacity: 0.5, color: "#005fff" },
+                    { mode: "wave", opacity: 0.4, speed: 1.2, color: "#00ffff" },
+                    { mode: "sparkle", opacity: 0.35, color: "#ffffff" },
+                ],
+            },
+        },
+        {
+            kind: "ripple",
+            options: {
+                mode: "ripple",
+                color: "#72F1B8",
+                speed: 0.7,
+                fontSize: 7,
+                density: 0.6,
+                edgeFade: 0.25,
+            },
+        },
+        {
+            kind: "glitch",
+            options: {
+                mode: "glitch",
+                color: "#C04FFF",
+                speed: 0.9,
+                fontSize: 8,
+                density: 0.7,
+                glitchIntensity: 0.35,
+                charSet: " 01<>/\\|#@",
+            },
+        },
+        {
+            kind: "torus3d",
+            options: {
+                mode: "mesh",
+                color: "#4FFFF3",
+                meshPrimitive: "torus",
+                meshStyle: "wireframe",
+                meshProjection: "perspective",
+                meshAutoRotate: true,
+                meshRotationSpeed: [0.2, 0.5, 0.15],
+                fontSize: 6,
+                density: 0.45,
+                resolutionScale: 1.5,
+            },
+        },
+    ];
+
+    configs.forEach(({ kind, options }) => {
+        const canvas = container.querySelector(`[data-showcase-canvas="${kind}"]`);
+        if (!canvas) return;
+        const anim = new asciiam(canvas, {
+            quality: "performance",
+            renderer: "auto",
+            maxDPR: 1,
+            targetFPS: 30,
+            respectReducedMotion: true,
+            ...options,
+        });
+        anim.start();
+        instances.push(anim);
+    });
+
+    const destroy = () => instances.forEach((anim) => anim.destroy());
+    window.addEventListener("pagehide", destroy, { once: true });
+    return { instances, destroy };
 }
 
 /**
@@ -375,5 +507,6 @@ export default {
     initHeroCompactAnimation,
     initAllHeroCompactElements,
     initExampleCards,
+    initShowcaseCards,
     createPresetAnimation,
 };

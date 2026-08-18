@@ -80,6 +80,16 @@ await animation.setModel(gltfFile, {
 });
 ```
 
+Custom decoders for compressed glTF extensions (such as `KHR_draco_mesh_compression` or `EXT_meshopt_compression`) can be registered via `asciiam.registerGltfDecoder(name, decoderFn)`:
+
+```js
+// Register a custom Draco or Meshopt extension decoder
+asciiam.registerGltfDecoder('KHR_draco_mesh_compression', async (extensionData, context) => {
+  // Decode compressed buffer view into Float32Array positions/normals
+  return decodedGeometry;
+});
+```
+
 The utility’s scale and field-of-view controls are 3D equivalents of the image
 controls, but they update `meshTransform.scale` and `meshCamera.fov`.
 The same `meshTransform.rotation` and signed scale controls rotate or mirror procedural

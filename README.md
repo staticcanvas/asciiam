@@ -9,7 +9,7 @@ A dependency-free, efficient HTML5 Canvas and WebGL2 animation engine for proced
 ## Capabilities
 
 - **Efficient Dual Backend**: WebGL2 glyph rendering with instanced quad batching, spatial font atlases, zero-allocation cell loops, and automatic Canvas 2D fallback.
-- Twenty-seven built-in modes (including fluid dynamics, atmospheric effects, reveals, 3D GLTF model rendering, image sampling, and pointer interaction zones).
+- Built-in modes including fluid dynamics, atmospheric effects, directional reveals, fragment assembly and break-apart transitions, 3D GLTF model rendering, image sampling, and pointer interaction zones.
 - **Real-Time Image & Animated GIF Sampling**: Converts raster images (`PNG`, `JPEG`, `WebP`, `AVIF`), `SVG` vectors, and animated `GIF` frames into ASCII glyph matrices with silhouette-aware luminance mapping, tone controls, and inclusive RGB animation range masking.
 - **3D GLTF / Mesh-to-ASCII Renderer**: Built-in 3D software rendering engine supporting `GLTF`/`GLB` models and `OBJ` primitives with perspective/orthographic projections, wireframe, point-cloud, and shaded surface styles.
 - **Playlist Sequencing & Morphing**: Chain multi-step animation sequences (`setSequence()`) with snapshot morph transitions, step-level repeat controls (`repeat: false`), and sequence loop policies (`loop: false`).
@@ -487,6 +487,8 @@ new asciiam('#hero', { ...asciiam.presets.heroWave, color: '#C04FFF' });
 | `fadeOut`                    | The matching directional exit animation for dismissals and scene transitions.                                                  |
 | `irisIn` / `irisOut`         | Radial entrance and exit centered on the selected spatial origin.                                                              |
 | `dissolveIn` / `dissolveOut` | Seeded directional transitions suitable for sequence boundaries.                                                               |
+| `assemble`                  | Seeded fragments gather into the field; supports directional ordering and bounded reveal duration.                       |
+| `breakApart`                | Seeded fragments leave the field; supports directional ordering and bounded reveal duration.                            |
 | `lumaFold`                   | Folded luminance ridges that travel across the glyph field.                                                                    |
 | `riftLace`                   | Intersecting animated seams forming a shifting lace lattice.                                                                   |
 | `echoBloom`                  | Layered radial echoes that open from the selected origin.                                                                      |

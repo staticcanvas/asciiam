@@ -8,6 +8,34 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
+- [x] 🟠🌟✅1️⃣ **Epic: Toolbar Restructuring, Option Consolidation & DX Servicing**
+  - [x] 🟡🌟✅1️⃣ **Serve:Example DX Pipeline** - Add `-c-1` cache-busting and build step to `npm run serve:example` in `package.json` to prevent stale browser caching during local development.
+  - [x] 🟡🌟✅1️⃣ **Chart Option Consolidation** - Remove duplicate chart controls from `pop-motion` and consolidate all chart settings exclusively inside `pop-chart`.
+  - [x] 🟡🌟✅1️⃣ **Toolbar Column Grouping** - Group toolbar pills into distinct visual columns (Authoring, Media Layers: Image, 3D, Chart, None, and Actions) with subtle rounded container styling.
+  - [x] 🟡🌟✅1️⃣ **Option Coverage Audit** - Audit and expose all 48 `asciiam` options across the Web Utility toolbar, JSON Builder, and code exporter without duplicate handlers.
+  - [x] 🟡🌟✅1️⃣ **High-Fidelity ASCII Charting** - Added chart axis guides (`chartShowAxes`), top bar caps (`chartShowValues`), line slope characters & area shading, donut center labels, and JSON builder preset entries.
+
+- [x] 🟠🌟✅1️⃣ **Epic: Chart Mode Full Enhancement**
+  - [x] 🟡🌟✅1️⃣ **Backfill Fix** - Rewrote `_chartCell()` to ensure all bars and chart types backfill solid block characters from axis baseline to full data height. Corrected Y-axis gutter from 2→3 columns so plotStart aligns correctly with all data values.
+  - [x] 🟡🌟✅1️⃣ **Y-Axis Scale Range** - Added `chartScaleMin` / `chartScaleMax` options for explicit Y-axis bounds. Auto-defaults to 0→data max. Scale labels (top + mid) rendered in left gutter with `showAxes`.
+  - [x] 🟡🌟✅1️⃣ **Per-Series Color Palette** - Added `chartColors: string[]` option. Each bar/segment/series picks its color cyclically from the array. Exposed in Web Utility chart popover as space-separated hex/named color input.
+  - [x] 🟡🌟✅1️⃣ **Legend Labels** - Added `chartShowLegend` toggle. When `chartData` is `{label, value}[]` format, labels render below bars (vertical), in gutter (horizontal bar), or inside donut center area. Web Utility exposes a "Series labels" input that merges with data values.
+  - [x] 🟡🌟✅1️⃣ **Per-Item Stagger Animation** - Added `chartAnimateItems: boolean` option. Bars reveal staggered from left→right, donut sweeps clockwise, line slides in from left. Uses `this._time` clock so animation loops on each restart. Toggle exposed in Web Utility chart popover.
+  - [x] 🟡🌟✅1️⃣ **API Expansion** - Updated `setChartData(data, options)` to accept all new options, extended `getChartInfo()` to return `showLegend`, `hasColors`, `scaleMin`, `scaleMax`, `animateItems`.
+  - [x] 🟡🌟✅1️⃣ **WebGL & 2D Atlas Chart Glyphs** - Added `_getChartCharacters()` to include box-drawing (`┌└│─┘`), vertical block ramps (` ▂▃▄▅▆▇█`), horizontal blocks (`▏▎▍▌▋▊▉█`), slope chars (`╱╲`), shading (`░▒▓`), digits, and label text inside both WebGL and 2D canvas glyph atlases so chart mode renders under WebGL.
+  - [x] 🟡🌟✅1️⃣ **Code Export Coverage** - All 5 new options flow through `renderUsage()` and `getPersistableOptions()` so generated code snippets remain complete.
+
+- [x] 🟠🌟✅1️⃣ **Epic: Media Layer Mode Separation & Comprehensive Chart Architecture**
+  - [x] 🟡🌟✅1️⃣ **Mode Menu Clean-Up** - Removed `chart` and `mesh` from the primary animation mode selector buttons (`#modeButtons` grid in `#pop-mode`), aligning them strictly with `image` as dedicated composable media layers.
+  - [x] 🟡🌟✅1️⃣ **Animation Mode Access for Media Layers** - Allowed media layers (images, 3D meshes, and charts) to composite over or blend with active ASCII field background animation modes (wave, ripple, vortex, plasma, matrix, etc.) while running their own render passes.
+  - [x] 🟡🌟✅1️⃣ **Complete Chart Suite: Titles & Styling** - Implemented header title rendering with bold emphasis, centering, and theme colors across all chart types.
+  - [x] 🟡🌟✅1️⃣ **Complete Chart Suite: Rich Legends** - Implemented per-series legend rows with colored item labels for vertical bars, horizontal gutter labels, line point series, and donut center hubs.
+  - [x] 🟡🌟✅1️⃣ **Complete Chart Suite: Individual Object Values & Markers** - Render explicit value labels on top of vertical bars, alongside horizontal bars, on line graph peak/data points (`●`), and within donut segments.
+  - [x] 🟡🌟✅1️⃣ **Data Model Completeness** - Supported rich objects (`{ label, value, color }`), multi-series arrays, explicit ranges, and formatted values in both core engine and Web Utility.
+  - [x] 🟡🌟✅1️⃣ **Media Layer Enable/Disable Toggles** - Added `imageEnabled`, `meshEnabled`, and `chartEnabled` options with dedicated UI switch toggles in Image, 3D, and Chart popovers; updated toolbar summaries to report active/off/none cleanly.
+  - [x] 🟡🌟✅1️⃣ **Session Persistence & Reset** - Fixed state persistence across page refreshes so active animation mode, media layers (image, 3D mesh, chart), chart form inputs, and enable toggles restore reliably from `localStorage`, with "Reset" restoring clean demo defaults.
+
+
 ### **Distribution Readiness (priority-2)**
 
 - [ ] 🟠🌟⏳2️⃣ **Distribution** - **Real-browser verification.** Run a manual visual pass in current
@@ -17,20 +45,7 @@ strangers with confidence."
         Chromium, Firefox, and WebKit, including non-empty Canvas 2D pixels, grid changes,
         procedural 3D configuration, generated output, responsive bounds, and browser errors.
         WebKit on Linux is not treated as Safari or physical-device verification.
-- [ ] 🟠🌟⏳2️⃣ **Distribution** - **Safari-specific canvas text rendering unverified.** Font metrics and subpixel
-      text positioning have known quirks in Safari; the quantized-font-level approach
-      hasn't been visually checked there.
 ### **Engineering Backlog (priority-3)**
-
-- [x] 🟠🌟✅3️⃣ **Backlog** - **`fadeIn` and reveal modes expose configurable timing controls** (`revealDuration` sweep duration parameter) via `setOption('revealDuration', ...)` and constructor options.
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
-      `wave` sweep on top). Currently one mode at a time; layering would mean running
-      two instances on stacked canvases, which works but isn't documented as a
-      pattern.
-- [ ] 🟠🌟⏳3️⃣ **Backlog** - **Matrix mode column state doesn't survive a `setOption('density', …)` change**
-      cleanly mid-run — it reinitializes via `_resize()`, so an in-progress rain
-      column resets rather than continuing at the new density. Minor visual hitch,
-      not a bug.
 
 - [ ] 🟠🌟✔️3️⃣ **Engineering Backlog** - 3D feature verification and documentation. Allocation reuse, the 8.92 KiB combined gzip delta, repeatable desktop benchmark, regression coverage, README/API/architecture guidance, a live docs example, and bounded web-utility controls are complete. Current Chrome/Firefox/Safari and representative mobile visual/performance passes remain required before release claims.
   > **Note!** - `npm run benchmark:mesh` measures the cell raster stage in Node. It does not replace browser glyph-raster, GPU-driver, font-metric, or mobile thermal verification.
@@ -38,11 +53,19 @@ strangers with confidence."
 - [ ] 🟠💡⏳4️⃣ **Engineering Backlog** - Deferred mesh-compression research. After uncompressed glTF/GLB support has production measurements, benchmark Draco and Meshopt transfer size, decoder payload, initialization, decode time, peak memory, retained memory, and render-ready latency on desktop and mobile. Keep all codec code and dependencies out of released artifacts unless a later evidence-based architecture review explicitly approves a change.
   > **Note!** - `architecture/mesh-compression-evaluation.md` and `npm run benchmark:model` define the isolated corpus, baseline, measurements, and decision rule. The evaluation remains deferred until production uncompressed-model data exists.
 
+- [ ] 🟠💡3️⃣ **Engineering Backlog** - WebGPU backend feasibility and renderer architecture review. Define a shared cell/render contract so WebGPU can replace the WebGL2 glyph path without duplicating animation, media-layer, chart, export, diagnostics, or lifecycle logic; document core versus compatibility-mode constraints, secure-context requirements, adapter/device loss, shader strategy, and automatic WebGL2/Canvas 2D fallback. Gate implementation on representative Chrome, Firefox, Safari, Linux, Windows, macOS, and mobile measurements.
+- [ ] 🟠🌟3️⃣ **Engineering Backlog** - WebGPU prototype and benchmark. Implement an opt-in experimental backend for the dense ASCII glyph pipeline, with adapter capability checks, device-loss recovery, bounded resource reuse, no readback in the display path, and parity tests against WebGL2/Canvas 2D. Record frame time, upload cost, memory, initialization latency, thermal behavior, and fallback reasons before deciding whether WebGPU becomes the auto-selected backend.
+- [ ] 🟠🌟3️⃣ **Engineering Backlog** - Media asset pipeline extension. Expand the media layer contract for local and user-supplied image, GIF/video, and audio assets with object-URL cleanup, decode/readback budgets, format/error handling, autoplay and permission rules, accessible controls, and an explicit policy for remote assets and cross-origin isolation.
+- [ ] 🟠🌟3️⃣ **Engineering Backlog** - Audio visualizer plugin evaluation and reference implementation. Keep Web Audio lifecycle outside the renderer; expose normalized analyser time-domain/frequency bands, beat/energy smoothing, pause/resume, teardown, and user-gesture handling to registered ASCII modes or media layers. Evaluate a built-in reference visualizer versus a separately shipped plugin and verify browser, accessibility, CPU, and battery behavior.
+- [ ] 🟠💡3️⃣ **Engineering Backlog** - Plugin extension architecture. Define a versioned, capability-scoped registration API for custom animation modes, media providers, audio visualizers, render backends, toolbar controls, and exporters; specify lifecycle/disposal, option schemas, TypeScript types, serialization, isolation, dependency/version rules, CSP/security boundaries, failure containment, documentation, and a minimal example plugin before committing to a public API.
+
 ### **Deferred Concepts (priority-4)**
 
-- WebGPU backend. WebGL2 now provides the selectable GPU path with much broader browser
-  coverage, while Canvas 2D remains the compatibility and explicitly selectable CPU
-  backend. A separate WebGPU implementation would currently duplicate those paths.
+- WebGPU backend auto-selection remains deferred pending the Engineering Backlog feasibility
+  review and benchmark. WebGPU now has broader major-browser availability, but still requires
+  a secure context and a usable adapter/device, can be blocked by drivers or platform policy,
+  and must retain WebGL2/Canvas 2D fallback for compatibility. See the W3C WebGPU Candidate
+  Standard, MDN WebGPU API guidance, and Chrome WebGPU browser-support/troubleshooting notes.
 - Server-side rendering / static ASCII export. This is a live animation engine, not an
   ASCII-art generation tool for static output.
 

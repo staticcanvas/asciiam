@@ -90,9 +90,8 @@ editBranch = "main"
   icon = "box"
   [[menus.main]]
   name = "Web utility"
-  parent = "guides"
   pageRef = "/guides/web-utility"
-  weight = 50
+  weight = 22
   [menus.main.params]
   icon = "sliders-horizontal"
   [[menus.main]]

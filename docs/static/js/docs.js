@@ -349,6 +349,52 @@ if (pageSearch) {
     });
 }
 
+// Theme Toggle Controller for Documentation Site
+function applyTheme(theme) {
+    if (document.documentElement) document.documentElement.dataset.theme = theme;
+    try {
+        if (typeof localStorage !== "undefined") localStorage.setItem("asciiam:theme", theme);
+    } catch {
+        // Ignore storage access errors in restricted contexts
+    }
+    document.querySelectorAll(".docs-theme-toggle, #themeToggleBtn").forEach((btn) => {
+        const isLight = theme === "light";
+        btn.setAttribute("aria-label", isLight ? "Switch to dark theme" : "Switch to light theme");
+        btn.setAttribute("title", isLight ? "Switch to dark theme" : "Switch to light theme");
+        const sunIcons = btn.querySelectorAll("#docsThemeIconSun, #themeIconSun");
+        const moonIcons = btn.querySelectorAll("#docsThemeIconMoon, #themeIconMoon");
+        sunIcons.forEach((icon) => { icon.style.display = isLight ? "inline-block" : "none"; });
+        moonIcons.forEach((icon) => { icon.style.display = isLight ? "none" : "inline-block"; });
+    });
+}
+
+function initThemeToggle() {
+    let savedTheme = "dark";
+    try {
+        if (typeof localStorage !== "undefined" && localStorage.getItem("asciiam:theme")) {
+            savedTheme = localStorage.getItem("asciiam:theme");
+        } else if (typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: light)").matches) {
+            savedTheme = "light";
+        }
+    } catch {
+        // Fallback to default theme if query throws
+    }
+    applyTheme(savedTheme);
+
+    document.querySelectorAll(".docs-theme-toggle, #themeToggleBtn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const current = (document.documentElement && document.documentElement.dataset.theme) || "dark";
+            applyTheme(current === "light" ? "dark" : "light");
+        });
+    });
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initThemeToggle);
+} else {
+    initThemeToggle();
+}
+
 import { initAllHeroCompactElements } from "./asciiam-animations.js";
 
 // Mount ASCII background animations on all .hero.hero-compact page header elements

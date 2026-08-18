@@ -922,6 +922,29 @@
                 outline-offset: 2px;
             }
 
+            /* Popover text / number inputs (chart title, labels, scale, colors) */
+            .code-export__textarea {
+                display: block;
+                inline-size: 100%;
+                box-sizing: border-box;
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                color: var(--clr-text-main);
+                font: inherit;
+                font-size: var(--font-sm);
+                padding-block: 6px;
+                padding-inline: var(--space-sm);
+                transition: border-color var(--time-fast) var(--ease-fluid);
+                appearance: textfield;
+            }
+            .code-export__textarea:hover { border-color: var(--clr-border-hi); }
+            .code-export__textarea:focus { border-color: var(--clr-primary); outline: none; }
+            .code-export__textarea::placeholder { color: var(--clr-text-muted); opacity: 0.6; }
+            /* Remove number spinner arrows */
+            .code-export__textarea::-webkit-outer-spin-button,
+            .code-export__textarea::-webkit-inner-spin-button { appearance: none; margin: 0; }
+
             /* ── §10 Value display + layout helpers ── */
             .val { color: var(--clr-primary); font-size: var(--font-xs); margin-inline-start: 6px; }
             .row { display: flex; align-items: center; justify-content: space-between; }
@@ -2472,6 +2495,16 @@
                         <option value="center">Center out</option>
                         <option value="edges">Edges inward</option>
                     </select>
+                    <label class="cpop-label row" for="sweepDuration" style="margin-top:var(--space-xs)">Sweep duration <span class="val" id="sweepDurationVal">1.5s</span></label>
+                    <input type="range" id="sweepDuration" min="0.2" max="5.0" step="0.1" value="1.5" />
+                    <label class="cpop-label" for="delayCurve" style="margin-top:var(--space-xs)">Delay curve</label>
+                    <select id="delayCurve">
+                        <option value="linear">Linear</option>
+                        <option value="easeIn">Ease In</option>
+                        <option value="easeOut">Ease Out</option>
+                        <option value="easeInOut">Ease In Out</option>
+                        <option value="stagger">Stagger</option>
+                    </select>
                 </div>
                 <div class="cpop-group">
                     <label class="cpop-label row" for="edgeFade">Edge fade <span class="val" id="edgeFadeVal">0%</span></label>
@@ -2786,7 +2819,12 @@
             </button>
             <div class="ctrl-popover ctrl-popover--wide" id="pop-image" popover>
                 <div class="cpop-group">
-                    <label class="cpop-label" for="imageInput">Upload image</label>
+                    <label class="ui-switch" for="imageEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="imageEnabledToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable image layer</strong></span>
+                    </label>
+                    <label class="cpop-label" for="imageInput" style="margin-block-start:var(--space-xs)">Upload image</label>
                     <input type="file" id="imageInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/avif" />
                 </div>
                 <div class="cpop-group">
@@ -2885,7 +2923,12 @@
             </button>
             <div class="ctrl-popover ctrl-popover--wide" id="pop-mesh" popover>
                 <div class="cpop-group">
-                    <span class="cpop-label">3D mesh source</span>
+                    <label class="ui-switch" for="meshEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="meshEnabledToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable 3D mesh layer</strong></span>
+                    </label>
+                    <span class="cpop-label" style="margin-block-start:var(--space-xs)">3D mesh source</span>
                     <label class="cpop-label" for="meshPrimitive">Procedural primitive</label>
                     <select id="meshPrimitive">
                         <option value="">None</option>
@@ -2957,6 +3000,89 @@
                 </div>
             </div>
 
+            <!-- Chart -->
+            <button class="ctrl-pill ctrl-pill--media" id="chartTriggerBtn" type="button" title="Data chart configuration and series input"
+                    popovertarget="pop-chart" aria-expanded="false" aria-controls="pop-chart">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Chart</span>
+                <span class="ctrl-pill__status" id="chartToolbarStatus">none</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-chart" popover>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="chartEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="chartEnabledToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable chart layer</strong></span>
+                    </label>
+                    <span class="cpop-label" style="margin-block-start:var(--space-xs)">Chart configuration</span>
+                    <label class="cpop-label" for="chartType">Chart type</label>
+                    <select id="chartType">
+                        <option value="bar" selected>Bar (Vertical)</option>
+                        <option value="horizontalBar">Horizontal Bar</option>
+                        <option value="line">Line Graph</option>
+                        <option value="sparkline">Sparkline</option>
+                        <option value="heatmap">Heatmap Matrix</option>
+                        <option value="donut">Donut Ring</option>
+                    </select>
+                    <label class="cpop-label" for="chartTitle" style="margin-block-start:var(--space-xs)">Chart header title</label>
+                    <input class="code-export__textarea" type="text" id="chartTitle" value="System Metrics" style="height:34px;" />
+                    <label class="cpop-label" for="chartData" style="margin-block-start:var(--space-xs)">Series data (comma separated)</label>
+                    <textarea class="custom-charset-input" id="chartData" spellcheck="false" rows="3" placeholder="e.g. 15, 32, 48, 72, 95, 60, 84">15, 32, 48, 72, 95, 60, 84</textarea>
+                    <label class="cpop-label" for="chartLabels" style="margin-block-start:var(--space-xs)">Series labels (comma separated, optional)</label>
+                    <input class="code-export__textarea" type="text" id="chartLabels" placeholder="e.g. Jan, Feb, Mar, Apr" style="height:34px;" />
+                </div>
+                <div class="cpop-group">
+                    <span class="cpop-label">Scale &amp; display</span>
+                    <div class="btn-row" style="gap:10px;align-items:center;">
+                        <div style="flex:1">
+                            <label class="cpop-label" for="chartScaleMin" style="margin-block-start:0">Y-axis min</label>
+                            <input class="code-export__textarea" type="number" id="chartScaleMin" placeholder="auto (0)" style="height:32px;width:100%;" />
+                        </div>
+                        <div style="flex:1">
+                            <label class="cpop-label" for="chartScaleMax" style="margin-block-start:0">Y-axis max</label>
+                            <input class="code-export__textarea" type="number" id="chartScaleMax" placeholder="auto (max)" style="height:32px;width:100%;" />
+                        </div>
+                    </div>
+                    <label class="ui-switch" for="chartShowAxesToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartShowAxesToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Show chart axes &amp; scale labels</span>
+                    </label>
+                    <label class="ui-switch" for="chartShowLegendToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartShowLegendToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Show series legend labels</span>
+                    </label>
+                    <label class="ui-switch" for="chartAnimateItemsToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartAnimateItemsToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Stagger-reveal per item on entry</span>
+                    </label>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="chartColors">Per-series color palette (space separated hex/named, optional)</label>
+                    <input class="code-export__textarea" type="text" id="chartColors" placeholder="e.g. #00ff99 #ff6633 #33aaff" style="height:34px;" />
+                </div>
+                <div class="cpop-group">
+                    <span class="cpop-label">Quick sample data presets</span>
+                    <div class="btn-row" style="flex-wrap:wrap;gap:6px;">
+                        <button class="mode-btn" id="chartPresetGrowthBtn" type="button">Revenue Growth</button>
+                        <button class="mode-btn" id="chartPresetLoadBtn" type="button">Server Workload</button>
+                        <button class="mode-btn" id="chartPresetTempBtn" type="button">Temperature</button>
+                        <button class="mode-btn" id="chartPresetFinancialBtn" type="button">Stock Trend</button>
+                    </div>
+                </div>
+                <div class="cpop-group">
+                    <p class="image-library-help">Charts render dynamically using ASCII sub-cell block characters with full-column backfill, scale labels, optional legend, and per-item stagger animation. Use <strong>{label, value}</strong> objects in the API for automatic legend support.</p>
+                </div>
+            </div>
+
+            <!-- None -->
+            <button class="ctrl-pill ctrl-pill--media" id="clearMediaBtn" type="button" title="Clear image, 3D model, and chart data sources">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                <span>None</span>
+            </button>
+
             <!-- Code -->
             <button class="ctrl-pill ctrl-pill--code ctrl-pill--primary" type="button" title="Copy the current configuration as code"
                     popovertarget="pop-code" aria-expanded="false" aria-controls="pop-code">
@@ -3026,7 +3152,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=a1a6f36ad9b3"></script>
-        <script type="module" src="./js/webutil.js?v=a1a6f36ad9b3"></script>
+        <script src="./libs/asciiam.js?v=__ASSET_REVISION__"></script>
+        <script type="module" src="./js/webutil.js?v=__ASSET_REVISION__"></script>
     </body>
 </html>

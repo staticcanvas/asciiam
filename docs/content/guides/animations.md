@@ -23,6 +23,8 @@ Modes determine how each frame selects glyph, intensity, opacity, weight, and op
 | `fadeIn`, `fadeOut` | timed reveal | `revealDirection`, `loop` |
 | `irisIn`, `irisOut` | radial transition reveal | `align`, `loop` |
 | `dissolveIn`, `dissolveOut` | seeded directional dissolve | `revealDirection`, `loop` |
+| `assemble` | seeded fragments gather into the field | `revealDirection`, `revealDuration`, `loop` |
+| `breakApart` | seeded fragments leave the field | `revealDirection`, `revealDuration`, `loop` |
 | `lumaFold` | moving folded-luminance ridges | `speed`, opacity bounds |
 | `riftLace` | intersecting animated seam lattice | `speed`, character set |
 | `echoBloom` | concentric radial echoes | `align`, `speed` |
@@ -34,6 +36,7 @@ Modes determine how each frame selects glyph, intensity, opacity, weight, and op
 | `clickZone` | triggered expanding dense field | `interactionRadius`, `interactionDuration`, `triggerInteraction()` |
 | `image` | sampled image grid | image and mask options |
 | `mesh` | projected geometry grid | mesh source, camera, transform, and raster style |
+| `chart` | ASCII data visualization | `chartData`, `chartType`, `chartTitle`, `setChartData()` |
 | `custom` | callback | `customCell` |
 
 ## Change mode
@@ -48,7 +51,7 @@ animation.setOption('speed', 0.65);
 
 Manual `setMode()` interrupts an active sequence and emits `sequenceInterrupt`. Sequence step changes use the internal mode transition without treating the change as manual input.
 
-Mode selection changes only the animation algorithm. A loaded image remains the glyph source, including for `irisIn`, `irisOut`, `dissolveIn`, `dissolveOut`, `lumaFold`, `riftLace`, and `echoBloom`. Preset selection retains the active global mode.
+Mode selection changes only the animation algorithm. A loaded image remains the glyph source, including for `irisIn`, `irisOut`, `dissolveIn`, `dissolveOut`, `assemble`, `breakApart`, `lumaFold`, `riftLace`, and `echoBloom`. Preset selection retains the active global mode.
 
 `revealDirection` supports `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top`, `diagonal`, `center`, and `edges`. Changing the direction restarts the local reveal timeline so the result is visible immediately.
 

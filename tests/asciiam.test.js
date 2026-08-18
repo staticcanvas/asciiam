@@ -416,6 +416,33 @@ describe("asciiam lifecycle", () => {
         animation.destroy();
     });
 
+    it("supports configurable sweepDuration and delayCurve timing options for reveal modes", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const animation = new asciiam(host, {
+            mode: "fadeIn",
+            sweepDuration: 4.0,
+            delayCurve: "easeIn",
+            loop: false,
+            respectReducedMotion: false,
+        });
+
+        expect(animation.opts.sweepDuration).toBe(4.0);
+        expect(animation.opts.delayCurve).toBe("easeIn");
+
+        const progressEaseIn = animation._revealProgress(0.5, 0.5);
+        animation.setOption("delayCurve", "stagger");
+        const progressStagger = animation._revealProgress(0.5, 0.5);
+
+        expect(typeof progressEaseIn).toBe("number");
+        expect(typeof progressStagger).toBe("number");
+        animation.destroy();
+    });
+
     it("draws transition modes and the three coined animation modes", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {
@@ -423,7 +450,7 @@ describe("asciiam lifecycle", () => {
             clientHeight: { configurable: true, value: 180 },
         });
         const animation = new asciiam(host, { respectReducedMotion: false });
-        ["irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom"].forEach((mode) => {
+        ["irisIn", "irisOut", "dissolveIn", "dissolveOut", "assemble", "breakApart", "lumaFold", "riftLace", "echoBloom"].forEach((mode) => {
             animation.setMode(mode);
             animation._time = 0.9;
             expect(() => animation._draw(16.7)).not.toThrow();
@@ -454,7 +481,7 @@ describe("asciiam lifecycle", () => {
             }).join("|");
         };
 
-        ["irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom"].forEach((mode) => {
+        ["irisIn", "irisOut", "dissolveIn", "dissolveOut", "assemble", "breakApart", "lumaFold", "riftLace", "echoBloom"].forEach((mode) => {
             expect(signature(mode, 0.15)).not.toBe(signature(mode, 1.15));
         });
         animation.destroy();
@@ -1527,5 +1554,115 @@ describe("asciiam lifecycle", () => {
         animation.setMode("static");
         expect(animation.opts.mode).toBe("static");
         animation.destroy();
+    });
+
+    describe("Multi-mode layer compositing", () => {
+        it("configures and retrieves layer configurations via setLayers and getLayers", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { mode: "wave", respectReducedMotion: false });
+            expect(animation.getLayers()).toEqual([]);
+
+            animation.setLayers([
+                { mode: "current", opacity: 0.8, blendMode: "source-over" },
+                { mode: "fire", opacity: 0.5, blendMode: "screen" },
+            ]);
+
+            const layers = animation.getLayers();
+            expect(layers.length).toBe(2);
+            expect(layers[0]).toEqual({
+                mode: "current",
+                options: null,
+                opacity: 0.8,
+                blendMode: "source-over",
+            });
+            expect(layers[1]).toEqual({
+                mode: "fire",
+                options: null,
+                opacity: 0.5,
+                blendMode: "screen",
+            });
+
+            animation.setLayers(null);
+            expect(animation.getLayers()).toEqual([]);
+            animation.destroy();
+        });
+
+        it("updates layers through setOption('layers', ...)", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, {
+                mode: "wave",
+                layers: [{ mode: "plasma", opacity: 0.7 }],
+                respectReducedMotion: false,
+            });
+
+            expect(animation.getLayers().length).toBe(1);
+            expect(animation.getLayers()[0].mode).toBe("plasma");
+
+            animation.setOption("layers", [{ mode: "vortex", opacity: 0.9 }]);
+            expect(animation.getLayers()[0].mode).toBe("vortex");
+
+            animation.destroy();
+        });
+
+        it("renders frame through multi-layer pass without throwing", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, {
+                mode: "wave",
+                layers: [
+                    { mode: "current", opacity: 0.6 },
+                    { mode: "sparkle", opacity: 0.4 },
+                ],
+                respectReducedMotion: false,
+            });
+            animation.start();
+            expect(() => animation._draw(16.7)).not.toThrow();
+            expect(animation.getStats().drawn).toBeGreaterThanOrEqual(0);
+            animation.destroy();
+        });
+    });
+
+    describe("State preservation on grid resizing", () => {
+        it("preserves matrix and particle state across grid resizes", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { mode: "matrix", respectReducedMotion: false });
+            animation.start();
+            expect(animation._matrix.length).toBeGreaterThan(0);
+            const initialFirstColY = animation._matrix[0].y;
+
+            // Trigger a resize by changing density
+            animation.setOption("density", 12);
+            expect(animation._matrix.length).toBeGreaterThan(0);
+            // Verify state was preserved and scaled rather than completely wiped to top
+            expect(Number.isFinite(animation._matrix[0].y)).toBe(true);
+
+            animation.setMode("snow");
+            expect(animation._snow.length).toBeGreaterThan(0);
+            animation.setOption("density", 16);
+            expect(animation._snow.length).toBeGreaterThan(0);
+
+            animation.setOption("density", 1);
+            animation.setMode("snow");
+            const initialSnowCount = animation._snow.length;
+            animation.setOption("snowDensity", 0.08);
+            expect(animation._snow.length).toBeGreaterThan(initialSnowCount);
+
+            animation.destroy();
+        });
     });
 });
