@@ -10,6 +10,56 @@ keywords: [image to ASCII, photo to ASCII, animated GIF ASCII, SVG silhouette, i
 
 Image loading establishes a sampled glyph source. Static images are resampled after grid or image-option changes. Animated GIFs capture each composited frame as an ASCII grid when WebCodecs `ImageDecoder` is available. Brightness selects glyph density. Optional sampled RGB values color each glyph. The global `mode` then animates that source, so the same mode inventory applies to procedural and image-backed output.
 
+## Planned media asset lifecycle
+
+Media support is planned as an explicit application-owned lifecycle:
+
+1. Acquire a URL, `File`, or user-selected `Blob` only after the application has
+   established the required permission and consent state.
+2. Validate the media type and size before decoding, then create a short-lived
+   object URL or stream for the loader.
+3. Decode and sample frames into the active ASCII grid. Retain compact sampled
+   data where possible instead of full-resolution frame buffers.
+4. Revoke object URLs and release decoders, tracks, audio nodes, and frame data
+   when the asset is replaced or the asciiam instance is destroyed.
+
+Applications should treat remote media as untrusted input: use HTTPS, configure
+appropriate CORS headers, and avoid copying user media to a server unless that is
+an explicit product decision. A future media adapter may expose progress,
+cancellation, memory limits, and disposal hooks without changing the renderer API.
+
+## Local media and audio visualization (planned)
+
+Local and user-selected media should remain local by default. File inputs and drag-
+and-drop can provide `File` objects to an application-level adapter, while camera
+and microphone sources require an explicit `getUserMedia()` permission request.
+The adapter should make ownership clear: the application owns the `MediaStream`,
+and stopping its tracks is part of teardown.
+
+An audio visualizer can feed an asciiam mode through the Web Audio API without
+coupling audio processing to the renderer. The planned data flow is:
+
+```text
+audio element or MediaStream
+        -> AudioContext -> AnalyserNode
+        -> Uint8Array frequency/time-domain samples
+        -> visualizer adapter or plugin
+        -> mode parameters / sampled cells
+        -> asciiam renderer
+```
+
+`AnalyserNode.getByteFrequencyData()` is suitable for spectrum bars and
+`getByteTimeDomainData()` for waveform-driven motion. The adapter should reuse
+typed-array buffers, throttle analysis to the render cadence, suspend the audio
+context when hidden, and disconnect nodes during disposal. It should not expose
+raw microphone samples to a plugin unless the user has explicitly granted that
+capability.
+
+Visualizers must provide a non-audio alternative, respect `prefers-reduced-motion`,
+and avoid implying that microphone access is available until permission succeeds.
+The permission prompt should be initiated by a clear user action and its denied,
+revoked, and unavailable states should be represented as ordinary fallback UI.
+
 ## Load an image
 
 `app.js`

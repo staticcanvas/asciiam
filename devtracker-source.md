@@ -315,10 +315,9 @@ strangers with confidence."
 - [x] 🟠🌟✅2️⃣ **Distribution** - **TypeScript definitions.** `src/asciiam.d.ts` documents the options object and
       method signatures discoverable in editors and catch misconfiguration at
       compile time for TS consumers.
-- [x] 🟠🌟✅2️⃣ **Distribution** - **Safari-specific canvas text rendering unverified.** Font metrics and subpixel
+- [ ] 🟠🌟⏳2️⃣ **Distribution** - **Safari-specific canvas text rendering unverified.** Font metrics and subpixel
       text positioning have known quirks in Safari; the quantized-font-level approach
       hasn't been visually checked there.
-    > **Solution Implemented:** Implemented automated subpixel font metric calibration (`calibrateFontMetrics`) in Epic Task 4, dynamically calculating WebKit/Safari subpixel baseline offsets (`actualBoundingBoxAscent`/`Descent`) and verified via `tests/font-metrics.test.js`.
 - [x] 🟠🌟✅2️⃣ **Distribution** - **Bundled distribution.** Vite now produces readable and minified UMD + ESM
       builds in `dist/asciiam/dist`, and copies browser-ready bundles to
       `public/libs` for static deployment.
@@ -334,21 +333,18 @@ strangers with confidence."
 - [x] 🟠🌟✅3️⃣ **Backlog** - **Lifecycle events.** `onReady` and the `ready`, `resize`, and `frame` events
       let consumers react to internal state without subclassing. `on()` returns an
       unsubscribe function, and all subscriptions are cleared by `destroy()`.
-- [x] 🟠🌟✅3️⃣ **Backlog** - **`fadeIn` and `image` modes don't expose fine-grained timing controls** (sweep
+- [ ] 🟠🌟⏳3️⃣ **Backlog** - **`fadeIn` and `image` modes don't expose fine-grained timing controls** (sweep
       duration, per-character delay curve) — currently hardcoded constants
       (`totalDuration = 2.2`, etc.). Fine for the presets, limiting if someone wants a
       slower/faster intro without digging into source.
-    > **Solution Implemented:** Added `sweepDuration` (seconds) and `delayCurve` (`linear`, `easeIn`, `easeOut`, `easeInOut`, `stagger`) options in `src/asciiam.js`. Exported in `src/asciiam.d.ts`, documented in API docs, and covered by unit tests.
-- [x] 🟠🌟✅3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
+- [ ] 🟠🌟⏳3️⃣ **Backlog** - **No built-in way to composite multiple modes** (e.g. `current` texture plus a
       `wave` sweep on top). Currently one mode at a time; layering would mean running
       two instances on stacked canvases, which works but isn't documented as a
       pattern.
-    > **Solution Implemented:** Implemented native multi-layer compositing pipeline `setLayers()` in Epic Task 1. Allows running multiple modes with custom opacity and blend modes within a single canvas instance.
-- [x] 🟠🌟✅3️⃣ **Backlog** - **Matrix mode column state doesn't survive a `setOption('density', …)` change**
+- [ ] 🟠🌟⏳3️⃣ **Backlog** - **Matrix mode column state doesn't survive a `setOption('density', …)` change**
       cleanly mid-run — it reinitializes via `_resize()`, so an in-progress rain
       column resets rather than continuing at the new density. Minor visual hitch,
       not a bug.
-    > **Solution Implemented:** Added live density state preservation in `setOption` in `src/asciiam.js`. Automatically invokes `_adaptStateOnResize` when `matrixDensity`, `snowDensity`, `sparkleDensity`, `fireDensity`, `starfieldDensity`, or `orbitDensity` options are updated mid-run, preserving existing particle trajectories while scaling array lengths.
 
 - [x] 🟠💡✅2️⃣ **Engineering Backlog** - WebGL2 3D feasibility gate. A reusable typed-array prototype projects points, edges, and flat triangles into cell-resolution depth and luminance buffers without per-frame buffer allocation after warm-up. A 960-vertex, 1,920-triangle torus at 60×45 cells measured 0.399 ms median and 0.479 ms p95 across 1,200 frames on the development machine, below the 4 ms and 8 ms desktop gates. Mobile and real-browser presentation remain part of feature verification.
 - [x] 🔴🌟✅3️⃣ **Engineering Backlog** - Dependency-free 3D-to-ASCII mesh mode. MeshData validation, camera and transform controls, points/wireframe/solid styles, four procedural primitives, Canvas/WebGL2 presentation parity, reusable raster buffers, lifecycle cleanup, and TypeScript contracts are implemented.
@@ -356,25 +352,6 @@ strangers with confidence."
   > **Note!** - `npm run benchmark:mesh` measures the cell raster stage in Node. It does not replace browser glyph-raster, GPU-driver, font-metric, or mobile thermal verification.
   > **Note!** - Headless Chromium, Firefox, and WebKit configure a torus through the built utility and validate its generated output. Interactive current Chrome/Firefox, Safari on Apple hardware, and representative physical-mobile passes remain outstanding.
 - [x] 🔴🌟✅3️⃣ **Engineering Backlog** - Core glTF 2.0 and GLB v2 loading. The dependency-free loader handles scenes, node transforms, embedded and external buffers, interleaved and sparse accessors, all core point/line/triangle modes, abortable URL/Blob/byte-buffer input, progress, complexity limits, cleanup, types, tests, and documentation. Required compression extensions are rejected by name before buffer fetching or accessor allocation; no decoder hook exists.
-- [x] 🔴🌟✅3️⃣ **Engine / Compositing** - **Multi-Mode Layer Compositing & Pass Blending Pipeline.** Implement an in-memory multi-pass composition system allowing multiple modes (e.g. `image` background + `wave` ambient + `fire` foreground) to be layered and blended within a single `asciiam` instance and single canvas surface without spawning multiple instances.
-  - [x] 🟠🌟✅3️⃣ **Engine / Compositing** - Core `setLayers([ { mode, options, opacity, blendMode } ])` engine API with zero-allocation per-frame glyph grid merging.
-    > **Solution Implemented:** Added `setLayers()`, `getLayers()`, `options.layers`, and `setOption('layers', ...)` API in `src/asciiam.js`. Supports per-layer opacity, blend modes, and options with zero-allocation per-frame execution in both Canvas 2D and WebGL2 rendering loops. Full TypeScript interfaces added to `src/asciiam.d.ts` and covered by Jest unit tests.
-  - [x] 🟡🌟✅3️⃣ **Engine / DX** - WebGL2 multi-texture shader pass blending & Canvas 2D composite-operation pipeline with TypeScript types and Web Utility live layer editor.
-    > **Solution Implemented:** Integrated layer composite pass execution loop directly into Canvas 2D and WebGL2 render loops with globalAlpha and globalCompositeOperation controls per layer pass.
-- [x] 🔴🌟✅3️⃣ **3D Engine / Optimization** - **3D Software Renderer Acceleration & Draco/Meshopt Compression.** Optimize 3D vertex processing, matrix transformation, and face rasterization with TypedArray batching, optional Web Worker thread offloading, and compressed 3D model parsing (Draco / Meshopt).
-  - [x] 🟠🌟✅3️⃣ **3D Engine / Optimization** - SIMD/TypedArray vertex transformation pipeline reducing CPU main-thread frame time for >20,000 vertex GLTF/GLB models.
-    > **Solution Implemented:** Pre-computed 4x4 View-Model Transformation Matrix in `src/mesh.js` once per frame, reducing per-vertex projection calculations to single dot-products. Removed per-vertex Euler angle trigonometry and 3x matrix multiplications, achieving 4x-8x CPU speedup on high-poly models (>20,000 vertices).
-  - [x] 🟡🌟✅3️⃣ **3D Engine / Feature** - Optional Draco / Meshopt GLTF extension decoder support with progressive asynchronous decoding and light shading (Lambertian / Normal mapping ASCII glyphs).
-    > **Solution Implemented:** Added plug-and-play GLTF decoder extension registry `registerGltfDecoder()` in `src/gltf.js` and exposed on `asciiam.registerGltfDecoder()`. Allows registering Draco/Meshopt decoders dynamically without bloating bundle core.
-- [x] 🟠🌟✅3️⃣ **Engine / State** - **State Preservation & Seamless Grid Resizing.** Implement seamless state migration for stateful procedural modes (Matrix rain columns, particle positions, fluid velocity fields) during dynamic canvas resizing or `density` shifts.
-  - [x] 🟡🌟✅3️⃣ **Engine / State** - Coordinate-scaling and state interpolation algorithms on `_resize()` preventing jarring animation restarts for stateful modes.
-    > **Solution Implemented:** Added `_adaptStateOnResize(oldCols, oldRows, newCols, newRows)` in `src/asciiam.js`. Dynamically rescales `col` and `y` coordinates for Matrix rain, snow, sparkles, fire embers, starfield particles, and orbit paths when `_resize()` is called. Preserves animation progress instead of restarting drops/particles at position zero. Documentation updated in rendering guide and API reference.
-- [x] 🟠🌟✅3️⃣ **Rendering / Compatibility** - **Automated Font Metric Calibration & Safari Rendering Verification.** Develop an automated subpixel font metric calibration system and end-to-end visual testing harness targeting Safari/WebKit canvas quirks.
-  - [x] 🟡🌟✅3️⃣ **Rendering / Compatibility** - Font-metric baseline measurement helper in WebGL font atlas generator and cross-browser visual snapshot regression test suite.
-    > **Solution Implemented:** Implemented `calibrateFontMetrics(target, fontFamily, fontSize)` and static `asciiam.calibrateFontMetrics()` in `src/asciiam.js`. Uses 2D `TextMetrics` (`actualBoundingBoxAscent`/`Descent`) to compute exact subpixel glyph baselines across WebKit/Safari and Chrome engines. Exported `asciiamFontMetrics` types in `src/asciiam.d.ts`, documented in API docs, and verified via `tests/font-metrics.test.js`.
-- [x] 🟠🌟✅3️⃣ **DX / SSR** - **Headless ASCII String & Frame Generator.** Create a pure JavaScript text/string rasterizer mode (`asciiam.renderToString()` / `asciiam.renderFrame()`) that operates natively in Node.js, Bun, and Deno without requiring DOM Canvas or JSDOM.
-  - [x] 🟡🌟✅3️⃣ **DX / SSR** - Light-weight headless text renderer for CLI tools, terminal outputs, SSR frameworks (Next.js, Nuxt), and static site generation.
-    > **Solution Implemented:** Implemented `renderFrame(options)` and `renderToString(options)` static and instance methods in `src/asciiam.js`. Allows pure JavaScript text/string rasterization in Node.js, Bun, Deno, and SSR environments without requiring DOM Canvas or JSDOM. Supports 24-bit ANSI color escape code rendering (`ansi: true`), custom charsets, density, and time offsets. Exported `asciiamHeadlessOptions` & `asciiamHeadlessCell` in `src/asciiam.d.ts`, documented in API docs, and verified with `tests/headless.test.js`.
 - [ ] 🟠💡⏳4️⃣ **Engineering Backlog** - Deferred mesh-compression research. After uncompressed glTF/GLB support has production measurements, benchmark Draco and Meshopt transfer size, decoder payload, initialization, decode time, peak memory, retained memory, and render-ready latency on desktop and mobile. Keep all codec code and dependencies out of released artifacts unless a later evidence-based architecture review explicitly approves a change.
   > **Note!** - `architecture/mesh-compression-evaluation.md` and `npm run benchmark:model` define the isolated corpus, baseline, measurements, and decision rule. The evaluation remains deferred until production uncompressed-model data exists.
 

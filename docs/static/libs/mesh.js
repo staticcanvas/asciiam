@@ -337,59 +337,12 @@ export class MeshCellRasterizer {
         const translation = readVector3(transform.position, ZERO_VECTOR, this._translation);
         const rotation = readVector3(transform.rotation, ZERO_VECTOR, this._rotation);
         const scale = readVector3(transform.scale, ONE_VECTOR, this._scale);
-
         const sinX = Math.sin(rotation[0]);
         const cosX = Math.cos(rotation[0]);
         const sinY = Math.sin(rotation[1]);
         const cosY = Math.cos(rotation[1]);
         const sinZ = Math.sin(rotation[2]);
         const cosZ = Math.cos(rotation[2]);
-
-        const scaleX = scale[0];
-        const scaleY = scale[1];
-        const scaleZ = scale[2];
-        const tx = translation[0];
-        const ty = translation[1];
-        const tz = translation[2];
-
-        // Combined 3x3 Model Matrix
-        const m00 = (cosY * cosZ) * scaleX;
-        const m01 = (sinX * sinY * cosZ - cosX * sinZ) * scaleY;
-        const m02 = (cosX * sinY * cosZ + sinX * sinZ) * scaleZ;
-
-        const m10 = (cosY * sinZ) * scaleX;
-        const m11 = (sinX * sinY * sinZ + cosX * cosZ) * scaleY;
-        const m12 = (cosX * sinY * sinZ - sinX * cosZ) * scaleZ;
-
-        const m20 = (-sinY) * scaleX;
-        const m21 = (sinX * cosY) * scaleY;
-        const m22 = (cosX * cosY) * scaleZ;
-
-        const right = this._right;
-        const up = this._up;
-        const forward = this._forward;
-        const cameraPosition = this._cameraPosition;
-
-        const txRel = tx - cameraPosition[0];
-        const tyRel = ty - cameraPosition[1];
-        const tzRel = tz - cameraPosition[2];
-
-        // Combined View-Model Matrix
-        const T00 = m00 * right[0] + m10 * right[1] + m20 * right[2];
-        const T01 = m01 * right[0] + m11 * right[1] + m21 * right[2];
-        const T02 = m02 * right[0] + m12 * right[1] + m22 * right[2];
-        const T03 = txRel * right[0] + tyRel * right[1] + tzRel * right[2];
-
-        const T10 = m00 * up[0] + m10 * up[1] + m20 * up[2];
-        const T11 = m01 * up[0] + m11 * up[1] + m21 * up[2];
-        const T12 = m02 * up[0] + m12 * up[1] + m22 * up[2];
-        const T13 = txRel * up[0] + tyRel * up[1] + tzRel * up[2];
-
-        const T20 = m00 * forward[0] + m10 * forward[1] + m20 * forward[2];
-        const T21 = m01 * forward[0] + m11 * forward[1] + m21 * forward[2];
-        const T22 = m02 * forward[0] + m12 * forward[1] + m22 * forward[2];
-        const T23 = txRel * forward[0] + tyRel * forward[1] + tzRel * forward[2];
-
         const near = Math.max(EPSILON, Number(camera?.near) || DEFAULT_CAMERA.near);
         const far = Math.max(near + EPSILON, Number(camera?.far) || DEFAULT_CAMERA.far);
         const aspect = this.cols / this.rows;
@@ -400,32 +353,40 @@ export class MeshCellRasterizer {
         const projected = this.projected;
         const world = this.world;
         const visible = this.visible;
-        const colsMinus1 = this.cols - 1;
-        const rowsMinus1 = this.rows - 1;
+        const right = this._right;
+        const up = this._up;
+        const forward = this._forward;
+        const cameraPosition = this._cameraPosition;
 
         for (let vertex = 0; vertex < mesh.vertexCount; vertex++) {
             const offset = vertex * 3;
-            const x = source[offset];
-            const y = source[offset + 1];
-            const z = source[offset + 2];
-
-            const wx = m00 * x + m01 * y + m02 * z + tx;
-            const wy = m10 * x + m11 * y + m12 * z + ty;
-            const wz = m20 * x + m21 * y + m22 * z + tz;
+            const sx = source[offset] * scale[0];
+            const sy = source[offset + 1] * scale[1];
+            const sz = source[offset + 2] * scale[2];
+            const rx = sx;
+            const ry = sy * cosX - sz * sinX;
+            const rz = sy * sinX + sz * cosX;
+            const qx = rx * cosY + rz * sinY;
+            const qy = ry;
+            const qz = -rx * sinY + rz * cosY;
+            const wx = qx * cosZ - qy * sinZ + translation[0];
+            const wy = qx * sinZ + qy * cosZ + translation[1];
+            const wz = qz + translation[2];
             world[offset] = wx;
             world[offset + 1] = wy;
             world[offset + 2] = wz;
-
-            const viewX = T00 * x + T01 * y + T02 * z + T03;
-            const viewY = T10 * x + T11 * y + T12 * z + T13;
-            const viewZ = T20 * x + T21 * y + T22 * z + T23;
-
+            const dx = wx - cameraPosition[0];
+            const dy = wy - cameraPosition[1];
+            const dz = wz - cameraPosition[2];
+            const viewX = dx * right[0] + dy * right[1] + dz * right[2];
+            const viewY = dx * up[0] + dy * up[1] + dz * up[2];
+            const viewZ = dx * forward[0] + dy * forward[1] + dz * forward[2];
             visible[vertex] = viewZ >= near && viewZ <= far ? 1 : 0;
             const divisor = perspective ? viewZ * tanHalfFov : orthoScale;
             const ndcX = viewX / (divisor * aspect);
             const ndcY = viewY / divisor;
-            projected[offset] = (ndcX * 0.5 + 0.5) * colsMinus1;
-            projected[offset + 1] = (0.5 - ndcY * 0.5) * rowsMinus1;
+            projected[offset] = (ndcX * 0.5 + 0.5) * (this.cols - 1);
+            projected[offset + 1] = (0.5 - ndcY * 0.5) * (this.rows - 1);
             projected[offset + 2] = viewZ;
         }
     }

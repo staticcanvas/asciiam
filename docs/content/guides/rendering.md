@@ -24,6 +24,84 @@ const animation = new asciiam('#target', {
 
 `auto` is appropriate for most integrations. Use `canvas2d` for deterministic CPU rendering or environments that limit WebGL contexts. Use `webgl2` when the requested renderer must be recorded as GPU-first while retaining fallback behavior.
 
+## WebGPU roadmap (planned and experimental)
+
+WebGPU is a planned renderer backend. It is not part of the current production renderer selection: asciiam currently uses WebGL2 for GPU presentation and Canvas 2D as its fallback. Any WebGPU implementation must preserve the existing output and lifecycle behavior before it can be enabled by `renderer: 'auto'`.
+
+The proposed architecture keeps animation and cell generation independent from presentation. A shared renderer contract would receive the resolved logical grid, glyph atlas, cell attributes, resize state, and frame timing, then expose the same lifecycle operations to each backend:
+
+- create and resize the presentation resources;
+- upload or consume the current cell data;
+- draw one frame without changing animation state;
+- release resources on `destroy()`; and
+- report backend status, errors, and recovery events.
+
+The contract is an implementation boundary, not a new public API. The WebGL2 and Canvas 2D implementations remain the source of truth while the WebGPU prototype is evaluated.
+
+### Capability detection and fallback
+
+WebGPU detection must be asynchronous and capability-based. A prototype should first verify a secure context and `navigator.gpu`, request an adapter, inspect the adapter limits and required features, and request a device. A truthy `navigator.gpu` value alone does not establish that a usable device is available. WebGPU is currently not a Baseline feature and is available only in secure contexts in supporting browsers; see the [WebGPU API reference](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API).
+
+The requested backend must never prevent an instance from rendering when WebGPU is unavailable. The planned resolution order is:
+
+```mermaid
+flowchart TD
+  A[Construct instance] --> B{Explicit canvas2d?}
+  B -->|yes| C[Canvas 2D]
+  B -->|no| D{WebGPU requested or eligible?}
+  D -->|no| E{WebGL2 available?}
+  D -->|yes| F{Secure context and usable adapter/device?}
+  F -->|yes| G[Experimental WebGPU]
+  F -->|no| E
+  E -->|yes| H[Production WebGL2]
+  E -->|no| C
+  G --> I{Device lost or initialization fails?}
+  I -->|yes| E
+  I -->|no| G
+```
+
+`auto` should continue to resolve to WebGL2 or Canvas 2D until the benchmark gates below are met. A WebGPU request may be recorded as an attempted backend in diagnostics, but failure must resolve to WebGL2 and then Canvas 2D using the existing fallback events. The implementation must not repeatedly recreate a lost device in a loop.
+
+### Secure-context and device-loss constraints
+
+WebGPU requires HTTPS (with browser-defined localhost development exceptions) and can fail before a device is created. The adapter can be unavailable, the requested limits or features can be unsupported, and a device can be lost after initialization. The prototype must observe `GPUDevice.lost`, classify the loss reason, release device-owned resources, and fall back to WebGL2 or Canvas 2D. Recreating a WebGPU device is optional recovery work; it must not delay the fallback frame or interrupt `destroy()`.
+
+Resources are device-specific. Any recovery attempt must rebuild buffers, textures, bind groups, pipelines, and glyph-atlas uploads against the new device. Application animation state and logical grid state must remain owned by asciiam and survive backend changes. See the [`GPUDevice.lost` reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/lost) for the browser-level loss contract.
+
+### Shared renderer contract proposal
+
+The prototype should test an internal contract equivalent to the following shape. Names are provisional and must not be treated as supported public API:
+
+`src/renderers/contract.js`
+
+```js
+const renderer = {
+  async init(surface, capabilities) {},
+  resize(grid, pixelRatio) {},
+  upload(frame, glyphAtlas) {},
+  draw(timestamp) {},
+  getInfo() {},
+  dispose() {}
+};
+```
+
+`frame` should describe cell glyph, color, alpha, and visibility data in a backend-neutral form. Backends may choose different buffer layouts, batching, atlas formats, and synchronization strategies, but they must produce equivalent cell output for the same frame input.
+
+### Benchmark gates
+
+WebGPU should remain experimental until measurements on representative devices show that it improves the workloads that matter to asciiam without increasing startup or recovery failures. The benchmark plan must compare WebGPU, WebGL2, and Canvas 2D using the same animation state, grid, quality tier, DPR, and media input.
+
+Promotion to `renderer: 'auto'` should require all of the following:
+
+- no correctness regressions across supported modes, images, animations, and mesh input;
+- equal or lower median frame time at medium and high cell counts on supported GPU classes;
+- no unacceptable increase in initialization latency or memory use;
+- successful resize, visibility suspension, repeated start/stop, and destruction cycles;
+- deterministic fallback when secure-context, adapter, device, shader, validation, or device-loss conditions occur; and
+- repeated runs across Chromium, Firefox, and WebKit coverage where WebGPU is available, plus explicit fallback coverage where it is not.
+
+Record median and tail frame time, CPU frame work, drawn-cell count, initialization time, device-loss recovery time, and failure category. Do not promote the backend from a single high-end device result. Until these gates are reviewed, WebGPU remains opt-in prototype work and production behavior remains WebGL2/Canvas 2D.
+
 ## WebGL2 fallback flow
 
 ```mermaid

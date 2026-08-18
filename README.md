@@ -16,6 +16,28 @@ A dependency-free, efficient HTML5 Canvas and WebGL2 animation engine for proced
 - **Backdrops & Quality Tiers**: Multi-stop linear, radial, and cubic gradients, edge fade (vignette), trails, custom character density palettes, off-screen auto-pausing, and full accessibility (`prefers-reduced-motion` aware).
 - **Interactive Web Utility**: Dedicated composition authoring tool with 27 presets, live controls, multi-column popovers, code export, image uploads, and sequence editing.
 
+## Roadmap
+
+The renderer roadmap is a progressive enhancement path: **WebGPU → WebGL2 → Canvas 2D**.
+WebGPU is the planned modern backend for higher-throughput ASCII rendering, but remains
+experimental and evidence-gated until real-device compatibility, fallback behavior, and
+benchmarks justify enabling it by default. WebGL2 remains the current GPU backend, with
+Canvas 2D as the reliable compatibility fallback. See [Rendering](docs/content/guides/rendering.md)
+for the current backend behavior.
+
+Planned extensions include a unified media-asset pipeline for images, animated media, and
+eventually video/audio sources, plus optional audio-visualizer modes. Audio analysis and
+media lifecycle management will remain outside the core renderer so applications can own
+permissions, playback, cleanup, and performance policy; a visualizer can consume those
+signals through an explicit integration or plugin boundary.
+
+The plugin roadmap will define a versioned, capability-scoped extension API for custom
+modes, media adapters, visualizers, and renderer integrations. Plugin lifecycle, disposal,
+validation, and failure isolation will be part of that contract. Ordinary JavaScript
+plugins should be treated as trusted application code; stronger isolation is a separate
+design concern. Current custom-mode boundaries are documented in
+[Integration and lifecycle](docs/content/guides/integration.md).
+
 ## Releases
 
 The current package and documentation version is `0.10.0`. Release behavior is recorded

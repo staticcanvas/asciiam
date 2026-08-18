@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=c948ec73a06f";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=c948ec73a06f";
+import { highlightJavaScript } from "./webutil-code.js?v=a1a6f36ad9b3";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=a1a6f36ad9b3";
 
 const asciiam = window.asciiam;
 
@@ -149,7 +149,7 @@ const modes = [
     "plain", "wave", "current", "ripple", "vortex", "plasma", "fadeIn", "fadeOut",
     "irisIn", "irisOut", "dissolveIn", "dissolveOut", "lumaFold", "riftLace", "echoBloom",
     "matrix", "snow", "sparkle", "fire", "starfield", "glitch", "typewriter", "orbit",
-    "hoverZone", "clickZone",
+    "hoverZone", "clickZone", "mesh",
 ];
 let sequenceImageLibrary = [];
 const modeButtonsEl = document.getElementById("modeButtons");
@@ -162,178 +162,6 @@ function setActiveModeButton(mode) {
     if (revealDirectionGroup) revealDirectionGroup.hidden = !["fadeIn", "fadeOut", "dissolveIn", "dissolveOut"].includes(mode);
     const interactionControls = document.getElementById("interactionControlsGroup");
     if (interactionControls) interactionControls.hidden = !["hoverZone", "clickZone"].includes(mode);
-}
-
-const chartTypeEl = document.getElementById("chartType");
-if (chartTypeEl) {
-    chartTypeEl.onchange = () => {
-        anim.setOption("chartType", chartTypeEl.value);
-        renderUsage();
-    };
-}
-const chartTitleEl = document.getElementById("chartTitle");
-if (chartTitleEl) {
-    chartTitleEl.oninput = () => {
-        anim.setOption("chartTitle", chartTitleEl.value);
-        renderUsage();
-    };
-}
-const chartDataEl = document.getElementById("chartData");
-function applyChartDataFromInput() {
-    if (!chartDataEl) return;
-    const raw = chartDataEl.value.split(",").map((v) => parseFloat(v.trim())).filter((v) => !isNaN(v));
-    if (raw.length) {
-        anim.setOption("chartData", raw);
-        renderUsage();
-    }
-}
-if (chartDataEl) {
-    chartDataEl.oninput = applyChartDataFromInput;
-}
-const chartShowAxesToggle = document.getElementById("chartShowAxesToggle");
-if (chartShowAxesToggle) {
-    chartShowAxesToggle.onchange = () => {
-        anim.setOption("chartShowAxes", chartShowAxesToggle.checked);
-        renderUsage();
-    };
-}
-
-// Chart labels — when set, merge into {label, value}[] data format
-const chartLabelsEl = document.getElementById("chartLabels");
-function applyChartLabelsFromInput() {
-    if (!chartLabelsEl || !chartDataEl) return;
-    const rawVals = chartDataEl.value.split(",").map((v) => parseFloat(v.trim())).filter((v) => !isNaN(v));
-    const rawLabels = chartLabelsEl.value.split(",").map((l) => l.trim());
-    if (rawVals.length === 0) return;
-    if (rawLabels.length > 0 && rawLabels[0] !== "") {
-        const merged = rawVals.map((val, i) => ({ value: val, label: rawLabels[i] ?? "" }));
-        anim.setOption("chartData", merged);
-    } else {
-        anim.setOption("chartData", rawVals);
-    }
-    renderUsage();
-}
-if (chartLabelsEl) {
-    chartLabelsEl.oninput = applyChartLabelsFromInput;
-    // Override applyChartDataFromInput to also re-merge labels
-    const origApply = applyChartDataFromInput;
-    chartDataEl.oninput = () => {
-        if (chartLabelsEl.value.trim()) {
-            applyChartLabelsFromInput();
-        } else {
-            origApply();
-        }
-    };
-}
-
-// Scale range inputs
-const chartScaleMinEl = document.getElementById("chartScaleMin");
-const chartScaleMaxEl = document.getElementById("chartScaleMax");
-if (chartScaleMinEl) {
-    chartScaleMinEl.oninput = () => {
-        const v = chartScaleMinEl.value.trim();
-        anim.setOption("chartScaleMin", v === "" ? null : parseFloat(v));
-        renderUsage();
-    };
-}
-if (chartScaleMaxEl) {
-    chartScaleMaxEl.oninput = () => {
-        const v = chartScaleMaxEl.value.trim();
-        anim.setOption("chartScaleMax", v === "" ? null : parseFloat(v));
-        renderUsage();
-    };
-}
-
-// Legend toggle
-const chartShowLegendToggle = document.getElementById("chartShowLegendToggle");
-if (chartShowLegendToggle) {
-    chartShowLegendToggle.onchange = () => {
-        anim.setOption("chartShowLegend", chartShowLegendToggle.checked);
-        renderUsage();
-    };
-}
-
-// Animate items stagger toggle
-const chartAnimateItemsToggle = document.getElementById("chartAnimateItemsToggle");
-if (chartAnimateItemsToggle) {
-    chartAnimateItemsToggle.onchange = () => {
-        anim.setOption("chartAnimateItems", chartAnimateItemsToggle.checked);
-        renderUsage();
-    };
-}
-
-// Per-series color palette
-const chartColorsEl = document.getElementById("chartColors");
-if (chartColorsEl) {
-    chartColorsEl.oninput = () => {
-        const raw = chartColorsEl.value.trim();
-        const colors = raw ? raw.split(/\s+/).filter(Boolean) : null;
-        anim.setOption("chartColors", colors && colors.length > 0 ? colors : null);
-        renderUsage();
-    };
-}
-
-// Chart sample data presets
-const setChartPreset = (title, dataStr) => {
-    if (chartTitleEl) chartTitleEl.value = title;
-    if (chartDataEl) chartDataEl.value = dataStr;
-    anim.setOption("chartTitle", title);
-    applyChartDataFromInput();
-};
-
-document.getElementById("chartPresetGrowthBtn")?.addEventListener("click", () => setChartPreset("Revenue Growth", "15, 32, 48, 72, 95, 60, 84"));
-document.getElementById("chartPresetLoadBtn")?.addEventListener("click", () => setChartPreset("Server Workload", "45, 88, 62, 91, 35, 76, 50"));
-document.getElementById("chartPresetTempBtn")?.addEventListener("click", () => setChartPreset("Temperature", "20, 22, 25, 28, 31, 27, 23"));
-document.getElementById("chartPresetFinancialBtn")?.addEventListener("click", () => setChartPreset("Stock Trend", "100, 110, 105, 125, 140, 135, 160"));
-
-const chartTriggerBtn = document.getElementById("chartTriggerBtn");
-if (chartTriggerBtn) {
-    chartTriggerBtn.addEventListener("click", () => {
-        if (!anim.opts.chartData) {
-            if (chartTypeEl) anim.setOption("chartType", chartTypeEl.value);
-            if (chartTitleEl) anim.setOption("chartTitle", chartTitleEl.value);
-            if (chartLabelsEl && chartLabelsEl.value.trim()) {
-                applyChartLabelsFromInput();
-            } else {
-                applyChartDataFromInput();
-            }
-            renderUsage();
-        }
-    });
-}
-
-const clearMediaBtn = document.getElementById("clearMediaBtn");
-if (clearMediaBtn) {
-    clearMediaBtn.onclick = () => {
-        if (typeof anim.clearImage === "function") anim.clearImage();
-        if (typeof anim.clearModel === "function") anim.clearModel();
-        anim.setOption("chartData", null);
-        anim.setOption("chartScaleMin", null);
-        anim.setOption("chartScaleMax", null);
-        anim.setOption("chartColors", null);
-        anim.setOption("chartAnimateItems", false);
-        anim.setMode("wave");
-        setActiveModeButton("wave");
-        renderUsage();
-    };
-}
-
-const sweepDurationEl = document.getElementById("sweepDuration");
-const sweepDurationVal = document.getElementById("sweepDurationVal");
-if (sweepDurationEl) {
-    sweepDurationEl.oninput = () => {
-        const val = parseFloat(sweepDurationEl.value);
-        if (sweepDurationVal) sweepDurationVal.textContent = val.toFixed(1) + "s";
-        anim.setOption("sweepDuration", val);
-        renderUsage();
-    };
-}
-const delayCurveEl = document.getElementById("delayCurve");
-if (delayCurveEl) {
-    delayCurveEl.onchange = () => {
-        anim.setOption("delayCurve", delayCurveEl.value);
-        renderUsage();
-    };
 }
 modes.forEach((m) => {
     const b = document.createElement("button");
@@ -1367,6 +1195,8 @@ meshPrimitive.onchange = () => {
         setModelStatus("No model loaded.");
     } else {
         anim.setOption("meshPrimitive", name);
+        anim.setMode("mesh");
+        setActiveModeButton("mesh");
         setModelStatus(`${name} primitive active.`);
     }
     renderUsage();
@@ -1387,6 +1217,8 @@ document.getElementById("modelInput").onchange = async (event) => {
     setModelStatus(`Loading ${file.name}…`);
     try {
         await anim.setModel(file);
+        anim.setMode("mesh");
+        setActiveModeButton("mesh");
         setModelStatus(`${file.name} loaded · ${anim.getMeshInfo().vertexCount} vertices.`);
         renderUsage();
     } catch (error) {
@@ -1411,6 +1243,8 @@ document.getElementById("loadModelUrlBtn").onclick = async () => {
     setModelStatus(`Loading ${url.pathname.split("/").pop()}…`);
     try {
         await anim.setModel(url.href);
+        anim.setMode("mesh");
+        setActiveModeButton("mesh");
         setModelStatus(`${url.pathname.split("/").pop()} loaded · ${anim.getMeshInfo().vertexCount} vertices.`);
         renderUsage();
     } catch (error) {
@@ -1878,21 +1712,6 @@ function usageSource() {
         options.animateImageMask = anim.opts.animateImageMask;
         if (anim.opts.imageAnimationRange) options.imageAnimationRange = anim.opts.imageAnimationRange;
     }
-    if (anim.opts.mode === "chart" || anim.opts.chartData) {
-        options.mode = "chart";
-        if (anim.opts.chartType) options.chartType = anim.opts.chartType;
-        if (anim.opts.chartTitle) options.chartTitle = anim.opts.chartTitle;
-        if (anim.opts.chartData) options.chartData = anim.opts.chartData;
-        if (anim.opts.chartShowAxes !== undefined) options.chartShowAxes = anim.opts.chartShowAxes;
-        if (anim.opts.chartShowLegend === false) options.chartShowLegend = false;
-        if (Array.isArray(anim.opts.chartColors)) options.chartColors = anim.opts.chartColors;
-        if (anim.opts.chartScaleMin != null) options.chartScaleMin = anim.opts.chartScaleMin;
-        if (anim.opts.chartScaleMax != null) options.chartScaleMax = anim.opts.chartScaleMax;
-        if (anim.opts.chartAnimateItems) options.chartAnimateItems = true;
-    }
-    if (anim.opts.sweepDuration) options.sweepDuration = anim.opts.sweepDuration;
-    if (anim.opts.delayCurve) options.delayCurve = anim.opts.delayCurve;
-    if (Array.isArray(anim.opts.layers) && anim.opts.layers.length) options.layers = anim.opts.layers;
     if (colorMode === "gradient" && anim.opts.gradient) options.gradient = anim.opts.gradient;
     if (colorMode === "hueRotate" || colorMode === "breathe") options.colorAnimation = anim.opts.colorAnimation;
     if (anim.opts.backdrop && anim.opts.backdrop.enabled) options.backdrop = anim.opts.backdrop;
@@ -1916,11 +1735,10 @@ function getPersistableOptions() {
     const keys = [
         "mode", "quality", "targetFPS", "resolutionScale", "renderer", "charSet", "align", "color", "gradient", "backdrop",
         "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "extendedStats", "colorAnimation",
-        "interactionRadius", "interactionDuration", "sweepDuration", "delayCurve",
+        "interactionRadius", "interactionDuration",
         "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",
         "fireDensity", "starfieldDensity", "orbitDensity", "glitchIntensity", "typewriterDuration",
         "meshPrimitive", "meshStyle", "meshProjection", "meshCamera", "meshTransform", "meshAutoRotate", "meshRotationSpeed",
-        "chartData", "chartType", "chartTitle", "chartShowValues", "chartShowAxes", "chartShowLegend", "chartColors", "chartScaleMin", "chartScaleMax", "chartAnimateItems", "layers",
         "sequence", "sequenceOptions",
     ];
     const options = {};
@@ -1990,8 +1808,6 @@ function updateToolbarSummaries() {
         ? anim.opts.meshPrimitive || (anim.opts.model ? "model" : `${meshInfo.primitiveCount} primitives`)
         : "none";
     setToolbarSummary("meshTriggerBtn", "meshToolbarStatus", "3D", meshLabel);
-    const chartLabel = anim.opts.chartData ? (anim.opts.chartType || "bar") : "none";
-    setToolbarSummary("chartTriggerBtn", "chartToolbarStatus", "Chart", chartLabel);
 }
 function syncHistoryButtons() {
     document.getElementById("undoSettingsBtn").disabled = historyIndex <= 0 && historyTimer === null;

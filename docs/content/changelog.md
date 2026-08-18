@@ -9,25 +9,6 @@ tags: [release, compatibility, changes]
 keywords: [asciiam changelog, release notes, upgrade notes]
 ---
 
-## 0.11.0
-
-### Runtime & API Extensions
-
-- **Multi-Layer Compositing**: Introduced `setLayers()`, `getLayers()`, and `options.layers` for multi-pass animation blending, opacity masking, and per-layer mode composition.
-- **3D Software Renderer Acceleration**: Precomputed $4\times4$ view-model transformations for 3D GLB/glTF rendering; added `registerGltfDecoder()` for custom 3D model decoders.
-- **Dynamic Density & State Preservation**: Integrated particle state preservation across dynamic `density` updates (`setOption('density', ...)`), retaining trajectory states for Matrix, Sparkle, Fire, Snow, Starfield, and Orbit modes during live resizing.
-- **Subpixel Font Calibration**: Added `calibrateFontMetrics()` for subpixel character ratio measurement and high-precision ASCII canvas alignment.
-- **Headless Generator**: Added `renderToString()` and `renderFrame()` for generating static ASCII strings and frame arrays in Node.js, CLI, and headless environments.
-- **Data Chart Mode**: Added `chart` animation mode supporting 6 visualization types (`bar`, `horizontalBar`, `line`, `sparkline`, `heatmap`, `donut`), with custom titles and CSV data inputs.
-- **Sweep Timing & Delay Curves**: Added `sweepDuration` (seconds) and `delayCurve` (`linear`, `easeIn`, `easeOut`, `easeInOut`, `stagger`) options for reveal animations.
-
-### Web Utility & Documentation
-
-- **Light Theme Support**: Added comprehensive Light Theme styling across the documentation site and Web Utility with zero FOUC, theme persistence (`asciiam:theme`), and automatic logo color switching.
-- **Web Utility Expansion**: Integrated `chart` mode with full interactive controls, sweep timing/delay curve selectors, and multi-layer compositing options into the Web Utility.
-- **Navigation Alignment**: Restructured documentation sidebar navigation to place "Web Utility" as a primary top-level item preceding the JSON Builder.
-- **Homepage Showcase**: Enhanced splash page 3D mesh resolution and added an 8-card live animation showcase grid featuring real-time procedural, media, and 3D demos.
-
 ## 0.10.0
 
 **Current documented baseline.** This release establishes the public renderer, animation, sequencing, image-sampling, and web-utility contracts reflected in the API reference.

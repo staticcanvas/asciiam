@@ -59,44 +59,6 @@ export type asciiamEvent =
   | 'modelClear'
   | (string & {});
 
-export interface asciiamLayerConfig {
-  mode: asciiamMode;
-  options?: Record<string, unknown> | null;
-  opacity?: number;
-  blendMode?: GlobalCompositeOperation | string;
-}
-
-export interface asciiamFontMetrics {
-  charW: number;
-  charH: number;
-  ascent: number;
-  descent: number;
-  baselineOffset: number;
-}
-
-export interface asciiamHeadlessCell {
-  char: string;
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
-
-export interface asciiamHeadlessOptions {
-  cols?: number;
-  rows?: number;
-  mode?: asciiamMode | string;
-  time?: number;
-  charSet?: string;
-  invert?: boolean;
-  density?: number;
-  ansi?: boolean;
-  color?: string;
-  background?: string | null;
-  align?: asciiamAlign;
-  layers?: asciiamLayerConfig[];
-}
-
 export interface asciiamMeshData {
   positions: Float32Array | Float64Array;
   indices?: Uint8Array | Uint16Array | Uint32Array | null;
@@ -293,9 +255,6 @@ export interface asciiamOptions {
   speed?: number;
   direction?: 'horizontal' | 'vertical' | 'diagonal';
   revealDirection?: 'left-to-right' | 'right-to-left' | 'top-to-bottom' | 'bottom-to-top' | 'diagonal' | 'center' | 'edges';
-  revealDuration?: number;
-  sweepDuration?: number;
-  delayCurve?: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'stagger';
   align?: 'center' | 'top' | 'top-left' | 'top-right' | 'left' | 'right' | 'bottom' | 'bottom-left' | 'bottom-right';
   minOpacity?: number;
   maxOpacity?: number;
@@ -337,17 +296,12 @@ export interface asciiamOptions {
   desynchronized?: boolean;
   renderer?: 'auto' | 'webgl2' | 'canvas2d';
   powerPreference?: 'high-performance' | 'low-power' | 'default';
-  chartData?: number[] | { label?: string; value: number; color?: string }[] | number[][] | null;
-  chartType?: 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut';
-  chartTitle?: string;
-  chartShowValues?: boolean;
-  chartShowAxes?: boolean;
+  respectReducedMotion?: boolean;
   onReady?: ((animation: asciiam) => void) | null;
   onImageError?: ((error: Event) => void) | null;
   onModelError?: ((error: unknown) => void) | null;
   sequence?: asciiamSequenceStep[] | null;
   sequenceOptions?: asciiamSequenceOptions | null;
-  layers?: asciiamLayerConfig[] | null;
   ambient?: number;
   bandWidth?: number;
   trail?: number;
@@ -390,17 +344,10 @@ export default class asciiam {
   static registerMode(name: string, fn: (api: Record<string, unknown>) => unknown): void;
   static createMeshPrimitive(name: 'cube' | 'plane' | 'icosphere' | 'torus', options?: Record<string, number>): asciiamMeshData;
   static loadModel(source: asciiamModelSource, options?: asciiamModelLoadOptions): Promise<asciiamMeshData>;
-  static registerGltfDecoder(name: string, decoderFn: (extensionData: unknown, context: Record<string, unknown>) => unknown): void;
-  static getGltfDecoders(): string[];
-  static calibrateFontMetrics(target?: CanvasRenderingContext2D | string, fontFamily?: string, fontSize?: number): asciiamFontMetrics;
-  static renderFrame(options?: asciiamHeadlessOptions): asciiamHeadlessCell[][];
-  static renderToString(options?: asciiamHeadlessOptions): string;
   constructor(target: string | HTMLCanvasElement | HTMLElement, options?: asciiamOptions);
   start(): void;
   stop(): void;
   destroy(): void;
-  renderFrame(options?: asciiamHeadlessOptions): asciiamHeadlessCell[][];
-  renderToString(options?: asciiamHeadlessOptions): string;
   on(event: asciiamEvent, listener: (detail: asciiamEventDetail, animation: asciiam) => void): () => void;
   off(event: asciiamEvent, listener: (detail: asciiamEventDetail, animation: asciiam) => void): void;
   setMode(mode: asciiamMode): void;
@@ -423,8 +370,6 @@ export default class asciiam {
     willReadFrequently: boolean;
   };
   setRenderer(renderer: 'auto' | 'webgl2' | 'canvas2d'): 'webgl2' | 'canvas2d';
-  setLayers(layers: asciiamLayerConfig[] | null): this;
-  getLayers(): asciiamLayerConfig[];
   /** Decodes and samples an image. Animated GIFs capture every frame when ImageDecoder is available. */
   setImage(source: string, options?: { animated?: boolean }): Promise<HTMLImageElement | null>;
   clearImage(): this;
@@ -462,10 +407,4 @@ export default class asciiam {
     height: number;
     format: string;
   }>;
-  /** Installs chart data and enables ASCII chart rendering mode. */
-  setChartData(data: number[] | { label?: string; value: number; color?: string }[] | number[][], options?: { type?: 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut'; title?: string; showValues?: boolean; showAxes?: boolean }): this;
-  /** Clears active chart data and resets animation mode. */
-  clearChart(): this;
-  /** Returns metadata for the active ASCII chart. */
-  getChartInfo(): { active: boolean; type: string; dataLength: number; title: string };
 }

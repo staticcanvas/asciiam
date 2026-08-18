@@ -66,6 +66,43 @@ asciiam.registerMode('diagonalBands', (cell) => {
 
 Registered names are process-global. Choose names that will not collide with built-in or third-party modes.
 
+## Capability-scoped plugins (planned)
+
+An extension API is planned for integrations such as media adapters, audio
+visualizers, renderer experiments, and custom modes. Plugins should receive an
+explicit capability object rather than the application, DOM, or global asciiam
+instance. A capability is granted by the host and can be omitted or revoked:
+
+```js
+// Planned shape; not a current API.
+const plugin = await asciiam.plugins.load(visualizerPlugin, {
+  capabilities: ['registerMode', 'readAudioAnalysis']
+});
+
+await plugin.dispose();
+```
+
+The host should define a versioned contract covering plugin identity, compatible
+asciiam versions, configuration schema, registration, events, and disposal. Each
+plugin must be able to release listeners, animation work, object URLs, decoded
+media, audio nodes, and renderer resources through an idempotent lifecycle:
+`install -> activate -> deactivate -> dispose`. Failed activation or disposal
+must not stop unrelated instances.
+
+Capabilities should be narrow and purpose-specific. For example, a visualizer may
+receive aggregate frequency bins but not microphone `MediaStream` tracks,
+network access, arbitrary DOM access, or filesystem access. Plugins are ordinary
+JavaScript and therefore trusted code unless a future worker or iframe sandbox is
+explicitly selected; capability names are an API boundary, not a security sandbox
+by themselves. Hosts should validate manifests, isolate failures, require user
+consent for media and audio capabilities, and make plugin removal/revocation
+observable to the application.
+
+Plugins that need a canvas or WebGPU/WebGL resource should use host-provided
+handles and cleanup callbacks. They should not assume a particular renderer is
+available: feature detection and the host's renderer fallback policy remain in
+control of the application.
+
 ## Integration flow
 
 ```mermaid

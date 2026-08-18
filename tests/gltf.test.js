@@ -163,18 +163,4 @@ describe("dependency-free glTF and GLB loader", () => {
         document.meshes[0].primitives.push({ attributes: { POSITION: 0 }, mode: 1 });
         await expect(loadGltf(document)).rejects.toThrow("mixed point, line, and triangle topologies");
     });
-
-    it("registers and queries custom glTF extension decoders", async () => {
-        const { registerGltfDecoder, getGltfDecoders } = await import("../src/gltf.js");
-        const dummyDecoder = jest.fn();
-        registerGltfDecoder("KHR_draco_mesh_compression", dummyDecoder);
-        expect(getGltfDecoders()).toContain("KHR_draco_mesh_compression");
-
-        // Document with registered extension does not throw during header validation
-        const document = triangleDocument({
-            document: { extensionsRequired: ["KHR_draco_mesh_compression"] },
-        });
-        const mesh = await loadGltf(document);
-        expect(mesh.vertexCount).toBe(3);
-    });
 });
