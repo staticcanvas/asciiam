@@ -29,6 +29,8 @@ export type asciiamMode =
   | 'clickZone'
   | 'image'
   | 'mesh'
+  | 'chart'
+  | 'plain'
   | 'custom'
   | (string & {});
 
@@ -166,8 +168,8 @@ export interface asciiamStats {
   /** Drawn cells divided by total cells; not GPU utilization. */
   occupancy: number;
   renderer: {
-    requested: 'auto' | 'webgl2' | 'canvas2d';
-    backend: 'webgl2' | 'canvas2d';
+    requested: 'auto' | 'webgl2' | 'webgpu' | 'canvas2d';
+    backend: 'webgl2' | 'webgpu' | 'canvas2d';
     gpuPreferred: boolean;
     acceleration: 'gpu-api-preferred' | 'browser-managed' | 'not-requested';
     desynchronized: boolean;
@@ -263,8 +265,8 @@ export interface asciiamEventDetail {
   elapsed?: number;
   step?: asciiamSequenceStep | null;
   reason?: string;
-  requested?: 'auto' | 'webgl2' | 'canvas2d';
-  backend?: 'webgl2' | 'canvas2d';
+  requested?: 'auto' | 'webgl2' | 'webgpu' | 'canvas2d';
+  backend?: 'webgl2' | 'webgpu' | 'canvas2d';
   gpuPreferred?: boolean;
   acceleration?: 'gpu-api-preferred' | 'browser-managed' | 'not-requested';
   desynchronized?: boolean;
@@ -319,7 +321,7 @@ export interface asciiamOptions {
   imageBrightness?: number;
   imageContrast?: number;
   animateImageMask?: boolean;
-  /** @deprecated Use the global `mode` option; retained for legacy `mode: 'image'` configurations. */
+  /** Legacy per-mask animation style for `mode: 'image'`; still the active behavior for that mode, not a removal candidate. */
   imageMaskMode?: 'waveSweep' | 'radialRipple' | 'scanlinePass' | 'thermalNoise' | 'halftonePulse' | 'fullStatic';
   imageAnimationRange?: { min: string; max: string } | null;
   animateImageFrames?: boolean;
@@ -337,13 +339,23 @@ export interface asciiamOptions {
   cacheStaticWave?: boolean;
   preferGPU?: boolean;
   desynchronized?: boolean;
-  renderer?: 'auto' | 'webgl2' | 'canvas2d';
+  /** Explicit experimental WebGPU presentation; asynchronously falls back to WebGL2, then Canvas 2D. */
+  renderer?: 'auto' | 'webgl2' | 'webgpu' | 'canvas2d';
   powerPreference?: 'high-performance' | 'low-power' | 'default';
+  /** Gates the image media layer; disabling skips image rendering without clearing the loaded source. */
+  imageEnabled?: boolean;
   chartData?: number[] | { label?: string; value: number; color?: string }[] | number[][] | null;
   chartType?: 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut';
   chartTitle?: string;
   chartShowValues?: boolean;
   chartShowAxes?: boolean;
+  chartShowLegend?: boolean;
+  chartColors?: string[];
+  chartScaleMin?: number | null;
+  chartScaleMax?: number | null;
+  chartAnimateItems?: boolean;
+  /** Gates the chart media layer; disabling skips chart rendering without clearing `chartData`. */
+  chartEnabled?: boolean;
   onReady?: ((animation: asciiam) => void) | null;
   onImageError?: ((error: Event) => void) | null;
   onModelError?: ((error: unknown) => void) | null;
@@ -378,6 +390,8 @@ export interface asciiamOptions {
   meshMaxVertices?: number;
   meshMaxPrimitives?: number;
   model?: asciiamModelSource | null;
+  /** Gates the 3D mesh media layer; disabling skips mesh rendering without clearing the loaded mesh/model. */
+  meshEnabled?: boolean;
   customCell?: ((api: Record<string, unknown>) => unknown) | null;
   [key: string]: unknown;
 }
@@ -417,14 +431,14 @@ export default class asciiam {
   nextSequenceStep(): this;
   getSequenceState(): asciiamSequenceState;
   getRendererInfo(): {
-    requested: 'auto' | 'webgl2' | 'canvas2d';
-    backend: 'webgl2' | 'canvas2d';
+    requested: 'auto' | 'webgl2' | 'webgpu' | 'canvas2d';
+    backend: 'webgl2' | 'webgpu' | 'canvas2d';
     gpuPreferred: boolean;
     acceleration: 'gpu-api-preferred' | 'browser-managed' | 'not-requested';
     desynchronized: boolean;
     willReadFrequently: boolean;
   };
-  setRenderer(renderer: 'auto' | 'webgl2' | 'canvas2d'): 'webgl2' | 'canvas2d';
+  setRenderer(renderer: 'auto' | 'webgl2' | 'webgpu' | 'canvas2d'): 'webgl2' | 'webgpu' | 'canvas2d';
   setLayers(layers: asciiamLayerConfig[] | null): this;
   getLayers(): asciiamLayerConfig[];
   /** Decodes and samples an image. Animated GIFs capture every frame when ImageDecoder is available. */
@@ -465,9 +479,34 @@ export default class asciiam {
     format: string;
   }>;
   /** Installs chart data and enables ASCII chart rendering mode. */
-  setChartData(data: number[] | { label?: string; value: number; color?: string }[] | number[][], options?: { type?: 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut'; title?: string; showValues?: boolean; showAxes?: boolean }): this;
+  setChartData(
+    data: number[] | { label?: string; value: number; color?: string }[] | number[][],
+    options?: {
+      enabled?: boolean;
+      type?: 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut';
+      title?: string;
+      showValues?: boolean;
+      showAxes?: boolean;
+      showLegend?: boolean;
+      colors?: string[];
+      scaleMin?: number;
+      scaleMax?: number;
+      animateItems?: boolean;
+    },
+  ): this;
   /** Clears active chart data and resets animation mode. */
   clearChart(): this;
   /** Returns metadata for the active ASCII chart. */
-  getChartInfo(): { active: boolean; type: string; dataLength: number; title: string };
+  getChartInfo(): {
+    active: boolean;
+    enabled: boolean;
+    type: string;
+    dataLength: number;
+    title: string;
+    showLegend: boolean;
+    hasColors: boolean;
+    scaleMin: number | null;
+    scaleMax: number | null;
+    animateItems: boolean;
+  };
 }
