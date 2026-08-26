@@ -8,7 +8,7 @@ A dependency-free, efficient HTML5 Canvas and WebGL2 animation engine for proced
 
 ## Capabilities
 
-- **Efficient GPU-first Backend**: WebGPU glyph rendering when supported, WebGL2 instanced quad batching as fallback, spatial font atlases, zero-allocation cell loops, and automatic Canvas 2D fallback.
+- **Efficient Dual Backend**: WebGL2 glyph rendering with instanced quad batching, spatial font atlases, zero-allocation cell loops, and automatic Canvas 2D fallback.
 - Built-in modes including fluid dynamics, atmospheric effects, directional reveals, fragment assembly and break-apart transitions, 3D GLTF model rendering, image sampling, and pointer interaction zones.
 - **Real-Time Image & Animated GIF Sampling**: Converts raster images (`PNG`, `JPEG`, `WebP`, `AVIF`), `SVG` vectors, and animated `GIF` frames into ASCII glyph matrices with silhouette-aware luminance mapping, tone controls, and inclusive RGB animation range masking.
 - **3D GLTF / Mesh-to-ASCII Renderer**: Built-in 3D software rendering engine supporting `GLTF`/`GLB` models and `OBJ` primitives with perspective/orthographic projections, wireframe, point-cloud, and shaded surface styles.
@@ -209,7 +209,7 @@ import asciiam from '@staticcanvas/asciiam';
 
 const anim = new asciiam('#hero', {
   ...asciiam.presets.heroWave,
-  renderer: 'auto', // WebGPU → WebGL2 → Canvas 2D fallback
+  renderer: 'auto', // WebGL2 first, Canvas 2D fallback
 });
 anim.start();
 ```
@@ -725,31 +725,25 @@ state changes or `fillText()` calls.
 
 ### Rendering backends
 
-`renderer: 'auto'` is the default. It prefers WebGPU when a secure context and usable
-adapter are available, then falls back to WebGL2. The WebGL2 path creates a context with
+`renderer: 'auto'` is the default. It creates a WebGL2 context with
 `powerPreference: 'high-performance'`, batches glyphs into one instanced draw, samples a
 white glyph atlas in the fragment shader, and applies glyph gradients, trails, and
 backdrops on the GPU. Mode state, sequence timing, and glyph selection remain on the
 CPU. Image sampling uses a separate readback-optimized Canvas 2D surface.
 
-If WebGPU initialization fails, `auto` tries WebGL2; if WebGL2 context or shader creation
-fails, it uses Canvas 2D. A lost GPU device or WebGL context also switches to the next
-available backend and emits `rendererFallback`. Use
+If WebGL2 context or shader creation fails, `auto` uses Canvas 2D. A lost WebGL context
+also switches the live instance to Canvas 2D and emits `rendererFallback`. Use
 `renderer: 'webgl2'` to request GPU rendering explicitly while retaining that fallback,
-or `renderer: 'canvas2d'` to choose the CPU renderer. `renderer: 'webgpu'` opts into the
-experimental asynchronous WebGPU backend; it falls back to WebGL2 and then Canvas 2D
-when secure-context, adapter, device, shader, or device-loss conditions prevent use.
-The backend can be changed on a
+or `renderer: 'canvas2d'` to choose the CPU renderer. The backend can be changed on a
 live instance with `setRenderer()`; the presentation canvas is replaced while animation
 state, target, event subscriptions, and sequence state remain attached to the instance.
 
 ```js
 // app.js
 const gpu = new asciiam('#gpu-hero', { mode: 'plasma', renderer: 'webgl2' });
-const experimental = new asciiam('#webgpu-hero', { mode: 'plasma', renderer: 'webgpu' });
 const cpu = new asciiam('#cpu-hero', { mode: 'plasma', renderer: 'canvas2d' });
 
-console.log(experimental.getRendererInfo().backend); // 'webgpu', 'webgl2', or 'canvas2d'
+console.log(gpu.getRendererInfo().backend); // 'webgl2' or fallback 'canvas2d'
 gpu.setRenderer('canvas2d');
 ```
 
@@ -1007,7 +1001,7 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | --------------------------------------------------------- | ------------------------------------------ | --------------------------- | ------------------------------------------------------------------------- |
 | `mode`                                                    | `asciiamMode`                              | `wave`                      | Selects the animation; `setMode()` restarts its local timeline.           |
 | `quality`                                                 | `high \| balanced \| performance \| ultra` | `balanced`                  | Applies the tier's DPR, density, FPS, and font-level values.              |
-| `renderer`                                                | `auto \| webgl2 \| webgpu \| canvas2d`     | `auto`                      | Selects WebGPU-first, explicit GPU, experimental WebGPU, or CPU rendering.  |
+| `renderer`                                                | `auto \| webgl2 \| canvas2d`               | `auto`                      | Selects GPU-first, explicit GPU, or CPU rendering.                        |
 | `powerPreference`                                         | WebGL power preference                     | `high-performance`          | Requests the preferred adapter class for WebGL2.                          |
 | `charSet` / `imageChars`                                  | `string`                                   | `asciiExtended`             | Maps intensity or image brightness to glyphs.                             |
 | `fontFamily`                                              | `string`                                   | IBM Plex Mono stack         | Sets the font stack used to rasterize glyphs.                             |
