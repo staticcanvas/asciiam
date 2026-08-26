@@ -51,7 +51,7 @@ Hero and Splash can use an uploaded or included image as the ASCII source. The i
 
 ## Validate performance
 
-Choose `auto` to request WebGL2 first and retain Canvas 2D fallback. Enable FPS for the
+Choose `auto` to request WebGPU first when supported, then WebGL2, with Canvas 2D fallback. Enable FPS for the
 existing compact frame-rate, grid, and drawn-cell line. Enable Extended diagnostics in
 Quality for estimated display cadence, CPU-side frame work, fill-history text charts,
 renderer details, and active 3D geometry counts. The extended path is off by default and
@@ -111,7 +111,7 @@ or non-object values are ignored.
 
 | Utility control | Runtime option or API | Default behavior |
 | --- | --- | --- |
-| Renderer | `renderer`, `setRenderer()` | `auto`; WebGL2 first, Canvas 2D fallback. |
+| Renderer | `renderer`, `setRenderer()` | `auto`; WebGPU first, WebGL2, then Canvas 2D fallback. |
 | Quality | `quality`, `resolutionScale`, `maxDPR`, `targetFPS` | Uses the selected quality tier, a 0–540 FPS cap (default 60 FPS, 0 for Auto), and 100% logical resolution. |
 | Extended diagnostics | `showStats`, `extendedStats`, `getStats()` | Disabled; samples only when explicitly enabled. |
 | Mode | `mode`, `setMode()` | Selects the active cell algorithm. |
