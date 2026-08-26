@@ -22,11 +22,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     const STATS_HISTORY_LENGTH = 24;
     const SPARKLINE_LEVELS = "▁▂▃▄▅▆▇█";
 
-    /** Cheap synchronous gate used only to decide whether async WebGPU setup is worth attempting. */
-    function canUseWebGPU() {
-        return globalThis.isSecureContext === true && !!globalThis.navigator?.gpu;
-    }
-
     /** Formats a fixed-size numeric ring without retaining DOM or chart objects. */
     function formatSparkline(values, count, cursor, ceiling) {
         if (!count || !(ceiling > 0)) return "";
@@ -482,272 +477,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Experimental WebGPU presentation backend.
-     * The instance still resolves animation cells; this class owns only the
-     * configured canvas, atlas, instance buffer, and GPU command submission.
-     */
-    class WebGPUGlyphRenderer {
-        constructor(canvas, options = {}) {
-            this.canvas = canvas;
-            this.capacity = 4096;
-            this.count = 0;
-            this.stride = 12;
-            this.instances = new Float32Array(this.capacity * this.stride);
-            this.atlasKey = "";
-            this.gradientSources = new Map();
-            this.gradientViews = new Map();
-            this.bindGroups = new Map();
-            this.uniformValues = new Float32Array(12);
-            this.ready = this._initialize(options);
-        }
-
-        async _initialize(options) {
-            if (!globalThis.isSecureContext || !globalThis.navigator?.gpu) throw new Error("WebGPU unavailable: secure context or navigator.gpu missing");
-            const adapter = await globalThis.navigator.gpu.requestAdapter({ powerPreference: options.powerPreference || "high-performance" });
-            if (!adapter) throw new Error("WebGPU unavailable: no adapter");
-            const device = await adapter.requestDevice();
-            const context = this.canvas.getContext("webgpu");
-            if (!context) throw new Error("WebGPU canvas context unavailable");
-            this.adapter = adapter;
-            this.device = device;
-            this.context = context;
-            this.format = globalThis.navigator.gpu.getPreferredCanvasFormat();
-            this.context.configure({ device, format: this.format, alphaMode: "premultiplied" });
-            this._buildPipelines();
-            device.lost.then((info) => {
-                if (this._destroyed || !this.onDeviceLost) return;
-                this.onDeviceLost(info?.reason || "device-lost");
-            });
-            this._resizePending = true;
-            return this;
-        }
-
-        _buildPipelines() {
-            const device = this.device;
-            const shader = device.createShaderModule({ code: `
-                struct Uniforms { viewport: vec2f, color: vec4f, useGradient: f32 };
-                @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-                @group(0) @binding(1) var atlas: texture_2d<f32>;
-                @group(0) @binding(2) var atlasSampler: sampler;
-                @group(0) @binding(3) var gradient: texture_2d<f32>;
-                @group(0) @binding(4) var gradientSampler: sampler;
-
-                struct VertexInput {
-                    @location(0) corner: vec2f,
-                    @location(1) rect: vec4f,
-                    @location(2) uv: vec4f,
-                    @location(3) cellColor: vec4f,
-                };
-                struct VertexOutput {
-                    @builtin(position) position: vec4f,
-                    @location(0) uv: vec2f,
-                    @location(1) color: vec4f,
-                    @location(2) screen: vec2f,
-                };
-
-                @vertex fn glyphVertex(input: VertexInput) -> VertexOutput {
-                    var out: VertexOutput;
-                    let pixel = input.rect.xy + input.corner * input.rect.zw;
-                    let clip = pixel / uniforms.viewport * 2.0 - 1.0;
-                    out.position = vec4f(clip.x, -clip.y, 0.0, 1.0);
-                    out.uv = mix(input.uv.xy, input.uv.zw, input.corner);
-                    out.color = input.cellColor;
-                    out.screen = pixel / uniforms.viewport;
-                    return out;
-                }
-
-                @fragment fn glyphFragment(input: VertexOutput) -> @location(0) vec4f {
-                    let mask = textureSample(atlas, atlasSampler, input.uv).a;
-                    if (mask < 0.01) { discard; }
-                    var color = input.color;
-                    if (uniforms.useGradient > 0.5) {
-                        let t = clamp(input.screen.x, 0.0, 1.0);
-                        color = vec4f(textureSample(gradient, gradientSampler, vec2f(t, 0.5)).rgb, color.a);
-                    }
-                    return vec4f(color.rgb * color.a, color.a) * mask;
-                }
-
-                @vertex fn surfaceVertex(@location(0) corner: vec2f) -> @builtin(position) vec4f {
-                    return vec4f(corner * 2.0 - 1.0, 0.0, 1.0);
-                }
-                @fragment fn surfaceFragment() -> @location(0) vec4f {
-                    return uniforms.color;
-                }
-            ` });
-            const blend = { color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" }, alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" } };
-            this.glyphPipeline = device.createRenderPipeline({
-                layout: "auto",
-                vertex: { module: shader, entryPoint: "glyphVertex", buffers: [
-                    { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] },
-                    { arrayStride: this.stride * 4, stepMode: "instance", attributes: [
-                        { shaderLocation: 1, offset: 0, format: "float32x4" },
-                        { shaderLocation: 2, offset: 16, format: "float32x4" },
-                        { shaderLocation: 3, offset: 32, format: "float32x4" },
-                    ] },
-                ] },
-                fragment: { module: shader, entryPoint: "glyphFragment", targets: [{ format: this.format, blend }] },
-                primitive: { topology: "triangle-strip" },
-            });
-            this.surfacePipeline = device.createRenderPipeline({
-                layout: "auto",
-                vertex: { module: shader, entryPoint: "surfaceVertex", buffers: [{ arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] }] },
-                fragment: { module: shader, entryPoint: "surfaceFragment", targets: [{ format: this.format, blend }] },
-                primitive: { topology: "triangle-strip" },
-            });
-            const bufferUsage = globalThis.GPUBufferUsage;
-            const textureUsage = globalThis.GPUTextureUsage;
-            this.uniformBuffer = device.createBuffer({ size: 48, usage: bufferUsage.UNIFORM | bufferUsage.COPY_DST });
-            this.cornerBuffer = device.createBuffer({ size: 32, usage: bufferUsage.VERTEX | bufferUsage.COPY_DST });
-            device.queue.writeBuffer(this.cornerBuffer, 0, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
-            this.instanceBuffer = device.createBuffer({ size: this.instances.byteLength, usage: bufferUsage.VERTEX | bufferUsage.COPY_DST });
-            this.sampler = device.createSampler({ minFilter: "linear", magFilter: "linear" });
-            this.gradientSampler = device.createSampler({ minFilter: "linear", magFilter: "linear" });
-            this._emptyTexture = device.createTexture({ size: [1, 1], format: "rgba8unorm", usage: textureUsage.TEXTURE_BINDING | textureUsage.COPY_DST });
-            device.queue.writeTexture({ texture: this._emptyTexture }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
-        }
-
-        resize(width, height) {
-            if (!this.device) return;
-            this.width = width;
-            this.height = height;
-            this._resizePending = false;
-        }
-
-        setAtlas(source, key) {
-            if (!this.device || key === this.atlasKey) return;
-            this.atlasTexture?.destroy();
-            const textureUsage = globalThis.GPUTextureUsage;
-            this.atlasTexture = this.device.createTexture({ size: [source.width, source.height], format: "rgba8unorm", usage: textureUsage.TEXTURE_BINDING | textureUsage.COPY_DST | textureUsage.RENDER_ATTACHMENT });
-            this.device.queue.copyExternalImageToTexture({ source }, { texture: this.atlasTexture }, [source.width, source.height]);
-            this.atlasKey = key;
-            this.atlasView = this.atlasTexture.createView();
-            this.bindGroups.clear();
-        }
-
-        hasGradient(key) { return this.gradientSources.has(key); }
-
-        setGradient(source, key) {
-            if (!this.device || !source || this.gradientSources.has(key)) return;
-            const textureUsage = globalThis.GPUTextureUsage;
-            const texture = this.device.createTexture({ size: [source.width, source.height], format: "rgba8unorm", usage: textureUsage.TEXTURE_BINDING | textureUsage.COPY_DST | textureUsage.RENDER_ATTACHMENT });
-            this.device.queue.copyExternalImageToTexture({ source }, { texture }, [source.width, source.height]);
-            this.gradientSources.set(key, texture);
-            this.gradientViews.set(key, texture.createView());
-            this.bindGroups.delete(`glyph:${key}`);
-            if (this.gradientSources.size > 8) {
-                const oldest = this.gradientSources.keys().next().value;
-                this.gradientSources.get(oldest)?.destroy();
-                this.gradientSources.delete(oldest);
-            }
-        }
-
-        begin(clearColor, preserve = false) {
-            if (!this.device) return;
-            this.count = 0;
-            this.encoder = this.device.createCommandEncoder();
-            this.pass = this.encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), clearValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: clearColor[3] }, loadOp: preserve ? "load" : "clear", storeOp: "store" }] });
-        }
-
-        _uniforms(color, useGradient = false) {
-            // WGSL struct layout: viewport (vec2f, offset 0) is padded to 16 bytes so
-            // color (vec4f) can start at its required 16-byte alignment (offset 4 in
-            // float units), and the struct itself rounds up to a 16-byte multiple (48
-            // bytes / 12 floats) to hold trailing useGradient (f32, offset 8).
-            const values = this.uniformValues;
-            values[0] = this.width || 1; values[1] = this.height || 1;
-            values[4] = color[0]; values[5] = color[1]; values[6] = color[2]; values[7] = color[3];
-            values[8] = useGradient ? 1 : 0;
-            this.device.queue.writeBuffer(this.uniformBuffer, 0, values);
-        }
-
-        _bindGroup(pipeline, color, useGradient = false) {
-            this._uniforms(color, useGradient);
-            const cacheKey = pipeline === this.glyphPipeline ? `glyph:${this._gradientKey || "none"}` : "surface";
-            const cached = this.bindGroups.get(cacheKey);
-            if (cached) return cached;
-            const entries = [{ binding: 0, resource: { buffer: this.uniformBuffer } }];
-            if (pipeline === this.glyphPipeline) entries.push(
-                { binding: 1, resource: this.atlasView || this._emptyTexture.createView() },
-                { binding: 2, resource: this.sampler },
-                { binding: 3, resource: this.gradientViews.get(this._gradientKey) || this._emptyTexture.createView() },
-                { binding: 4, resource: this.gradientSampler },
-            );
-            const bindGroup = this.device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries });
-            this.bindGroups.set(cacheKey, bindGroup);
-            return bindGroup;
-        }
-
-        surface(color, gradient = null) {
-            if (!this.device) return;
-            const standalone = !this.pass;
-            if (standalone) this._beginLoadedPass();
-            this._gradientKey = gradient?.textureKey || "";
-            this.pass.setPipeline(this.surfacePipeline);
-            this.pass.setBindGroup(0, this._bindGroup(this.surfacePipeline, color, !!this._gradientKey));
-            this.pass.setVertexBuffer(0, this.cornerBuffer);
-            this.pass.draw(4);
-            if (standalone) {
-                this.pass.end();
-                this.device.queue.submit([this.encoder.finish()]);
-                this.pass = null;
-            }
-        }
-
-        _beginLoadedPass() {
-            this.encoder = this.device.createCommandEncoder();
-            this.pass = this.encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: "load", storeOp: "store" }] });
-        }
-
-        push(x, y, width, height, uv, uvOffset, color, opacity) {
-            if (this.count >= this.capacity) {
-                this.capacity *= 2;
-                this.instances = new Float32Array(this.capacity * this.stride);
-                this.instanceBuffer.destroy();
-                const bufferUsage = globalThis.GPUBufferUsage;
-                this.instanceBuffer = this.device.createBuffer({ size: this.instances.byteLength, usage: bufferUsage.VERTEX | bufferUsage.COPY_DST });
-            }
-            const offset = this.count++ * this.stride;
-            const data = this.instances;
-            data[offset] = x; data[offset + 1] = y; data[offset + 2] = width; data[offset + 3] = height;
-            data[offset + 4] = uv[uvOffset]; data[offset + 5] = uv[uvOffset + 1]; data[offset + 6] = uv[uvOffset + 2]; data[offset + 7] = uv[uvOffset + 3];
-            data[offset + 8] = color[0]; data[offset + 9] = color[1]; data[offset + 10] = color[2]; data[offset + 11] = color[3] * opacity;
-        }
-
-        flush(width, height, gradient = null) {
-            if (!this.device || !this.pass) return;
-            this.width = width; this.height = height;
-            if (this.count && this.atlasTexture) {
-                this.device.queue.writeBuffer(this.instanceBuffer, 0, this.instances.subarray(0, this.count * this.stride));
-                this._gradientKey = gradient?.textureKey || "";
-                this.pass.setPipeline(this.glyphPipeline);
-                this.pass.setBindGroup(0, this._bindGroup(this.glyphPipeline, [1, 1, 1, 1], !!this._gradientKey));
-                this.pass.setVertexBuffer(0, this.cornerBuffer);
-                this.pass.setVertexBuffer(1, this.instanceBuffer);
-                this.pass.draw(4, this.count);
-            }
-            this.pass.end();
-            this.device.queue.submit([this.encoder.finish()]);
-            this.pass = null;
-        }
-
-        getAdapterInfo() {
-            return { vendor: "WebGPU", renderer: this.adapter?.info?.description || this.adapter?.info?.device || "available" };
-        }
-
-        destroy() {
-            this._destroyed = true;
-            this.atlasTexture?.destroy();
-            this.gradientSources.forEach((texture) => texture.destroy());
-            this.gradientSources.clear();
-            this.gradientViews.clear();
-            this.bindGroups.clear();
-            [this.uniformBuffer, this.cornerBuffer, this.instanceBuffer, this._emptyTexture].forEach((resource) => resource?.destroy?.());
-            if (this.pass) this.pass.end();
-            this.pass = null;
-        }
-    }
-
-    /**
      * Owns one ASCII animation surface, its renderer, timing, image source, and
      * optional sequence state. Running instances share a frame scheduler.
      */
@@ -765,7 +494,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             "irisIn", "irisOut", "dissolveIn", "dissolveOut", "assemble", "breakApart", "lumaFold", "riftLace",
             "echoBloom", "matrix", "snow", "sparkle", "fire", "starfield", "glitch",
             "typewriter", "orbit", "hoverZone", "clickZone", "image", "custom",
-            "mesh", "static", "plain", "chart",
+            "mesh", "static", "chart",
         ]);
 
         static CHARACTER_SETS = {
@@ -1031,8 +760,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._gpuPreferred = opts.preferGPU !== false;
             this._desynchronized = this._gpuPreferred && opts.desynchronized !== false;
             this._rendererRequested = opts.renderer || (this._gpuPreferred ? "auto" : "canvas2d");
-            if (!["auto", "webgl2", "webgpu", "canvas2d"].includes(this._rendererRequested)) {
-                throw new TypeError('asciiam: renderer must be "auto", "webgl2", "webgpu", or "canvas2d"');
+            if (!["auto", "webgl2", "canvas2d"].includes(this._rendererRequested)) {
+                throw new TypeError('asciiam: renderer must be "auto", "webgl2", or "canvas2d"');
             }
             if (!asciiam.isSupported()) {
                 console.warn("asciiam: canvas 2D not supported in this browser — instance is a no-op.");
@@ -1049,23 +778,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 this.setImage = () => Promise.resolve(null);
                 this.setModel = () => Promise.resolve(null);
                 this.getMeshInfo = () => ({ loaded: false, vertexCount: 0, primitiveCount: 0, primitive: null });
-                this.exportImage = () => Promise.resolve(null);
-                this.downloadSnapshot = () => Promise.resolve(null);
-                this.setChartData = () => this;
-                this.clearChart = () => this;
-                this.getChartInfo = () => ({
-                    active: false, enabled: false, type: opts.chartType || "bar", dataLength: 0,
-                    title: opts.chartTitle || "", showLegend: false, hasColors: false,
-                    scaleMin: null, scaleMax: null, animateItems: false,
-                });
-                this.renderFrame = (options = {}) => renderFrame({
-                    cols: 80, rows: 24, mode: opts.mode || "matrix", charSet: opts.charSet,
-                    invert: opts.invert, color: opts.color, align: opts.align, ...options,
-                });
-                this.renderToString = (options = {}) => renderToString({
-                    cols: 80, rows: 24, mode: opts.mode || "matrix", charSet: opts.charSet,
-                    invert: opts.invert, color: opts.color, align: opts.align, ...options,
-                });
                 return;
             }
 
@@ -1097,21 +809,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
             this._webgl = null;
             let webglInitializationFailed = false;
-            const wantsWebGPU = this._rendererRequested === "webgpu" || (this._rendererRequested === "auto" && canUseWebGPU());
-            if (wantsWebGPU) {
-                try {
-                    this._webgl = new WebGPUGlyphRenderer(this.canvas, { powerPreference: opts.powerPreference });
-                    this._renderer = "webgpu";
-                    this._webgl.onDeviceLost = (reason) => this._fallbackFromWebGPU(reason);
-                    this._webgl.ready.then(() => {
-                        if (this._disabled || !["auto", "webgpu"].includes(this._rendererRequested) || !this._webgl) return;
-                        this._resize();
-                        this._emit("rendererChange", this.getRendererInfo());
-                    }, (error) => this._fallbackFromWebGPU(error));
-                } catch (error) {
-                    this._fallbackFromWebGPU(error);
-                }
-            } else if (this._rendererRequested !== "canvas2d") {
+            if (this._rendererRequested !== "canvas2d") {
                 try {
                     this._webgl = new WebGL2GlyphRenderer(this.canvas, {
                         desynchronized: this._desynchronized,
@@ -1122,8 +820,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     if (this._rendererRequested === "webgl2") console.warn("asciiam: WebGL2 initialization failed; using Canvas 2D.", error);
                 }
             }
-            if (!this._renderer) this._renderer = this._webgl ? "webgl2" : "canvas2d";
-            if (this._webgl instanceof WebGL2GlyphRenderer) this._bindWebGLFallback();
+            this._renderer = this._webgl ? "webgl2" : "canvas2d";
+            if (this._webgl) this._bindWebGLFallback();
             if (!this._webgl) {
                 const contextAttributes = {
                     alpha: true,
@@ -1157,26 +855,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 this.on = () => () => {};
                 this.off = () => {};
                 this.setImage = () => Promise.resolve(null);
-                this.clearImage = () => {};
                 this.setModel = () => Promise.resolve(null);
                 this.getMeshInfo = () => ({ loaded: false, vertexCount: 0, primitiveCount: 0, primitive: null });
-                this.exportImage = () => Promise.resolve(null);
-                this.downloadSnapshot = () => Promise.resolve(null);
-                this.setChartData = () => this;
-                this.clearChart = () => this;
-                this.getChartInfo = () => ({
-                    active: false, enabled: false, type: opts.chartType || "bar", dataLength: 0,
-                    title: opts.chartTitle || "", showLegend: false, hasColors: false,
-                    scaleMin: null, scaleMax: null, animateItems: false,
-                });
-                this.renderFrame = (options = {}) => renderFrame({
-                    cols: 80, rows: 24, mode: opts.mode || "matrix", charSet: opts.charSet,
-                    invert: opts.invert, color: opts.color, align: opts.align, ...options,
-                });
-                this.renderToString = (options = {}) => renderToString({
-                    cols: 80, rows: 24, mode: opts.mode || "matrix", charSet: opts.charSet,
-                    invert: opts.invert, color: opts.color, align: opts.align, ...options,
-                });
                 return;
             }
 
@@ -2061,7 +1741,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 requested: this._rendererRequested,
                 backend: this._renderer,
                 gpuPreferred: this._gpuPreferred,
-                acceleration: this._renderer === "webgl2" || this._renderer === "webgpu" ? "gpu-api-preferred" : this._gpuPreferred ? "browser-managed" : "not-requested",
+                acceleration: this._renderer === "webgl2" ? "gpu-api-preferred" : this._gpuPreferred ? "browser-managed" : "not-requested",
                 desynchronized: attributes?.desynchronized ?? this._desynchronized,
                 willReadFrequently: attributes?.willReadFrequently ?? false,
             };
@@ -2069,12 +1749,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
         /** Replaces presentation resources while retaining instance-level state. */
         setRenderer(renderer, requestedRenderer = renderer) {
-            if (!["auto", "webgl2", "webgpu", "canvas2d"].includes(renderer)) {
-                throw new TypeError('asciiam: renderer must be "auto", "webgl2", "webgpu", or "canvas2d"');
+            if (!["auto", "webgl2", "canvas2d"].includes(renderer)) {
+                throw new TypeError('asciiam: renderer must be "auto", "webgl2", or "canvas2d"');
             }
-            const wantsGPU = renderer !== "canvas2d";
-            const wantsWebGPU = renderer === "webgpu" || (renderer === "auto" && canUseWebGPU());
-            if ((renderer === this._renderer && this._renderer !== "webgpu") || (wantsWebGPU && this._renderer === "webgpu") || (!wantsGPU && this._renderer === "canvas2d")) {
+            const wantsWebGL = renderer !== "canvas2d";
+            if ((wantsWebGL && this._renderer === "webgl2") || (!wantsWebGL && this._renderer === "canvas2d")) {
                 const requestChanged = this._rendererRequested !== requestedRenderer;
                 this._rendererRequested = requestedRenderer;
                 this.opts.renderer = requestedRenderer;
@@ -2097,21 +1776,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.canvas = nextCanvas;
             this._ownsCanvas = true;
             this._webgl = null;
-            if (wantsWebGPU) {
-                this._renderer = "webgpu";
-                try {
-                    this._webgl = new WebGPUGlyphRenderer(nextCanvas, { powerPreference: this.opts.powerPreference });
-                    this._webgl.onDeviceLost = (reason) => this._fallbackFromWebGPU(reason);
-                    this._webgl.ready.then(() => {
-                        if (["auto", "webgpu"].includes(this._rendererRequested) && this._webgl) {
-                            this._resize();
-                            this._emit("rendererChange", this.getRendererInfo());
-                        }
-                    }, (error) => this._fallbackFromWebGPU(error));
-                } catch (error) {
-                    this._fallbackFromWebGPU(error);
-                }
-            } else if (wantsGPU) {
+            if (wantsWebGL) {
                 try {
                     this._webgl = new WebGL2GlyphRenderer(nextCanvas, {
                         desynchronized: this._desynchronized,
@@ -2121,8 +1786,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     if (renderer === "webgl2") console.warn("asciiam: WebGL2 initialization failed; using Canvas 2D.", error);
                 }
             }
-            if (!wantsWebGPU) this._renderer = this._webgl ? "webgl2" : "canvas2d";
-            if (this._webgl instanceof WebGL2GlyphRenderer) this._bindWebGLFallback();
+            this._renderer = this._webgl ? "webgl2" : "canvas2d";
+            if (this._webgl) this._bindWebGLFallback();
             if (this._webgl) {
                 const measureCanvas = document.createElement("canvas");
                 this.ctx = measureCanvas.getContext("2d", { alpha: true, willReadFrequently: false });
@@ -2132,7 +1797,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     desynchronized: this._desynchronized,
                     willReadFrequently: false,
                 });
-                if (!this.ctx && wantsGPU) {
+                if (!this.ctx && wantsWebGL) {
                     this._replacePresentationCanvas();
                     if (this._io) {
                         this._io.disconnect();
@@ -2155,37 +1820,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._resize();
             this._emit("rendererChange", this.getRendererInfo());
             return this._renderer;
-        }
-
-        /** Replaces an unavailable WebGPU surface with the established 2D fallback. */
-        _fallbackFromWebGPU(reason) {
-            if (this._disabled || this._renderer !== "webgpu") return;
-            if (reason) console.warn("asciiam: WebGPU initialization failed; using Canvas 2D.", reason);
-            if (this._webgl) this._webgl.destroy();
-            this._webgl = null;
-            this._replacePresentationCanvas();
-            try {
-                this._webgl = new WebGL2GlyphRenderer(this.canvas, {
-                    desynchronized: this._desynchronized,
-                    powerPreference: this.opts?.powerPreference,
-                });
-            } catch {
-                this._webgl = null;
-            }
-            if (this._webgl) {
-                this._renderer = "webgl2";
-                this._bindWebGLFallback();
-                const measureCanvas = document.createElement("canvas");
-                this.ctx = measureCanvas.getContext("2d", { alpha: true, willReadFrequently: false });
-            } else {
-                this.ctx = this.canvas.getContext("2d", { alpha: true, desynchronized: this._desynchronized, willReadFrequently: false }) || this.canvas.getContext("2d", { alpha: true });
-                this._renderer = "canvas2d";
-            }
-            if (this.ctx && this.opts) {
-                this._buildFontCache();
-                this._resize();
-            }
-            this._emit("rendererFallback", { reason: "webgpu-unavailable", detail: String(reason?.message || reason || "unavailable"), ...this.getRendererInfo() });
         }
 
         _replacePresentationCanvas() {
@@ -3489,10 +3123,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         // ---- main draw loop ----
         /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
         _draw(dt) {
-            // WebGPU adapter/device creation is asynchronous. Avoid entering the
-            // GPU composition path at all while it is pending; this keeps the
-            // auto/opt-in startup state from adding per-frame CPU work.
-            if (this._renderer === "webgpu" && !this._webgl?.device) return;
             if (this._webgl) {
                 this._drawWebGL(dt);
                 return;
@@ -4007,12 +3637,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         /** Rasterize the retained mesh once, then paint only occupied ASCII cells. */
         _drawMesh(globalGradient) {
             if (!this._mesh || !this._meshRasterizer) return 0;
-            if (this.opts.meshEnabled === false) return 0;
             this._meshRasterOptions.style = this.opts.meshStyle;
             this._meshRasterOptions.projection = this.opts.meshProjection;
             this._meshRasterOptions.camera = this.opts.meshCamera;
             this._meshRasterOptions.light = this.opts.meshLight;
-            const isStaticMode = this.opts.mode === "none" || this.opts.mode === "static" || this.opts.mode === "plain";
+            const isStaticMode = this.opts.mode === "none" || this.opts.mode === "static";
             for (let axis = 0; axis < 3; axis++) {
                 const speed = Number(this.opts.meshRotationSpeed?.[axis]);
                 this._meshRotation[axis] = this._meshBaseRotation[axis]
@@ -4346,7 +3975,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             switch (mode) {
                 case "none":
                 case "static":
-                case "plain":
                     if (this._imageGrid) return this._imageCell(col, row, x, y);
                     return this._setCell(this.opts.charSet[0] || " ", this.opts.maxOpacity, 0.5, false);
                 case "wave":
@@ -4725,7 +4353,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
         _imageCell(col, row, x, y) {
             if (!this._imageGrid) return null;
-            if (this.opts.imageEnabled === false) return null;
             const g = this._imageGrid;
             const i = row * g.cols + col;
             const char = g.chars[i];
@@ -5163,7 +4790,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const occupancy = cells ? Math.min(1, this._lastDrawnCount / cells) : 0;
             const stats = this._extendedStats;
             const renderer = this.getRendererInfo();
-            const adapter = renderer.backend === "webgl2" || renderer.backend === "webgpu" ? this._webgl?.getAdapterInfo() || null : null;
+            const adapter = renderer.backend === "webgl2" ? this._webgl?.getAdapterInfo() || null : null;
             return {
                 fps: this._fps,
                 estimatedRefreshRate: stats?.refreshInterval ? 1000 / stats.refreshInterval : null,
@@ -5188,8 +4815,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const frameCeiling = Math.max(1, 1000 / (snapshot.estimatedRefreshRate || snapshot.targetFPS || 60));
             const frameChart = formatSparkline(stats.frameHistory, stats.historyCount, stats.historyCursor, frameCeiling);
             const occupancyChart = formatSparkline(stats.occupancyHistory, stats.historyCount, stats.historyCursor, 1);
-            const backendLabel = snapshot.renderer.backend === "webgpu" ? "WebGPU" : snapshot.renderer.backend === "webgl2" ? "WebGL2" : "Canvas 2D";
-            const fillLabel = snapshot.renderer.backend === "webgpu" ? "WebGPU batch fill" : snapshot.renderer.backend === "webgl2" ? "GPU batch fill" : "Canvas fill";
+            const backendLabel = snapshot.renderer.backend === "webgl2" ? "WebGL2" : "Canvas 2D";
+            const fillLabel = snapshot.renderer.backend === "webgl2" ? "GPU batch fill" : "Canvas fill";
             const lines = [
                 `${snapshot.fps} fps · ${this.cols}×${this.rows} cells · ${snapshot.drawn} drawn`,
                 `display ${refresh} · ${backendLabel} · ${snapshot.quality} · DPR ${snapshot.dpr.toFixed(2)}`,

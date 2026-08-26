@@ -73,8 +73,9 @@ use the generated module without a bundler:
 
 | Value | Selection behavior | Fallback |
 | --- | --- | --- |
-| `auto` | Attempts WebGL2 first. | Canvas 2D |
+| `auto` | Attempts WebGPU first when supported, then WebGL2. | Canvas 2D |
 | `webgl2` | Explicitly requests WebGL2. | Canvas 2D |
+| `webgpu` | Explicitly requests experimental WebGPU asynchronously. | WebGL2, then Canvas 2D |
 | `canvas2d` | Uses Canvas 2D. | None |
 
 Inspect the resolved backend after construction:
@@ -116,7 +117,7 @@ stateDiagram-v2
 | API | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `new asciiam(target, options)` | constructor | — | Creates one renderer instance for the target. |
-| `renderer` | option | `auto` | Selects automatic, WebGL2, or Canvas 2D rendering. |
+| `renderer` | option | `auto` | Selects automatic, WebGL2, experimental WebGPU, or Canvas 2D rendering. |
 | `dist/asciiam.mjs` | ESM artifact | — | Supports package resolution and direct browser module imports. |
 | `dist/asciiam.cjs` | CommonJS artifact | — | Supports `require('@staticcanvas/asciiam')`. |
 | `start()` | method | — | Starts or resumes frame scheduling. |

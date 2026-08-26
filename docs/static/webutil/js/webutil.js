@@ -203,9 +203,6 @@ function applyChartDataFromInput() {
         renderUsage();
     }
 }
-if (chartDataEl) {
-    chartDataEl.oninput = applyChartDataFromInput;
-}
 const chartShowAxesToggle = document.getElementById("chartShowAxesToggle");
 if (chartShowAxesToggle) {
     chartShowAxesToggle.onchange = () => {
@@ -827,7 +824,7 @@ if (!hasVisited) {
 function applyDemoOptions(options, presetName = "", referenceLabel = presetName || "Custom") {
     const activeMode = anim.opts.mode || "wave";
     const qualityName = options.quality || "ultra";
-    Object.assign(anim.opts, demoDefaults, quality, options, { quality: qualityName });
+    Object.assign(anim.opts, demoDefaults, options, { quality: qualityName });
     const rawOptFps = options.targetFPS;
     anim.opts.targetFPS = rawOptFps === null || rawOptFps === undefined || rawOptFps === 0 || rawOptFps === "0" ? 0 : Math.min(540, Math.max(0, Number(rawOptFps) || 60));
 
@@ -943,11 +940,15 @@ resolutionScale.oninput = (event) => {
 anim.on("resize", updateResolutionStatus);
 function updateRendererControls(info = anim.getRendererInfo()) {
     document.getElementById("renderer").value = info.requested;
-    document.getElementById("rendererStatus").textContent = info.backend === "webgl2"
-        ? "WebGL2 GPU renderer active."
-        : info.requested === "canvas2d"
-          ? "Canvas 2D CPU renderer active."
-          : "WebGL2 unavailable; Canvas 2D fallback active.";
+    document.getElementById("rendererStatus").textContent = info.backend === "webgpu"
+        ? "Experimental WebGPU renderer active."
+        : info.backend === "webgl2"
+          ? info.requested === "webgpu" ? "WebGPU unavailable; WebGL2 fallback active." : "WebGL2 GPU renderer active."
+          : info.requested === "canvas2d"
+            ? "Canvas 2D CPU renderer active."
+            : info.requested === "webgpu"
+              ? "WebGPU unavailable; Canvas 2D fallback active."
+              : "WebGL2 unavailable; Canvas 2D fallback active.";
     updateToolbarSummaries();
 }
 document.getElementById("renderer").onchange = (e) => {
@@ -1774,11 +1775,15 @@ function syncControlsFromOpts() {
         }
     });
     const rendererInfo = anim.getRendererInfo();
-    document.getElementById("rendererStatus").textContent = rendererInfo.backend === "webgl2"
-        ? "WebGL2 GPU renderer active."
-        : rendererInfo.requested === "canvas2d"
-          ? "Canvas 2D CPU renderer active."
-          : "WebGL2 unavailable; Canvas 2D fallback active.";
+    document.getElementById("rendererStatus").textContent = rendererInfo.backend === "webgpu"
+        ? "Experimental WebGPU renderer active."
+        : rendererInfo.backend === "webgl2"
+          ? rendererInfo.requested === "webgpu" ? "WebGPU unavailable; WebGL2 fallback active." : "WebGL2 GPU renderer active."
+          : rendererInfo.requested === "canvas2d"
+            ? "Canvas 2D CPU renderer active."
+            : rendererInfo.requested === "webgpu"
+              ? "WebGPU unavailable; Canvas 2D fallback active."
+              : "WebGL2 unavailable; Canvas 2D fallback active.";
     const charSetEntry = Object.entries(asciiam.CHARACTER_SETS).find(([, value]) => value === anim.opts.charSet);
     const charSetSelect = document.getElementById("charSet");
     charSetSelect.value = charSetEntry ? charSetEntry[0] : "custom";
@@ -2079,7 +2084,7 @@ function updateToolbarSummaries() {
         ? backdrop.gradient?.type || "solid"
         : "off";
 
-    const rendererBackend = anim.getRendererInfo().backend === "webgl2" ? "GPU" : "CPU";
+    const rendererBackend = ["webgl2", "webgpu"].includes(anim.getRendererInfo().backend) ? "GPU" : "CPU";
     setToolbarSummary("qualityTriggerBtn", "qualityToolbarStatus", "Quality", `${document.getElementById("quality").value} · ${rendererBackend}`);
     const sequenceState = anim.getSequenceState();
     const sequenceLabel = sequenceDraft.length
