@@ -248,7 +248,7 @@ describe('demo toolbar quality-of-life controls', () => {
     });
   });
 
-  it('lets developers select automatic, WebGL2, WebGPU, or Canvas 2D rendering', () => {
+  it('lets developers select automatic, WebGL2, or Canvas 2D rendering', () => {
     activeDom = createDemo();
     const { document, Event } = activeDom.window;
     const renderer = document.getElementById('renderer');
@@ -256,7 +256,6 @@ describe('demo toolbar quality-of-life controls', () => {
     expect([...renderer.options].map((option) => option.value)).toEqual([
       'auto',
       'webgl2',
-      'webgpu',
       'canvas2d',
     ]);
     expect(document.getElementById('rendererStatus').textContent).toContain('fallback');

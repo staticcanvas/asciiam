@@ -73,7 +73,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `mode` | mode string | `wave` | Selects the active animation algorithm or `none` (`static`) for un-animated rendering. |
 | `layers` | layer array or `null` | `null` | Configures multi-pass layer composition array (`[{ mode, options, opacity, blendMode }]`). |
 | `quality` | `high \| balanced \| performance \| ultra` | `balanced` | Applies one quality tier. |
-| `renderer` | `auto \| webgl2 \| webgpu \| canvas2d` | `auto` when GPU preference is enabled | Selects GPU-first, explicit WebGL2, experimental WebGPU, or Canvas 2D presentation. WebGPU initializes asynchronously and falls back safely. |
+| `renderer` | `auto \| webgl2 \| canvas2d` | `auto` when GPU preference is enabled | Selects GPU-first, explicit WebGL2, or Canvas 2D presentation. |
 | `charSet` | string | `asciiExtended` | Supplies glyphs used by procedural modes. |
 | `fontFamily` | string | IBM Plex Mono fallback stack | Sets glyph measurement and rasterization fonts. |
 | `fontSize` | number | `14` | Sets the base font size in CSS pixels. |
@@ -244,14 +244,14 @@ Use `setOption()` for focused changes and `setMode()` when the animation algorit
 
 ### `setRenderer(renderer)`
 
-Returns the resolved backend: `webgpu`, `webgl2`, or `canvas2d`. WebGPU may resolve asynchronously; the method replaces the presentation canvas when backend type changes and retains animation and sequence state.
+Returns the resolved backend: `webgl2` or `canvas2d`. The method replaces the presentation canvas when backend type changes and retains animation and sequence state.
 
 ### `getRendererInfo()`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `requested` | `auto \| webgl2 \| webgpu \| canvas2d` | Developer-selected policy. |
-| `backend` | `webgpu \| webgl2 \| canvas2d` | Active presentation backend. |
+| `requested` | `auto \| webgl2 \| canvas2d` | Developer-selected policy. |
+| `backend` | `webgl2 \| canvas2d` | Active presentation backend. |
 | `gpuPreferred` | boolean | Whether GPU preference is enabled. |
 | `acceleration` | status string | Reports GPU API preference, browser-managed Canvas, or no request. |
 | `desynchronized` | boolean | Resolved or requested low-latency context flag. |
