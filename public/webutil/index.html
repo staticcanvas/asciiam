@@ -63,10 +63,10 @@
                 --clr-surface-2:     oklch(0.13 0.025 260);
                 --clr-surface-hi:    oklch(0.20 0.035 260);
 
-                --clr-primary:       oklch(0.65 0.18 250);
+                --clr-primary:       oklch(0.75 0.155 198);
                 --clr-primary-glow:  oklch(from var(--clr-primary) l c h / 0.2);
                 --clr-primary-tint:  oklch(from var(--clr-primary) l c h / 0.07);
-                --clr-accent2:       oklch(0.60 0.25 310);
+                --clr-accent2:       oklch(0.70 0.185 52);
                 --clr-on-primary:    oklch(0.98 0.01 250);
 
                 --clr-text-main:     oklch(0.88 0.02 250);
@@ -108,10 +108,10 @@
                 --clr-surface-2:     oklch(0.96 0.02 260);
                 --clr-surface-hi:    oklch(0.88 0.025 260);
 
-                --clr-primary:       oklch(0.48 0.22 250);
+                --clr-primary:       oklch(0.45 0.13 200);
                 --clr-primary-glow:  oklch(from var(--clr-primary) l c h / 0.25);
                 --clr-primary-tint:  oklch(from var(--clr-primary) l c h / 0.12);
-                --clr-accent2:       oklch(0.52 0.25 310);
+                --clr-accent2:       oklch(0.50 0.17 45);
                 --clr-on-primary:    oklch(0.10 0.02 250);
 
                 --clr-text-main:     oklch(0.18 0.03 250);
@@ -2368,11 +2368,12 @@
                 <div class="cpop-group">
                     <label class="cpop-label" for="renderer">Rendering backend</label>
                     <select id="renderer">
-                        <option value="auto" selected>Auto — WebGL2 preferred</option>
+                        <option value="auto" selected>Auto — WebGPU preferred</option>
                         <option value="webgl2">GPU — WebGL2</option>
+                        <option value="webgpu">Experimental GPU — WebGPU</option>
                         <option value="canvas2d">CPU — Canvas 2D</option>
                     </select>
-                    <p class="sequence-status" id="rendererStatus" role="status" aria-live="polite">WebGL2 preferred with Canvas 2D fallback.</p>
+                    <p class="sequence-status" id="rendererStatus" role="status" aria-live="polite">WebGPU preferred, then WebGL2 and Canvas 2D fallback.</p>
                 </div>
                 <div class="cpop-group">
                     <label class="ui-switch" for="extendedStatsToggle">
@@ -3152,7 +3153,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=61b9d46fb0b0"></script>
-        <script type="module" src="./js/webutil.js?v=61b9d46fb0b0"></script>
+        <script src="./libs/asciiam.js?v=58fa270cda57"></script>
+        <script type="module" src="./js/webutil.js?v=58fa270cda57"></script>
     </body>
 </html>
