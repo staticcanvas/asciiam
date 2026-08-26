@@ -2416,6 +2416,30 @@
                 </section>
             </div>
 
+            <!-- Layers -->
+            <button class="ctrl-pill" id="layersTriggerBtn" type="button" title="Composite multiple modes in one canvas"
+                    popovertarget="pop-layers" aria-expanded="false" aria-controls="pop-layers">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+                <span>Layers</span>
+                <span class="ctrl-pill__status" id="layersToolbarStatus">off</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-layers" popover>
+                <section class="cpop-group" aria-labelledby="layerEditorLabel">
+                    <div class="sequence-toolbar">
+                        <span class="cpop-label" id="layerEditorLabel">Layer stack</span>
+                        <div class="sequence-step__actions">
+                            <button class="mode-btn" id="addLayerBtn" type="button">Add layer</button>
+                        </div>
+                    </div>
+                    <p class="sequence-status" id="layerStatus" role="status" aria-live="polite">Add a layer to composite it over the active mode.</p>
+                    <ol class="sequence-list" id="layerList" aria-label="Composited layers in paint order, bottom to top"></ol>
+                </section>
+                <section class="cpop-group">
+                    <span class="cpop-label">About layers</span>
+                    <p class="sequence-status">Each layer runs its own mode and paints in order (first = bottom) using the toolbar's global settings, blended by opacity and blend mode. A layer's option overrides (JSON) apply only during that layer's own draw pass, then revert &mdash; use them to give one layer its own charSet, speed, color, density, and similar fields without changing the others.</p>
+                </section>
+            </div>
+
             <!-- Mode -->
             <button class="ctrl-pill" id="modeTriggerBtn" type="button" title="Choose animation mode"
                     popovertarget="pop-mode" aria-expanded="false" aria-controls="pop-mode">
@@ -3153,7 +3177,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=ec000d29fd99"></script>
-        <script type="module" src="./js/webutil.js?v=ec000d29fd99"></script>
+        <script src="./libs/asciiam.js?v=64acefecf7e0"></script>
+        <script type="module" src="./js/webutil.js?v=64acefecf7e0"></script>
     </body>
 </html>

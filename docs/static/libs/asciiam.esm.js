@@ -1718,11 +1718,46 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             })) : [];
         }
 
+        /**
+         * Temporarily overlays a layer's `options` onto `this.opts` for the duration
+         * of that layer's draw pass, so every mode-cell function (which reads
+         * `this.opts.*` directly) picks up per-layer overrides without a broader
+         * refactor. Returns the key list to hand back to `_restoreLayerOptions()`;
+         * `null` when the layer has no per-layer options.
+         */
+        _applyLayerOptions(layer) {
+            const keys = layer._optionKeys;
+            if (!keys || keys.length === 0) return null;
+            const restore = this._layerRestoreScratch || (this._layerRestoreScratch = {});
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                restore[key] = this.opts[key];
+                this.opts[key] = layer.options[key];
+            }
+            return keys;
+        }
+
+        /** Restores `this.opts` fields saved by `_applyLayerOptions()`. */
+        _restoreLayerOptions(keys) {
+            if (!keys) return;
+            const restore = this._layerRestoreScratch;
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                this.opts[key] = restore[key];
+            }
+        }
+
         _normalizeLayers(layers) {
             if (!Array.isArray(layers) || layers.length === 0) return null;
             return layers.map((layer) => ({
                 mode: typeof layer.mode === "string" ? layer.mode : "wave",
                 options: layer.options && typeof layer.options === "object" ? Object.assign({}, layer.options) : null,
+                // Precomputed once per setLayers() call so the per-frame apply/restore
+                // path below never allocates. `mode` is excluded: layer.mode is always
+                // authoritative, so a stray `options.mode` can't fight with it.
+                _optionKeys: layer.options && typeof layer.options === "object"
+                    ? Object.keys(layer.options).filter((key) => key !== "mode")
+                    : null,
                 opacity: typeof layer.opacity === "number" ? Math.max(0, Math.min(1, layer.opacity)) : 1.0,
                 blendMode: typeof layer.blendMode === "string" ? layer.blendMode : "source-over",
             }));
@@ -3524,6 +3559,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     ctx.globalAlpha = layer.opacity ?? 1;
                     if (layer.blendMode) ctx.globalCompositeOperation = layer.blendMode;
 
+                    const restoreKeys = this._applyLayerOptions(layer);
                     this.opts.mode = layer.mode;
                     this._prepareModeFrame();
                     ctx.textBaseline = "alphabetic";
@@ -3536,7 +3572,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         : 1;
                     this._updateAnimatedColor();
 
-                    const globalGradient = (layer.options?.gradient || this.opts.gradient) && !this.opts.colorFromImage ? this._getGradient() : null;
+                    const globalGradient = this.opts.gradient && !this.opts.colorFromImage ? this._getGradient() : null;
                     this._activeGlyphAtlas = this._getGlyphAtlas();
                     const waveBase = layer.mode === "wave" ? this._getWaveBaseLayer() : null;
                     if (waveBase) {
@@ -3556,6 +3592,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         drawn = this._drawDense(globalGradient);
                     }
                     totalDrawn += drawn;
+                    this._restoreLayerOptions(restoreKeys);
                     ctx.restore();
                 }
                 if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawCanvasBackdrop();
@@ -3669,6 +3706,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 let totalDrawn = 0;
                 for (let i = 0; i < this._layers.length; i++) {
                     const layer = this._layers[i];
+                    const restoreKeys = this._applyLayerOptions(layer);
                     this.opts.mode = layer.mode;
                     this._prepareModeFrame();
                     this._pulseFactor = this.opts.pulse
@@ -3679,7 +3717,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     this._webgl.setAtlas(atlas.canvas, atlas.key);
                     this._activeWebGLAtlas = atlas;
 
-                    this._webglGradient = (layer.options?.gradient || this.opts.gradient) && !this.opts.colorFromImage ? this._prepareWebGLGradient(layer.options?.gradient || this.opts.gradient) : null;
+                    this._webglGradient = this.opts.gradient && !this.opts.colorFromImage ? this._prepareWebGLGradient(this.opts.gradient) : null;
                     let drawn = 0;
                     if (layer.mode === "mesh") {
                         drawn = this._drawMesh(null);
@@ -3690,6 +3728,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                         drawn = this._drawDense(null);
                     }
                     totalDrawn += drawn;
+                    this._restoreLayerOptions(restoreKeys);
                 }
                 this._webgl.flush(this.w, this.h, this._webglGradient);
                 if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawWebGLBackdrop();
