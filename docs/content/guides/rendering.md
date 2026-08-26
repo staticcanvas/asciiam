@@ -8,7 +8,7 @@ tags: [WebGL2, Canvas 2D, GPU, renderer, performance, quality]
 keywords: [WebGL2 ASCII renderer, GPU rendering, Canvas 2D fallback, renderer selection, quality tiers, animation performance, frame rate, 3D to ASCII, glTF GLB research]
 ---
 
-asciiam separates animation-state calculation from presentation. WebGPU and WebGL2 upload one glyph instance buffer and draw visible glyphs as instanced quads. Canvas 2D uses cached glyph atlases and mode-specific shortcuts where possible.
+asciiam separates animation-state calculation from presentation. WebGL2 uploads one glyph instance buffer and draws the visible glyphs as instanced quads. Canvas 2D uses cached glyph atlases and mode-specific shortcuts where possible.
 
 ## Renderer selection
 
@@ -22,21 +22,11 @@ const animation = new asciiam('#target', {
 });
 ```
 
-`auto` is appropriate for most integrations: it prefers WebGPU, then WebGL2, then Canvas 2D. Use `canvas2d` for deterministic CPU rendering or environments that limit GPU contexts. Use `webgl2` when a production WebGL2 path is required, or `webgpu` to require the experimental backend while retaining fallback behavior.
+`auto` is appropriate for most integrations. Use `canvas2d` for deterministic CPU rendering or environments that limit WebGL contexts. Use `webgl2` when the requested renderer must be recorded as GPU-first while retaining fallback behavior.
 
-## WebGPU (experimental opt-in)
+## WebGPU roadmap (planned and experimental)
 
-WebGPU is available as an explicit experimental renderer: `renderer: 'webgpu'`. It is
-selected by `renderer: 'auto'` when capability detection succeeds. Device creation is asynchronous; while it is being
-prepared, the instance reports the requested WebGPU policy and then emits
-`rendererChange` when WebGPU is ready. Failure or device loss falls back to WebGL2 and
-then Canvas 2D through `rendererFallback`.
-
-The explicit WebGPU path does not probe `navigator.gpu`, allocate an adapter, or create
-WebGPU objects for WebGL2 or Canvas 2D. `auto` performs one capability probe and uses
-WebGPU when available, then falls back to WebGL2 or Canvas 2D. While a WebGPU device is
-pending, frame dispatch returns before animation composition. Atlas views and bind
-groups are reused after initialization rather than recreated every frame.
+WebGPU is a planned renderer backend. It is not part of the current production renderer selection: asciiam currently uses WebGL2 for GPU presentation and Canvas 2D as its fallback. Any WebGPU implementation must preserve the existing output and lifecycle behavior before it can be enabled by `renderer: 'auto'`.
 
 The proposed architecture keeps animation and cell generation independent from presentation. A shared renderer contract would receive the resolved logical grid, glyph atlas, cell attributes, resize state, and frame timing, then expose the same lifecycle operations to each backend:
 
@@ -46,13 +36,13 @@ The proposed architecture keeps animation and cell generation independent from p
 - release resources on `destroy()`; and
 - report backend status, errors, and recovery events.
 
-The contract is an implementation boundary, not a new public API. The WebGL2 and Canvas 2D implementations remain the production fallback source of truth while the WebGPU backend is evaluated.
+The contract is an implementation boundary, not a new public API. The WebGL2 and Canvas 2D implementations remain the source of truth while the WebGPU prototype is evaluated.
 
 ### Capability detection and fallback
 
-WebGPU detection is asynchronous and capability-based. The implementation verifies a secure context and `navigator.gpu`, requests an adapter and device, and treats a missing adapter as unavailable. A truthy `navigator.gpu` value alone does not establish that a usable device is available. WebGPU is currently not a Baseline feature and is available only in secure contexts in supporting browsers; see the [WebGPU API reference](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API).
+WebGPU detection must be asynchronous and capability-based. A prototype should first verify a secure context and `navigator.gpu`, request an adapter, inspect the adapter limits and required features, and request a device. A truthy `navigator.gpu` value alone does not establish that a usable device is available. WebGPU is currently not a Baseline feature and is available only in secure contexts in supporting browsers; see the [WebGPU API reference](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API).
 
-The requested backend must never prevent an instance from rendering when WebGPU is unavailable. The resolution order is:
+The requested backend must never prevent an instance from rendering when WebGPU is unavailable. The planned resolution order is:
 
 ```mermaid
 flowchart TD
@@ -70,7 +60,7 @@ flowchart TD
   I -->|no| G
 ```
 
-`auto` resolves to WebGPU when available, with WebGL2 and Canvas 2D fallback. Failure must resolve to WebGL2 and then Canvas 2D using the existing fallback events. The implementation must not repeatedly recreate a lost device in a loop; promotion or removal of WebGPU from `auto` remains subject to the benchmark gates below.
+`auto` should continue to resolve to WebGL2 or Canvas 2D until the benchmark gates below are met. A WebGPU request may be recorded as an attempted backend in diagnostics, but failure must resolve to WebGL2 and then Canvas 2D using the existing fallback events. The implementation must not repeatedly recreate a lost device in a loop.
 
 ### Secure-context and device-loss constraints
 
@@ -101,7 +91,7 @@ const renderer = {
 
 WebGPU should remain experimental until measurements on representative devices show that it improves the workloads that matter to asciiam without increasing startup or recovery failures. The benchmark plan must compare WebGPU, WebGL2, and Canvas 2D using the same animation state, grid, quality tier, DPR, and media input.
 
-Continued use of WebGPU in `renderer: 'auto'` should be reviewed against all of the following:
+Promotion to `renderer: 'auto'` should require all of the following:
 
 - no correctness regressions across supported modes, images, animations, and mesh input;
 - equal or lower median frame time at medium and high cell counts on supported GPU classes;

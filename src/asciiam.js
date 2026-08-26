@@ -497,7 +497,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.gradientSources = new Map();
             this.gradientViews = new Map();
             this.bindGroups = new Map();
-            this.uniformValues = new Float32Array(8);
+            this.uniformValues = new Float32Array(12);
             this.ready = this._initialize(options);
         }
 
@@ -596,7 +596,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
             const bufferUsage = globalThis.GPUBufferUsage;
             const textureUsage = globalThis.GPUTextureUsage;
-            this.uniformBuffer = device.createBuffer({ size: 32, usage: bufferUsage.UNIFORM | bufferUsage.COPY_DST });
+            this.uniformBuffer = device.createBuffer({ size: 48, usage: bufferUsage.UNIFORM | bufferUsage.COPY_DST });
             this.cornerBuffer = device.createBuffer({ size: 32, usage: bufferUsage.VERTEX | bufferUsage.COPY_DST });
             device.queue.writeBuffer(this.cornerBuffer, 0, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
             this.instanceBuffer = device.createBuffer({ size: this.instances.byteLength, usage: bufferUsage.VERTEX | bufferUsage.COPY_DST });
@@ -629,7 +629,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         setGradient(source, key) {
             if (!this.device || !source || this.gradientSources.has(key)) return;
             const textureUsage = globalThis.GPUTextureUsage;
-            const texture = this.device.createTexture({ size: [source.width, source.height], format: "rgba8unorm", usage: textureUsage.TEXTURE_BINDING | textureUsage.COPY_DST });
+            const texture = this.device.createTexture({ size: [source.width, source.height], format: "rgba8unorm", usage: textureUsage.TEXTURE_BINDING | textureUsage.COPY_DST | textureUsage.RENDER_ATTACHMENT });
             this.device.queue.copyExternalImageToTexture({ source }, { texture }, [source.width, source.height]);
             this.gradientSources.set(key, texture);
             this.gradientViews.set(key, texture.createView());
@@ -649,10 +649,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         _uniforms(color, useGradient = false) {
+            // WGSL struct layout: viewport (vec2f, offset 0) is padded to 16 bytes so
+            // color (vec4f) can start at its required 16-byte alignment (offset 4 in
+            // float units), and the struct itself rounds up to a 16-byte multiple (48
+            // bytes / 12 floats) to hold trailing useGradient (f32, offset 8).
             const values = this.uniformValues;
             values[0] = this.width || 1; values[1] = this.height || 1;
-            values[2] = color[0]; values[3] = color[1]; values[4] = color[2]; values[5] = color[3];
-            values[6] = useGradient ? 1 : 0; values[7] = 0;
+            values[4] = color[0]; values[5] = color[1]; values[6] = color[2]; values[7] = color[3];
+            values[8] = useGradient ? 1 : 0;
             this.device.queue.writeBuffer(this.uniformBuffer, 0, values);
         }
 

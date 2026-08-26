@@ -310,7 +310,7 @@ describe('Hugo documentation source', () => {
     expect(template).toContain('"css/docs.css" | relURL');
     expect(stylesheet).toContain('docs/static-sot-template.html');
     expect(stylesheet).toContain('@supports (color: oklch(0 0 0))');
-    expect(stylesheet).toContain('--plasma: #00cad1');
+    expect(stylesheet).toContain('--plasma: #428ef4');
     expect(stylesheet).toMatch(/\.shell > aside \{[\s\S]*overflow-y: auto/);
     expect(template).toContain('family=JetBrains+Mono');
     expect(template).toContain('family=Outfit');
