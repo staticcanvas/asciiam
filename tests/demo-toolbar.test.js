@@ -496,7 +496,7 @@ describe('demo toolbar quality-of-life controls', () => {
     document.getElementById('addSequenceStepBtn').click();
     const secondStep = document.querySelectorAll('.sequence-step')[1];
     const transition = secondStep.querySelector('select[aria-label="Step 2 transition"]');
-    const duration = secondStep.querySelector('input[aria-label="Step 2 morph duration in seconds"]');
+    const duration = secondStep.querySelector('input[aria-label="Step 2 transition duration in seconds"]');
 
     transition.value = 'morph';
     transition.dispatchEvent(new Event('change', { bubbles: true }));
@@ -506,6 +506,22 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(duration.hidden).toBe(false);
     expect(document.getElementById('usageCodePopover').textContent).toContain('"type": "morph"');
     expect(document.getElementById('usageCodePopover').textContent).toContain('"duration": 1.2');
+  });
+
+  it('configures an incoming blend transition in the sequence editor', () => {
+    activeDom = createDemo();
+    const { document, Event } = activeDom.window;
+    document.getElementById('addSequenceStepBtn').click();
+    document.getElementById('addSequenceStepBtn').click();
+    const secondStep = document.querySelectorAll('.sequence-step')[1];
+    const transition = secondStep.querySelector('select[aria-label="Step 2 transition"]');
+    const duration = secondStep.querySelector('input[aria-label="Step 2 transition duration in seconds"]');
+
+    transition.value = 'blend';
+    transition.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(duration.hidden).toBe(false);
+    expect(document.getElementById('usageCodePopover').textContent).toContain('"type": "blend"');
   });
 
   it('renders hero and splash ASCII as media slots and moves one canvas between them', () => {

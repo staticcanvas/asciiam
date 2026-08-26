@@ -323,7 +323,7 @@ the first reporting interval completes. Calling this method does not start sampl
 | `model` | glTF/GLB source, `null`, or omitted | No | Decodes new geometry before timing starts, clears geometry, or retains it when omitted. |
 | `modelOptions` | model load option record | No | Passes loader limits, scene selection, and progress handling to `setModel()`. |
 | `options` | option record | No | Step-local option overrides. |
-| `transition` | transition object | No | Incoming `cut` or retained-frame `morph` transition. |
+| `transition` | transition object | No | Incoming `cut`, retained-frame `blend`, or real per-cell `morph` transition. See [Animation sequences]({{< relref "/guides/sequences" >}}) for `morph`'s `style`/`spread` fields. |
 | `onStart` | callback | No | Runs when the step starts. |
 | `onComplete` | callback | No | Runs on normal completion. |
 | `onInterrupt` | callback | No | Runs when interrupted. |
@@ -366,8 +366,8 @@ the first reporting interval completes. Calling this method does not start sampl
 | `elapsed` | number | Seconds elapsed in the current phase. |
 | `waiting` | boolean | Whether the active step delay is pending. |
 | `loading` | boolean | Whether the active step is waiting for an image decode. Duration remains at zero. |
-| `morphing` | boolean | Whether an outgoing snapshot is currently fading. |
-| `morphProgress` | number | Normalized morph progress from `0` through `1`. |
+| `morphing` | boolean | Whether a `blend` or `morph` transition is currently in progress. |
+| `morphProgress` | number | Normalized transition progress from `0` through `1`. |
 
 ## Events
 
@@ -404,7 +404,7 @@ Keep the returned unsubscribe function when a listener belongs to a component li
 | `sequenceStepComplete` | A step reaches its duration. |
 | `sequenceStepInterrupt` | Seek, stop, reconfiguration, or manual input interrupts a step. |
 | `sequenceStepError` | A step image fails to decode; detail contains `error` and playback pauses. |
-| `sequenceMorphStart`, `sequenceMorphComplete` | A snapshot morph begins or finishes. |
+| `sequenceMorphStart`, `sequenceMorphComplete` | A step's `blend` or `morph` transition begins or finishes. |
 
 ## Callback types
 

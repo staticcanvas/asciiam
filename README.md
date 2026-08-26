@@ -12,7 +12,7 @@ A dependency-free, efficient HTML5 Canvas and WebGL2 animation engine for proced
 - Built-in modes including fluid dynamics, atmospheric effects, directional reveals, fragment assembly and break-apart transitions, 3D GLTF model rendering, image sampling, and pointer interaction zones.
 - **Real-Time Image & Animated GIF Sampling**: Converts raster images (`PNG`, `JPEG`, `WebP`, `AVIF`), `SVG` vectors, and animated `GIF` frames into ASCII glyph matrices with silhouette-aware luminance mapping, tone controls, and inclusive RGB animation range masking.
 - **3D GLTF / Mesh-to-ASCII Renderer**: Built-in 3D software rendering engine supporting `GLTF`/`GLB` models and `OBJ` primitives with perspective/orthographic projections, wireframe, point-cloud, and shaded surface styles.
-- **Playlist Sequencing & Morphing**: Chain multi-step animation sequences (`setSequence()`) with snapshot morph transitions, step-level repeat controls (`repeat: false`), and sequence loop policies (`loop: false`).
+- **Playlist Sequencing & Morphing**: Chain multi-step animation sequences (`setSequence()`) with retained-frame `blend` crossfades or real per-cell `morph` transitions (`dissolve`, `scramble`, `flow` styles), step-level repeat controls (`repeat: false`), and sequence loop policies (`loop: false`).
 - **Backdrops & Quality Tiers**: Multi-stop linear, radial, and cubic gradients, edge fade (vignette), trails, custom character density palettes, off-screen auto-pausing, and full accessibility (`prefers-reduced-motion` aware).
 - **Interactive Web Utility**: Dedicated composition authoring tool with 27 presets, live controls, multi-column popovers, code export, image uploads, and sequence editing.
 
@@ -167,7 +167,7 @@ also works beneath a project path such as `/asciiam/`.
 Documentation search is available with `Ctrl+K`, `Command+K`, or `/`. The static Hugo
 index ranks page titles, descriptions, tags, keywords, and body text without an external
 search service. Common vocabulary aliases connect terms such as setup/installation,
-charset/glyphs, sequence/timeline, morph/cross-fade, and renderer/GPU. Result titles and
+charset/glyphs, sequence/timeline, morph/blend/cross-fade, and renderer/GPU. Result titles and
 descriptions highlight literal query words, while metadata tags identify matched topics.
 
 ### Documentation map
@@ -835,9 +835,14 @@ image decoding from a configured delay.
 Mesh steps use the same retained-source contract. Set `model` to a glTF/GLB source,
 omit it to retain current geometry, or use `model: null` to clear it. `modelOptions`
 is passed to `setModel()`. Image and model preparation both finish before step timing
-starts. For a `morph`, asciiam captures the outgoing presentation before preparation,
+starts. For a `blend`, asciiam captures the outgoing presentation before preparation,
 holds it without running a second renderer, then reveals the live incoming mode after
-its sources are ready. GIF and retained-image clocks are not reset by mode-only steps.
+its sources are ready. A `morph` transitions individual ASCII cells (character, color,
+opacity, and — in `flow` style — position) instead of crossfading the whole canvas; it
+automatically falls back to `blend` behavior for a step whose sources are still loading
+(there is no "after" content to morph toward yet), a `setLayers()` composite, or a step
+whose own `options` resize the grid mid-transition. GIF and retained-image clocks are
+not reset by mode-only steps.
 
 Steps may also define `onStart`, `onComplete`, and `onInterrupt`. Callback failures are
 caught so they cannot stop the shared render scheduler. The same lifecycle is available

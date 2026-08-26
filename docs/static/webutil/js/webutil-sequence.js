@@ -20,10 +20,33 @@ export function normalizeSequenceDraft(steps) {
         repeat: step.repeat === true,
         image: Object.prototype.hasOwnProperty.call(step, "image") ? step.image : undefined,
         options: step.options && typeof step.options === "object" ? { ...step.options } : {},
-        transition: step.transition?.type === "morph"
-            ? { type: "morph", duration: Number(step.transition.duration) > 0 ? Number(step.transition.duration) : 0.8, easing: step.transition.easing || "easeInOut" }
-            : { type: "cut", duration: 0, easing: "linear" },
+        transition: normalizeTransition(step.transition),
     }));
+}
+
+/**
+ * Mirrors asciiam's own `setSequence()` transition normalization (src/asciiam.js) so the
+ * editor round-trips exactly what the engine will actually do with a step: 'cut' (instant),
+ * 'blend' (the original whole-canvas crossfade), or 'morph' (real per-cell transition, with
+ * its 'dissolve' | 'scramble' | 'flow' style and wavefront spread).
+ *
+ * @param {Object} [transition] Raw transition input.
+ * @returns {Object} Normalized transition.
+ */
+function normalizeTransition(transition) {
+    const type = transition?.type;
+    if (type !== "blend" && type !== "morph") return { type: "cut", duration: 0, easing: "linear" };
+    const normalized = {
+        type,
+        duration: Number(transition.duration) > 0 ? Number(transition.duration) : 0.8,
+        easing: ["linear", "easeIn", "easeOut", "easeInOut"].includes(transition.easing) ? transition.easing : "easeInOut",
+    };
+    if (type === "morph") {
+        normalized.style = ["dissolve", "scramble", "flow"].includes(transition.style) ? transition.style : "dissolve";
+        const spread = Number(transition.spread);
+        normalized.spread = Number.isFinite(spread) ? Math.max(0.02, Math.min(0.9, spread)) : 0.22;
+    }
+    return normalized;
 }
 
 /**

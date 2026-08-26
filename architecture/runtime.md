@@ -80,18 +80,39 @@ encoded GIF data.
 
 ## Sequence state
 
-A sequence contains normalized steps, current index, delay and duration clocks, loop policy, callbacks, optional image/model source actions, and outgoing retained-frame morph state. Step option changes reuse the existing renderer. Manual `setMode()` interrupts and pauses active sequence playback.
+A sequence contains normalized steps, current index, delay and duration clocks, loop policy, callbacks, optional image/model source actions, and outgoing transition state (`blend` or `morph`). Step option changes reuse the existing renderer. Manual `setMode()` interrupts and pauses active sequence playback.
 
 An omitted step image retains the sampled source, `null` clears it, and a string starts
 an asynchronous decode after the step delay. An activation token prevents a late image
 from committing after seek, stop, or reconfiguration. The duration clock stays at zero
 while decoding. A decode failure pauses playback and emits `sequenceStepError`.
 
-Morph transitions capture one outgoing frame before image or model preparation. The
-opaque retained frame preserves continuity while sources load; after readiness, the
-incoming live state runs beneath it while the retained frame eases to zero opacity.
-This bounds work to one live renderer and one static compositing layer. Reduced-motion
-preference resolves morphs to cuts.
+`blend` transitions capture one outgoing canvas snapshot before image or model
+preparation. The opaque retained frame preserves continuity while sources load; after
+readiness, the incoming live state runs beneath it while the retained frame eases to
+zero opacity. This bounds work to one live renderer and one static compositing layer.
+`blend` is also the fallback for every case a `morph` transition can't handle per-cell
+(see below), so a step whose sources are still loading always uses it regardless of the
+requested transition type.
+
+`morph` transitions instead capture one outgoing *frame's cells* — not a canvas
+image — into a pooled `cols*rows` buffer: `_prepareMorph()` reuses the active mode's
+existing dense/sparse/mesh compute loop, redirecting `_paintCell`'s resolved
+char/opacity/level/bold/color into that buffer instead of drawing pixels, so nothing is
+ever read back from a canvas or GPU buffer. Per frame during the transition,
+`_paintCell` blends each cell's captured "before" state against the live "after" state
+it would paint anyway, using the same per-cell staggered-wavefront math
+(`_seedCache`/`_revealProgress()`) that `assemble`/`breakApart`/`_dissolveCell` already
+use — no new noise or state. Outside the thin wavefront band a cell is currently
+crossing, this costs exactly one paint call, identical to normal rendering; only cells
+inside that band do the style-specific extra work (`dissolve`: one extra paint call;
+`scramble`: none, just a different deterministic character source; `flow`: none, just an
+interpolated draw position for cells matched to a same-character "before" cell within a
+bounded search radius, computed once at transition start). `morph` falls back to
+`blend` for a `setLayers()` composite (no single per-cell color once layers blend at the
+pixel level), and for a step whose own `options` resize the grid mid-transition (a
+captured buffer can't realign to a different `cols`/`rows`). Reduced-motion preference
+resolves both `blend` and `morph` to cuts.
 
 ## Cache ownership
 

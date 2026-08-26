@@ -197,8 +197,29 @@ export interface asciiamSequenceDetail {
 export type asciiamSequenceCallback = (detail: asciiamSequenceDetail, animation: asciiam) => void;
 
 export interface asciiamSequenceTransition {
-  type?: 'cut' | 'morph';
+  /**
+   * `'cut'` swaps instantly. `'blend'` crossfades the whole outgoing canvas into the
+   * incoming one (a single rasterized overlay tweened by opacity — no cell ever
+   * actually changes character). `'morph'` is a real per-cell transition: individual
+   * ASCII cells transition character, color, and opacity (or position, in `'flow'`
+   * style) from the outgoing step's content to the incoming step's, staggered across
+   * the grid rather than uniformly faded. `'morph'` falls back to `'blend'` behavior
+   * automatically for scenes it can't capture cell-by-cell — an active `setLayers()`
+   * composite (no single per-cell color once layers blend), a step whose own `options`
+   * resize the grid mid-transition, or while a step's image/model source is still
+   * loading (there is no "after" content to morph toward yet).
+   */
+  type?: 'cut' | 'blend' | 'morph';
   duration?: number;
+  /** `'morph'` only. Selects the per-cell transition style; defaults to `'dissolve'`. */
+  style?: 'dissolve' | 'scramble' | 'flow';
+  /**
+   * `'morph'` only. Width of the staggered transition band a cell sweeps through, as a
+   * fraction of the transition's overall progress (0.02–0.9). Smaller values produce a
+   * sharper, more localized wavefront; larger values spread the change out over more
+   * of the transition. Defaults to `0.22`.
+   */
+  spread?: number;
   source?: unknown;
   loaded?: number;
   total?: number | null;

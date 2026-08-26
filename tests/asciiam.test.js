@@ -1441,7 +1441,7 @@ describe("asciiam lifecycle", () => {
         animation.destroy();
     });
 
-    it("morphs between sequence steps with one outgoing snapshot", () => {
+    it("blends between sequence steps with one outgoing snapshot", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {
             clientWidth: { configurable: true, value: 320 },
@@ -1454,7 +1454,7 @@ describe("asciiam lifecycle", () => {
         animation.on("sequenceMorphComplete", completed);
         animation.setSequence([
             { mode: "wave", duration: 1 },
-            { mode: "ripple", duration: 2, transition: { type: "morph", duration: 0.5, easing: "linear" } },
+            { mode: "ripple", duration: 2, transition: { type: "blend", duration: 0.5, easing: "linear" } },
         ], { loop: false });
 
         animation.playSequence();
@@ -1472,6 +1472,193 @@ describe("asciiam lifecycle", () => {
         expect(animation.getSequenceState().morphing).toBe(false);
         expect(host.querySelector(".asciiam-morph-layer")).toBeNull();
         expect(completed).toHaveBeenCalledTimes(1);
+        animation.destroy();
+    });
+
+    it("morphs individual cells between sequence steps instead of crossfading the whole canvas", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, {
+            mode: "custom",
+            charSet: "AB",
+            customCell: () => ({ char: "A", opacity: 1 }),
+            respectReducedMotion: false,
+        });
+        animation.start();
+        const started = jest.fn();
+        const completed = jest.fn();
+        animation.on("sequenceMorphStart", started);
+        animation.on("sequenceMorphComplete", completed);
+        animation.setSequence([
+            { mode: "custom", duration: 1 },
+            {
+                mode: "custom",
+                duration: 2,
+                // The incoming step's own customCell paints "B"; the outgoing frame's "A"
+                // cells were captured per-cell (no DOM snapshot element) at the moment of
+                // transition, before this option was applied.
+                options: { customCell: () => ({ char: "B", opacity: 1 }) },
+                transition: { type: "morph", duration: 0.5, easing: "linear" },
+            },
+        ], { loop: false });
+
+        animation.playSequence();
+        animation._advanceSequence(1000);
+
+        expect(animation.getSequenceState()).toEqual(expect.objectContaining({ morphing: true, morphProgress: 0 }));
+        expect(host.querySelectorAll(".asciiam-morph-layer")).toHaveLength(0);
+        expect(started).toHaveBeenCalledTimes(1);
+
+        const observedChars = new Set();
+        const originalPaint = animation._paintResolvedCell.bind(animation);
+        animation._paintResolvedCell = (cell, ...rest) => {
+            observedChars.add(cell.char);
+            return originalPaint(cell, ...rest);
+        };
+        animation._advanceMorph(250);
+        animation._draw(16.7);
+        // A cell mid-transition still shows some "A" (fading out) and some "B" (fading
+        // in) at the same instant — the defining behavior a whole-canvas crossfade
+        // cannot produce, since every pixel there is one flat blended image.
+        expect(observedChars.has("A")).toBe(true);
+        expect(observedChars.has("B")).toBe(true);
+
+        animation._advanceMorph(250);
+        expect(animation.getSequenceState().morphing).toBe(false);
+        expect(completed).toHaveBeenCalledTimes(1);
+        animation.destroy();
+    });
+
+    it("falls back to blend for a morph transition into a composited layer scene", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, { respectReducedMotion: false });
+        animation.setLayers([{ mode: "wave" }]);
+        animation.setSequence([
+            { mode: "wave", duration: 1 },
+            { mode: "ripple", duration: 2, transition: { type: "morph", duration: 0.5 } },
+        ], { loop: false });
+
+        animation.playSequence();
+        animation._advanceSequence(1000);
+        expect(host.querySelectorAll(".asciiam-morph-layer")).toHaveLength(1);
+        animation.destroy();
+    });
+
+    it("falls back to blend when a step's own options resize the grid mid-morph", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, { respectReducedMotion: false });
+        animation.setSequence([
+            { mode: "wave", duration: 1 },
+            {
+                mode: "ripple",
+                duration: 2,
+                options: { resolutionScale: 0.3 },
+                transition: { type: "morph", duration: 0.5 },
+            },
+        ], { loop: false });
+
+        animation.playSequence();
+        animation._advanceSequence(1000);
+        expect(animation.opts.mode).toBe("ripple");
+        expect(host.querySelectorAll(".asciiam-morph-layer")).toHaveLength(1);
+        expect(animation.getSequenceState().morphing).toBe(true);
+        animation.destroy();
+    });
+
+    it("scrambles through intermediate characters during a 'scramble' style morph", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, {
+            mode: "custom",
+            charSet: "ABCDEFGH",
+            customCell: () => ({ char: "A", opacity: 1 }),
+            respectReducedMotion: false,
+        });
+        animation.start();
+        animation.setSequence([
+            { mode: "custom", duration: 1 },
+            {
+                mode: "custom",
+                duration: 2,
+                options: { customCell: () => ({ char: "B", opacity: 1 }) },
+                transition: { type: "morph", style: "scramble", duration: 0.5, easing: "linear" },
+            },
+        ], { loop: false });
+
+        animation.playSequence();
+        animation._advanceSequence(1000);
+
+        const observedChars = new Set();
+        const originalPaint = animation._paintResolvedCell.bind(animation);
+        animation._paintResolvedCell = (cell, ...rest) => {
+            observedChars.add(cell.char);
+            return originalPaint(cell, ...rest);
+        };
+        for (let i = 0; i < 10; i++) {
+            animation._advanceMorph(50);
+            animation._draw(16.7);
+        }
+        // At least one cell should have shown a character other than the outgoing "A"
+        // or incoming "B" while mid-decode — the signature of 'scramble' versus a plain
+        // crossfade, which only ever shows those two characters.
+        const scrambledSeen = [...observedChars].some((char) => char !== "A" && char !== "B");
+        expect(scrambledSeen).toBe(true);
+        animation.destroy();
+    });
+
+    it("flows a matched cell toward its new position instead of only fading in 'flow' style", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const animation = new asciiam(host, {
+            mode: "custom",
+            charSet: "X",
+            customCell: (api) => (api.col === 2 && api.row === 2 ? { char: "X", opacity: 1 } : null),
+            respectReducedMotion: false,
+        });
+        animation.start();
+        animation.setSequence([
+            { mode: "custom", duration: 1 },
+            {
+                mode: "custom",
+                duration: 2,
+                options: { customCell: (api) => (api.col === 5 && api.row === 2 ? { char: "X", opacity: 1 } : null) },
+                transition: { type: "morph", style: "flow", duration: 0.5, easing: "linear" },
+            },
+        ], { loop: false });
+
+        animation.playSequence();
+        animation._advanceSequence(1000);
+
+        const positions = [];
+        const originalPaint = animation._paintResolvedCell.bind(animation);
+        animation._paintResolvedCell = (cell, col, row, x, y, ...rest) => {
+            if (cell.char === "X") positions.push({ col, x });
+            return originalPaint(cell, col, row, x, y, ...rest);
+        };
+        for (let i = 0; i < 10; i++) {
+            animation._advanceMorph(50);
+            animation._draw(16.7);
+        }
+        const naturalX = animation._columnX[5];
+        const interpolated = positions.some((p) => p.col === 5 && Math.abs(p.x - naturalX) > 1);
+        expect(interpolated).toBe(true);
         animation.destroy();
     });
 

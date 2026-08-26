@@ -11,6 +11,7 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 
 ## Unreleased
 
+- **Behavior change:** sequence `transition.type: 'morph'` is now a real per-cell transition — individual ASCII cells transition character, color, and opacity (or position, in `style: 'flow'`) instead of crossfading the whole canvas. The original whole-canvas crossfade moved to `transition.type: 'blend'`; an existing sequence using `type: 'morph'` will start getting the new per-cell behavior automatically. `morph` accepts `style: 'dissolve' | 'scramble' | 'flow'` (default `'dissolve'`) and `spread` (wavefront band width, default `0.22`), and falls back to `blend` automatically for a `setLayers()` composite, a step whose own `options` resize the grid mid-transition, or while a step's image/model source is still loading. See [Animation sequences]({{< relref "/guides/sequences" >}}).
 - Added `assemble` and `breakApart` seeded fragment modes for directional entry and exit transitions. The modes use the existing logical grid and reveal-duration controls across Canvas 2D, WebGL2, image-backed output, and headless rendering.
 
 ## 0.11.0
