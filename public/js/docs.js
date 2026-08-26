@@ -4,6 +4,11 @@
  * @module docs
  */
 
+import { Lume } from "../libs/lume/lume.mjs";
+
+// Auto-discovers every current and future [data-lume]/[data-lume-content] element on the page.
+new Lume({ tier: "minimal" });
+
 // Format tables into responsive scroll regions for screen readers
 document.querySelectorAll(".prose table").forEach((table) => {
     const wrapper = document.createElement("div");
