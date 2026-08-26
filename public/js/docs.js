@@ -89,7 +89,7 @@ if (pageSearch) {
         ["examples", "playground", "editor", "workbench"],
         ["image", "images", "photo", "gif", "svg", "media"],
         ["install", "installation", "setup", "quickstart", "start"],
-        ["morph", "transition", "crossfade", "cross-fade"],
+        ["morph", "blend", "transition", "crossfade", "cross-fade"],
         ["preset", "presets", "gallery"],
         ["render", "renderer", "rendering", "webgl", "webgl2", "canvas", "gpu"],
         ["sequence", "sequences", "timeline", "steps", "playlist"],

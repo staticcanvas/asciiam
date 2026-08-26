@@ -1329,6 +1329,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._backdropGradientObj = null;
             this._edgeFadeCache = null;
             this._cell = { char: " ", opacity: 0, level: 0, bold: false, color: null };
+            this._morphRecording = null;
+            this._morphCaptureA = null;
+            this._morphCaptureB = null;
+            this._morphClaimed = null;
+            this._morphBeforeScratch = { char: " ", opacity: 0, level: 0, bold: false, color: null };
+            this._morphScrambleScratch = { char: " ", opacity: 0, level: 0, bold: false, color: null };
             this._frames = 0;
             this._fps = 0;
             this._statsEl = null;
@@ -1941,12 +1947,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 const duration = Number(step.duration);
                 const delay = Number(step.delay);
                 const transitionDuration = Number(step.transition?.duration);
-                const transition = step.transition?.type === "morph" ? {
-                    type: "morph",
+                const transitionType = step.transition?.type;
+                const transition = transitionType === "blend" || transitionType === "morph" ? {
+                    type: transitionType,
                     duration: Number.isFinite(transitionDuration) && transitionDuration > 0 ? transitionDuration : 0.8,
                     easing: ["linear", "easeIn", "easeOut", "easeInOut"].includes(step.transition.easing)
                         ? step.transition.easing
                         : "easeInOut",
+                    ...(transitionType === "morph" ? {
+                        style: ["dissolve", "scramble", "flow"].includes(step.transition.style) ? step.transition.style : "dissolve",
+                        spread: Number.isFinite(Number(step.transition.spread)) ? Math.max(0.02, Math.min(0.9, Number(step.transition.spread))) : 0.22,
+                    } : {}),
                 } : { type: "cut", duration: 0, easing: "linear" };
                 return {
                     id: step.id || `step-${index + 1}`,
@@ -2385,11 +2396,34 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Capture the outgoing presentation before incoming source preparation begins. */
+        /**
+         * Capture the outgoing presentation before incoming source preparation begins.
+         * `transition.type === 'morph'` captures real per-cell "before" state (see
+         * `_prepareRealMorph`); `'blend'`, and any transition kept alive only to bridge
+         * an async image/model load (`retainDuringLoad`), fall back to the original
+         * whole-canvas crossfade — a real per-cell morph has no "after" cells to work
+         * with until that load finishes, so there is nothing to morph toward yet.
+         */
         _prepareMorph(transition, retainDuringLoad = false) {
             this._clearMorph();
-            const isMorph = !this._reduced && transition?.type === "morph";
-            if ((!isMorph && !retainDuringLoad) || !this.canvas.parentElement) return;
+            if (!this._reduced && !retainDuringLoad && transition?.type === "morph" && this._prepareRealMorph(transition)) {
+                return;
+            }
+            const isBlend = !this._reduced && (transition?.type === "blend" || transition?.type === "morph");
+            if ((!isBlend && !retainDuringLoad) || !this.canvas.parentElement) return;
+            this._createBlendSnapshot(transition, isBlend);
+        }
+
+        /**
+         * Rasterizes the canvas as it currently appears into an offscreen overlay
+         * element, faded out over the transition by `_advanceMorph`. Shared by
+         * `_prepareMorph` (called before a step's options mutate `this.opts`, so the
+         * canvas still shows the outgoing content) and `_startPreparedMorph`'s
+         * grid-mismatch recovery path (called right after mutation but before the next
+         * paint, so the canvas — not yet repainted — still shows the outgoing content
+         * there too).
+         */
+        _createBlendSnapshot(transition, isBlend) {
             const duration = Math.max(0.05, Number(transition?.duration) || 0.8) * 1000;
             const snapshot = document.createElement("canvas");
             snapshot.width = this.canvas.width;
@@ -2408,18 +2442,193 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 return;
             }
             this.canvas.after(snapshot);
-            this._morph = { canvas: snapshot, elapsed: 0, duration, easing: transition?.easing || "easeInOut", isMorph, started: false };
+            this._morph = { kind: "blend", canvas: snapshot, elapsed: 0, duration, easing: transition?.easing || "easeInOut", isBlend, started: false };
+        }
+
+        /**
+         * Captures the current frame's cells (CPU-side char/opacity/color per cell, no
+         * canvas/pixel readback) into a pooled buffer and prepares real per-cell morph
+         * state. Returns false — caller falls back to the whole-canvas blend — when the
+         * active scene can't be captured cell-by-cell: a composited `setLayers()` scene
+         * has no single per-cell color (multiple layers blend at the pixel level, not
+         * the cell level), and an empty grid has nothing to capture.
+         */
+        _prepareRealMorph(transition) {
+            if ((this._layers && this._layers.length) || !this.cols || !this.rows) return false;
+            const capture = this._captureMorphFrame("_morphCaptureA");
+            if (!capture) return false;
+            this._morph = {
+                kind: "morph",
+                capture,
+                matches: null,
+                progress: 0,
+                elapsed: 0,
+                duration: Math.max(0.05, Number(transition?.duration) || 0.8) * 1000,
+                easing: transition?.easing || "easeInOut",
+                style: transition?.style || "dissolve",
+                feather: Number.isFinite(transition?.spread) ? transition.spread : 0.22,
+                started: false,
+            };
+            return true;
+        }
+
+        /**
+         * Runs the current mode's normal per-cell compute loop (dense/sparse/mesh —
+         * whichever the active `this.opts.mode` would use to paint right now) but
+         * records each resolved cell's char/opacity/level/bold and fully-resolved color
+         * into `this[bufferProp]` instead of drawing it. Reuses `_prepareModeFrame()`/
+         * `_pulseFactor`/animated-color/gradient setup so the capture matches exactly
+         * what was (or is about to be) on screen. Sparse modes are advanced by `dt`
+         * inside their own draw loop, so this passes `dt = 0` to avoid double-advancing
+         * particle state — this call is a snapshot of the current instant, not an extra
+         * animation tick.
+         */
+        _captureMorphFrame(bufferProp) {
+            if ((this._layers && this._layers.length) || !this.cols || !this.rows) return null;
+            const buffer = this._ensureMorphBuffer(this[bufferProp], this.cols, this.rows);
+            this[bufferProp] = buffer;
+
+            this._prepareModeFrame();
+            this._pulseFactor = this.opts.pulse
+                ? Math.max(0, 1 + this.opts.pulse.amplitude * Math.sin(this._time * (this.opts.pulse.speed ?? 1)))
+                : 1;
+            this._updateAnimatedColor();
+            const globalGradient = this.opts.gradient && !this.opts.colorFromImage ? this._getGradient() : null;
+            this._activeGlyphAtlas = this._getGlyphAtlas();
+
+            this._morphRecording = buffer;
+            try {
+                if (this.opts.mode === "mesh") {
+                    this._drawMesh(globalGradient);
+                } else if (SPARSE_MODES.has(this.opts.mode)) {
+                    if (this._imageGrid) this._drawImageSourceBase(globalGradient);
+                    this._drawSparse(0, globalGradient);
+                } else {
+                    this._drawDense(globalGradient);
+                }
+                if (this._mesh && this._meshRasterizer && this.opts.mode !== "mesh") {
+                    this._drawMesh(globalGradient);
+                }
+            } finally {
+                this._morphRecording = null;
+            }
+            return buffer;
+        }
+
+        /** Pooled cols*rows cell-capture buffer; grown (never shrunk) across transitions. */
+        _ensureMorphBuffer(buffer, cols, rows) {
+            const n = cols * rows;
+            if (!buffer || buffer.chars.length < n) {
+                buffer = {
+                    cols, rows,
+                    chars: new Array(n).fill(null),
+                    colors: new Array(n).fill(null),
+                    opacity: new Float32Array(n),
+                    level: new Uint8Array(n),
+                    bold: new Uint8Array(n),
+                };
+            } else {
+                buffer.cols = cols;
+                buffer.rows = rows;
+                buffer.chars.fill(null, 0, n);
+            }
+            return buffer;
+        }
+
+        /** Reads a captured cell back into a pooled scratch object; null if that cell was blank. */
+        _readMorphCell(buffer, index, scratch) {
+            if (!buffer) return null;
+            const char = buffer.chars[index];
+            if (char === null) return null;
+            scratch.char = char;
+            scratch.opacity = buffer.opacity[index];
+            scratch.level = buffer.level[index];
+            scratch.bold = buffer.bold[index] === 1;
+            scratch.color = buffer.colors[index];
+            return scratch;
+        }
+
+        /**
+         * Builds the before→after cell-position match table for the 'flow' style: for
+         * each live cell, search a small fixed-radius ring for an unclaimed captured
+         * "before" cell with the same character, so it can visually slide into place
+         * instead of dissolving. Runs once at transition start (not per frame); bounded
+         * by radius regardless of character distribution, and skipped outright above a
+         * cell-count ceiling, so it can't become a per-frame or unbounded cost. Degrades
+         * to 'dissolve' whenever a same-size, non-layered "after" snapshot isn't
+         * available — matching needs both snapshots at identical grid dimensions.
+         */
+        _buildMorphMatches() {
+            const morph = this._morph;
+            if (!morph || morph.kind !== "morph") return;
+            const cols = morph.capture.cols, rows = morph.capture.rows;
+            const n = cols * rows;
+            if ((this._layers && this._layers.length) || this.cols !== cols || this.rows !== rows || n > 20000) {
+                morph.style = "dissolve";
+                return;
+            }
+            const after = this._captureMorphFrame("_morphCaptureB");
+            if (!after) {
+                morph.style = "dissolve";
+                return;
+            }
+            const claimed = this._morphClaimed && this._morphClaimed.length >= n ? this._morphClaimed : new Uint8Array(n);
+            claimed.fill(0, 0, n);
+            this._morphClaimed = claimed;
+            const matches = new Int32Array(n).fill(-1);
+            const radius = 3;
+            const beforeChars = morph.capture.chars;
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const index = row * cols + col;
+                    const targetChar = after.chars[index];
+                    if (targetChar === null) continue;
+                    let bestIndex = -1, bestDist = Infinity;
+                    for (let dr = -radius; dr <= radius; dr++) {
+                        const r2 = row + dr;
+                        if (r2 < 0 || r2 >= rows) continue;
+                        for (let dc = -radius; dc <= radius; dc++) {
+                            const c2 = col + dc;
+                            if (c2 < 0 || c2 >= cols) continue;
+                            const candidate = r2 * cols + c2;
+                            if (claimed[candidate] || beforeChars[candidate] !== targetChar) continue;
+                            const dist = dr * dr + dc * dc;
+                            if (dist < bestDist) { bestDist = dist; bestIndex = candidate; }
+                        }
+                    }
+                    if (bestIndex >= 0) {
+                        claimed[bestIndex] = 1;
+                        matches[index] = bestIndex;
+                    }
+                }
+            }
+            morph.matches = matches;
         }
 
         /** Reveal the live incoming state beneath the retained outgoing frame. */
         _startPreparedMorph(transition) {
-            if (this._morph && !this._morph.isMorph) {
+            if (this._morph && this._morph.kind === "blend" && !this._morph.isBlend) {
                 this._clearMorph();
                 return;
             }
             if (!this._morph) {
                 this._prepareMorph(transition);
                 if (!this._morph) return;
+            }
+            if (this._morph.kind === "morph") {
+                // The incoming step's options (applied between `_prepareMorph` and here)
+                // can change `quality`/`resolutionScale` and resize the grid — every
+                // captured index would then misalign with the live grid. The canvas
+                // hasn't repainted since `_prepareMorph` ran, so it's not too late to
+                // recover into a whole-canvas blend instead of morphing misaligned cells.
+                if (this.cols !== this._morph.capture.cols || this.rows !== this._morph.capture.rows) {
+                    const isBlend = !this._reduced && transition?.type !== "cut";
+                    this._morph = null;
+                    if (isBlend && this.canvas.parentElement) this._createBlendSnapshot(transition, isBlend);
+                    if (!this._morph) return;
+                } else if (this._morph.style === "flow") {
+                    this._buildMorphMatches();
+                }
             }
             this._morph.started = true;
             this._emit("sequenceMorphStart", this._sequenceDetail({ transition }));
@@ -2436,16 +2645,27 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             else if (morph.easing === "easeInOut") eased = progress < 0.5
                 ? 2 * progress * progress
                 : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+            if (morph.kind === "morph") {
+                morph.progress = eased;
+                if (progress >= 1) {
+                    const detail = this._sequenceDetail({ transition: { type: "morph", style: morph.style, duration: morph.duration / 1000, easing: morph.easing } });
+                    this._clearMorph();
+                    this._emit("sequenceMorphComplete", detail);
+                }
+                return;
+            }
+
             morph.canvas.style.opacity = String(1 - eased);
             if (progress >= 1) {
-                const detail = this._sequenceDetail({ transition: { type: "morph", duration: morph.duration / 1000, easing: morph.easing } });
+                const detail = this._sequenceDetail({ transition: { type: "blend", duration: morph.duration / 1000, easing: morph.easing } });
                 this._clearMorph();
                 this._emit("sequenceMorphComplete", detail);
             }
         }
 
         _clearMorph() {
-            if (this._morph?.canvas.parentElement) this._morph.canvas.remove();
+            if (this._morph?.kind === "blend" && this._morph.canvas.parentElement) this._morph.canvas.remove();
             this._morph = null;
         }
 
@@ -4223,9 +4443,107 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (applyImageSource && this._imageGrid && this.opts.mode !== "image" && this.opts.mode !== "chart") {
                 cell = this._applyImageSource(cell, col, row);
             }
-            if (!cell || cell.char === " ") return false;
+            if (cell && cell.char === " ") cell = null;
+            // Checked before the blank-cell bail-out below: a cell fading OUT under the
+            // 'dissolve'/'scramble' morph styles can still need to paint its captured
+            // "before" character even where the live "after" cell is blank.
+            if (this._morph?.kind === "morph" && this._morph.progress < 1 && !this._morphRecording) {
+                return this._paintMorphCell(cell, col, row, x, y, globalGradient, baselineY);
+            }
+            if (!cell) return false;
+            return this._paintResolvedCell(cell, col, row, x, y, globalGradient, baselineY);
+        }
+
+        /**
+         * Real per-cell morph dispatch (reached only while a `'morph'`-kind transition is
+         * in progress). Reuses the same per-cell staggered-wavefront math as
+         * `assemble`/`breakApart`/`_dissolveCell` (`this._seedCache`/`_revealProgress()`)
+         * so cells cross the wavefront at a deterministic, varied moment rather than all
+         * at once — no new noise/state needed. Outside the thin `feather` band around the
+         * wavefront, this costs exactly one paint call, identical to normal rendering;
+         * only cells currently inside that band do the (bounded, temporary) extra work
+         * each style requires.
+         */
+        _paintMorphCell(afterCell, col, row, x, y, globalGradient, baselineY) {
+            const morph = this._morph;
+            const index = row * this.cols + col;
+            const before = this._readMorphCell(morph.capture, index, this._morphBeforeScratch);
+            const seed = this._seedCache ? this._seedCache[index] : 0;
+            const threshold = seed * 0.72 + this._revealProgress(col, row) * 0.28;
+            const feather = morph.feather;
+            const local = Math.max(0, Math.min(1, (morph.progress - threshold + feather) / feather));
+
+            if (local <= 0) {
+                return before ? this._paintResolvedCell(before, col, row, x, y, globalGradient, baselineY) : false;
+            }
+            if (local >= 1) {
+                return afterCell ? this._paintResolvedCell(afterCell, col, row, x, y, globalGradient, baselineY) : false;
+            }
+
+            if (morph.style === "scramble") {
+                const scrambled = this._scrambleMorphCell(before, afterCell, col, row, local);
+                return scrambled ? this._paintResolvedCell(scrambled, col, row, x, y, globalGradient, baselineY) : false;
+            }
+
+            if (morph.style === "flow") {
+                const matchIndex = morph.matches ? morph.matches[index] : -1;
+                if (matchIndex >= 0 && afterCell) {
+                    const fromCol = matchIndex % morph.capture.cols;
+                    const fromRow = (matchIndex / morph.capture.cols) | 0;
+                    const fx = this._columnX[fromCol];
+                    const fy = this._rowY[fromRow];
+                    const ix = fx + (x - fx) * local;
+                    const iy = fy + (y - fy) * local;
+                    return this._paintResolvedCell(afterCell, col, row, ix, iy, globalGradient, undefined);
+                }
+                // Unmatched cells (no same-character "before" cell within the search
+                // radius) fall through to the dissolve behavior below.
+            }
+
+            let drawn = false;
+            if (before) drawn = this._paintResolvedCell(before, col, row, x, y, globalGradient, baselineY, 1 - local) || drawn;
+            if (afterCell) drawn = this._paintResolvedCell(afterCell, col, row, x, y, globalGradient, baselineY, local) || drawn;
+            return drawn;
+        }
+
+        /**
+         * Synthesizes a "decoding" cell for the 'scramble' morph style: a character
+         * picked deterministically from `opts.charSet` via the same `_seed()` hash other
+         * modes already use for flicker/noise (fire mode, etc.), varying by a coarse
+         * quantization of the cell's local transition progress so it visibly steps
+         * through a few glyphs rather than re-rolling every single frame. Pure function
+         * of (col, row, local) — no per-cell mutable state, no RNG calls.
+         */
+        _scrambleMorphCell(before, afterCell, col, row, local) {
+            const charSet = this.opts.charSet;
+            if (!charSet || charSet.length === 0) return afterCell || before || null;
+            const scratch = this._morphScrambleScratch;
+            const steps = 4;
+            const step = Math.min(steps - 1, Math.floor(local * steps));
+            const pick = Math.floor(this._seed(col + step * 17, row - step * 11) * charSet.length);
+            scratch.char = charSet[pick] || afterCell?.char || before?.char || " ";
+            const beforeOpacity = before ? before.opacity : 0;
+            const afterOpacity = afterCell ? afterCell.opacity : 0;
+            scratch.opacity = beforeOpacity + (afterOpacity - beforeOpacity) * local;
+            const useAfter = local >= 0.5;
+            scratch.level = (useAfter ? afterCell?.level : before?.level) ?? afterCell?.level ?? before?.level ?? 0;
+            scratch.bold = !!(useAfter ? afterCell?.bold : before?.bold);
+            scratch.color = (useAfter ? afterCell?.color : before?.color) ?? afterCell?.color ?? before?.color ?? null;
+            return scratch;
+        }
+
+        /**
+         * Shared drawing body for both normal painting and morph playback. `alphaMul`
+         * lets the 'dissolve' morph style paint the same cell twice at complementary
+         * partial opacities (before fading out, after fading in) without duplicating the
+         * opacity/atlas/fillText logic. When `this._morphRecording` is set (a one-time
+         * capture pass, never during normal rendering), records the fully-resolved
+         * char/opacity/level/bold/color into that buffer instead of drawing pixels — no
+         * canvas or GPU readback involved.
+         */
+        _paintResolvedCell(cell, col, row, x, y, globalGradient, baselineY, alphaMul = 1) {
             const ctx = this.ctx;
-            let opacity = cell.opacity * this._pulseFactor;
+            let opacity = cell.opacity * this._pulseFactor * alphaMul;
 
             if (this._edgeFadeCache) {
                 opacity *= this._edgeFadeCache[row * this.cols + col];
@@ -4248,6 +4566,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const alphaLevels = this.opts.alphaLevels;
             if (alphaLevels > 1) opacity = Math.round(opacity * alphaLevels) / alphaLevels;
             if (opacity <= 0) return false;
+
+            if (this._morphRecording) {
+                let color = cell.color;
+                if (!color && this.opts.colorFromImage && this._imageGrid && this.opts.mode !== "chart") color = this._imageGrid.colors[row * this.cols + col];
+                if (!color) color = globalGradient || this._animatedColor || this.opts.color;
+                const index = row * this.cols + col;
+                const buffer = this._morphRecording;
+                buffer.chars[index] = cell.char;
+                buffer.colors[index] = color;
+                buffer.opacity[index] = opacity;
+                buffer.level[index] = cell.level;
+                buffer.bold[index] = cell.bold ? 1 : 0;
+                return true;
+            }
 
             if (this._webgl && this._activeWebGLAtlas) {
                 const atlas = this._activeWebGLAtlas;

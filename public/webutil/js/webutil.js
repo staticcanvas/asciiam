@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=33833592e7a1";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=33833592e7a1";
+import { highlightJavaScript } from "./webutil-code.js?v=702aa06f84b7";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=702aa06f84b7";
 
 const asciiam = window.asciiam;
 
@@ -602,29 +602,34 @@ function renderSequenceEditor() {
         transitionLabel.textContent = "Transition in";
         const transitionSelect = document.createElement("select");
         transitionSelect.setAttribute("aria-label", `Step ${index + 1} transition`);
-        transitionSelect.append(new Option("Cut", "cut"), new Option("Morph", "morph"));
+        // "Blend" is the original whole-canvas crossfade; "Morph" is a real per-cell
+        // transition (style/spread beyond the defaults used here are reachable by
+        // hand-editing the generated JSON in the Code popover).
+        transitionSelect.append(new Option("Cut", "cut"), new Option("Blend (crossfade)", "blend"), new Option("Morph (per-cell)", "morph"));
         transitionSelect.value = step.transition?.type || "cut";
-        const morphDuration = document.createElement("input");
-        morphDuration.type = "number";
-        morphDuration.min = "0.1";
-        morphDuration.step = "0.1";
-        morphDuration.value = String(step.transition?.duration || 0.8);
-        morphDuration.setAttribute("aria-label", `Step ${index + 1} morph duration in seconds`);
-        morphDuration.hidden = transitionSelect.value !== "morph";
+        const transitionDuration = document.createElement("input");
+        transitionDuration.type = "number";
+        transitionDuration.min = "0.1";
+        transitionDuration.step = "0.1";
+        transitionDuration.value = String(step.transition?.duration || 0.8);
+        transitionDuration.setAttribute("aria-label", `Step ${index + 1} transition duration in seconds`);
+        transitionDuration.hidden = transitionSelect.value === "cut";
         transitionSelect.onchange = () => {
-            step.transition = transitionSelect.value === "morph"
-                ? { type: "morph", duration: Math.max(0.1, Number(morphDuration.value) || 0.8), easing: "easeInOut" }
+            step.transition = transitionSelect.value !== "cut"
+                ? { type: transitionSelect.value, duration: Math.max(0.1, Number(transitionDuration.value) || 0.8), easing: "easeInOut" }
                 : { type: "cut", duration: 0, easing: "linear" };
-            morphDuration.hidden = transitionSelect.value !== "morph";
+            transitionDuration.hidden = transitionSelect.value === "cut";
             configureSequence();
         };
-        morphDuration.onchange = () => {
-            const duration = Math.max(0.1, Number(morphDuration.value) || 0.8);
-            morphDuration.value = String(duration);
-            step.transition = { type: "morph", duration, easing: "easeInOut" };
-            configureSequence();
+        transitionDuration.onchange = () => {
+            const duration = Math.max(0.1, Number(transitionDuration.value) || 0.8);
+            transitionDuration.value = String(duration);
+            if (transitionSelect.value !== "cut") {
+                step.transition = { type: transitionSelect.value, duration, easing: "easeInOut" };
+                configureSequence();
+            }
         };
-        transitionLabel.append(transitionSelect, morphDuration);
+        transitionLabel.append(transitionSelect, transitionDuration);
         grid.append(modeLabel, imageLabel, durationLabel, delayLabel, repeatLabel, transitionLabel);
 
         const details = document.createElement("details");
