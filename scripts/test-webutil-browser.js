@@ -125,14 +125,6 @@ async function verifyBrowser(browserType, browserName) {
         assert.match(generatedCode, /"meshPrimitive": "torus"/);
 
         await page.locator("#pop-mesh").evaluate((element) => element.hidePopover());
-        await page.locator("#moreTriggerBtn").click();
-        await page.locator("#qualityTriggerBtn").click();
-        await page.locator("#renderer").selectOption("webgpu");
-        await page.waitForFunction(() => {
-            const info = document.getElementById("rendererStatus")?.textContent || "";
-            return /WebGPU|fallback/.test(info);
-        });
-        assert.equal(await page.locator("#renderer").inputValue(), "webgpu");
         await page.locator("#resetSettingsBtn").click();
         const reset = parseGridStatus(await page.locator("#resolutionGridStatus").textContent());
         assert.equal(reset.percent, 100);

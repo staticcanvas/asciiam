@@ -45,6 +45,19 @@ strangers with confidence."
 
 ### **Critical Path (priority-1)**
 
+- [ ] Additional animation types and sequences.
+  - [ ] Flame reveal (from left, right, center, bottom, top).
+  - [ ] Raindrops.
+  - [ ] Walk-by scrolling: right to left, left to right, bottom to top, top to bottom.
+  - [ ] Survey ASCII animation styles seen in Omarchy Linux's terminal theming for additional
+        mode inspiration — there appear to be more worth cataloguing than the current
+        inventory covers.
+- [ ] Web Audio integration and use cases in asciiam.
+  - [ ] ASCII audio visualizer — sequence modes/images/GIFs/3D meshes so audio-reactive
+        input can drive a next-generation Web Audio visualizer.
+  - [ ] Chart legend and bar numeric-label rendering needs more deliberate scaling logic so
+        text stays correctly positioned and legible across different quality tiers and
+        resolution scales.
 - [x] 🟠🌟✅1️⃣ **Critical** - **Morph entry/exit mode expansion.** Added `assemble` and `breakApart` as deterministic seeded fragment modes. They reuse the existing logical grid, reveal direction, duration, reduced-motion handling, image source, Canvas 2D, WebGL2, and headless rendering paths without a second per-cell pass.
   > **Solution Implemented:** Added the modes to the runtime inventory, TypeScript declarations, Web Utility mode editor, animation/API guides, README, and regression coverage. Retained-frame sequence `morph` remains the transition for outgoing snapshots; these modes control the incoming or outgoing cell field.
 - [x] 🟡🌟✅1️⃣ **Critical** - **Image Brightness & Contrast Controls.** Added `imageBrightness` and `imageContrast` core options, pixel sampling tone mapping in `src/asciiam.js`, TypeScript declarations, and live Web Utility slider controls.
@@ -152,7 +165,7 @@ strangers with confidence."
         spatial origin without trigonometry in the dense per-cell loop.
   - [x] 🟡🌟✅1️⃣ **Critical** - Plasma/noise field — three cached low-frequency fields blend into organic
         motion with only six trigonometric calculations per frame.
-  - [x] 🟡🌟✅1️⃣ **Critical** - Fire/embers — a bottom-origin heat ramp emits sparse particles with asciiam and lifetime decay.
+  - [x] 🟡🌟✅1️⃣ **Critical** - Fire/embers — a bottom-origin heat ramp emits sparse particles with ember color and lifetime decay.
   - [x] 🟡🌟✅1️⃣ **Critical** - Starfield/tunnel — depth-projected sparse particles expand from the selected origin.
   - [x] 🟡🌟✅1️⃣ **Critical** - Glitch/scramble — deterministic timed displacement and scan-band corruption.
   - [x] 🟡🌟✅1️⃣ **Critical** - Typewriter/reveal — deterministic row-major sequencing with a visible cursor.
@@ -358,7 +371,8 @@ strangers with confidence."
 - [x] 🔴🌟✅3️⃣ **Engine / Compositing** - **Multi-Mode Layer Compositing & Pass Blending Pipeline.** Implement an in-memory multi-pass composition system allowing multiple modes (e.g. `image` background + `wave` ambient + `fire` foreground) to be layered and blended within a single `asciiam` instance and single canvas surface without spawning multiple instances.
   - [x] 🟠🌟✅3️⃣ **Engine / Compositing** - Core `setLayers([ { mode, options, opacity, blendMode } ])` engine API with zero-allocation per-frame glyph grid merging.
     > **Solution Implemented:** Added `setLayers()`, `getLayers()`, `options.layers`, and `setOption('layers', ...)` API in `src/asciiam.js`. Supports per-layer opacity, blend modes, and options with zero-allocation per-frame execution in both Canvas 2D and WebGL2 rendering loops. Full TypeScript interfaces added to `src/asciiam.d.ts` and covered by Jest unit tests.
-  - [x] 🟡🌟✅3️⃣ **Engine / DX** - WebGL2 multi-texture shader pass blending & Canvas 2D composite-operation pipeline with TypeScript types and Web Utility live layer editor.
+  - [x] 🟡🌟✔️3️⃣ **Engine / DX** - WebGL2 multi-texture shader pass blending & Canvas 2D composite-operation pipeline with TypeScript types and Web Utility live layer editor.
+    > **Note!** - 2026-08-26 audit found the engine-side blending pipeline and TypeScript types genuinely complete, but no "Web Utility live layer editor" exists in `docs/static/webutil/`. `options.layers` only round-trips through code export and persisted-settings serialization (`webutil.js:2011, 2039`) — a user cannot build or edit a layer stack from the playground UI; it requires hand-editing the generated JSON. Either build the editor or correct this line to describe engine/TS-only completion. See `devtracker-pending.md` priority-2 for the tracked gap.
     > **Solution Implemented:** Integrated layer composite pass execution loop directly into Canvas 2D and WebGL2 render loops with globalAlpha and globalCompositeOperation controls per layer pass.
 - [x] 🔴🌟✅3️⃣ **3D Engine / Optimization** - **3D Software Renderer Acceleration & Draco/Meshopt Compression.** Optimize 3D vertex processing, matrix transformation, and face rasterization with TypedArray batching, optional Web Worker thread offloading, and compressed 3D model parsing (Draco / Meshopt).
   - [x] 🟠🌟✅3️⃣ **3D Engine / Optimization** - SIMD/TypedArray vertex transformation pipeline reducing CPU main-thread frame time for >20,000 vertex GLTF/GLB models.
@@ -408,21 +422,21 @@ that's higher priority than anything on this list — flag it and it jumps the q
 - [x] 🟠🌟✅5️⃣ **UI/Visual** - **T1 — Font loading.** Import `IBM Plex Mono` from Google Fonts so the face loads
       on systems that don't have it locally; remove system-fallback dependency.
 - [x] 🟠🌟✅5️⃣ **UI/Visual** - **P1/P8 — Custom form controls.** Style `<select>` elements (chevron, focus ring)
-      and range sliders (custom thumb + coloured track fill) so they match the dark
+      and range sliders (custom thumb + colored track fill) so they match the dark
       design system instead of showing browser defaults.
 - [x] 🟠🌟✅5️⃣ **UI/Visual** - **C1 — Range track fill.** Drive a CSS `--fill` custom property from `oninput` so
       the filled portion of every slider is visually distinct.
 - [x] 🟠🌟✅5️⃣ **UI/Visual** - **P2/P7 — Button transitions.** Add `transition` on `mode-btn` and
-      `preview-switcher button` colour/border changes; state flips were instant.
+      `preview-switcher button` color/border changes; state flips were instant.
 - [x] 🟠🌟✅5️⃣ **UI/Visual** - **P5 — Backdrop blur on stage overlays.** Apply `backdrop-filter: blur()` to the
       stage-label, stats, and preview-switcher so they stay legible over bright ASCII.
-- [x] 🟠🌟✅5️⃣ **UI/Visual** - **P3 — Traffic-light dots.** Colour the three code-window dots red/yellow/green.
+- [x] 🟠🌟✅5️⃣ **UI/Visual** - **P3 — Traffic-light dots.** Color the three code-window dots red/yellow/green.
 - [x] 🟠🌟✅5️⃣ **UI/Visual** - **P4 — Preview tab active indicator.** Add a sliding bottom-border indicator
       (animated via CSS `transition`) on the preview-switcher active button.
 
 - [x] 🟠🌟✅5️⃣ **UI/Layout** - **L1 — Control panel grouping.** Wrap logically related fields (Motion, Color,
       Image) with a visible section header so the flat `flex-wrap` grid reads as
-      organised groups rather than an undifferentiated list.
+      organized groups rather than an undifferentiated list.
 - [x] 🟠🌟✅5️⃣ **UI/Layout** - **L2 — Image browser max-height.** Cap the image browser with vertical overflow
       so a large local asset library does not create an infinitely tall slab.
 - [x] 🟠🌟✅5️⃣ **UI/Layout** - **L3 — Usage code card frame.** Give `.note` a card treatment (border + slight
@@ -433,10 +447,10 @@ that's higher priority than anything on this list — flag it and it jumps the q
 - [x] 🟠🌟✅5️⃣ **UI/Controls** - **F3 — Copy button checkmark.** On clipboard success flash the copy-btn green
       with a `✓` character, then fade back to default.
 
-- [x] 🟠🌟✅5️⃣ **Accessibility** - **A1 — `aria-valuetext` on range inputs.** Add humanised value strings
+- [x] 🟠🌟✅5️⃣ **Accessibility** - **A1 — `aria-valuetext` on range inputs.** Add humanized value strings
       (e.g. "Speed 1.0") so screen readers announce meaningful units.
-- [x] 🟠🌟✅5️⃣ **Accessibility** - **A2 — Visible colour-input labels.** Add short visible text labels ("Colour",
-      "Gradient stops", etc.) next to the colour pickers.
+- [x] 🟠🌟✅5️⃣ **Accessibility** - **A2 — Visible color-input labels.** Add short visible text labels ("Color",
+      "Gradient stops", etc.) next to the color pickers.
 
 - [x] 🟠🌟✅5️⃣ **UI/Popover** - **Floating Control Bar & Button-Anchored Popovers.** Replaced static bottom panel with a floating toolbar
       docked to the canvas stage using native HTML `popover` menus expanding directly upwards from their trigger button
