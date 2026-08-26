@@ -41,6 +41,9 @@ describe('documentation search interaction', () => {
     const response = { ok: true, json: jest.fn(async () => searchIndex) };
     global.fetch = jest.fn(async () => response);
     window.fetch = global.fetch;
+    // docs.js's `import { Lume }` is stripped above along with every other import;
+    // stub the no-op constructor call that remains (this suite exercises search, not tooltips).
+    window.Lume = class { constructor() {} };
     window.eval(searchSource);
   });
 

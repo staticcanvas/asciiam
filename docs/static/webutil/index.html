@@ -8,6 +8,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="./libs/lume/lume.css?v=__ASSET_REVISION__" />
         <style>
             /* ============================================================
                SOURCE OF TRUTH — asciiam demo page
@@ -2283,7 +2284,7 @@
         <div class="ctrl-bar" role="toolbar" aria-label="Animation controls">
 
             <!-- Preset -->
-            <button class="ctrl-pill" id="presetTriggerBtn" type="button" aria-label="Preset, heroWave" title="Choose or save an animation preset"
+            <button class="ctrl-pill" id="presetTriggerBtn" type="button" aria-label="Preset, heroWave" data-lume="Choose or save an animation preset"
                     popovertarget="pop-preset" aria-expanded="false" aria-controls="pop-preset">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4H14"/><path d="M10 4H3"/><path d="M14 2V6"/><path d="M21 12H12"/><path d="M8 12H3"/><path d="M12 10V14"/><path d="M21 20H18"/><path d="M14 20H3"/><path d="M18 18V22"/></svg>
                 <span>Preset</span>
@@ -2338,7 +2339,7 @@
             </div>
 
             <!-- Quality -->
-            <button class="ctrl-pill" id="qualityTriggerBtn" type="button" title="Choose render quality"
+            <button class="ctrl-pill" id="qualityTriggerBtn" type="button" data-lume="Choose render quality"
                     popovertarget="pop-quality" aria-expanded="false" aria-controls="pop-quality">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 4.5L19 8.2l-3.5 3.4.8 4.8L12 14.1 7.7 16.4l.8-4.8L5 8.2l4.8-.7L12 3z"/></svg>
                 <span>Quality</span>
@@ -2394,7 +2395,7 @@
             </div>
 
             <!-- Sequence -->
-            <button class="ctrl-pill" id="sequenceTriggerBtn" type="button" title="Build and play an animation sequence"
+            <button class="ctrl-pill" id="sequenceTriggerBtn" type="button" data-lume="Build and play an animation sequence"
                     popovertarget="pop-sequence" aria-expanded="false" aria-controls="pop-sequence">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14"/><path d="M5 12h14"/><path d="M5 18h14"/><path d="M2 6h.01"/><path d="M2 12h.01"/><path d="M2 18h.01"/></svg>
                 <span>Sequence</span>
@@ -2425,7 +2426,7 @@
             </div>
 
             <!-- Layers -->
-            <button class="ctrl-pill" id="layersTriggerBtn" type="button" title="Composite multiple modes in one canvas"
+            <button class="ctrl-pill" id="layersTriggerBtn" type="button" data-lume="Composite multiple modes in one canvas"
                     popovertarget="pop-layers" aria-expanded="false" aria-controls="pop-layers">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
                 <span>Layers</span>
@@ -2449,7 +2450,7 @@
             </div>
 
             <!-- Mode -->
-            <button class="ctrl-pill" id="modeTriggerBtn" type="button" title="Choose animation mode"
+            <button class="ctrl-pill" id="modeTriggerBtn" type="button" data-lume="Choose animation mode"
                     popovertarget="pop-mode" aria-expanded="false" aria-controls="pop-mode">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                 <span>Mode</span>
@@ -2463,7 +2464,7 @@
             </div>
 
             <!-- Character set -->
-            <button class="ctrl-pill" id="charsetTriggerBtn" type="button" title="Choose the glyph palette"
+            <button class="ctrl-pill" id="charsetTriggerBtn" type="button" data-lume="Choose the glyph palette"
                     popovertarget="pop-chars" aria-expanded="false" aria-controls="pop-chars">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
                 <span>Charset</span>
@@ -2506,7 +2507,7 @@
             </div>
 
             <!-- Motion -->
-            <button class="ctrl-pill" id="motionTriggerBtn" type="button" title="Adjust motion and reveal behavior"
+            <button class="ctrl-pill" id="motionTriggerBtn" type="button" data-lume="Adjust motion and reveal behavior"
                     popovertarget="pop-motion" aria-expanded="false" aria-controls="pop-motion">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3"/><path d="M18.5 5.5l-2.12 2.12"/><path d="M21 12h-3"/><path d="M18.5 18.5l-2.12-2.12"/><path d="M12 21v-3"/><path d="M5.5 18.5l2.12-2.12"/><path d="M3 12h3"/><path d="M5.5 5.5l2.12 2.12"/></svg>
                 <span>Motion</span>
@@ -2562,7 +2563,7 @@
             </div>
 
             <!-- Spatial alignment -->
-            <button class="ctrl-pill" id="alignTriggerBtn" type="button" title="Choose the spatial origin"
+            <button class="ctrl-pill" id="alignTriggerBtn" type="button" data-lume="Choose the spatial origin"
                     popovertarget="pop-align" aria-expanded="false" aria-controls="pop-align">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/><circle cx="12" cy="12" r="2"/></svg>
                 <span>Align</span>
@@ -2586,7 +2587,7 @@
             </div>
 
             <!-- Color -->
-            <button class="ctrl-pill" id="colorTriggerBtn" type="button" title="Adjust color treatment"
+            <button class="ctrl-pill" id="colorTriggerBtn" type="button" data-lume="Adjust color treatment"
                     popovertarget="pop-color" aria-expanded="false" aria-controls="pop-color">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.46-1.16-.27-.32-.44-.72-.44-1.16 0-.92.75-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg>
                 <span>Color</span>
@@ -2644,7 +2645,7 @@
             </div>
 
             <!-- Backdrop -->
-            <button class="ctrl-pill" id="backdropTriggerBtn" type="button" title="Configure the background layer"
+            <button class="ctrl-pill" id="backdropTriggerBtn" type="button" data-lume="Configure the background layer"
                     popovertarget="pop-backdrop" aria-expanded="false" aria-controls="pop-backdrop">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>
                 <span>Backdrop</span>
@@ -2716,7 +2717,7 @@
             <span class="ctrl-bar__separator" aria-hidden="true"></span>
 
             <!-- Advanced / secondary controls -->
-            <button class="ctrl-pill" id="moreTriggerBtn" type="button" title="Open advanced and workspace controls"
+            <button class="ctrl-pill" id="moreTriggerBtn" type="button" data-lume="Open advanced and workspace controls"
                     popovertarget="pop-more" aria-expanded="false" aria-controls="pop-more">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>
                 <span>Advanced</span>
@@ -2730,24 +2731,24 @@
             </div>
 
             <!-- Theme -->
-            <button class="ctrl-pill ctrl-pill--utility" id="themeToggleBtn" type="button" aria-label="Toggle dark or light theme" title="Toggle dark or light theme">
+            <button class="ctrl-pill ctrl-pill--utility" id="themeToggleBtn" type="button" aria-label="Toggle dark or light theme" data-lume="Toggle dark or light theme">
                 <svg id="themeIconSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                 <svg id="themeIconMoon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 <span id="themeText">Theme</span>
             </button>
 
             <!-- Reset -->
-            <button class="ctrl-pill ctrl-pill--utility" id="resetSettingsBtn" type="button" title="Restore demo defaults">
+            <button class="ctrl-pill ctrl-pill--utility" id="resetSettingsBtn" type="button" data-lume="Restore demo defaults">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg>
                 <span>Reset</span>
             </button>
 
             <!-- History -->
-            <button class="ctrl-pill ctrl-pill--utility" id="undoSettingsBtn" type="button" aria-label="Undo last settings change" title="Undo last settings change" disabled>
+            <button class="ctrl-pill ctrl-pill--utility" id="undoSettingsBtn" type="button" aria-label="Undo last settings change" data-lume="Undo last settings change" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M20 17a7 7 0 0 0-7-7H4"/></svg>
                 <span>Undo</span>
             </button>
-            <button class="ctrl-pill ctrl-pill--utility" id="redoSettingsBtn" type="button" aria-label="Redo settings change" title="Redo settings change" disabled>
+            <button class="ctrl-pill ctrl-pill--utility" id="redoSettingsBtn" type="button" aria-label="Redo settings change" data-lume="Redo settings change" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5"/><path d="M4 17a7 7 0 0 1 7-7h9"/></svg>
                 <span>Redo</span>
             </button>
@@ -2844,7 +2845,7 @@
             <span class="ctrl-bar__separator" aria-hidden="true"></span>
 
             <!-- Image -->
-            <button class="ctrl-pill ctrl-pill--media" id="imageTriggerBtn" type="button" title="Upload or choose an included image"
+            <button class="ctrl-pill ctrl-pill--media" id="imageTriggerBtn" type="button" data-lume="Upload or choose an included image"
                     popovertarget="pop-image" aria-expanded="false" aria-controls="pop-image">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 <span>Image</span>
@@ -2953,7 +2954,7 @@
             </div>
 
             <!-- 3D -->
-            <button class="ctrl-pill ctrl-pill--media" id="meshTriggerBtn" type="button" title="Choose a 3D primitive or load a model"
+            <button class="ctrl-pill ctrl-pill--media" id="meshTriggerBtn" type="button" data-lume="Choose a 3D primitive or load a model"
                     popovertarget="pop-mesh" aria-expanded="false" aria-controls="pop-mesh">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 7 9 5 9-5"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
                 <span>3D</span>
@@ -3039,7 +3040,7 @@
             </div>
 
             <!-- Chart -->
-            <button class="ctrl-pill ctrl-pill--media" id="chartTriggerBtn" type="button" title="Data chart configuration and series input"
+            <button class="ctrl-pill ctrl-pill--media" id="chartTriggerBtn" type="button" data-lume="Data chart configuration and series input"
                     popovertarget="pop-chart" aria-expanded="false" aria-controls="pop-chart">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 <span>Chart</span>
@@ -3121,13 +3122,13 @@
             </div>
 
             <!-- None -->
-            <button class="ctrl-pill ctrl-pill--media" id="clearMediaBtn" type="button" title="Clear image, 3D model, and chart data sources">
+            <button class="ctrl-pill ctrl-pill--media" id="clearMediaBtn" type="button" data-lume="Clear image, 3D model, and chart data sources">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                 <span>None</span>
             </button>
 
             <!-- Code -->
-            <button class="ctrl-pill ctrl-pill--code ctrl-pill--primary" type="button" title="Copy the current configuration as code"
+            <button class="ctrl-pill ctrl-pill--code ctrl-pill--primary" type="button" data-lume="Copy the current configuration as code"
                     popovertarget="pop-code" aria-expanded="false" aria-controls="pop-code">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                 <span>Code</span>

@@ -6,8 +6,13 @@
 
 import { highlightJavaScript } from "./webutil-code.js?v=__ASSET_REVISION__";
 import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=__ASSET_REVISION__";
+import { Lume } from "../libs/lume/lume.mjs?v=__ASSET_REVISION__";
 
 const asciiam = window.asciiam;
+// Auto-discovers every current and future [data-lume]/[data-lume-content] element;
+// the toolbar's popovers and controls are built dynamically, so its DOM
+// mutation observer (not a one-shot bind) is what keeps tooltips working.
+const lume = new Lume({ tier: "minimal" });
 
 /* ============================== demo wiring ============================== */
 const stage = document.getElementById("stage");

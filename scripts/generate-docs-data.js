@@ -10,6 +10,8 @@ import asciiam from "../src/asciiam.js";
 const packageMetadata = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const docsData = new URL("../docs/data/", import.meta.url);
 const docsLibrary = new URL("../docs/static/libs/", import.meta.url);
+const docsLumeLibrary = new URL("../docs/static/libs/lume/", import.meta.url);
+const lumeModule = new URL("../node_modules/@staticcanvas/lume/", import.meta.url);
 const docsBranding = new URL("../docs/static/branding/", import.meta.url);
 const docsImages = new URL("../docs/static/images/", import.meta.url);
 
@@ -43,6 +45,7 @@ const presets = Object.entries(asciiam.presets).map(([name, options]) => ({
 await Promise.all([
     mkdir(docsData, { recursive: true }),
     mkdir(docsLibrary, { recursive: true }),
+    mkdir(docsLumeLibrary, { recursive: true }),
     mkdir(docsBranding, { recursive: true }),
     mkdir(docsImages, { recursive: true }),
 ]);
@@ -54,6 +57,10 @@ await Promise.all([
     cp(new URL("../src/gltf.js", import.meta.url), new URL("gltf.js", docsLibrary)),
     cp(new URL("../branding/asciiam-logo.svg", import.meta.url), new URL("asciiam-logo.svg", docsBranding)),
     cp(new URL("../docs/static/webutil/assets/images/domitian-tunnel-5122424_1920.jpg", import.meta.url), new URL("domitian-tunnel-5122424_1920.jpg", docsImages)),
+    // Vendor the tooltip engine used site-wide, rather than pulling it from a CDN at runtime.
+    cp(new URL("dist/lume.mjs", lumeModule), new URL("lume.mjs", docsLumeLibrary)),
+    cp(new URL("dist/lume.mjs.map", lumeModule), new URL("lume.mjs.map", docsLumeLibrary)),
+    cp(new URL("src/lume.css", lumeModule), new URL("lume.css", docsLumeLibrary)),
 ]);
 
 console.log(`Documentation data: v${packageMetadata.version}; ${presets.length} preset(s)`);

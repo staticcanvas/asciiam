@@ -22,6 +22,14 @@ function stageWebUtilityAssets() {
       const brandingDestination = resolve('docs/static/webutil/assets/branding');
       mkdirSync(brandingDestination, { recursive: true });
       cpSync(resolve('branding/asciiam-logo.svg'), resolve(brandingDestination, 'asciiam-logo.svg'));
+      // Vendor the tooltip engine's browser ESM build + CSS, matching how asciiam's own
+      // bundle is staged here rather than pulled from a CDN at runtime.
+      const lumeDestination = resolve('docs/static/webutil/libs/lume');
+      mkdirSync(lumeDestination, { recursive: true });
+      const lumeModule = resolve('node_modules/@staticcanvas/lume');
+      cpSync(resolve(lumeModule, 'dist/lume.mjs'), resolve(lumeDestination, 'lume.mjs'));
+      cpSync(resolve(lumeModule, 'dist/lume.mjs.map'), resolve(lumeDestination, 'lume.mjs.map'));
+      cpSync(resolve(lumeModule, 'src/lume.css'), resolve(lumeDestination, 'lume.css'));
     },
   };
 }

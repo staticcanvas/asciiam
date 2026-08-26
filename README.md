@@ -999,6 +999,10 @@ replace Safari verification on Apple hardware. JSDOM tests remain the faster con
 
 - Documentation navigation embeds selected [Lucide](https://lucide.dev/) SVG paths under
   the ISC License; Feather-derived designs retain their MIT notice.
+- The Web Utility playground and the docs site vendor
+  [`@staticcanvas/lume`](https://staticcanvas.gitlab.io/lume) (MIT License) as their
+  tooltip engine — a `devDependency` bundled into `docs/static/webutil/libs/lume/` and
+  `docs/static/libs/lume/` at build time, not the published `asciiam` package itself.
 - `docs/static/webutil/assets/images/bird-silhouette.svg` is the
   [Bird Shape vector from SVG Repo](https://www.svgrepo.com/svg/23736/bird-shape), identified
   by SVG Repo as CC0.
