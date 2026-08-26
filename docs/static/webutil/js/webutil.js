@@ -203,6 +203,13 @@ function applyChartDataFromInput() {
         renderUsage();
     }
 }
+const chartShowValuesToggle = document.getElementById("chartShowValuesToggle");
+if (chartShowValuesToggle) {
+    chartShowValuesToggle.onchange = () => {
+        anim.setOption("chartShowValues", chartShowValuesToggle.checked);
+        renderUsage();
+    };
+}
 const chartShowAxesToggle = document.getElementById("chartShowAxesToggle");
 if (chartShowAxesToggle) {
     chartShowAxesToggle.onchange = () => {
@@ -1475,6 +1482,15 @@ if (colorFromImgEl) {
     };
 }
 
+const animateImageMaskEl = document.getElementById("animateImageMaskToggle");
+if (animateImageMaskEl) {
+    animateImageMaskEl.onchange = (e) => {
+        anim.setOption("animateImageMask", e.target.checked);
+        e.target.setAttribute("aria-checked", String(e.target.checked));
+        renderUsage();
+    };
+}
+
 const imageStatus = document.getElementById("imageStatus");
 const localImageSection = document.getElementById("localImageSection");
 const localImages = document.getElementById("localImages");
@@ -2046,6 +2062,10 @@ function syncControlsFromOpts() {
         colorFromImgEl.checked = !!anim.opts.colorFromImage;
         colorFromImgEl.setAttribute('aria-checked', String(colorFromImgEl.checked));
     }
+    if (animateImageMaskEl) {
+        animateImageMaskEl.checked = anim.opts.animateImageMask !== false;
+        animateImageMaskEl.setAttribute("aria-checked", String(animateImageMaskEl.checked));
+    }
     const imageRange = anim.opts.imageAnimationRange;
     imageColorRangeToggle.checked = !!imageRange;
     imageColorRangeToggle.setAttribute("aria-checked", String(!!imageRange));
@@ -2115,6 +2135,10 @@ function syncControlsFromOpts() {
                 chartDataEl.value = anim.opts.chartData.join(", ");
             }
         }
+    }
+    if (chartShowValuesToggle) {
+        chartShowValuesToggle.checked = anim.opts.chartShowValues !== false;
+        chartShowValuesToggle.setAttribute("aria-checked", String(chartShowValuesToggle.checked));
     }
     if (chartShowAxesToggle) {
         chartShowAxesToggle.checked = anim.opts.chartShowAxes !== false;
@@ -2193,6 +2217,7 @@ function usageSource() {
         if (anim.opts.chartType) options.chartType = anim.opts.chartType;
         if (anim.opts.chartTitle) options.chartTitle = anim.opts.chartTitle;
         if (anim.opts.chartData) options.chartData = anim.opts.chartData;
+        if (anim.opts.chartShowValues !== undefined) options.chartShowValues = anim.opts.chartShowValues;
         if (anim.opts.chartShowAxes !== undefined) options.chartShowAxes = anim.opts.chartShowAxes;
         if (anim.opts.chartShowLegend === false) options.chartShowLegend = false;
         if (Array.isArray(anim.opts.chartColors)) options.chartColors = anim.opts.chartColors;
