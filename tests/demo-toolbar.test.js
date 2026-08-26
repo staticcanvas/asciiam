@@ -173,10 +173,11 @@ describe('demo toolbar quality-of-life controls', () => {
     const advanced = document.getElementById('moreAdvancedActions');
     const workspace = document.getElementById('moreWorkspaceActions');
 
-    expect(primaryLabels).toHaveLength(16);
+    expect(primaryLabels).toHaveLength(17);
     expect(primaryLabels.join(' ')).toContain('Preset');
     expect(primaryLabels.join(' ')).toContain('Quality');
     expect(primaryLabels.join(' ')).toContain('Sequence');
+    expect(primaryLabels.join(' ')).toContain('Layers');
     expect(primaryLabels.join(' ')).toContain('Mode');
     expect(primaryLabels.join(' ')).toContain('Charset');
     expect(primaryLabels.join(' ')).toContain('Motion');

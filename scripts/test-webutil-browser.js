@@ -143,6 +143,15 @@ async function verifyBrowser(browserType, browserName) {
         }
         assert.equal(await page.locator("#qualityTriggerBtn").evaluate((element) => element.parentElement?.classList.contains("ctrl-bar")), true);
 
+        // Close any popover left open by the Reset click above before measuring: its CSS
+        // close transition can leave the element `display: block` for a beat after
+        // `:popover-open` stops matching, and that box still counts toward .ctrl-bar's
+        // scrollWidth until the transition finishes.
+        await page.evaluate(() => document.querySelectorAll(":popover-open").forEach((element) => element.hidePopover()));
+        await page.waitForFunction(() =>
+            [...document.querySelectorAll(".ctrl-popover")].every((element) => getComputedStyle(element).display === "none")
+        );
+
         await page.setViewportSize({ width: 390, height: 844 });
         const mobileToolbar = await page.locator(".ctrl-bar").evaluate((element) => ({
             clientWidth: element.clientWidth,

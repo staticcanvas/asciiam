@@ -65,6 +65,7 @@ export type asciiamEvent =
 
 export interface asciiamLayerConfig {
   mode: asciiamMode;
+  /** Overlaid onto the instance's options for this layer's draw pass only, then restored. A `mode` key here is ignored — use the top-level `mode` field instead. */
   options?: Record<string, unknown> | null;
   opacity?: number;
   blendMode?: GlobalCompositeOperation | string;

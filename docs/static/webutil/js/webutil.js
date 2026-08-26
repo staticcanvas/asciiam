@@ -710,6 +710,197 @@ anim.on("sequenceInterrupt", () => {
 });
 renderSequenceEditor();
 
+/* ── Composited layer stack editor ── */
+const layerModes = [...modes, "mesh"];
+function normalizeLayerDraft(layers) {
+    if (!Array.isArray(layers)) return [];
+    return layers.map((layer, index) => ({
+        id: `layer-${Date.now()}-${index}`,
+        mode: typeof layer.mode === "string" ? layer.mode : "wave",
+        opacity: typeof layer.opacity === "number" ? layer.opacity : 1,
+        blendMode: typeof layer.blendMode === "string" ? layer.blendMode : "source-over",
+        options: layer.options && typeof layer.options === "object" ? Object.assign({}, layer.options) : {},
+    }));
+}
+let layerDraft = normalizeLayerDraft(initialOptions.layers);
+let layerCounter = layerDraft.length;
+const layerList = document.getElementById("layerList");
+const layerStatus = document.getElementById("layerStatus");
+
+function setLayerStatus(message, isError = false) {
+    layerStatus.textContent = message;
+    layerStatus.dataset.error = String(isError);
+}
+
+function configureLayers({ announce = true } = {}) {
+    if (layerDraft.length) {
+        anim.setLayers(layerDraft.map(({ mode, opacity, blendMode, options }) => ({
+            mode, opacity, blendMode, options: Object.keys(options).length ? options : null,
+        })));
+        if (announce) setLayerStatus(`${layerDraft.length} layer${layerDraft.length === 1 ? "" : "s"} compositing.`);
+    } else {
+        anim.setLayers(null);
+        if (announce) setLayerStatus("Add a layer to composite it over the active mode.");
+    }
+    renderUsage();
+}
+
+function moveLayer(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= layerDraft.length) return;
+    [layerDraft[index], layerDraft[target]] = [layerDraft[target], layerDraft[index]];
+    renderLayerEditor();
+    configureLayers();
+}
+
+const blendModes = [
+    "source-over", "lighter", "screen", "multiply", "overlay",
+    "darken", "lighten", "difference", "exclusion", "color-dodge", "color-burn",
+];
+
+function renderLayerEditor() {
+    layerList.replaceChildren();
+    if (!layerDraft.length) {
+        const empty = document.createElement("li");
+        empty.className = "sequence-empty";
+        empty.textContent = "No layers. The active mode alone drives the canvas.";
+        layerList.appendChild(empty);
+        return;
+    }
+
+    layerDraft.forEach((layer, index) => {
+        const item = document.createElement("li");
+        item.className = "sequence-step";
+        item.dataset.layerId = layer.id;
+
+        const header = document.createElement("div");
+        header.className = "sequence-step__header";
+        const indexLabel = document.createElement("span");
+        indexLabel.className = "sequence-step__index";
+        indexLabel.textContent = `Layer ${index + 1}${index === layerDraft.length - 1 ? " (top)" : index === 0 ? " (bottom)" : ""}`;
+        const actions = document.createElement("div");
+        actions.className = "sequence-step__actions";
+        const down = document.createElement("button");
+        down.className = "mode-btn";
+        down.type = "button";
+        down.textContent = "↓";
+        down.disabled = index === 0;
+        down.setAttribute("aria-label", `Paint layer ${index + 1} earlier (further back)`);
+        down.onclick = () => moveLayer(index, -1);
+        const up = document.createElement("button");
+        up.className = "mode-btn";
+        up.type = "button";
+        up.textContent = "↑";
+        up.disabled = index === layerDraft.length - 1;
+        up.setAttribute("aria-label", `Paint layer ${index + 1} later (further forward)`);
+        up.onclick = () => moveLayer(index, 1);
+        const remove = document.createElement("button");
+        remove.className = "mode-btn";
+        remove.type = "button";
+        remove.textContent = "Remove";
+        remove.setAttribute("aria-label", `Remove layer ${index + 1}`);
+        remove.onclick = () => {
+            layerDraft.splice(index, 1);
+            renderLayerEditor();
+            configureLayers();
+        };
+        actions.append(down, up, remove);
+        header.append(indexLabel, actions);
+
+        const grid = document.createElement("div");
+        grid.className = "sequence-step__grid";
+        const modeLabel = document.createElement("label");
+        modeLabel.textContent = "Mode";
+        const modeSelect = document.createElement("select");
+        modeSelect.setAttribute("aria-label", `Layer ${index + 1} mode`);
+        layerModes.forEach((mode) => modeSelect.appendChild(new Option(mode, mode)));
+        modeSelect.value = layer.mode;
+        modeSelect.onchange = () => {
+            layer.mode = modeSelect.value;
+            configureLayers();
+        };
+        modeLabel.appendChild(modeSelect);
+
+        const opacityLabel = document.createElement("label");
+        opacityLabel.textContent = "Opacity";
+        const opacityInput = document.createElement("input");
+        opacityInput.type = "number";
+        opacityInput.min = "0";
+        opacityInput.max = "1";
+        opacityInput.step = "0.05";
+        opacityInput.value = String(layer.opacity);
+        opacityInput.onchange = () => {
+            layer.opacity = Math.max(0, Math.min(1, Number(opacityInput.value)));
+            opacityInput.value = String(layer.opacity);
+            configureLayers();
+        };
+        opacityLabel.appendChild(opacityInput);
+
+        const blendLabel = document.createElement("label");
+        blendLabel.textContent = "Blend mode";
+        const blendSelect = document.createElement("select");
+        blendSelect.setAttribute("aria-label", `Layer ${index + 1} blend mode`);
+        blendModes.forEach((mode) => blendSelect.appendChild(new Option(mode, mode)));
+        blendSelect.value = layer.blendMode;
+        blendSelect.onchange = () => {
+            layer.blendMode = blendSelect.value;
+            configureLayers();
+        };
+        blendLabel.appendChild(blendSelect);
+        grid.append(modeLabel, opacityLabel, blendLabel);
+
+        const details = document.createElement("details");
+        details.className = "sequence-step__options";
+        const summary = document.createElement("summary");
+        summary.textContent = "Option overrides for this layer (JSON)";
+        const optionsLabel = document.createElement("label");
+        optionsLabel.textContent = "Options object";
+        const optionsInput = document.createElement("textarea");
+        optionsInput.spellcheck = false;
+        optionsInput.placeholder = '{ "charSet": "01", "speed": 2, "color": "#ff6633" }';
+        optionsInput.value = JSON.stringify(layer.options, null, 2);
+        const error = document.createElement("span");
+        error.className = "sequence-step__error";
+        error.setAttribute("role", "alert");
+        optionsInput.onchange = () => {
+            try {
+                const value = JSON.parse(optionsInput.value || "{}");
+                if (!value || Array.isArray(value) || typeof value !== "object") throw new Error("Use a JSON object.");
+                layer.options = value;
+                error.textContent = "";
+                configureLayers();
+            } catch (parseError) {
+                error.textContent = parseError.message;
+            }
+        };
+        optionsLabel.append(optionsInput, error);
+        details.append(summary, optionsLabel);
+
+        item.append(header, grid, details);
+        layerList.appendChild(item);
+    });
+}
+
+function syncLayerEditorFromOpts() {
+    layerDraft = normalizeLayerDraft(anim.getLayers());
+    layerCounter = layerDraft.length;
+    renderLayerEditor();
+}
+
+document.getElementById("addLayerBtn").onclick = () => {
+    layerCounter += 1;
+    layerDraft.push({
+        id: `layer-${Date.now()}-${layerCounter}`,
+        mode: anim.opts.mode,
+        opacity: 1,
+        blendMode: "source-over",
+        options: {},
+    });
+    renderLayerEditor();
+    configureLayers();
+};
+renderLayerEditor();
+
 /* ── Compact toolbar information architecture ── */
 function organizeToolbarOverflow() {
     const workspaceActions = document.getElementById("moreWorkspaceActions");
@@ -888,6 +1079,11 @@ function applyDemoOptions(options, presetName = "", referenceLabel = presetName 
         anim.setSequence(anim.opts.sequence, anim.opts.sequenceOptions || {});
     } else {
         anim.clearSequence();
+    }
+    if (Array.isArray(anim.opts.layers) && anim.opts.layers.length) {
+        anim.setLayers(anim.opts.layers);
+    } else {
+        anim.setLayers(null);
     }
     anim._buildFontCache();
     anim._resize();
@@ -1936,6 +2132,7 @@ function syncControlsFromOpts() {
     if (chartScaleMaxEl) chartScaleMaxEl.value = anim.opts.chartScaleMax ?? "";
     if (chartColorsEl) chartColorsEl.value = Array.isArray(anim.opts.chartColors) ? anim.opts.chartColors.join(" ") : "";
     syncSequenceEditorFromOpts();
+    syncLayerEditorFromOpts();
 }
 function usageSource() {
     const colorMode = document.getElementById("colorMode").value;
@@ -2091,6 +2288,8 @@ function updateToolbarSummaries() {
         ? sequenceState.running ? `${sequenceState.index + 1}/${sequenceDraft.length}` : `${sequenceDraft.length} steps`
         : "off";
     setToolbarSummary("sequenceTriggerBtn", "sequenceToolbarStatus", "Sequence", sequenceLabel);
+    const layersLabel = layerDraft.length ? `${layerDraft.length} layer${layerDraft.length === 1 ? "" : "s"}` : "off";
+    setToolbarSummary("layersTriggerBtn", "layersToolbarStatus", "Layers", layersLabel);
     setToolbarSummary("modeTriggerBtn", "modeToolbarStatus", "Mode", mode);
     setToolbarSummary("charsetTriggerBtn", "charsetToolbarStatus", "Character set", charset === "asciiExtended" ? "extended" : charset);
     setToolbarSummary("motionTriggerBtn", "motionToolbarStatus", "Motion", motion);

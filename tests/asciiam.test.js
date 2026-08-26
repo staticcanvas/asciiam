@@ -1708,6 +1708,38 @@ describe("asciiam lifecycle", () => {
             expect(animation.getStats().drawn).toBeGreaterThanOrEqual(0);
             animation.destroy();
         });
+
+        it("applies per-layer option overrides only for that layer's draw pass, then restores them", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const observedCharSets = [];
+            const captureCharSet = function () {
+                observedCharSets.push(this.opts.charSet);
+                return { char: "#", opacity: 1 };
+            };
+            const animation = new asciiam(host, {
+                mode: "custom",
+                charSet: "GLOBAL",
+                customCell: captureCharSet,
+                layers: [
+                    { mode: "custom", options: { charSet: "LAYER-ONE" } },
+                    { mode: "custom", options: { charSet: "LAYER-TWO" } },
+                ],
+                respectReducedMotion: false,
+            });
+            animation.start();
+            observedCharSets.length = 0;
+            animation._draw(16.7);
+
+            expect(observedCharSets).toContain("LAYER-ONE");
+            expect(observedCharSets).toContain("LAYER-TWO");
+            expect(observedCharSets).not.toContain("GLOBAL");
+            expect(animation.opts.charSet).toBe("GLOBAL");
+            animation.destroy();
+        });
     });
 
     describe("State preservation on grid resizing", () => {
