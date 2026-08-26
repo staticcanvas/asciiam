@@ -571,7 +571,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     return vec4f(corner * 2.0 - 1.0, 0.0, 1.0);
                 }
                 @fragment fn surfaceFragment() -> @location(0) vec4f {
-                    return uniforms.color;
+                    let color = uniforms.color;
+                    return vec4f(color.rgb * color.a, color.a);
                 }
             ` });
             const blend = { color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" }, alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" } };
@@ -933,6 +934,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             },
             imageReveal: {
                 mode: "image",
+                imageEnabled: true,
                 color: "#4FA8FF",
                 imageScale: 1,
                 imageScaleX: 1,
@@ -944,6 +946,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             },
             telemetryChart: {
                 mode: "chart",
+                chartEnabled: true,
                 color: "#4FA8FF",
                 chartType: "bar",
                 chartTitle: "System Telemetry",
@@ -1191,6 +1194,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     fontSize: 14,
                     density: quality.density,
                     resolutionScale: 1,
+                    // Opt-in: automatically steps resolutionScale and quality down under
+                    // sustained frame-time pressure and back up when there's headroom,
+                    // never exceeding the quality/resolutionScale requested at construction.
+                    autoQuality: false,
                     color: "#4FA8FF",
                     gradient: null,
                     background: "transparent",
@@ -1273,7 +1280,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     typewriterDuration: 4.5,
 
                     // --- dependency-free 3D-to-ASCII source ---
-                    meshEnabled: true,
+                    meshEnabled: false,
                     mesh: null,
                     meshPrimitive: null,
                     meshStyle: "wireframe",
@@ -1288,7 +1295,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     model: null,
 
                     // --- sampled image source ---
-                    imageEnabled: true,
+                    imageEnabled: false,
 
                     // --- dependency-free ASCII chart source ---
                     chartEnabled: false,
@@ -1337,6 +1344,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._morphScrambleScratch = { char: " ", opacity: 0, level: 0, bold: false, color: null };
             this._frames = 0;
             this._fps = 0;
+            this._autoQualityState = null;
             this._statsEl = null;
             this._statsWindowStart = null;
             this._extendedStats = null;
@@ -1526,7 +1534,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 this._acc %= frameDur;
             }
 
-            const frameWorkStart = measureExtendedStats && globalThis.performance?.now
+            const measureFrameWork = measureExtendedStats || this.opts.autoQuality;
+            const frameWorkStart = measureFrameWork && globalThis.performance?.now
                 ? globalThis.performance.now()
                 : null;
 
@@ -1545,11 +1554,88 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (this._events.get("frame")?.size) {
                 this._emit("frame", { time: this._time, delta: dt, drawn: this._lastDrawnCount });
             }
-            if (this.opts.showStats) {
-                const frameWorkMs = frameWorkStart === null ? 0 : Math.max(0, globalThis.performance.now() - frameWorkStart);
-                this._updateStats(t, frameWorkMs);
+            const frameWorkMs = frameWorkStart === null ? 0 : Math.max(0, globalThis.performance.now() - frameWorkStart);
+            if (this.opts.showStats) this._updateStats(t, frameWorkMs);
+            if (this.opts.autoQuality && hasPreviousFrame) this._updateAutoQuality(frameWorkMs);
+        }
+
+        /**
+         * Steps `resolutionScale` (the finer-grained, cheaper-to-rebuild lever) and, once
+         * that reaches its floor, `quality` (the coarser tier lever) down under sustained
+         * CPU frame-time pressure, and back up — never past what was originally
+         * requested — once there's sustained headroom. Reuses the exact CPU frame-work
+         * measurement `showStats`/`extendedStats` already takes (`performance.now()`
+         * around `_draw()`), just decoupled from whether the stats overlay is open, so
+         * enabling `autoQuality` costs nothing beyond that one timestamp pair per frame.
+         * A smoothed running average (not a single frame) and a cooldown between any two
+         * adjustments avoid reacting to a one-off hitch or thrashing back and forth —
+         * `setOption('resolutionScale'|'quality', ...)` both trigger a real `_resize()`
+         * (rebuilds seed/edge-fade/spatial caches, forces a layout reflow), so adjustments
+         * must stay infrequent, not per-frame.
+         */
+        _updateAutoQuality(frameWorkMs) {
+            const now = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+            let state = this._autoQualityState;
+            if (!state) {
+                state = this._autoQualityState = {
+                    ema: frameWorkMs,
+                    lastAdjust: now,
+                    ceilingQuality: this.opts.quality,
+                    ceilingResolutionScale: Number(this.opts.resolutionScale) || 1,
+                    // A quality-tier switch applies that whole tier's preset — including
+                    // targetFPS: null on every built-in tier — so stepping quality would
+                    // otherwise silently clear a targetFPS the caller explicitly set.
+                    userTargetFPS: this.opts.targetFPS,
+                };
+                return;
+            }
+            state.ema = state.ema * 0.85 + frameWorkMs * 0.15;
+            if (now - state.lastAdjust < 1500) return;
+
+            // Cheapest to most expensive, matching measured cost (scripts/benchmark-renderer.js):
+            // ultra < performance < balanced < high. Counterintuitive relative to the
+            // names — "ultra" trades resolution (maxDPR: 1) and per-cell shading levels
+            // for glyph-atlas + static-wave caching, making it the fastest tier, not the
+            // most demanding one.
+            const order = ["high", "balanced", "performance", "ultra"];
+            const budgetMs = 1000 / (this.opts.targetFPS || 60);
+            const resolutionFloor = 0.5; // matches the engine's own resolutionScale clamp (see _resize())
+
+            if (state.ema > budgetMs * 1.25) {
+                const current = Number(this.opts.resolutionScale) || 1;
+                if (current > resolutionFloor) {
+                    this.setOption("resolutionScale", Math.max(resolutionFloor, Math.round((current - 0.15) * 100) / 100));
+                } else {
+                    const index = order.indexOf(this.opts.quality);
+                    if (index >= 0 && index < order.length - 1) {
+                        this.setOption("quality", order[index + 1]);
+                        if (state.userTargetFPS) this.opts.targetFPS = state.userTargetFPS;
+                    } else {
+                        return; // already at the cheapest tier and resolution floor
+                    }
+                }
+                state.lastAdjust = now;
+                this._emit("autoQualityChange", { reason: "pressure", quality: this.opts.quality, resolutionScale: this.opts.resolutionScale, frameWorkMs: Math.round(state.ema * 100) / 100 });
+            } else if (state.ema < budgetMs * 0.6) {
+                const currentIndex = order.indexOf(this.opts.quality);
+                const ceilingIndex = order.indexOf(state.ceilingQuality);
+                if (currentIndex > ceilingIndex && currentIndex > 0) {
+                    this.setOption("quality", order[currentIndex - 1]);
+                    if (state.userTargetFPS) this.opts.targetFPS = state.userTargetFPS;
+                } else {
+                    const current = Number(this.opts.resolutionScale) || 1;
+                    const ceiling = state.ceilingResolutionScale;
+                    if (current < ceiling) {
+                        this.setOption("resolutionScale", Math.min(ceiling, Math.round((current + 0.15) * 100) / 100));
+                    } else {
+                        return; // already at the originally requested ceiling
+                    }
+                }
+                state.lastAdjust = now;
+                this._emit("autoQualityChange", { reason: "recovery", quality: this.opts.quality, resolutionScale: this.opts.resolutionScale, frameWorkMs: Math.round(state.ema * 100) / 100 });
             }
         }
+
         /** Subscribe to a lifecycle event. Returns an unsubscribe function. */
         on(event, listener) {
             if (typeof listener !== "function") throw new TypeError("asciiam: event listener must be a function");
@@ -1711,6 +1797,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         setLayers(layers) {
             this._layers = this._normalizeLayers(layers);
             this.opts.layers = this._layers;
+            this._loadLayerMedia();
             return this;
         }
 
@@ -1721,6 +1808,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 options: l.options ? Object.assign({}, l.options) : null,
                 opacity: l.opacity,
                 blendMode: l.blendMode,
+                image: l.image,
+                imageOptions: l.imageOptions ? Object.assign({}, l.imageOptions) : null,
+                meshPrimitive: l.meshPrimitive,
+                model: l.model,
+                modelOptions: l.modelOptions ? Object.assign({}, l.modelOptions) : null,
             })) : [];
         }
 
@@ -1753,20 +1845,201 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Normalizes a `setLayers()` config array. Each layer may carry its own
+         * `image`/`imageOptions` and `meshPrimitive`/`model`/`modelOptions`, independent
+         * of the instance's single global `_imageGrid`/`_mesh` — matching the identical
+         * fields sequence steps already support. Re-normalization is positional: a
+         * layer at the same index whose media fields are unchanged from the previous
+         * `setLayers()` call carries its already-loaded `_imageGrid`/`_mesh` forward
+         * instead of reloading, so re-calling `setLayers()` for an unrelated tweak
+         * (opacity, blend mode) doesn't re-fetch or re-decode anything.
+         */
         _normalizeLayers(layers) {
             if (!Array.isArray(layers) || layers.length === 0) return null;
-            return layers.map((layer) => ({
-                mode: typeof layer.mode === "string" ? layer.mode : "wave",
-                options: layer.options && typeof layer.options === "object" ? Object.assign({}, layer.options) : null,
-                // Precomputed once per setLayers() call so the per-frame apply/restore
-                // path below never allocates. `mode` is excluded: layer.mode is always
-                // authoritative, so a stray `options.mode` can't fight with it.
-                _optionKeys: layer.options && typeof layer.options === "object"
-                    ? Object.keys(layer.options).filter((key) => key !== "mode")
-                    : null,
-                opacity: typeof layer.opacity === "number" ? Math.max(0, Math.min(1, layer.opacity)) : 1.0,
-                blendMode: typeof layer.blendMode === "string" ? layer.blendMode : "source-over",
-            }));
+            const previous = this._layers;
+            return layers.map((layer, index) => {
+                const prev = previous && previous[index];
+                const image = typeof layer.image === "string" ? layer.image : null;
+                const meshPrimitive = typeof layer.meshPrimitive === "string" ? layer.meshPrimitive : null;
+                const model = layer.model !== undefined && layer.model !== null ? layer.model : null;
+                const normalized = {
+                    mode: typeof layer.mode === "string" ? layer.mode : "wave",
+                    options: layer.options && typeof layer.options === "object" ? Object.assign({}, layer.options) : null,
+                    // Precomputed once per setLayers() call so the per-frame apply/restore
+                    // path below never allocates. `mode` is excluded: layer.mode is always
+                    // authoritative, so a stray `options.mode` can't fight with it.
+                    _optionKeys: layer.options && typeof layer.options === "object"
+                        ? Object.keys(layer.options).filter((key) => key !== "mode")
+                        : null,
+                    opacity: typeof layer.opacity === "number" ? Math.max(0, Math.min(1, layer.opacity)) : 1.0,
+                    blendMode: typeof layer.blendMode === "string" ? layer.blendMode : "source-over",
+                    image,
+                    imageOptions: layer.imageOptions && typeof layer.imageOptions === "object" ? Object.assign({}, layer.imageOptions) : null,
+                    meshPrimitive,
+                    model,
+                    modelOptions: layer.modelOptions && typeof layer.modelOptions === "object" ? Object.assign({}, layer.modelOptions) : null,
+                    _sourceImage: null,
+                    _imageGrid: null,
+                    _imageLoadToken: 0,
+                    _mesh: null,
+                    _meshRasterizer: null,
+                    _modelLoadToken: 0,
+                    _modelAbortController: null,
+                };
+                if (prev && prev.image === image && prev._imageGrid) {
+                    normalized._sourceImage = prev._sourceImage;
+                    normalized._imageGrid = prev._imageGrid;
+                    normalized._imageLoadToken = prev._imageLoadToken;
+                }
+                if (prev && prev.meshPrimitive === meshPrimitive && prev.model === model && prev._mesh) {
+                    normalized._mesh = prev._mesh;
+                    normalized._meshRasterizer = prev._meshRasterizer;
+                    normalized._modelLoadToken = prev._modelLoadToken;
+                }
+                return normalized;
+            });
+        }
+
+        /** Kicks off (or skips, if already loaded — see `_normalizeLayers()`) each layer's own independent image/mesh source. */
+        _loadLayerMedia() {
+            if (!this._layers) return;
+            for (const layer of this._layers) {
+                if (layer.image && !layer._imageGrid) this._loadLayerImage(layer);
+                if ((layer.meshPrimitive || layer.model) && !layer._mesh) this._loadLayerModel(layer);
+            }
+        }
+
+        /** Decodes one layer's independent image source; does not touch the shared `_imageGrid`. */
+        _loadLayerImage(layer) {
+            const token = ++layer._imageLoadToken;
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                if (token !== layer._imageLoadToken || this._destroyed) return;
+                layer._sourceImage = img;
+                this._resampleLayerImage(layer);
+            };
+            img.onerror = (error) => {
+                if (token !== layer._imageLoadToken || this._destroyed) return;
+                console.warn("asciiam: failed to load layer image:", layer.image, error);
+            };
+            img.src = layer.image;
+        }
+
+        /**
+         * Samples a layer's own decoded image into its own `_imageGrid`, reusing
+         * `_resampleImage()` — the same tested single-slot pipeline the global image
+         * uses — via a synchronous swap: point the instance's image state at the
+         * layer's `<img>`, resample as normal, copy the result out to the layer, then
+         * restore the instance's own image state exactly as it was. No `await` runs
+         * between the swap and the restore, so there's no re-entrancy hazard from
+         * another load resolving mid-swap. `layer.imageOptions` overlays `this.opts`
+         * for the same window (same pattern as `_applyLayerOptions`) so per-layer
+         * fit/scale/rotation/luminance options affect only that layer's sampling pass.
+         */
+        _resampleLayerImage(layer) {
+            if (!layer._sourceImage || !this.cols || !this.rows) return;
+            const savedSourceImage = this._sourceImage;
+            const savedImageGrid = this._imageGrid;
+            const overrides = layer.imageOptions;
+            const keys = overrides ? Object.keys(overrides) : null;
+            const restore = keys ? {} : null;
+            if (keys) {
+                for (const key of keys) {
+                    restore[key] = this.opts[key];
+                    this.opts[key] = overrides[key];
+                }
+            }
+            this._sourceImage = layer._sourceImage;
+            this._imageGrid = null;
+            this._resampleImage();
+            layer._imageGrid = this._imageGrid;
+            if (keys) {
+                for (const key of keys) this.opts[key] = restore[key];
+            }
+            this._sourceImage = savedSourceImage;
+            this._imageGrid = savedImageGrid;
+        }
+
+        /**
+         * Loads one layer's own independent mesh: a procedural `meshPrimitive` (built
+         * synchronously, mirroring `setOption('meshPrimitive', ...)`) or a glTF/GLB
+         * `model` (async, mirroring `setModel()`, with its own per-layer cancellation
+         * token/abort controller so two layers' loads can never race each other).
+         */
+        _loadLayerModel(layer) {
+            if (layer.meshPrimitive) {
+                const mesh = normalizeMeshData(asciiam.createMeshPrimitive(layer.meshPrimitive), {
+                    maxVertices: this.opts.meshMaxVertices,
+                    maxPrimitives: this.opts.meshMaxPrimitives,
+                });
+                layer._mesh = mesh;
+                layer._meshRasterizer = new MeshCellRasterizer(this.cols || 1, this.rows || 1);
+                return;
+            }
+            if (!layer.model) return;
+            const token = ++layer._modelLoadToken;
+            layer._modelAbortController?.abort();
+            const controller = new AbortController();
+            layer._modelAbortController = controller;
+            const modelOptions = layer.modelOptions || {};
+            loadGltf(layer.model, {
+                ...modelOptions,
+                signal: controller.signal,
+                limits: {
+                    maxVertices: this.opts.meshMaxVertices,
+                    maxPrimitives: this.opts.meshMaxPrimitives,
+                    ...modelOptions.limits,
+                },
+            }).then((mesh) => {
+                if (token !== layer._modelLoadToken || this._destroyed) return;
+                layer._mesh = normalizeMeshData(mesh, {
+                    maxVertices: this.opts.meshMaxVertices,
+                    maxPrimitives: this.opts.meshMaxPrimitives,
+                });
+                layer._meshRasterizer = new MeshCellRasterizer(this.cols || 1, this.rows || 1);
+            }).catch((error) => {
+                if (token !== layer._modelLoadToken || error?.name === "AbortError") return;
+                console.warn("asciiam: failed to load layer model:", layer.model, error);
+            });
+        }
+
+        /**
+         * Swaps the shared `_imageGrid`/`_mesh`/`_meshRasterizer` (and force-enables the
+         * corresponding gate) for a layer's own media, for the duration of that layer's
+         * draw pass — the same technique `_applyLayerOptions` uses for `this.opts`, just
+         * for the media singletons `_applyImageSource`/`_drawMesh` read directly. Layers
+         * without their own media are unaffected and keep reading the shared globals, so
+         * `mode: 'image'`/`'mesh'` layers with no per-layer source still show whatever
+         * `setImage()`/`setModel()` loaded instance-wide, exactly as before this existed.
+         * Uses pooled scratch fields, not an allocated object, since this runs per layer
+         * per frame.
+         */
+        _applyLayerMedia(layer) {
+            this._layerMediaScratchImageGrid = this._imageGrid;
+            this._layerMediaScratchMesh = this._mesh;
+            this._layerMediaScratchMeshRasterizer = this._meshRasterizer;
+            this._layerMediaScratchImageEnabled = this.opts.imageEnabled;
+            this._layerMediaScratchMeshEnabled = this.opts.meshEnabled;
+            if (layer._imageGrid) {
+                this._imageGrid = layer._imageGrid;
+                this.opts.imageEnabled = true;
+            }
+            if (layer._mesh) {
+                this._mesh = layer._mesh;
+                this._meshRasterizer = layer._meshRasterizer;
+                this.opts.meshEnabled = true;
+            }
+        }
+
+        /** Restores state saved by `_applyLayerMedia()`. */
+        _restoreLayerMedia() {
+            this._imageGrid = this._layerMediaScratchImageGrid;
+            this._mesh = this._layerMediaScratchMesh;
+            this._meshRasterizer = this._layerMediaScratchMeshRasterizer;
+            this.opts.imageEnabled = this._layerMediaScratchImageEnabled;
+            this.opts.meshEnabled = this._layerMediaScratchMeshEnabled;
         }
 
         /** Validate and retain typed-array geometry for the mesh animation mode. */
@@ -3126,6 +3399,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._waveBaseLayer = null;
             this._canvasRect = this.canvas.getBoundingClientRect();
             if (this._sourceImage) this._resampleImage();
+            if (this._layers) {
+                for (const layer of this._layers) {
+                    if (layer._sourceImage) this._resampleLayerImage(layer);
+                    if (layer._meshRasterizer) layer._meshRasterizer.resize(this.cols || 1, this.rows || 1);
+                }
+            }
             this._scheduleAnimatedFrameCapture();
 
             if (oldCols > 0 && oldRows > 0) {
@@ -3780,6 +4059,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     if (layer.blendMode) ctx.globalCompositeOperation = layer.blendMode;
 
                     const restoreKeys = this._applyLayerOptions(layer);
+                    this._applyLayerMedia(layer);
                     this.opts.mode = layer.mode;
                     this._prepareModeFrame();
                     ctx.textBaseline = "alphabetic";
@@ -3813,6 +4093,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     }
                     totalDrawn += drawn;
                     this._restoreLayerOptions(restoreKeys);
+                    this._restoreLayerMedia();
                     ctx.restore();
                 }
                 if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawCanvasBackdrop();
@@ -3927,6 +4208,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 for (let i = 0; i < this._layers.length; i++) {
                     const layer = this._layers[i];
                     const restoreKeys = this._applyLayerOptions(layer);
+                    this._applyLayerMedia(layer);
                     this.opts.mode = layer.mode;
                     this._prepareModeFrame();
                     this._pulseFactor = this.opts.pulse
@@ -3949,6 +4231,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     }
                     totalDrawn += drawn;
                     this._restoreLayerOptions(restoreKeys);
+                    this._restoreLayerMedia();
                 }
                 this._webgl.flush(this.w, this.h, this._webglGradient);
                 if (this.opts.backdrop?.enabled && this.opts.backdrop.placement === "over") this._drawWebGLBackdrop();

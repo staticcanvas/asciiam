@@ -4,8 +4,8 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=702aa06f84b7";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=702aa06f84b7";
+import { highlightJavaScript } from "./webutil-code.js?v=1c5acf484988";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=1c5acf484988";
 
 const asciiam = window.asciiam;
 
@@ -18,6 +18,10 @@ const demoDefaults = Object.assign({}, asciiam.presets.heroWave, {
     quality: "ultra",
     targetFPS: 60,
     resolutionScale: 1,
+    // The playground runs on visitors' widely varying hardware; automatically ease
+    // resolutionScale/quality down under load and back up when there's headroom,
+    // never past the "ultra" / 1.0 requested here.
+    autoQuality: true,
     renderer: "auto",
     charSet: asciiam.CHARACTER_SETS.asciiExtended,
     imageChars: asciiam.CHARACTER_SETS.asciiExtended,
@@ -350,15 +354,17 @@ if (clearMediaBtn) {
             chartEnabledToggle.checked = false;
             chartEnabledToggle.setAttribute("aria-checked", "false");
         }
-        anim.setOption("imageEnabled", true);
-        anim.setOption("meshEnabled", true);
+        // Image and mesh default to off; clearing their sources returns to that
+        // resting state rather than forcing the layer back on with nothing loaded.
+        anim.setOption("imageEnabled", false);
+        anim.setOption("meshEnabled", false);
         if (imageEnabledToggle) {
-            imageEnabledToggle.checked = true;
-            imageEnabledToggle.setAttribute("aria-checked", "true");
+            imageEnabledToggle.checked = false;
+            imageEnabledToggle.setAttribute("aria-checked", "false");
         }
         if (meshEnabledToggle) {
-            meshEnabledToggle.checked = true;
-            meshEnabledToggle.setAttribute("aria-checked", "true");
+            meshEnabledToggle.checked = false;
+            meshEnabledToggle.setAttribute("aria-checked", "false");
         }
         anim.setMode("wave");
         setActiveModeButton("wave");
@@ -1164,6 +1170,15 @@ document.getElementById("renderer").onchange = (e) => {
     renderUsage();
 };
 anim.on("rendererChange", (info) => updateRendererControls(info));
+anim.on("autoQualityChange", () => {
+    document.getElementById("quality").value = anim.opts.quality;
+    document.getElementById("targetFPS").value = String(anim.opts.targetFPS || 0);
+    resolutionScale.value = String(anim.opts.resolutionScale);
+    setRangeFill(resolutionScale);
+    updateResolutionStatus();
+    updateToolbarSummaries();
+    renderUsage();
+});
 const customCharSet = document.getElementById("customCharSet");
 const customCharSetGroup = document.getElementById("customCharSetGroup");
 const customCharSetStatus = document.getElementById("customCharSetStatus");
@@ -1478,6 +1493,11 @@ document.getElementById("extendedStatsToggle").onchange = (event) => {
     }
     renderUsage();
 };
+document.getElementById("autoQualityToggle").onchange = (event) => {
+    anim.setOption("autoQuality", event.target.checked);
+    event.target.setAttribute("aria-checked", String(event.target.checked));
+    renderUsage();
+};
 
 const colorFromImgEl = document.getElementById("colorFromImageToggle");
 if (colorFromImgEl) {
@@ -1538,6 +1558,7 @@ async function useLibraryImage(image, button) {
         }
         anim.opts.imageChars = anim.opts.charSet;
         await anim.setImage(source);
+        enableMediaLayer("image");
         activeImageSource = source;
         document.getElementById("preset").value = "";
         markSelectedImage(button);
@@ -1640,6 +1661,21 @@ if (meshEnabledToggle) {
     };
 }
 
+/**
+ * Image/mesh default to off (`setImage()`/`setModel()` load a source but stay hidden
+ * until the layer is explicitly enabled). Call this wherever the user directly picks a
+ * source, so loading one visibly turns the layer on instead of silently doing nothing.
+ */
+function enableMediaLayer(kind) {
+    const key = kind === "image" ? "imageEnabled" : "meshEnabled";
+    const toggle = kind === "image" ? imageEnabledToggle : meshEnabledToggle;
+    anim.setOption(key, true);
+    if (toggle) {
+        toggle.checked = true;
+        toggle.setAttribute("aria-checked", "true");
+    }
+}
+
 const modelStatus = document.getElementById("modelStatus");
 const meshPrimitive = document.getElementById("meshPrimitive");
 const meshStyle = document.getElementById("meshStyle");
@@ -1655,6 +1691,7 @@ meshPrimitive.onchange = () => {
         setModelStatus("No model loaded.");
     } else {
         anim.setOption("meshPrimitive", name);
+        enableMediaLayer("mesh");
         setModelStatus(`${name} primitive active.`);
     }
     renderUsage();
@@ -1675,6 +1712,7 @@ document.getElementById("modelInput").onchange = async (event) => {
     setModelStatus(`Loading ${file.name}…`);
     try {
         await anim.setModel(file);
+        enableMediaLayer("mesh");
         setModelStatus(`${file.name} loaded · ${anim.getMeshInfo().vertexCount} vertices.`);
         renderUsage();
     } catch (error) {
@@ -1699,6 +1737,7 @@ document.getElementById("loadModelUrlBtn").onclick = async () => {
     setModelStatus(`Loading ${url.pathname.split("/").pop()}…`);
     try {
         await anim.setModel(url.href);
+        enableMediaLayer("mesh");
         setModelStatus(`${url.pathname.split("/").pop()} loaded · ${anim.getMeshInfo().vertexCount} vertices.`);
         renderUsage();
     } catch (error) {
@@ -1831,6 +1870,7 @@ document.getElementById("imageInput").onchange = async (e) => {
     const stopListening = anim.on("imageFramesReady", ({ frameCount }) => { capturedFrames = frameCount || 0; });
     try {
         await anim.setImage(url, { animated: file.type === "image/gif" });
+        enableMediaLayer("image");
         activeImageSource = null;
         document.getElementById("preset").value = "";
         markSelectedImage(null);
@@ -2036,6 +2076,9 @@ function syncControlsFromOpts() {
     extendedStatsToggle.checked = !!anim.opts.extendedStats;
     extendedStatsToggle.setAttribute("aria-checked", String(extendedStatsToggle.checked));
     statsEl.dataset.extended = String(extendedStatsToggle.checked);
+    const autoQualityToggle = document.getElementById("autoQualityToggle");
+    autoQualityToggle.checked = anim.opts.autoQuality !== false;
+    autoQualityToggle.setAttribute("aria-checked", String(autoQualityToggle.checked));
     const backdropToggle = document.getElementById("backdropEnable");
     const backdrop = anim.opts.backdrop && anim.opts.backdrop.enabled ? anim.opts.backdrop : null;
     backdropToggle.checked = !!backdrop;
@@ -2170,6 +2213,7 @@ function usageSource() {
         quality: document.getElementById("quality").value,
         targetFPS: Number(targetFPS.value),
         resolutionScale: anim.opts.resolutionScale,
+        autoQuality: anim.opts.autoQuality,
         renderer: document.getElementById("renderer").value,
         charSet: anim.opts.charSet,
         align: anim.opts.align,
@@ -2254,7 +2298,7 @@ function usageSource() {
 }
 function getPersistableOptions() {
     const keys = [
-        "mode", "quality", "targetFPS", "resolutionScale", "renderer", "charSet", "align", "color", "gradient", "backdrop",
+        "mode", "quality", "targetFPS", "resolutionScale", "autoQuality", "renderer", "charSet", "align", "color", "gradient", "backdrop",
         "speed", "edgeFade", "trail", "pulse", "cursor", "showStats", "extendedStats", "colorAnimation",
         "interactionRadius", "interactionDuration", "sweepDuration", "delayCurve",
         "imageEnabled", "imageScale", "imageScaleX", "imageScaleY", "imageFov", "imageRotation", "imageFlipX", "imageFlipY", "imageLuminance", "fit", "colorFromImage", "animateImageMask", "animateImageFrames", "imageFrameRate", "imageAnimationRange", "revealDirection",

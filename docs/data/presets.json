@@ -449,6 +449,7 @@
       "previewable": false,
       "options": {
         "mode": "image",
+        "imageEnabled": true,
         "color": "#4FA8FF",
         "imageScale": 1,
         "imageScaleX": 1,
@@ -467,6 +468,7 @@
       "previewable": true,
       "options": {
         "mode": "chart",
+        "chartEnabled": true,
         "color": "#4FA8FF",
         "chartType": "bar",
         "chartTitle": "System Telemetry",
