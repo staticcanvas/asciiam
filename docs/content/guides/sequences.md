@@ -111,10 +111,12 @@ An image failure pauses the sequence, calls the node's optional `onError`, and e
 Set `model` to a URL or other `setModel()` source to load glTF/GLB geometry before a
 mesh node starts. Omit it to retain the current mesh, or set it to `null` to clear
 geometry. `modelOptions` accepts the same bounded loader options as `setModel()`.
+`meshEnabled` defaults to `false`; set it (globally at construction, or per step via
+`options`) for a `mesh` step's geometry to actually render.
 
 ```js
 animation.setSequence([
-  { mode: 'mesh', model: '/models/part-a.glb', duration: 4 },
+  { mode: 'mesh', model: '/models/part-a.glb', options: { meshEnabled: true }, duration: 4 },
   {
     mode: 'mesh',
     model: '/models/part-b.glb',

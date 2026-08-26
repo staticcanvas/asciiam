@@ -15,6 +15,7 @@ The `mesh` mode projects geometry into a cell-resolution depth and luminance buf
 ```js
 const animation = new asciiam('#target', {
   mode: 'mesh',
+  meshEnabled: true, // meshEnabled/imageEnabled default to false
   meshPrimitive: 'torus',
   meshStyle: 'wireframe',
   meshAutoRotate: true
@@ -103,6 +104,7 @@ primitives and imported models because both use the same normalized mesh pipelin
 // app.js - Image-textured 3D mesh composition
 const animation = new asciiam('#hero', {
   mode: 'mesh',
+  meshEnabled: true, // meshEnabled/imageEnabled default to false
   meshPrimitive: 'torus',
   colorFromImage: true
 });

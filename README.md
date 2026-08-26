@@ -259,6 +259,7 @@ Procedural meshes keep examples asset-free:
 ```js
 const model = new asciiam('#hero', {
   mode: 'mesh',
+  meshEnabled: true, // meshEnabled/imageEnabled default to false
   meshPrimitive: 'torus',
   meshStyle: 'wireframe'
 });
@@ -295,6 +296,7 @@ transform controls for X/Y/Z rotation and axis mirroring.
 // Combine 3D mesh geometry with background image color sampling
 const model = new asciiam('#hero', {
   mode: 'mesh',
+  meshEnabled: true, // meshEnabled/imageEnabled default to false
   meshPrimitive: 'torus',
   colorFromImage: true
 });
@@ -333,16 +335,20 @@ Chart types support vertical/horizontal block density bars (` ▂▃▄▅▆▇
 
 ### Multi-Pass Layer Compositing
 
-`asciiam` supports in-memory multi-pass composition via `setLayers()`. Stacking multiple animation passes with custom opacity and blend modes allows rich visual layering (e.g. background flow + ambient wave + foreground sparkles) on a single canvas surface with zero per-frame allocation:
+`asciiam` supports in-memory multi-pass composition via `setLayers()`. Stacking multiple animation passes with custom opacity and blend modes allows rich visual layering (e.g. background flow + ambient wave + foreground sparkles) on a single canvas surface with zero per-frame allocation. Per-cell option overrides (`color`, `speed`, `charSet`, etc.) go inside a layer's `options`, applied only during that layer's own draw pass:
 
 ```js
 const anim = new asciiam('#hero');
 
 // Configure multi-pass compositing layers
 anim.setLayers([
-  { mode: 'current', opacity: 0.5, color: '#005fff' },
-  { mode: 'wave', opacity: 0.4, speed: 1.2, color: '#00ffff' },
-  { mode: 'sparkle', opacity: 0.3, color: '#ffffff' }
+  { mode: 'current', opacity: 0.5, options: { color: '#005fff' } },
+  { mode: 'wave', opacity: 0.4, options: { speed: 1.2, color: '#00ffff' } },
+  { mode: 'sparkle', opacity: 0.3, options: { color: '#ffffff' } },
+  // Each layer can also carry its own independent image or 3D mesh source — distinct
+  // from the instance-wide setImage()/setModel() and from every other layer's:
+  { mode: 'image', opacity: 0.6, image: '/media/texture.webp', blendMode: 'screen' },
+  { mode: 'mesh', opacity: 0.5, meshPrimitive: 'torus' }
 ]);
 
 anim.start();
@@ -1018,6 +1024,7 @@ the [documentation attribution page](docs/content/attributions.md) for the maint
 | `fontFamily`                                              | `string`                                   | IBM Plex Mono stack         | Sets the font stack used to rasterize glyphs.                             |
 | `fontSize` / `density` / `fontLevels`                     | `number`                                   | `14` / tier / tier          | Controls grid measurement and cached font sizes.                          |
 | `resolutionScale`                                        | `number`                                   | `1`                         | Scales logical grid detail from `0.5` to `2` without changing DPR.        |
+| `autoQuality`                                             | `boolean`                                  | `false`                     | Steps `resolutionScale`, then `quality`, down under sustained frame-time pressure and back up under headroom — never past what was requested at construction. |
 | `alphaLevels`                                             | `number`                                   | tier value                  | Quantizes opacity to reduce Canvas state changes.                         |
 | `useGlyphAtlas`                                           | `boolean`                                  | tier value                  | Reuses rasterized solid-color glyphs in Performance and Ultra.            |
 | `cacheStaticWave`                                         | `boolean`                                  | tier value                  | Caches and shares Ultra's unchanged horizontal wave field.                |

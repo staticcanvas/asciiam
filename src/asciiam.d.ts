@@ -53,6 +53,8 @@ export type asciiamEvent =
   | 'sequenceMorphComplete'
   | 'rendererChange'
   | 'rendererFallback'
+  /** Fires whenever `autoQuality` actually steps `resolutionScale` or `quality`; detail is `{ reason: 'pressure' | 'recovery', quality, resolutionScale, frameWorkMs }`. */
+  | 'autoQualityChange'
   | 'imageFramesReady'
   | 'meshReady'
   | 'meshClear'
@@ -69,6 +71,22 @@ export interface asciiamLayerConfig {
   options?: Record<string, unknown> | null;
   opacity?: number;
   blendMode?: GlobalCompositeOperation | string;
+  /**
+   * This layer's own independent image source — decoded and sampled separately from
+   * the instance-wide `setImage()`/`opts.image`, so different layers can each show a
+   * different image at once. Omit to have this layer read the shared instance image
+   * instead (the behavior before this field existed). Static sampling only: unlike
+   * `setImage()`, a layer image does not capture animated GIF frames — an animated
+   * source samples as its default/first frame.
+   */
+  image?: string | null;
+  /** Overlays `this.opts` (fit, imageScale, imageRotation, imageLuminance, etc.) only while this layer's own `image` is being sampled. */
+  imageOptions?: { animated?: boolean } & Record<string, unknown>;
+  /** This layer's own procedural mesh primitive, built independently of the instance-wide mesh. Takes precedence over `model` if both are set. */
+  meshPrimitive?: string | null;
+  /** This layer's own independent glTF/GLB model source, loaded and rasterized separately from the instance-wide `setModel()`/`opts.model`. Omit to have this layer read the shared instance mesh instead. */
+  model?: asciiamModelSource | null;
+  modelOptions?: asciiamModelLoadOptions;
 }
 
 export interface asciiamFontMetrics {
@@ -306,6 +324,16 @@ export interface asciiamOptions {
   density?: number;
   /** Logical grid-detail multiplier. Clamped to 0.5–2; 1 retains automatic sizing. */
   resolutionScale?: number;
+  /**
+   * Automatically steps `resolutionScale` down, and — once that reaches its 0.5 floor —
+   * `quality` down, under sustained CPU frame-time pressure, and back up when there's
+   * headroom, never past the `quality`/`resolutionScale` given at construction. Off by
+   * default. Reuses the same `performance.now()` measurement `extendedStats` already
+   * takes around the draw call, so enabling it costs one timestamp pair per frame;
+   * adjustments themselves are rate-limited (checked on a smoothed running average, at
+   * most roughly every 1.5s) since each one triggers a real resize.
+   */
+  autoQuality?: boolean;
   color?: string;
   gradient?: Record<string, unknown> | null;
   background?: string;
@@ -364,7 +392,7 @@ export interface asciiamOptions {
   /** Explicit experimental WebGPU presentation; asynchronously falls back to WebGL2, then Canvas 2D. */
   renderer?: 'auto' | 'webgl2' | 'webgpu' | 'canvas2d';
   powerPreference?: 'high-performance' | 'low-power' | 'default';
-  /** Gates the image media layer; disabling skips image rendering without clearing the loaded source. */
+  /** Gates the image media layer; disabling skips image rendering without clearing the loaded source. Defaults to `false` — `setImage()` decodes and holds a source, but it stays hidden until this is set to `true`. */
   imageEnabled?: boolean;
   chartData?: number[] | { label?: string; value: number; color?: string }[] | number[][] | null;
   chartType?: 'bar' | 'horizontalBar' | 'line' | 'sparkline' | 'heatmap' | 'donut';
@@ -412,7 +440,7 @@ export interface asciiamOptions {
   meshMaxVertices?: number;
   meshMaxPrimitives?: number;
   model?: asciiamModelSource | null;
-  /** Gates the 3D mesh media layer; disabling skips mesh rendering without clearing the loaded mesh/model. */
+  /** Gates the 3D mesh media layer; disabling skips mesh rendering without clearing the loaded mesh/model. Defaults to `false` — `setMesh()`/`setModel()` load geometry, but it stays hidden until this is set to `true`. */
   meshEnabled?: boolean;
   customCell?: ((api: Record<string, unknown>) => unknown) | null;
   [key: string]: unknown;

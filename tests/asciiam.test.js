@@ -829,6 +829,7 @@ describe("asciiam lifecycle", () => {
         const animation = new asciiam(host, {
             renderer: "canvas2d",
             mode: "mesh",
+            meshEnabled: true,
             charSet: " .:-=+*#%@",
             meshStyle: "solid",
             respectReducedMotion: false,
@@ -867,6 +868,7 @@ describe("asciiam lifecycle", () => {
         const animation = new asciiam(host, {
             renderer: "webgl2",
             mode: "mesh",
+            meshEnabled: true,
             mesh: asciiam.createMeshPrimitive("torus", { majorSegments: 12, minorSegments: 8 }),
             meshStyle: "wireframe",
             respectReducedMotion: false,
@@ -1002,6 +1004,7 @@ describe("asciiam lifecycle", () => {
 
         const animation = new asciiam(host, {
             mode: "image",
+            imageEnabled: true,
             imageMaskMode: "scanlinePass",
             imageAnimationRange: { min: "#800000", max: "#ff8080" },
             respectReducedMotion: false,
@@ -1285,7 +1288,7 @@ describe("asciiam lifecycle", () => {
             clientWidth: { configurable: true, value: 320 },
             clientHeight: { configurable: true, value: 180 },
         });
-        const animation = new asciiam(host, { mode: "image", respectReducedMotion: false });
+        const animation = new asciiam(host, { mode: "image", imageEnabled: true, respectReducedMotion: false });
         const count = animation.cols * animation.rows;
         animation._imageGrid = {
             cols: animation.cols,
@@ -1842,12 +1845,22 @@ describe("asciiam lifecycle", () => {
                 options: null,
                 opacity: 0.8,
                 blendMode: "source-over",
+                image: null,
+                imageOptions: null,
+                meshPrimitive: null,
+                model: null,
+                modelOptions: null,
             });
             expect(layers[1]).toEqual({
                 mode: "fire",
                 options: null,
                 opacity: 0.5,
                 blendMode: "screen",
+                image: null,
+                imageOptions: null,
+                meshPrimitive: null,
+                model: null,
+                modelOptions: null,
             });
 
             animation.setLayers(null);
@@ -1925,6 +1938,274 @@ describe("asciiam lifecycle", () => {
             expect(observedCharSets).toContain("LAYER-TWO");
             expect(observedCharSets).not.toContain("GLOBAL");
             expect(animation.opts.charSet).toBe("GLOBAL");
+            animation.destroy();
+        });
+
+        it("gives each layer its own independent mesh primitive", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { mode: "wave", respectReducedMotion: false });
+            animation.setLayers([
+                { mode: "mesh", meshPrimitive: "cube" },
+                { mode: "mesh", meshPrimitive: "torus" },
+            ]);
+
+            const [cubeLayer, torusLayer] = animation._layers;
+            expect(cubeLayer._mesh).toBeTruthy();
+            expect(torusLayer._mesh).toBeTruthy();
+            // Different primitives must not resolve to the same mesh instance or topology.
+            expect(cubeLayer._mesh).not.toBe(torusLayer._mesh);
+            expect(cubeLayer._mesh.vertexCount).not.toBe(torusLayer._mesh.vertexCount);
+            // Neither layer's independent mesh touches the shared global slot.
+            expect(animation._mesh).toBeNull();
+            animation.destroy();
+        });
+
+        it("renders a layer's own mesh even while the global meshEnabled default stays off", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const context = makeContext();
+            HTMLCanvasElement.prototype.getContext.mockReturnValue(context);
+            const animation = new asciiam(host, { mode: "wave", respectReducedMotion: false });
+            expect(animation.opts.meshEnabled).toBe(false);
+            animation.setLayers([{ mode: "mesh", meshPrimitive: "cube" }]);
+            animation.start();
+
+            animation._draw(16.7);
+            expect(animation._lastDrawnCount).toBeGreaterThan(0);
+            // The per-layer force-enable during that layer's draw pass must not leak
+            // into the instance's own persistent option state afterward.
+            expect(animation.opts.meshEnabled).toBe(false);
+            animation.destroy();
+        });
+
+        it("reuses an already-loaded layer mesh across setLayers() calls that don't change its source", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { mode: "wave", respectReducedMotion: false });
+            animation.setLayers([{ mode: "mesh", meshPrimitive: "torus", opacity: 0.5 }]);
+            const firstMesh = animation._layers[0]._mesh;
+            expect(firstMesh).toBeTruthy();
+
+            animation.setLayers([{ mode: "mesh", meshPrimitive: "torus", opacity: 0.9 }]);
+            expect(animation._layers[0]._mesh).toBe(firstMesh);
+            expect(animation._layers[0].opacity).toBe(0.9);
+
+            animation.setLayers([{ mode: "mesh", meshPrimitive: "cube", opacity: 0.9 }]);
+            expect(animation._layers[0]._mesh).not.toBe(firstMesh);
+            animation.destroy();
+        });
+
+        it("falls back to the shared instance image for a layer without its own image", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, {
+                mode: "wave",
+                imageEnabled: true,
+                respectReducedMotion: false,
+            });
+            const sharedGrid = { cols: animation.cols, rows: animation.rows, chars: [], colors: [], animationMask: null };
+            animation._imageGrid = sharedGrid;
+            animation.setLayers([{ mode: "image" }]);
+
+            let observedDuringLayer = null;
+            const originalApply = animation._applyLayerMedia.bind(animation);
+            animation._applyLayerMedia = (layer) => {
+                originalApply(layer);
+                observedDuringLayer = animation._imageGrid;
+            };
+            animation.start();
+            animation._draw(16.7);
+
+            expect(observedDuringLayer).toBe(sharedGrid);
+            expect(animation._imageGrid).toBe(sharedGrid);
+            animation.destroy();
+        });
+
+        it("loads a layer's own image independently of the shared instance image", async () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const pixels = new Uint8ClampedArray([120, 60, 200, 255]);
+            HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+                ...makeContext(),
+                getImageData: jest.fn(() => ({ data: pixels })),
+            }));
+            const pendingImages = [];
+            globalThis.Image = class MockImage {
+                constructor() {
+                    this.naturalWidth = 4;
+                    this.naturalHeight = 4;
+                }
+                set src(value) {
+                    this.currentSrc = value;
+                    pendingImages.push(this);
+                }
+                get src() {
+                    return this.currentSrc;
+                }
+            };
+            const animation = new asciiam(host, { mode: "wave", respectReducedMotion: false });
+            animation.setLayers([{ mode: "image", image: "/layer-only.png" }]);
+            expect(animation._imageGrid).toBeFalsy();
+
+            pendingImages[0].onload();
+            const layer = animation._layers[0];
+            expect(layer._imageGrid).toBeTruthy();
+            expect(layer._imageGrid.chars.length).toBe(animation.cols * animation.rows);
+            // Loading the layer's own image must never populate the shared global slot.
+            expect(animation._imageGrid).toBeFalsy();
+            animation.destroy();
+        });
+    });
+
+    describe("Adaptive quality", () => {
+        it("defaults to off, and start()/_runFrame() never call the adjuster unless it's enabled", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { quality: "balanced", respectReducedMotion: false });
+            expect(animation.opts.autoQuality).toBe(false);
+            animation.start();
+            const spy = jest.spyOn(animation, "_updateAutoQuality");
+            animation._runFrame(1000);
+            animation._runFrame(1016.7);
+            expect(spy).not.toHaveBeenCalled();
+            expect(animation.opts.resolutionScale).toBe(1);
+            expect(animation.opts.quality).toBe("balanced");
+            expect(animation._autoQualityState).toBeNull();
+            animation.destroy();
+        });
+
+        it("steps resolutionScale down under sustained frame-time pressure, then back up once it recovers", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { quality: "balanced", resolutionScale: 1, autoQuality: true, respectReducedMotion: false });
+            let now = 0;
+            jest.spyOn(performance, "now").mockImplementation(() => now);
+
+            animation._updateAutoQuality(50); // seeds the EMA; far above the 16.7ms/60fps budget
+            expect(animation.opts.resolutionScale).toBe(1); // no adjustment on the seeding call
+
+            now += 2000; // clear the cooldown
+            animation._updateAutoQuality(50);
+            expect(animation.opts.resolutionScale).toBeLessThan(1);
+            const loweredScale = animation.opts.resolutionScale;
+
+            now += 500; // still inside the cooldown window
+            animation._updateAutoQuality(50);
+            expect(animation.opts.resolutionScale).toBe(loweredScale);
+
+            // Sustained headroom should recover it, capped at the original ceiling (1).
+            // The EMA intentionally decays slowly (recover cautiously, degrade readily);
+            // seed it directly rather than waiting out many real frames of headroom.
+            for (let i = 0; i < 10; i++) {
+                now += 2000;
+                animation._autoQualityState.ema = 1;
+                animation._updateAutoQuality(1);
+            }
+            expect(animation.opts.resolutionScale).toBe(1);
+
+            jest.restoreAllMocks();
+            animation.destroy();
+        });
+
+        it("drops to a cheaper quality tier only after resolutionScale reaches its floor", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { quality: "high", resolutionScale: 1, autoQuality: true, respectReducedMotion: false });
+            let now = 0;
+            jest.spyOn(performance, "now").mockImplementation(() => now);
+
+            animation._updateAutoQuality(50);
+            // Drive resolutionScale all the way down to its floor first.
+            for (let i = 0; i < 10 && animation.opts.resolutionScale > 0.5; i++) {
+                now += 2000;
+                animation._updateAutoQuality(50);
+            }
+            expect(animation.opts.resolutionScale).toBe(0.5);
+            expect(animation.opts.quality).toBe("high"); // still the original tier
+
+            now += 2000;
+            animation._updateAutoQuality(50);
+            expect(animation.opts.quality).toBe("balanced"); // one step cheaper than "high"
+
+            jest.restoreAllMocks();
+            animation.destroy();
+        });
+
+        it("never adjusts past the quality/resolutionScale requested at construction", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, { quality: "ultra", resolutionScale: 0.7, autoQuality: true, respectReducedMotion: false });
+            let now = 0;
+            jest.spyOn(performance, "now").mockImplementation(() => now);
+
+            animation._updateAutoQuality(1); // seed with plenty of headroom
+            for (let i = 0; i < 6; i++) {
+                now += 2000;
+                animation._updateAutoQuality(1);
+            }
+            // "ultra" is already the cheapest tier and 0.7 was the requested ceiling —
+            // sustained headroom must not push past either.
+            expect(animation.opts.quality).toBe("ultra");
+            expect(animation.opts.resolutionScale).toBe(0.7);
+
+            jest.restoreAllMocks();
+            animation.destroy();
+        });
+
+        it("preserves a caller-configured targetFPS across an autoQuality tier change", () => {
+            const host = document.querySelector("#host");
+            Object.defineProperties(host, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            const animation = new asciiam(host, {
+                quality: "high",
+                resolutionScale: 0.5, // already at the floor, so pressure drops quality immediately
+                targetFPS: 30,
+                autoQuality: true,
+                respectReducedMotion: false,
+            });
+            let now = 0;
+            jest.spyOn(performance, "now").mockImplementation(() => now);
+
+            animation._updateAutoQuality(80);
+            now += 2000;
+            animation._updateAutoQuality(80);
+
+            expect(animation.opts.quality).toBe("balanced");
+            // asciiam.QUALITY tiers all carry targetFPS: null; a naive setOption('quality', ...)
+            // would silently clear the caller's own 30fps cap.
+            expect(animation.opts.targetFPS).toBe(30);
+
+            jest.restoreAllMocks();
             animation.destroy();
         });
     });

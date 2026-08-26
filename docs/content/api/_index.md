@@ -79,6 +79,7 @@ Passing a container lets asciiam create and own its presentation canvas. Passing
 | `fontSize` | number | `14` | Sets the base font size in CSS pixels. |
 | `density` | number | quality-tier value | Scales glyph-cell spacing. |
 | `resolutionScale` | number | `1` | Scales logical grid detail from `0.5` to `2`; does not change DPR. |
+| `autoQuality` | boolean | `false` | Steps `resolutionScale`, then `quality`, down under sustained frame-time pressure and back up under headroom — never past what was requested at construction. Emits `autoQualityChange` on each adjustment. |
 | `color` | CSS color string | `#4FA8FF` | Sets the fallback glyph color. |
 | `background` | CSS color string | `transparent` | Sets the renderer clear color. |
 | `speed` | number | `1` | Scales the animation timeline. |
@@ -392,6 +393,7 @@ Keep the returned unsubscribe function when a listener belongs to a component li
 | `frame` | A frame is rendered. |
 | `rendererChange` | Requested or resolved renderer changes. |
 | `rendererFallback` | WebGL context loss switches presentation to Canvas 2D. |
+| `autoQualityChange` | `autoQuality` steps `resolutionScale` or `quality`; detail includes `reason` (`'pressure'` or `'recovery'`), the new `quality`/`resolutionScale`, and the measured `frameWorkMs`. |
 | `imageFramesReady` | Exact GIF capture completes; detail includes `frameCount` and total `duration` in seconds. |
 | `meshReady`, `meshClear` | Retained geometry is installed or released. |
 | `modelLoadStart`, `modelProgress` | Model loading starts or reports transferred bytes. |

@@ -2366,6 +2366,14 @@
                     <p class="sequence-status" id="resolutionGridStatus" role="status" aria-live="polite">100% uses the automatic grid size.</p>
                 </div>
                 <div class="cpop-group">
+                    <label class="ui-switch" for="autoQualityToggle">
+                        <input class="ui-switch__control" type="checkbox" id="autoQualityToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Auto-adjust for 60fps</span>
+                    </label>
+                    <p class="sequence-status">Eases grid resolution, then render quality, down under sustained frame-time pressure and back up when there's headroom — never past the Render quality / Grid resolution set above.</p>
+                </div>
+                <div class="cpop-group">
                     <label class="cpop-label" for="renderer">Rendering backend</label>
                     <select id="renderer">
                         <option value="auto" selected>Auto — WebGPU preferred</option>

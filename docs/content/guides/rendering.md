@@ -230,18 +230,28 @@ console.log(output);
 
 ## Multi-pass layer compositing
 
-`setLayers()` allows stacking and blending multiple animation modes with per-layer opacity and composition blend modes on a single canvas surface with zero per-frame buffer allocation.
+`setLayers()` allows stacking and blending multiple animation modes with per-layer opacity and composition blend modes on a single canvas surface with zero per-frame buffer allocation. Per-cell option overrides (`color`, `speed`, `charSet`, etc.) go inside a layer's `options`, applied only during that layer's own draw pass and restored afterward.
+
+Each layer can also carry its own independent `image` or `meshPrimitive`/`model`, decoded
+and rasterized separately from the instance-wide `setImage()`/`setModel()` and from every
+other layer's — so, for example, one layer can show one photo while another shows a
+different 3D primitive, composited together. A layer without its own source falls back to
+reading the shared instance-wide image/mesh, matching the behavior before these fields
+existed. Per-layer images are sampled statically (no GIF frame capture); `imageOptions`/
+`modelOptions` mirror sequence steps' `imageOptions`/`modelOptions`.
 
 `app.js`
 
 ```js
 const anim = new asciiam('#hero');
 
-// Blend multiple animation modes on a single canvas
+// Blend multiple animation modes, each with its own independent media source
 anim.setLayers([
-  { mode: 'current', opacity: 0.5, color: '#005fff' },
-  { mode: 'wave', opacity: 0.4, speed: 1.2, color: '#00ffff' },
-  { mode: 'sparkle', opacity: 0.3, color: '#ffffff' }
+  { mode: 'current', opacity: 0.5, options: { color: '#005fff' } },
+  { mode: 'wave', opacity: 0.4, options: { speed: 1.2, color: '#00ffff' } },
+  { mode: 'sparkle', opacity: 0.3, options: { color: '#ffffff' } },
+  { mode: 'image', opacity: 0.6, image: '/media/texture.webp', blendMode: 'screen' },
+  { mode: 'mesh', opacity: 0.5, meshPrimitive: 'torus' }
 ]);
 
 anim.start();
@@ -259,6 +269,7 @@ Safari and WebKit engines exhibit known subpixel baseline text offsets. `calibra
 | `powerPreference` | `high-performance \| low-power \| default` | `high-performance` | Passes an adapter preference to WebGL2. |
 | `quality` | quality name | `balanced` | Applies tier values. |
 | `resolutionScale` | number | `1` | Scales logical grid detail; clamped to `0.5`–`2`. |
+| `autoQuality` | boolean | `false` | Automatically steps `resolutionScale`, then `quality`, down under sustained frame-time pressure and back up under headroom — never past what was requested at construction. |
 | `maxDPR` | number | tier value | Caps backing-store pixel ratio. |
 | `targetFPS` | number or `null` | `null` | Adds a per-instance frame cap when numeric. |
 | `showStats` | boolean | `false` | Enables the compact attached output. |
