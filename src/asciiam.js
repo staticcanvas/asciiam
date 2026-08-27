@@ -4057,7 +4057,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 } else this._completeSequence();
             }
         }
-        /** Returns a Promise that resolves once the image is sampled into the ASCII grid. */
+        /**
+         * Loads and samples an image (raster, SVG, or animated GIF) into the ASCII
+         * grid (requires `imageEnabled: true`, or `mode: "image"`, to actually render).
+         * A new call cancels any load already in flight. Passing a nullish/empty `src`
+         * clears the image instead of loading (equivalent to {@link asciiam#clearImage}).
+         *
+         * @param {string|null} src - image URL, or nullish/empty to clear instead of loading
+         * @param {Object} [options]
+         * @param {boolean} [options.animated] - force animated-GIF handling on/off; auto-detected from `src`'s extension/data URI when omitted
+         * @returns {Promise<HTMLImageElement|null>} the loaded `<img>` once sampled, or `null` if cleared, failed, or superseded by a later call
+         * @throws {*} rejects with the underlying `<img>` error event if loading fails and wasn't superseded
+         */
         setImage(src, options = {}) {
             if (src === null || src === undefined || src === "") {
                 this.clearImage();
@@ -4113,7 +4124,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        /** Clears the sampled image while retaining the active procedural mode. */
+        /**
+         * Clears the sampled image (and any captured GIF frames) while retaining the
+         * active procedural mode. Cancels a load already in flight.
+         *
+         * @returns {asciiam} `this`, for chaining
+         */
         clearImage() {
             this._imageLoadToken++;
             this._imageCaptureToken++;
@@ -4133,7 +4149,23 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Decodes a GIF once and stores per-frame ASCII grids instead of bitmaps. */
+        /**
+         * Decodes a GIF once via `ImageDecoder` (WebCodecs) and stores per-frame ASCII
+         * grids instead of retaining raw bitmaps, so playback afterward is just
+         * grid-swapping. Falls back silently (returns `false`) when `ImageDecoder` or
+         * GIF decoding support is unavailable — the caller then relies on
+         * browser-timed `<img>` frame sampling instead. Yields to the main thread
+         * periodically so a long GIF's decode doesn't block interaction.
+         *
+         * @private
+         * @async
+         * @param {string|null} src - GIF URL to fetch; `null` reuses already-fetched bytes (see {@link asciiam#_scheduleAnimatedFrameCapture})
+         * @param {number} [token] - image-load cancellation token to check against `this._imageLoadToken`
+         * @param {number} [captureToken] - capture-specific cancellation token to check against `this._imageCaptureToken`
+         * @returns {Promise<boolean>} true if frames were captured; false if unsupported, cancelled, or the GIF has fewer than 2 frames
+         * @throws {Error} if the fetch itself fails (network error or non-ok response)
+         * @fires asciiam#imageFramesReady
+         */
         async _captureAnimatedImageFrames(src, token = this._imageLoadToken, captureToken = this._imageCaptureToken) {
             const Decoder = globalThis.ImageDecoder;
             if (typeof Decoder !== "function") return false;
@@ -4192,7 +4224,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Debounces GIF recapture after geometry or sampling options change. */
+        /**
+         * Debounces GIF recapture (180ms) after geometry or sampling options change —
+         * re-decoding every frame at the new grid size on every intermediate resize
+         * tick would be wasteful, so this coalesces rapid changes into one recapture.
+         * A no-op if no animated GIF is currently loaded.
+         *
+         * @private
+         * @returns {void}
+         */
         _scheduleAnimatedFrameCapture() {
             if (!this._animatedImage || !this._animatedImageData || this._destroyed) return;
             this._capturedImageFrames = null;
@@ -4209,7 +4249,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }, 180);
         }
 
-        /** Advances captured frames or the browser-timed compatibility sampler. */
+        /**
+         * Advances animated-image playback: steps through `_capturedImageFrames` by
+         * their own decoded durations if available, otherwise falls back to the
+         * browser-timed compatibility sampler at `opts.imageFrameRate`. A no-op unless
+         * an animated image is loaded and `opts.animateImageFrames` is enabled.
+         *
+         * @private
+         * @param {number} dt - elapsed time since the last frame, in milliseconds
+         * @returns {void}
+         */
         _advanceImageFrames(dt) {
             if (!this._animatedImage || !this.opts.animateImageFrames || !this._sourceImage) return;
             if (this._capturedImageFrames?.length) {
@@ -4235,17 +4284,42 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._imageFrameAccumulator %= interval;
             this._resampleImage();
         }
-        /** Programmatically drive the cursor-reactive modifier (e.g. for touch, audio-sync, demos). Pass null to clear. */
+        /**
+         * Programmatically drive the cursor-reactive modifier (`hoverField` mode, the
+         * `cursor` glow option) — useful for touch, audio-sync, or scripted demos
+         * where there's no real pointer to track.
+         *
+         * @param {number|null} x - canvas-relative x in pixels; `null` (with `y` omitted) clears it
+         * @param {number} [y] - canvas-relative y in pixels
+         * @returns {void}
+         */
         setCursor(x, y) {
             this._cursor = x === null || x === undefined ? null : { x, y };
         }
 
-        /** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */
+        /**
+         * Starts a click-zone pulse at the supplied coordinates, or the configured
+         * alignment origin if omitted. A no-op if the resolved coordinates aren't
+         * finite numbers.
+         *
+         * @param {number} [x=this._originX] - canvas-relative x in pixels
+         * @param {number} [y=this._originY] - canvas-relative y in pixels
+         * @returns {void}
+         */
         triggerInteraction(x = this._originX, y = this._originY) {
             if (!Number.isFinite(x) || !Number.isFinite(y)) return;
             this._interaction = { x, y, elapsed: 0 };
         }
 
+        /**
+         * Synchronously invokes every listener registered for `event` via
+         * {@link asciiam#on}, passing `detail` and this instance.
+         *
+         * @private
+         * @param {string} event - event name
+         * @param {Object} detail - event-specific payload
+         * @returns {void}
+         */
         _emit(event, detail) {
             const listeners = this._events.get(event);
             if (!listeners) return;
@@ -4253,6 +4327,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- lifecycle ----
+        /**
+         * Wires up off-screen auto-pausing (`IntersectionObserver`), tab-visibility
+         * resume, and resize detection (`ResizeObserver`, falling back to a `window`
+         * `resize` listener where unsupported). Called once from the constructor.
+         *
+         * @private
+         * @returns {void}
+         * @listens visibilitychange
+         */
         _bindLifecycle() {
             if ("IntersectionObserver" in window) {
                 this._io = new IntersectionObserver(
@@ -4278,6 +4361,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 window.addEventListener("resize", this._onResize);
             }
         }
+        /**
+         * Debounces `_resize()` to at most once per animation frame — a
+         * `ResizeObserver`/`window resize` callback can fire multiple times before
+         * the next paint, and `_resize()` itself is comparatively expensive (rebuilds
+         * caches, forces layout reads).
+         *
+         * @private
+         * @returns {void}
+         */
         _scheduleResize() {
             if (this._resizePending) return;
             this._resizePending = true;
@@ -4288,8 +4380,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        // Pointer tracking supplies cursor modifiers and interactive modes. The
-        // presentation canvas remains pointer-transparent; listeners belong to target.
+        /**
+         * Binds pointer tracking (supplies cursor modifiers and `hoverZone`/`clickZone`
+         * interactive modes) to the container, not the canvas — the presentation
+         * canvas remains pointer-transparent (`pointer-events: none`-equivalent
+         * behavior via not listening on it), so page content stacked above/below it
+         * stays interactive.
+         *
+         * @private
+         * @returns {void}
+         */
         _bindCursor() {
             const target = this.container || this.canvas.parentElement;
             if (!target) return;
@@ -4308,6 +4408,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             target.addEventListener("pointerleave", this._onPointerLeave, { passive: true });
             target.addEventListener("pointerdown", this._onPointerDown, { passive: true });
         }
+        /**
+         * Removes pointer listeners bound by {@link asciiam#_bindCursor}. A no-op if
+         * they were never bound.
+         *
+         * @private
+         * @returns {void}
+         */
         _unbindCursor() {
             const target = this.container || this.canvas.parentElement;
             if (target && this._onPointerMove) {
@@ -4318,6 +4425,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- sizing / measurement ----
+        /**
+         * Rebuilds font metrics and the regular/bold font-string cache for every
+         * `fontLevels` shading level, from `fontSize`/`fontFamily`/`resolutionScale`/
+         * `density`. Called whenever any of those change.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildFontCache() {
             // resolutionScale changes logical grid detail independently of the
             // canvas backing-store DPR. Bound it because cell work grows roughly
@@ -4346,7 +4461,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._waveBaseLayer = null;
         }
 
-        /** Deduped characters an atlas needs to rasterize: the active charSet plus any image/chart characters currently in play. Shared by _getGlyphAtlas() (Canvas 2D) and _getWebGLAtlas() (WebGL2/WebGPU) so the two atlases can't drift apart. */
+        /**
+         * Deduped characters an atlas needs to rasterize: the active charSet plus any
+         * image/chart characters currently in play. Shared by
+         * {@link asciiam#_getGlyphAtlas} (Canvas 2D) and `_getWebGLAtlas()`
+         * (WebGL2/WebGPU) so the two atlases can't drift apart.
+         *
+         * @private
+         * @returns {string[]} deduped characters, in first-seen order
+         */
         _computeAtlasCharacterSet() {
             const chartCharacters = (this.opts.mode === "chart" || this.opts.chartData || (this._layers && this._layers.some((l) => l.mode === "chart")))
                 ? this._getChartCharacters()
@@ -4355,6 +4478,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return [...new Set(this.opts.charSet + imageCharacters + chartCharacters)];
         }
 
+        /**
+         * Builds (or reuses, from an instance-level or shared static cache) the
+         * Canvas 2D glyph atlas: every character x bold x font-level combination
+         * pre-rasterized into one offscreen canvas, so per-cell painting is a cheap
+         * `drawImage()` instead of a `fillText()` call. Returns `null` when atlasing
+         * is disabled or incompatible with the active options (a gradient, animated
+         * color, or image-derived color all need per-cell color, which a shared atlas
+         * can't represent).
+         *
+         * @private
+         * @returns {Object|null} the atlas (`{canvas, characterIndex, characters, sourceX, sourceY, tileWidth, tileHeight, baseline, padding}`), or `null` if atlasing isn't applicable right now
+         */
         _getGlyphAtlas() {
             if (!this.opts.useGlyphAtlas || this.opts.gradient || this.opts.colorAnimation || this.opts.colorFromImage) return null;
             const characters = this._computeAtlasCharacterSet();
@@ -4421,6 +4556,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return atlas;
         }
 
+        /**
+         * Records the built/reused atlas and the exact config it's valid for, so
+         * {@link asciiam#_getGlyphAtlas}'s cheap instance-level check can skip the
+         * shared-cache lookup entirely on unchanged frames.
+         *
+         * @private
+         * @param {Object} atlas - the atlas to cache, see {@link asciiam#_getGlyphAtlas}
+         * @param {string} [characterSet=this.opts.charSet] - the exact character set this atlas covers
+         * @returns {void}
+         */
         _cacheGlyphAtlas(atlas, characterSet = this.opts.charSet) {
             this._glyphAtlas = atlas;
             this._glyphAtlasCharSet = characterSet;
