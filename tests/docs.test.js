@@ -74,6 +74,7 @@ describe('Hugo documentation source', () => {
       'docs/content/getting-started.md',
       'docs/content/guides/integration.md',
       'docs/content/guides/rendering.md',
+      'docs/content/guides/performance.md',
       'docs/content/guides/character-sets.md',
       'docs/content/guides/animations.md',
       'docs/content/guides/sequences.md',
@@ -107,6 +108,7 @@ describe('Hugo documentation source', () => {
     expect(config).toContain('name = "Attributions"');
     [
       '/guides/rendering',
+      '/guides/performance',
       '/guides/integration',
       '/guides/character-sets',
       '/guides/animations',
@@ -192,6 +194,7 @@ describe('Hugo documentation source', () => {
       'docs/content/getting-started.md',
       'docs/content/guides/_index.md',
       'docs/content/guides/rendering.md',
+      'docs/content/guides/performance.md',
       'docs/content/guides/integration.md',
       'docs/content/guides/animations.md',
       'docs/content/guides/character-sets.md',

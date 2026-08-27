@@ -183,7 +183,8 @@ descriptions highlight literal query words, while metadata tags identify matched
 | [Start](docs/content/getting-started.md)                        | Installation, initialization, renderer selection, and lifecycle.                     |
 | [Integration and lifecycle](docs/content/guides/integration.md) | Target ownership, application teardown, accessibility, and custom-mode boundaries.   |
 | [Web utility workflow](docs/content/guides/web-utility.md)      | Controls, previews, validation, persistence, and generated configuration.            |
-| [Rendering](docs/content/guides/rendering.md)                   | WebGL2, Canvas 2D, quality tiers, frame rate, and multi-instance behavior.           |
+| [Rendering](docs/content/guides/rendering.md)                   | WebGL2, Canvas 2D, WebGPU, and renderer selection and fallback.                     |
+| [Performance and diagnostics](docs/content/guides/performance.md) | Quality tiers, `resolutionScale`, the diagnostics overlay, and multi-instance behavior. |
 | [Animation modes](docs/content/guides/animations.md)            | Built-in algorithms, mode changes, image-backed behavior, and custom modes.          |
 | [Character sets](docs/content/guides/character-sets.md)         | Default glyph inventory, ordered ramps, symbolic sets, and custom strings.           |
 | [Images](docs/content/guides/images.md)                         | Image-to-ASCII sampling, fitting, masks, and RGB animation ranges.                   |

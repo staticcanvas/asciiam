@@ -47,6 +47,13 @@ editBranch = "main"
   [menus.main.params]
   icon = "gauge"
   [[menus.main]]
+  name = "Performance and diagnostics"
+  parent = "guides"
+  pageRef = "/guides/performance"
+  weight = 12
+  [menus.main.params]
+  icon = "activity"
+  [[menus.main]]
   name = "Integration and lifecycle"
   parent = "guides"
   pageRef = "/guides/integration"

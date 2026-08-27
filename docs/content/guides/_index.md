@@ -1,9 +1,9 @@
 ---
 title: Guides
-description: Operational guidance for integration, rendering, animations, character sets, sequences, images, and the web utility.
+description: Operational guidance for integration, rendering, performance, animations, character sets, sequences, images, and the web utility.
 weight: 20
 date: 2026-08-13
-lastmod: 2026-08-13
+lastmod: 2026-08-27
 tags: [guides, documentation, configuration, integration, tutorials]
 keywords: [asciiam guides, documentation topics, renderer configuration, animation integration, usage guidance]
 ---
