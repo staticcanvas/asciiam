@@ -1,5 +1,19 @@
-/*!
- * asciiam — dependency-free canvas engine for animated ASCII backgrounds.
+/*            ⢎⡑ ⡎⠑ ⢀⣀ ⠄ ⡇  ⢀⣀ ⣀⡀ ⡞⠁
+ * ⠉⠉ ⠉⠉ ⠉⠉   ⠣⠜ ⠣⠜ ⠣⠤ ⠇ ⠣⠭ ⠣⠤ ⡸⠑ ⠭⠕
+ *
+ * asciiam — dependency-free canvas engine for animated ASCII backgrounds
+ * @module asciiam
+ * @version 0.26.0
+ * @author  Garvey K. Snow
+ * @license MIT
+ * @requires ./mesh.js for 3D primitive generation and cell rasterization
+ * @requires ./gltf.js for glTF/GLB model loading
+ *
+ * entry point. resolves a presentation backend (WebGPU, then WebGL2, then
+ * Canvas 2D) and drives one shared requestAnimationFrame scheduler across every
+ * running instance. see docs/architecture/webgpu-feasibility.md for the
+ * multi-backend design and docs/content/guides/rendering.md for the renderer
+ * fallback contract.
  */
 
 import {
@@ -22,12 +36,27 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     const STATS_HISTORY_LENGTH = 24;
     const SPARKLINE_LEVELS = "▁▂▃▄▅▆▇█";
 
-    /** Cheap synchronous gate used only to decide whether async WebGPU setup is worth attempting. */
+    /**
+     * Cheap synchronous gate used only to decide whether attempting async WebGPU
+     * setup is worth it — a real device may still fail to initialize later, this
+     * only rules out environments with no chance of succeeding.
+     *
+     * @returns {boolean} true if a secure context with `navigator.gpu` is present
+     */
     function canUseWebGPU() {
         return globalThis.isSecureContext === true && !!globalThis.navigator?.gpu;
     }
 
-    /** Formats a fixed-size numeric ring without retaining DOM or chart objects. */
+    /**
+     * Formats a fixed-size numeric ring buffer into a Unicode block-character
+     * sparkline, without retaining DOM or chart objects.
+     *
+     * @param {number[]} values - ring buffer of sampled values
+     * @param {number} count - number of most-recent samples to render
+     * @param {number} cursor - index of the next write position in `values` (used to read oldest-first once the ring has wrapped)
+     * @param {number} ceiling - value that maps to the tallest sparkline level
+     * @returns {string} a `count`-character string of block glyphs, or `""` if `count`/`ceiling` are non-positive
+     */
     function formatSparkline(values, count, cursor, ceiling) {
         if (!count || !(ceiling > 0)) return "";
         let chart = "";
@@ -41,8 +70,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision.
-     * Works with 2D canvas context or creates a temporary offscreen measurement canvas.
+     * Measures font metrics (charW, charH, ascent, descent, baselineOffset) with
+     * subpixel precision using `CanvasRenderingContext2D.measureText()`'s bounding-box
+     * metrics where available. Falls back to fixed-ratio estimates (`0.6`/`1.2` of
+     * font size) when no 2D context is supplied — e.g. in a headless environment.
+     *
+     * @param {CanvasRenderingContext2D|string} [target] - a 2D context to measure with, or (if a string) the font family, shifting the other params
+     * @param {string} [fontFamily="monospace"] - CSS font family; ignored if `target` is a string
+     * @param {number} [fontSize=14] - font size in pixels; ignored if `target` is a string and `fontFamily` is a number
+     * @returns {{charW: number, charH: number, ascent: number, descent: number, baselineOffset: number}} measured or estimated metrics
+     *
+     * @example
+     * const metrics = calibrateFontMetrics(ctx, 'monospace', 16);
      */
     function calibrateFontMetrics(target, fontFamily = "monospace", fontSize = 14) {
         const ctx = target && typeof target.measureText === "function" ? target : null;
@@ -85,7 +124,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         };
     }
 
-    /** Headless cell frame generator for Node.js/Bun/Deno SSR or CLI rasterization. */
+    /**
+     * Headless cell frame generator for Node.js/Bun/Deno SSR or CLI rasterization —
+     * computes one frame of a built-in procedural mode as a plain grid, with no
+     * canvas, DOM, or animation loop involved.
+     *
+     * @param {Object} [options]
+     * @param {number} [options.cols=80] - grid column count
+     * @param {number} [options.rows=24] - grid row count
+     * @param {string} [options.mode="matrix"] - one of the built-in procedural field modes (`wave`, `plasma`, `vortex`, `fire`, `snow`, `matrix`, `starfield`, `ripple`, `sparkle`, `orbit`); unrecognized values fall back to a generic sine field
+     * @param {number} [options.time=0] - simulation time in seconds
+     * @param {string} [options.charSet="ascii-extended"] - a literal character ramp, or a key into `asciiam.CHARACTER_SETS`
+     * @param {boolean} [options.invert=false] - invert the computed intensity before mapping to a character
+     * @param {string} [options.color="#00ff66"] - base hex color (3 or 6 hex digits) scaled by each cell's intensity
+     * @returns {{char: string, r: number, g: number, b: number, a: number}[][]} a `rows`-length array of `cols`-length cell arrays
+     */
     function renderFrame(options = {}) {
         const cols = Math.max(1, options.cols || 80);
         const rows = Math.max(1, options.rows || 24);
@@ -180,7 +233,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         return grid;
     }
 
-    /** Headless multi-line ASCII string generator for SSR, terminal, or CLI rendering. */
+    /**
+     * Headless multi-line ASCII string generator for SSR, terminal, or CLI rendering.
+     * Builds on {@link renderFrame}, flattening its cell grid into text (optionally
+     * with ANSI 24-bit color escape codes).
+     *
+     * @param {Object} [options] - same options as {@link renderFrame}, plus:
+     * @param {boolean} [options.ansi=false] - wrap each character in a 24-bit ANSI color escape sequence
+     * @returns {string} newline-joined rows of characters
+     *
+     * @example
+     * console.log(renderToString({ mode: 'plasma', cols: 60, rows: 20, ansi: true }));
+     */
     function renderToString(options = {}) {
         const grid = renderFrame(options);
         const ansi = !!options.ansi;
@@ -196,10 +260,25 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Private WebGL2 presentation backend.
-     * Animation state remains in asciiam; this class owns GPU resources only.
+     * WebGL2GlyphRenderer
+     * ─────────────────────────────────────────────
+     * Private WebGL2 presentation backend. Batches every glyph into one instanced
+     * quad draw call per frame via a shared atlas texture; animation state remains
+     * in the owning `asciiam` instance — this class owns GPU resources only (atlas
+     * texture, gradient textures, instance buffer, shader programs).
+     *
+     * @class
+     * @private
+     * @since 0.9.0
      */
     class WebGL2GlyphRenderer {
+        /**
+         * @param {HTMLCanvasElement} canvas - canvas to acquire a `webgl2` context from
+         * @param {Object} [options]
+         * @param {boolean} [options.desynchronized=true] - passed through to `getContext()`'s `desynchronized` hint
+         * @param {"high-performance"|"low-power"|"default"} [options.powerPreference="high-performance"] - passed through to `getContext()`
+         * @throws {Error} if a WebGL2 context could not be acquired
+         */
         constructor(canvas, options = {}) {
             this.canvas = canvas;
             this.gl = canvas.getContext("webgl2", {
@@ -222,6 +301,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._initialize();
         }
 
+        /**
+         * Compile one shader stage.
+         *
+         * @private
+         * @param {number} type - `gl.VERTEX_SHADER` or `gl.FRAGMENT_SHADER`
+         * @param {string} source - GLSL ES 3.00 source
+         * @returns {WebGLShader} the compiled shader
+         * @throws {Error} if compilation fails
+         */
         _shader(type, source) {
             const gl = this.gl;
             const shader = gl.createShader(type);
@@ -231,6 +319,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return shader;
         }
 
+        /**
+         * Compile and link a vertex/fragment shader pair into a program.
+         *
+         * @private
+         * @param {string} vertex - vertex shader GLSL ES 3.00 source
+         * @param {string} fragment - fragment shader GLSL ES 3.00 source
+         * @returns {WebGLProgram} the linked program
+         * @throws {Error} if either shader fails to compile or the program fails to link
+         */
         _program(vertex, fragment) {
             const gl = this.gl;
             const program = gl.createProgram();
@@ -241,6 +338,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return program;
         }
 
+        /**
+         * Compile the glyph and surface shader programs, set up vertex array objects
+         * and buffers (a static unit-quad corner buffer shared by both, and the
+         * per-instance rect/uv/color buffer for glyphs), and enable premultiplied-alpha
+         * blending. Called once from the constructor.
+         *
+         * @private
+         * @returns {void}
+         * @throws {Error} if any shader/program fails to compile or link
+         */
         _initialize() {
             const gl = this.gl;
             this.program = this._program(`#version 300 es
@@ -335,10 +442,26 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         }
 
+        /**
+         * Update the GL viewport to match the backing canvas size.
+         *
+         * @param {number} width - drawing-buffer width in device pixels
+         * @param {number} height - drawing-buffer height in device pixels
+         * @returns {void}
+         */
         resize(width, height) {
             this.gl.viewport(0, 0, width, height);
         }
 
+        /**
+         * Upload a new glyph atlas texture, replacing the current one. A no-op if
+         * `key` already matches the currently-bound atlas (cache-key equality check,
+         * not a pixel comparison).
+         *
+         * @param {CanvasImageSource} source - the atlas canvas/image to upload
+         * @param {string} key - opaque cache key identifying this atlas's content
+         * @returns {void}
+         */
         setAtlas(source, key) {
             if (key === this.atlasKey) return;
             const gl = this.gl;
@@ -353,10 +476,23 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.atlasKey = key;
         }
 
+        /**
+         * @param {string} key - gradient cache key, see {@link WebGL2GlyphRenderer#setGradient}
+         * @returns {boolean} true if a gradient texture is already cached under `key`
+         */
         hasGradient(key) {
             return this.gradientTextures.has(key);
         }
 
+        /**
+         * Upload a gradient strip texture, or return the already-cached one for `key`.
+         * The cache is capped at 8 entries with FIFO (insertion-order) eviction —
+         * least-recently-*inserted*, not least-recently-*used*, to keep this cheap.
+         *
+         * @param {CanvasImageSource|null} source - a 1D gradient strip (e.g. a 256x1 canvas); ignored if `key` is already cached
+         * @param {string} key - opaque cache key identifying this gradient's content (and, for animated gradients, its current time step)
+         * @returns {WebGLTexture|null} the gradient texture, or null if `source` was falsy and `key` wasn't already cached
+         */
         setGradient(source, key) {
             if (!source || this.gradientTextures.has(key)) return this.gradientTextures.get(key) || null;
             const gl = this.gl;
@@ -376,6 +512,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return texture;
         }
 
+        /**
+         * Begin a frame: reset the glyph instance count and either clear the canvas
+         * to `clearColor` or preserve its current contents (for the trail-persistence
+         * effect, which composites a low-alpha overlay instead of clearing).
+         *
+         * @param {number[]} clearColor - `[r, g, b, a]` in 0-1, used only when `preserve` is false
+         * @param {boolean} [preserve=false] - skip the clear, leaving prior frame content in the color buffer
+         * @returns {void}
+         */
         begin(clearColor, preserve = false) {
             const gl = this.gl;
             this.count = 0;
@@ -385,6 +530,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Draw one full-viewport flat or gradient-filled quad — used for the trail
+         * overlay and the backdrop layer, neither of which involve glyph geometry.
+         *
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} [gradient] - active gradient, or null for a flat fill
+         * @returns {void}
+         */
         surface(color, gradient = null) {
             const gl = this.gl;
             gl.useProgram(this.surfaceProgram);
@@ -394,6 +547,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
+        /**
+         * Append one glyph instance to the pending batch, growing the backing typed
+         * array (doubling capacity) if it's full. Instances accumulate here across
+         * many calls within a frame and are uploaded together by {@link WebGL2GlyphRenderer#flush}.
+         *
+         * @param {number} x - destination pixel x (top-left, atlas padding already subtracted by the caller)
+         * @param {number} y - destination pixel y (top-left, atlas padding already subtracted by the caller)
+         * @param {number} width - destination tile width in pixels
+         * @param {number} height - destination tile height in pixels
+         * @param {Float32Array} uv - flat atlas UV rect array, 4 floats per tile (`[u0, v0, u1, v1, ...]`)
+         * @param {number} uvOffset - index into `uv` where this glyph's 4-float UV rect starts
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {number} opacity - multiplied into the color's alpha channel
+         * @returns {void}
+         */
         push(x, y, width, height, uv, uvOffset, color, opacity) {
             if (this.count >= this.capacity) {
                 this.capacity *= 2;
@@ -417,6 +585,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             data[offset + 11] = color[3] * opacity;
         }
 
+        /**
+         * Bind the active gradient (if any) to a program's `u_use_gradient`/
+         * `u_gradient_type`/`u_gradient_angle`/`u_gradient` uniforms. Shared by both
+         * the glyph and surface programs.
+         *
+         * @private
+         * @param {WebGLProgram} program - program whose uniforms should be set (must declare the gradient uniform set)
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} gradient - active gradient, or null to disable it for this draw
+         * @returns {void}
+         */
         _gradientUniforms(program, gradient) {
             const gl = this.gl;
             const texture = gradient ? this.gradientTextures.get(gradient.textureKey) : null;
@@ -431,6 +609,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Upload the accumulated glyph instance batch and draw it in one instanced
+         * call. A no-op if nothing was pushed this frame.
+         *
+         * @param {number} width - viewport width in device pixels, for NDC conversion in the shader
+         * @param {number} height - viewport height in device pixels, for NDC conversion in the shader
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} [gradient] - active gradient applied uniformly to every glyph in the batch, or null
+         * @returns {void}
+         */
         flush(width, height, gradient = null) {
             if (!this.count) return;
             const gl = this.gl;
@@ -449,7 +636,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
         }
 
-        /** Reads adapter strings once, only for explicitly enabled diagnostics. */
+        /**
+         * Reads adapter strings once, only for explicitly enabled diagnostics
+         * (`showStats`/`extendedStats`); caches the result for subsequent calls since
+         * `WEBGL_debug_renderer_info` queries are not free and the answer can't change
+         * mid-session. Falls back to generic `VENDOR`/`RENDERER` parameters, then to
+         * placeholder strings, if the debug extension or query itself is unavailable
+         * (privacy controls commonly reject `WEBGL_debug_renderer_info`).
+         *
+         * @returns {{vendor: string, renderer: string}} best-effort adapter description
+         */
         getAdapterInfo() {
             if (this._adapterInfo) return this._adapterInfo;
             const gl = this.gl;
@@ -471,6 +667,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._adapterInfo;
         }
 
+        /**
+         * Release every GPU resource this renderer owns (atlas texture, gradient
+         * textures, buffers, shader programs). Does not lose the WebGL context itself.
+         *
+         * @returns {void}
+         */
         destroy() {
             const gl = this.gl;
             if (this.atlasTexture) gl.deleteTexture(this.atlasTexture);
@@ -482,11 +684,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Experimental WebGPU presentation backend.
-     * The instance still resolves animation cells; this class owns only the
-     * configured canvas, atlas, instance buffer, and GPU command submission.
+     * WebGPUGlyphRenderer
+     * ─────────────────────────────────────────────
+     * Experimental WebGPU presentation backend. The owning `asciiam` instance still
+     * resolves animation cells; this class owns only the configured canvas, atlas,
+     * instance buffer, and GPU command submission. Initialization is asynchronous
+     * (`ready`, a Promise resolving to `this`) — callers must not draw until it
+     * settles, since adapter/device acquisition can fail or simply take time.
+     *
+     * @class
+     * @private
+     * @since 0.24.0
      */
     class WebGPUGlyphRenderer {
+        /**
+         * @param {HTMLCanvasElement} canvas - canvas to acquire a `webgpu` context from
+         * @param {Object} [options]
+         * @param {"high-performance"|"low-power"|"default"} [options.powerPreference="high-performance"] - forwarded to `requestAdapter()`
+         */
         constructor(canvas, options = {}) {
             this.canvas = canvas;
             this.capacity = 4096;
@@ -503,6 +718,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.ready = this._initialize(options);
         }
 
+        /**
+         * Acquire a GPU adapter/device and configure the canvas context. Sets
+         * `this.device`/`this.adapter`/`this.context`/`this.format` and builds the
+         * render pipelines on success. Assigned to `this.ready` by the constructor;
+         * callers await that rather than calling this directly.
+         *
+         * @private
+         * @async
+         * @param {Object} options - see constructor options
+         * @returns {Promise<WebGPUGlyphRenderer>} resolves to `this` once ready to draw
+         * @throws {Error} if not in a secure context, no adapter/device/context is available
+         */
         async _initialize(options) {
             if (!globalThis.isSecureContext || !globalThis.navigator?.gpu) throw new Error("WebGPU unavailable: secure context or navigator.gpu missing");
             const adapter = await globalThis.navigator.gpu.requestAdapter({ powerPreference: options.powerPreference || "high-performance" });
@@ -524,6 +751,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
+        /**
+         * Compile the shared WGSL shader module, build the glyph and surface render
+         * pipelines (premultiplied-alpha "one, one-minus-src-alpha" blending, matching
+         * the WebGL2 backend), and allocate the static corner/instance/sampler/1x1
+         * fallback-texture GPU resources. Called once from {@link WebGPUGlyphRenderer#_initialize}.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildPipelines() {
             const device = this.device;
             const shader = device.createShaderModule({ code: `
@@ -611,6 +847,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             device.queue.writeTexture({ texture: this._emptyTexture }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
         }
 
+        /**
+         * Record the target presentation size. A no-op while the device isn't ready
+         * yet — {@link WebGPUGlyphRenderer#_initialize} sets `_resizePending` in that
+         * case so the caller can detect a resize is still owed once it settles.
+         *
+         * @param {number} width - drawing-buffer width in device pixels
+         * @param {number} height - drawing-buffer height in device pixels
+         * @returns {void}
+         */
         resize(width, height) {
             if (!this.device) return;
             this.width = width;
@@ -618,6 +863,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._resizePending = false;
         }
 
+        /**
+         * Upload a new glyph atlas texture, replacing the current one, and clear the
+         * bind-group cache (every cached glyph bind group referenced the old atlas
+         * view). A no-op while the device isn't ready, or if `key` already matches the
+         * currently-bound atlas.
+         *
+         * @param {CanvasImageSource} source - the atlas canvas/image to upload
+         * @param {string} key - opaque cache key identifying this atlas's content
+         * @returns {void}
+         */
         setAtlas(source, key) {
             if (!this.device || key === this.atlasKey) return;
             this.atlasTexture?.destroy();
@@ -629,8 +884,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.bindGroups.clear();
         }
 
+        /**
+         * @param {string} key - gradient cache key, see {@link WebGPUGlyphRenderer#setGradient}
+         * @returns {boolean} true if a gradient texture is already cached under `key`
+         */
         hasGradient(key) { return this.gradientSources.has(key); }
 
+        /**
+         * Upload a gradient strip texture, or reuse the already-cached one for `key`.
+         * The texture (and its matching view) cache is capped at 8 entries with FIFO
+         * eviction; the bind-group cache is only invalidated when an eviction actually
+         * happens here, not on every new key — an animated gradient (a new key roughly
+         * every 50ms) would otherwise defeat WebGPU bind-group caching for the whole
+         * scene on every frame.
+         *
+         * @param {CanvasImageSource|null} source - a 1D gradient strip (e.g. a 256x1 canvas); ignored if `key` is already cached or the device isn't ready
+         * @param {string} key - opaque cache key identifying this gradient's content (and, for animated gradients, its current time step)
+         * @returns {void}
+         */
         setGradient(source, key) {
             if (!this.device || !source || this.gradientSources.has(key)) return;
             const textureUsage = globalThis.GPUTextureUsage;
@@ -654,6 +925,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Begin a frame: reset the glyph instance count and uniform-slot pool index,
+         * open a command encoder and render pass, and either clear the canvas to
+         * `clearColor` or preserve its current contents (for the trail-persistence
+         * effect). A no-op while the device isn't ready.
+         *
+         * @param {number[]} clearColor - `[r, g, b, a]` in 0-1, used only when `preserve` is false
+         * @param {boolean} [preserve=false] - skip the clear, leaving prior frame content (`loadOp: "load"` instead of `"clear"`)
+         * @returns {void}
+         */
         begin(clearColor, preserve = false) {
             if (!this.device) return;
             this.count = 0;
@@ -662,14 +943,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.pass = this.encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), clearValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: clearColor[3] }, loadOp: preserve ? "load" : "clear", storeOp: "store" }] });
         }
 
-        // Returns a distinct { buffer } for each draw call within one frame (index reset
-        // by begin()/_beginLoadedPass()), growing the pool lazily and reusing it across
-        // frames. Every draw recorded before queue.submit() must read its *own* uniform
-        // buffer — writeBuffer() calls made before submit() all land before any of that
-        // submission's draws execute, so draws that shared one buffer would all read
-        // whichever draw's uniforms were written *last*, not their own (this is how the
-        // trail/backdrop "surface" quads used to render solid white: flush()'s own,
-        // unrelated glyph-pipeline uniform write of [1,1,1,1] always happened last).
+        /**
+         * Returns a distinct `{ buffer }` for each draw call within one frame (index
+         * reset by {@link WebGPUGlyphRenderer#begin}/{@link WebGPUGlyphRenderer#_beginLoadedPass}),
+         * growing the pool lazily and reusing it across frames. Every draw recorded
+         * before `queue.submit()` must read its *own* uniform buffer —
+         * `writeBuffer()` calls made before `submit()` all land before any of that
+         * submission's draws execute, so draws that shared one buffer would all read
+         * whichever draw's uniforms were written *last*, not their own (this is how the
+         * trail/backdrop "surface" quads used to render solid white: `flush()`'s own,
+         * unrelated glyph-pipeline uniform write of `[1,1,1,1]` always happened last).
+         *
+         * @private
+         * @returns {{buffer: GPUBuffer}} the next pooled uniform slot for this frame
+         */
         _acquireUniformSlot() {
             let slot = this._uniformSlots[this._uniformSlotIndex];
             if (!slot) {
@@ -681,6 +968,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return slot;
         }
 
+        /**
+         * Write one draw call's uniform values (viewport, color, gradient flag) into a
+         * pooled slot's buffer. WGSL struct layout: `viewport` (vec2f, offset 0) is
+         * padded to 16 bytes so `color` (vec4f) can start at its required 16-byte
+         * alignment (offset 4 in float units), and the struct itself rounds up to a
+         * 16-byte multiple (48 bytes / 12 floats) to hold trailing `useGradient` (f32,
+         * offset 8).
+         *
+         * @private
+         * @param {{buffer: GPUBuffer}} slot - target slot, see {@link WebGPUGlyphRenderer#_acquireUniformSlot}
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {boolean} [useGradient=false] - whether the shader should sample the bound gradient texture instead of using `color` directly
+         * @returns {void}
+         */
         _uniforms(slot, color, useGradient = false) {
             // WGSL struct layout: viewport (vec2f, offset 0) is padded to 16 bytes so
             // color (vec4f) can start at its required 16-byte alignment (offset 4 in
@@ -693,6 +994,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.device.queue.writeBuffer(slot.buffer, 0, values);
         }
 
+        /**
+         * Write `slot`'s uniforms, then return a bind group referencing it — cached
+         * per (uniform-slot ordinal position, pipeline, gradient key) so a repeat draw
+         * shape within a frame doesn't re-create a `GPUBindGroup` every time.
+         *
+         * @private
+         * @param {{buffer: GPUBuffer}} slot - target slot, see {@link WebGPUGlyphRenderer#_acquireUniformSlot}
+         * @param {GPURenderPipeline} pipeline - `this.glyphPipeline` or `this.surfacePipeline`; determines which bind group layout/entries are built
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {boolean} [useGradient=false] - whether the shader should sample the bound gradient texture instead of using `color` directly
+         * @returns {GPUBindGroup} the bind group for this draw
+         */
         _bindGroup(slot, pipeline, color, useGradient = false) {
             this._uniforms(slot, color, useGradient);
             const cacheKey = `${this._uniformSlotIndex}:${pipeline === this.glyphPipeline ? `glyph:${this._gradientKey || "none"}` : "surface"}`;
@@ -710,6 +1023,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return bindGroup;
         }
 
+        /**
+         * Draw one full-viewport flat or gradient-filled quad — used for the trail
+         * overlay and the backdrop layer. If no pass is already open (called outside
+         * a `begin()`/`flush()` bracket), opens a self-contained load-preserving pass
+         * and submits it immediately afterward; otherwise draws into the currently
+         * open pass, leaving submission to the caller.
+         *
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} [gradient] - active gradient, or null for a flat fill
+         * @returns {void}
+         */
         surface(color, gradient = null) {
             if (!this.device) return;
             const standalone = !this.pass;
@@ -727,12 +1051,36 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Open a render pass that preserves existing canvas content (`loadOp: "load"`)
+         * instead of clearing it — used by {@link WebGPUGlyphRenderer#surface} when
+         * called outside a `begin()`/`flush()` bracket.
+         *
+         * @private
+         * @returns {void}
+         */
         _beginLoadedPass() {
             this._uniformSlotIndex = 0;
             this.encoder = this.device.createCommandEncoder();
             this.pass = this.encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: "load", storeOp: "store" }] });
         }
 
+        /**
+         * Append one glyph instance to the pending batch, growing the backing typed
+         * array and re-creating the GPU instance buffer (doubling capacity) if full.
+         * Instances accumulate here across many calls within a frame and are uploaded
+         * together by {@link WebGPUGlyphRenderer#flush}.
+         *
+         * @param {number} x - destination pixel x (top-left, atlas padding already subtracted by the caller)
+         * @param {number} y - destination pixel y (top-left, atlas padding already subtracted by the caller)
+         * @param {number} width - destination tile width in pixels
+         * @param {number} height - destination tile height in pixels
+         * @param {Float32Array} uv - flat atlas UV rect array, 4 floats per tile (`[u0, v0, u1, v1, ...]`)
+         * @param {number} uvOffset - index into `uv` where this glyph's 4-float UV rect starts
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {number} opacity - multiplied into the color's alpha channel
+         * @returns {void}
+         */
         push(x, y, width, height, uv, uvOffset, color, opacity) {
             if (this.count >= this.capacity) {
                 this.capacity *= 2;
@@ -748,6 +1096,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             data[offset + 8] = color[0]; data[offset + 9] = color[1]; data[offset + 10] = color[2]; data[offset + 11] = color[3] * opacity;
         }
 
+        /**
+         * Upload the accumulated glyph instance batch (if any and if an atlas is
+         * bound), draw it, then end and submit the render pass opened by
+         * {@link WebGPUGlyphRenderer#begin}. The `color` uniform passed to the glyph
+         * pipeline (`[1,1,1,1]`) is an inert placeholder — `glyphFragment` reads
+         * per-instance color from the vertex buffer, not `uniforms.color`.
+         *
+         * @param {number} width - viewport width in device pixels, stored for the next frame's uniform writes
+         * @param {number} height - viewport height in device pixels, stored for the next frame's uniform writes
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} [gradient] - active gradient applied uniformly to every glyph in the batch, or null
+         * @returns {void}
+         */
         flush(width, height, gradient = null) {
             if (!this.device || !this.pass) return;
             this.width = width; this.height = height;
@@ -766,10 +1126,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.pass = null;
         }
 
+        /**
+         * @returns {{vendor: string, renderer: string}} best-effort adapter description from `GPUAdapter.info` (falls back to placeholder strings if unavailable — `info` is not supported by every browser)
+         */
         getAdapterInfo() {
             return { vendor: "WebGPU", renderer: this.adapter?.info?.description || this.adapter?.info?.device || "available" };
         }
 
+        /**
+         * Release every GPU resource this renderer owns (atlas texture, gradient
+         * textures, pooled uniform buffers, instance/corner/fallback buffers/textures)
+         * and the device itself. Safe to call even if `_initialize()` never completed
+         * (e.g. adapter acquisition failed) — every field it touches is initialized in
+         * the constructor.
+         *
+         * @returns {void}
+         */
         destroy() {
             this._destroyed = true;
             this.atlasTexture?.destroy();
