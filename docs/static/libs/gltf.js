@@ -6,11 +6,27 @@ const GLB_BINARY = 0x004e4942;
 const COMPONENTS = Object.freeze({ SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT2: 4, MAT3: 9, MAT4: 16 });
 const COMPONENT_BYTES = Object.freeze({ 5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4 });
 
+/**
+ * Throw if a caller-supplied AbortSignal has already fired. Called between every
+ * await point in the load pipeline so a mid-flight abort stops work promptly.
+ *
+ * @param {AbortSignal} [signal] - signal to check; a no-op if omitted
+ * @returns {void}
+ * @throws {DOMException} `AbortError` if `signal.aborted` is true
+ */
 function throwIfAborted(signal) {
     if (signal?.aborted) throw new DOMException("The model load was aborted.", "AbortError");
 }
 
-/** Read one glTF scalar from an arbitrary aligned or interleaved byte offset. */
+/**
+ * Read one glTF scalar from an arbitrary aligned or interleaved byte offset.
+ *
+ * @param {DataView} view - buffer view over the accessor's backing bytes
+ * @param {number} offset - absolute byte offset of the component
+ * @param {number} type - glTF `componentType` constant (5120-5126)
+ * @returns {number} the raw component value (not yet normalized)
+ * @throws {TypeError} if `type` is not a supported glTF component type
+ */
 function readComponent(view, offset, type) {
     if (type === 5120) return view.getInt8(offset);
     if (type === 5121) return view.getUint8(offset);
@@ -21,7 +37,14 @@ function readComponent(view, offset, type) {
     throw new TypeError(`asciiam: unsupported glTF componentType ${type}`);
 }
 
-/** Convert normalized integer accessor values to their glTF floating-point range. */
+/**
+ * Convert a normalized integer accessor value to its glTF floating-point range
+ * (signed types map to [-1, 1], unsigned to [0, 1]; float types pass through).
+ *
+ * @param {number} value - raw component value from {@link readComponent}
+ * @param {number} type - glTF `componentType` constant (5120-5126)
+ * @returns {number} normalized floating-point value
+ */
 function normalizeComponent(value, type) {
     if (type === 5120) return Math.max(value / 127, -1);
     if (type === 5121) return value / 255;
@@ -31,7 +54,13 @@ function normalizeComponent(value, type) {
     return value;
 }
 
-/** Decode a data URI without adding a package or browser request. */
+/**
+ * Decode a `data:` URI without adding a package or browser request.
+ *
+ * @param {string} uri - a `data:...` URI, base64-encoded or not
+ * @returns {ArrayBuffer} decoded bytes
+ * @throws {TypeError} if the URI has no comma separator between metadata and payload
+ */
 function decodeDataUri(uri) {
     const comma = uri.indexOf(",");
     if (comma < 0) throw new TypeError("asciiam: malformed glTF data URI");
@@ -46,7 +75,19 @@ function decodeDataUri(uri) {
     return new TextEncoder().encode(decodeURIComponent(payload)).buffer;
 }
 
-/** Fetch bytes with cancellation and bounded progress notifications. */
+/**
+ * Fetch bytes with cancellation and bounded progress notifications. Falls back to a
+ * single `arrayBuffer()` read when streaming isn't available or no progress callback
+ * was given, otherwise reads the response body in chunks to report incremental progress.
+ *
+ * @async
+ * @param {string} url - resource URL to fetch
+ * @param {AbortSignal} [signal] - forwarded to `fetch()` and checked between chunks
+ * @param {(progress: {loaded: number, total: number|null}) => void} [onProgress] - called with cumulative bytes loaded and, when known from `content-length`, the total
+ * @returns {Promise<ArrayBuffer>} the fetched bytes
+ * @throws {Error} if the HTTP response is not ok
+ * @throws {DOMException} `AbortError` if `signal` fires mid-read
+ */
 async function fetchBytes(url, signal, onProgress) {
     const response = await fetch(url, { signal });
     if (!response.ok) throw new Error(`asciiam: model request failed with ${response.status}`);
@@ -75,7 +116,20 @@ async function fetchBytes(url, signal, onProgress) {
     return bytes.buffer;
 }
 
-/** Normalize a caller-resolved buffer resource without imposing a file-picker API. */
+/**
+ * Normalize a caller-resolved buffer resource (from `options.resolveUri`) into an
+ * ArrayBuffer, without imposing a file-picker API of asciiam's own — a string is
+ * fetched, a Blob/ArrayBuffer/typed array is read or copied directly.
+ *
+ * @async
+ * @param {string|Blob|ArrayBuffer|ArrayBufferView} resource - value returned by `options.resolveUri`
+ * @param {string|null} baseUrl - base URL used to resolve a string resource
+ * @param {Object} options - the active `loadGltf()` options (for `signal`/`onProgress`)
+ * @param {number} index - buffer index, forwarded to `onProgress` and error messages
+ * @returns {Promise<ArrayBuffer>} the resource's bytes
+ * @throws {TypeError} if `resource` is not a string, Blob, ArrayBuffer, or typed array
+ * @throws {DOMException} `AbortError` if `options.signal` fires mid-read
+ */
 async function readResolvedBytes(resource, baseUrl, options, index) {
     throwIfAborted(options.signal);
     let buffer;
@@ -93,7 +147,17 @@ async function readResolvedBytes(resource, baseUrl, options, index) {
     return buffer;
 }
 
-/** Parse a GLB v2 container and return its JSON plus optional first binary chunk. */
+/**
+ * Parse a GLB v2 container and return its JSON plus optional first binary chunk.
+ *
+ * @param {ArrayBuffer} buffer - complete GLB file bytes
+ * @returns {{json: Object, binary: ArrayBuffer|null}} the parsed glTF JSON document and, if present, the binary (`BIN`) chunk
+ * @throws {TypeError} if the header magic, version, or JSON chunk is missing/invalid
+ * @throws {RangeError} if the declared length or a chunk length doesn't fit the buffer
+ *
+ * @example
+ * const { json, binary } = parseGlb(await file.arrayBuffer());
+ */
 export function parseGlb(buffer) {
     const view = new DataView(buffer);
     if (view.byteLength < 20 || view.getUint32(0, true) !== GLB_MAGIC) throw new TypeError("asciiam: invalid GLB header");
@@ -124,7 +188,21 @@ export function parseGlb(buffer) {
     return { json, binary };
 }
 
-/** Resolve and load every declared glTF buffer. */
+/**
+ * Resolve and load every buffer declared in `gltf.buffers`: buffer 0 may come from
+ * an embedded GLB binary chunk, others from a `data:` URI, a caller's `resolveUri`,
+ * or a same-origin/relative fetch against `baseUrl`.
+ *
+ * @async
+ * @param {Object} gltf - parsed glTF JSON document
+ * @param {ArrayBuffer|null} binary - GLB binary chunk, if the source was a GLB container
+ * @param {string|null} baseUrl - base URL for resolving relative buffer URIs
+ * @param {Object} options - the active `loadGltf()` options (`signal`, `onProgress`, `resolveUri`)
+ * @returns {Promise<ArrayBuffer[]>} one entry per `gltf.buffers`, in order
+ * @throws {TypeError} if a buffer has no URI and no GLB chunk is available, or lacks a base URL/resolver
+ * @throws {RangeError} if a resolved buffer is shorter than its declared `byteLength`
+ * @throws {DOMException} `AbortError` if `options.signal` fires mid-load
+ */
 async function loadBuffers(gltf, binary, baseUrl, options) {
     const definitions = gltf.buffers || [];
     const buffers = new Array(definitions.length);
@@ -155,7 +233,18 @@ async function loadBuffers(gltf, binary, baseUrl, options) {
     return buffers;
 }
 
-/** Materialize one accessor, including interleaved and sparse storage. */
+/**
+ * Materialize one glTF accessor into a flat typed array, including interleaved
+ * (non-packed stride) and sparse (base + override) storage layouts.
+ *
+ * @param {Object} gltf - parsed glTF JSON document
+ * @param {ArrayBuffer[]} buffers - loaded buffers, see {@link loadBuffers}
+ * @param {number} accessorIndex - index into `gltf.accessors`
+ * @param {boolean} [forceIndices=false] - read as `Uint32Array` for index data instead of `Float32Array`, and skip normalization
+ * @returns {{values: Float32Array|Uint32Array, components: number}} the flattened values and the component count per element (1-16)
+ * @throws {RangeError} if the accessor, its bufferView, or a sparse bufferView is missing, or a sparse index exceeds the accessor's count
+ * @throws {TypeError} if the accessor's type/componentType combination is unsupported
+ */
 function readAccessor(gltf, buffers, accessorIndex, forceIndices = false) {
     const accessor = gltf.accessors?.[accessorIndex];
     if (!accessor) throw new RangeError(`asciiam: missing glTF accessor ${accessorIndex}`);
@@ -209,11 +298,24 @@ function readAccessor(gltf, buffers, accessorIndex, forceIndices = false) {
     return { values: output, components };
 }
 
+/**
+ * @returns {Float64Array} a fresh 4x4 column-major identity matrix
+ */
 function identityMatrix() {
     return new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 }
 
-/** Build a column-major node matrix from glTF matrix or TRS properties. */
+/**
+ * Build a column-major 4x4 local transform matrix from a glTF node's explicit
+ * `matrix` property, or its translation/rotation(quaternion)/scale properties.
+ *
+ * @param {Object} node - one entry from `gltf.nodes`
+ * @param {number[]} [node.matrix] - explicit column-major 4x4 matrix, takes precedence over TRS
+ * @param {number[]} [node.translation=[0,0,0]]
+ * @param {number[]} [node.rotation=[0,0,0,1]] - quaternion, xyzw
+ * @param {number[]} [node.scale=[1,1,1]]
+ * @returns {Float64Array} 4x4 column-major local transform matrix
+ */
 function nodeMatrix(node) {
     if (node.matrix) return new Float64Array(node.matrix);
     const translation = node.translation || [0, 0, 0];
@@ -232,6 +334,14 @@ function nodeMatrix(node) {
     ]);
 }
 
+/**
+ * Multiply two column-major 4x4 matrices (`a * b`), used to compose a node's
+ * transform with its parent's while walking the scene graph.
+ *
+ * @param {Float64Array} a - left-hand 4x4 column-major matrix (16 elements)
+ * @param {Float64Array} b - right-hand 4x4 column-major matrix (16 elements)
+ * @returns {Float64Array} the product, a fresh 4x4 column-major matrix
+ */
 function multiplyMatrices(a, b) {
     const output = new Float64Array(16);
     for (let col = 0; col < 4; col++) {
@@ -245,6 +355,13 @@ function multiplyMatrices(a, b) {
     return output;
 }
 
+/**
+ * Transform a flat XYZ position array by a 4x4 matrix (applying translation).
+ *
+ * @param {Float32Array} source - flat XYZ triples in local/model space
+ * @param {Float64Array} matrix - 4x4 column-major transform, see {@link nodeMatrix}
+ * @returns {Float32Array} a fresh array of transformed XYZ triples
+ */
 function transformPositions(source, matrix) {
     const output = new Float32Array(source.length);
     for (let index = 0; index < source.length; index += 3) {
@@ -256,6 +373,15 @@ function transformPositions(source, matrix) {
     return output;
 }
 
+/**
+ * Transform a flat XYZ normal array by the inverse transpose of a 4x4 matrix's
+ * upper-left 3x3 block (translation-free, so non-uniform node scale doesn't
+ * incorrectly tilt the imported surface lighting), and re-normalize each result.
+ *
+ * @param {Float32Array|null} source - flat XYZ normal triples in local/model space, or null if the primitive has none
+ * @param {Float64Array} matrix - 4x4 column-major transform, see {@link nodeMatrix}
+ * @returns {Float32Array|null} a fresh array of transformed, unit-length normals, or null if `source` was null
+ */
 function transformNormals(source, matrix) {
     if (!source) return null;
     // Normals use the inverse transpose of the world matrix so non-uniform node
@@ -289,7 +415,17 @@ function transformNormals(source, matrix) {
     return output;
 }
 
-/** Convert every core glTF primitive topology to explicit point, line, or triangle indices. */
+/**
+ * Convert every core glTF primitive topology (`mode` 0-6: points, lines, line loop,
+ * line strip, triangles, triangle strip, triangle fan) to explicit point, line, or
+ * triangle indices — asciiam's mesh pipeline only understands those three.
+ *
+ * @param {number|undefined} mode - glTF primitive `mode`; `undefined` defaults to 4 (triangles)
+ * @param {Uint32Array|null} source - explicit index accessor values, or null to use vertex order
+ * @param {number} vertexCount - vertex count, used to synthesize sequential indices when `source` is null
+ * @returns {{primitive: "points"|"lines"|"triangles", indices: Uint32Array}} normalized topology and indices
+ * @throws {TypeError} if `mode` is not one of the 7 core glTF primitive modes
+ */
 function convertPrimitiveIndices(mode, source, vertexCount) {
     const input = source || Uint32Array.from({ length: vertexCount }, (_, index) => index);
     if (mode === undefined || mode === 4) return { primitive: "triangles", indices: input };
@@ -318,7 +454,22 @@ function convertPrimitiveIndices(mode, source, vertexCount) {
     throw new TypeError(`asciiam: unsupported glTF primitive mode ${mode}`);
 }
 
-/** Flatten the selected glTF scene into one normalized mesh topology. */
+/**
+ * Flatten the selected glTF scene (walking its node hierarchy, applying each node's
+ * world transform, and enforcing vertex/primitive limits as it goes) into one
+ * normalized mesh. Every primitive in the scene must share the same topology
+ * (points, lines, or triangles) since {@link normalizeMeshData} models one mesh as
+ * a single primitive type.
+ *
+ * @param {Object} gltf - parsed glTF JSON document
+ * @param {ArrayBuffer[]} buffers - loaded buffers, see {@link loadBuffers}
+ * @param {Object} options - the active `loadGltf()` options
+ * @param {number} [options.scene] - scene index to flatten; defaults to `gltf.scene`, then 0
+ * @param {Object} [options.limits] - forwarded to {@link normalizeMeshData}
+ * @returns {Readonly<Object>} normalized mesh, see {@link normalizeMeshData}
+ * @throws {RangeError} if the scene, a referenced node, or a referenced mesh is missing, or vertex/primitive limits are exceeded
+ * @throws {TypeError} if the node hierarchy contains a cycle, a primitive is missing POSITION, an attribute has the wrong accessor type, or primitives mix topologies
+ */
 function buildSceneMesh(gltf, buffers, options) {
     const sceneIndex = options.scene ?? gltf.scene ?? 0;
     const scene = gltf.scenes?.[sceneIndex];
@@ -430,7 +581,21 @@ function buildSceneMesh(gltf, buffers, options) {
 
 const gltfDecoders = new Map();
 
-/** Register a custom decoder callback for a compressed glTF extension (e.g. KHR_draco_mesh_compression, EXT_meshopt_compression). */
+/**
+ * Register a custom decoder callback for a compressed glTF extension (e.g.
+ * `KHR_draco_mesh_compression`, `EXT_meshopt_compression`). asciiam ships with no
+ * decoders of its own — an asset declaring a required extension with no matching
+ * registered decoder is rejected by {@link validateDocumentHeader} before any
+ * buffer is fetched.
+ *
+ * @param {string} name - the glTF extension name as it appears in `extensionsUsed`/`extensionsRequired`
+ * @param {Function} decoderFn - decoder callback (shape defined by the extension/caller, not enforced here)
+ * @returns {void}
+ * @throws {TypeError} if `name` isn't a string or `decoderFn` isn't a function
+ *
+ * @example
+ * registerGltfDecoder('KHR_draco_mesh_compression', myDracoDecoder);
+ */
 export function registerGltfDecoder(name, decoderFn) {
     if (typeof name !== "string" || typeof decoderFn !== "function") {
         throw new TypeError("asciiam: registerGltfDecoder requires an extension name string and a decoder function");
@@ -438,12 +603,22 @@ export function registerGltfDecoder(name, decoderFn) {
     gltfDecoders.set(name, decoderFn);
 }
 
-/** Returns list of registered glTF extension decoders. */
+/**
+ * @returns {string[]} names of every glTF extension with a registered decoder, see {@link registerGltfDecoder}
+ */
 export function getGltfDecoders() {
     return Array.from(gltfDecoders.keys());
 }
 
-/** Reject incompatible documents before fetching buffers or allocating accessor arrays. */
+/**
+ * Reject incompatible documents before fetching buffers or allocating accessor
+ * arrays: only glTF 2.x assets are supported, and every extension the document
+ * marks as required must have a decoder registered via {@link registerGltfDecoder}.
+ *
+ * @param {Object} gltf - parsed glTF JSON document
+ * @returns {void}
+ * @throws {TypeError} if the asset version isn't 2.x, or a required extension has no registered decoder
+ */
 function validateDocumentHeader(gltf) {
     if (gltf.asset?.version !== "2.0" && !String(gltf.asset?.minVersion || "").startsWith("2.")) {
         throw new TypeError("asciiam: only glTF 2.x assets are supported");
@@ -456,7 +631,30 @@ function validateDocumentHeader(gltf) {
     }
 }
 
-/** Load core, uncompressed glTF 2.0 or GLB v2 into asciiam MeshData. */
+/**
+ * Load core, uncompressed glTF 2.0 or GLB v2 into an asciiam-normalized mesh — the
+ * same shape {@link normalizeMeshData} produces, ready for `setMesh()`/`setModel()`.
+ * Accepts a URL, a `Blob`, a raw byte buffer, or an already-parsed glTF JSON object;
+ * source type is auto-detected by magic bytes/asset shape.
+ *
+ * @async
+ * @param {string|Blob|ArrayBuffer|ArrayBufferView|Object} source - model source; a string is fetched as a URL
+ * @param {Object} [options]
+ * @param {AbortSignal} [options.signal] - aborts an in-flight load; checked between every await
+ * @param {(progress: {loaded: number, total: number|null, buffer?: number}) => void} [options.onProgress] - called with cumulative byte progress per buffer fetched
+ * @param {string} [options.baseUrl] - base URL for resolving relative buffer/image URIs; defaults to the document/fetched-source URL
+ * @param {(uri: string, context: {kind: string, index: number, baseUrl: string|null}) => (string|Blob|ArrayBuffer|ArrayBufferView|null|undefined|Promise<*>)} [options.resolveUri] - intercepts buffer URI resolution (e.g. to serve from a bundler-managed asset map) before falling back to a relative fetch
+ * @param {number} [options.scene] - scene index to load; defaults to the glTF document's default scene, then 0
+ * @param {Object} [options.limits] - forwarded to {@link normalizeMeshData} (`maxVertices`, `maxPrimitives`)
+ * @returns {Promise<Readonly<Object>>} normalized mesh, see {@link normalizeMeshData}
+ * @throws {TypeError} if the source type, glTF version, a required extension, or the document structure is unsupported/invalid
+ * @throws {RangeError} if the document exceeds `options.limits`, or references a missing scene/node/mesh/accessor/bufferView
+ * @throws {DOMException} `AbortError` if `options.signal` fires mid-load
+ *
+ * @example
+ * const mesh = await loadGltf('/models/bunny.glb', { limits: { maxVertices: 50000 } });
+ * anim.setMesh(mesh);
+ */
 export async function loadGltf(source, options = {}) {
     throwIfAborted(options.signal);
     let gltf;

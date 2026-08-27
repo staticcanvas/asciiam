@@ -1,5 +1,19 @@
-/*!
- * asciiam — dependency-free canvas engine for animated ASCII backgrounds.
+/*            ⢎⡑ ⡎⠑ ⢀⣀ ⠄ ⡇  ⢀⣀ ⣀⡀ ⡞⠁
+ * ⠉⠉ ⠉⠉ ⠉⠉   ⠣⠜ ⠣⠜ ⠣⠤ ⠇ ⠣⠭ ⠣⠤ ⡸⠑ ⠭⠕
+ *
+ * asciiam — dependency-free canvas engine for animated ASCII backgrounds
+ * @module asciiam
+ * @version 0.26.0
+ * @author  Garvey K. Snow
+ * @license MIT
+ * @requires ./mesh.js for 3D primitive generation and cell rasterization
+ * @requires ./gltf.js for glTF/GLB model loading
+ *
+ * entry point. resolves a presentation backend (WebGPU, then WebGL2, then
+ * Canvas 2D) and drives one shared requestAnimationFrame scheduler across every
+ * running instance. see docs/architecture/webgpu-feasibility.md for the
+ * multi-backend design and docs/content/guides/rendering.md for the renderer
+ * fallback contract.
  */
 
 import {
@@ -22,12 +36,27 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     const STATS_HISTORY_LENGTH = 24;
     const SPARKLINE_LEVELS = "▁▂▃▄▅▆▇█";
 
-    /** Cheap synchronous gate used only to decide whether async WebGPU setup is worth attempting. */
+    /**
+     * Cheap synchronous gate used only to decide whether attempting async WebGPU
+     * setup is worth it — a real device may still fail to initialize later, this
+     * only rules out environments with no chance of succeeding.
+     *
+     * @returns {boolean} true if a secure context with `navigator.gpu` is present
+     */
     function canUseWebGPU() {
         return globalThis.isSecureContext === true && !!globalThis.navigator?.gpu;
     }
 
-    /** Formats a fixed-size numeric ring without retaining DOM or chart objects. */
+    /**
+     * Formats a fixed-size numeric ring buffer into a Unicode block-character
+     * sparkline, without retaining DOM or chart objects.
+     *
+     * @param {number[]} values - ring buffer of sampled values
+     * @param {number} count - number of most-recent samples to render
+     * @param {number} cursor - index of the next write position in `values` (used to read oldest-first once the ring has wrapped)
+     * @param {number} ceiling - value that maps to the tallest sparkline level
+     * @returns {string} a `count`-character string of block glyphs, or `""` if `count`/`ceiling` are non-positive
+     */
     function formatSparkline(values, count, cursor, ceiling) {
         if (!count || !(ceiling > 0)) return "";
         let chart = "";
@@ -41,8 +70,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision.
-     * Works with 2D canvas context or creates a temporary offscreen measurement canvas.
+     * Measures font metrics (charW, charH, ascent, descent, baselineOffset) with
+     * subpixel precision using `CanvasRenderingContext2D.measureText()`'s bounding-box
+     * metrics where available. Falls back to fixed-ratio estimates (`0.6`/`1.2` of
+     * font size) when no 2D context is supplied — e.g. in a headless environment.
+     *
+     * @param {CanvasRenderingContext2D|string} [target] - a 2D context to measure with, or (if a string) the font family, shifting the other params
+     * @param {string} [fontFamily="monospace"] - CSS font family; ignored if `target` is a string
+     * @param {number} [fontSize=14] - font size in pixels; ignored if `target` is a string and `fontFamily` is a number
+     * @returns {{charW: number, charH: number, ascent: number, descent: number, baselineOffset: number}} measured or estimated metrics
+     *
+     * @example
+     * const metrics = calibrateFontMetrics(ctx, 'monospace', 16);
      */
     function calibrateFontMetrics(target, fontFamily = "monospace", fontSize = 14) {
         const ctx = target && typeof target.measureText === "function" ? target : null;
@@ -85,7 +124,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         };
     }
 
-    /** Headless cell frame generator for Node.js/Bun/Deno SSR or CLI rasterization. */
+    /**
+     * Headless cell frame generator for Node.js/Bun/Deno SSR or CLI rasterization —
+     * computes one frame of a built-in procedural mode as a plain grid, with no
+     * canvas, DOM, or animation loop involved.
+     *
+     * @param {Object} [options]
+     * @param {number} [options.cols=80] - grid column count
+     * @param {number} [options.rows=24] - grid row count
+     * @param {string} [options.mode="matrix"] - one of the built-in procedural field modes (`wave`, `plasma`, `vortex`, `fire`, `snow`, `matrix`, `starfield`, `ripple`, `sparkle`, `orbit`); unrecognized values fall back to a generic sine field
+     * @param {number} [options.time=0] - simulation time in seconds
+     * @param {string} [options.charSet="ascii-extended"] - a literal character ramp, or a key into `asciiam.CHARACTER_SETS`
+     * @param {boolean} [options.invert=false] - invert the computed intensity before mapping to a character
+     * @param {string} [options.color="#00ff66"] - base hex color (3 or 6 hex digits) scaled by each cell's intensity
+     * @returns {{char: string, r: number, g: number, b: number, a: number}[][]} a `rows`-length array of `cols`-length cell arrays
+     */
     function renderFrame(options = {}) {
         const cols = Math.max(1, options.cols || 80);
         const rows = Math.max(1, options.rows || 24);
@@ -180,7 +233,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         return grid;
     }
 
-    /** Headless multi-line ASCII string generator for SSR, terminal, or CLI rendering. */
+    /**
+     * Headless multi-line ASCII string generator for SSR, terminal, or CLI rendering.
+     * Builds on {@link renderFrame}, flattening its cell grid into text (optionally
+     * with ANSI 24-bit color escape codes).
+     *
+     * @param {Object} [options] - same options as {@link renderFrame}, plus:
+     * @param {boolean} [options.ansi=false] - wrap each character in a 24-bit ANSI color escape sequence
+     * @returns {string} newline-joined rows of characters
+     *
+     * @example
+     * console.log(renderToString({ mode: 'plasma', cols: 60, rows: 20, ansi: true }));
+     */
     function renderToString(options = {}) {
         const grid = renderFrame(options);
         const ansi = !!options.ansi;
@@ -196,10 +260,25 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Private WebGL2 presentation backend.
-     * Animation state remains in asciiam; this class owns GPU resources only.
+     * WebGL2GlyphRenderer
+     * ─────────────────────────────────────────────
+     * Private WebGL2 presentation backend. Batches every glyph into one instanced
+     * quad draw call per frame via a shared atlas texture; animation state remains
+     * in the owning `asciiam` instance — this class owns GPU resources only (atlas
+     * texture, gradient textures, instance buffer, shader programs).
+     *
+     * @class
+     * @private
+     * @since 0.9.0
      */
     class WebGL2GlyphRenderer {
+        /**
+         * @param {HTMLCanvasElement} canvas - canvas to acquire a `webgl2` context from
+         * @param {Object} [options]
+         * @param {boolean} [options.desynchronized=true] - passed through to `getContext()`'s `desynchronized` hint
+         * @param {"high-performance"|"low-power"|"default"} [options.powerPreference="high-performance"] - passed through to `getContext()`
+         * @throws {Error} if a WebGL2 context could not be acquired
+         */
         constructor(canvas, options = {}) {
             this.canvas = canvas;
             this.gl = canvas.getContext("webgl2", {
@@ -222,6 +301,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._initialize();
         }
 
+        /**
+         * Compile one shader stage.
+         *
+         * @private
+         * @param {number} type - `gl.VERTEX_SHADER` or `gl.FRAGMENT_SHADER`
+         * @param {string} source - GLSL ES 3.00 source
+         * @returns {WebGLShader} the compiled shader
+         * @throws {Error} if compilation fails
+         */
         _shader(type, source) {
             const gl = this.gl;
             const shader = gl.createShader(type);
@@ -231,6 +319,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return shader;
         }
 
+        /**
+         * Compile and link a vertex/fragment shader pair into a program.
+         *
+         * @private
+         * @param {string} vertex - vertex shader GLSL ES 3.00 source
+         * @param {string} fragment - fragment shader GLSL ES 3.00 source
+         * @returns {WebGLProgram} the linked program
+         * @throws {Error} if either shader fails to compile or the program fails to link
+         */
         _program(vertex, fragment) {
             const gl = this.gl;
             const program = gl.createProgram();
@@ -241,6 +338,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return program;
         }
 
+        /**
+         * Compile the glyph and surface shader programs, set up vertex array objects
+         * and buffers (a static unit-quad corner buffer shared by both, and the
+         * per-instance rect/uv/color buffer for glyphs), and enable premultiplied-alpha
+         * blending. Called once from the constructor.
+         *
+         * @private
+         * @returns {void}
+         * @throws {Error} if any shader/program fails to compile or link
+         */
         _initialize() {
             const gl = this.gl;
             this.program = this._program(`#version 300 es
@@ -335,10 +442,26 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         }
 
+        /**
+         * Update the GL viewport to match the backing canvas size.
+         *
+         * @param {number} width - drawing-buffer width in device pixels
+         * @param {number} height - drawing-buffer height in device pixels
+         * @returns {void}
+         */
         resize(width, height) {
             this.gl.viewport(0, 0, width, height);
         }
 
+        /**
+         * Upload a new glyph atlas texture, replacing the current one. A no-op if
+         * `key` already matches the currently-bound atlas (cache-key equality check,
+         * not a pixel comparison).
+         *
+         * @param {CanvasImageSource} source - the atlas canvas/image to upload
+         * @param {string} key - opaque cache key identifying this atlas's content
+         * @returns {void}
+         */
         setAtlas(source, key) {
             if (key === this.atlasKey) return;
             const gl = this.gl;
@@ -353,10 +476,23 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.atlasKey = key;
         }
 
+        /**
+         * @param {string} key - gradient cache key, see {@link WebGL2GlyphRenderer#setGradient}
+         * @returns {boolean} true if a gradient texture is already cached under `key`
+         */
         hasGradient(key) {
             return this.gradientTextures.has(key);
         }
 
+        /**
+         * Upload a gradient strip texture, or return the already-cached one for `key`.
+         * The cache is capped at 8 entries with FIFO (insertion-order) eviction —
+         * least-recently-*inserted*, not least-recently-*used*, to keep this cheap.
+         *
+         * @param {CanvasImageSource|null} source - a 1D gradient strip (e.g. a 256x1 canvas); ignored if `key` is already cached
+         * @param {string} key - opaque cache key identifying this gradient's content (and, for animated gradients, its current time step)
+         * @returns {WebGLTexture|null} the gradient texture, or null if `source` was falsy and `key` wasn't already cached
+         */
         setGradient(source, key) {
             if (!source || this.gradientTextures.has(key)) return this.gradientTextures.get(key) || null;
             const gl = this.gl;
@@ -376,6 +512,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return texture;
         }
 
+        /**
+         * Begin a frame: reset the glyph instance count and either clear the canvas
+         * to `clearColor` or preserve its current contents (for the trail-persistence
+         * effect, which composites a low-alpha overlay instead of clearing).
+         *
+         * @param {number[]} clearColor - `[r, g, b, a]` in 0-1, used only when `preserve` is false
+         * @param {boolean} [preserve=false] - skip the clear, leaving prior frame content in the color buffer
+         * @returns {void}
+         */
         begin(clearColor, preserve = false) {
             const gl = this.gl;
             this.count = 0;
@@ -385,6 +530,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Draw one full-viewport flat or gradient-filled quad — used for the trail
+         * overlay and the backdrop layer, neither of which involve glyph geometry.
+         *
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} [gradient] - active gradient, or null for a flat fill
+         * @returns {void}
+         */
         surface(color, gradient = null) {
             const gl = this.gl;
             gl.useProgram(this.surfaceProgram);
@@ -394,6 +547,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
+        /**
+         * Append one glyph instance to the pending batch, growing the backing typed
+         * array (doubling capacity) if it's full. Instances accumulate here across
+         * many calls within a frame and are uploaded together by {@link WebGL2GlyphRenderer#flush}.
+         *
+         * @param {number} x - destination pixel x (top-left, atlas padding already subtracted by the caller)
+         * @param {number} y - destination pixel y (top-left, atlas padding already subtracted by the caller)
+         * @param {number} width - destination tile width in pixels
+         * @param {number} height - destination tile height in pixels
+         * @param {Float32Array} uv - flat atlas UV rect array, 4 floats per tile (`[u0, v0, u1, v1, ...]`)
+         * @param {number} uvOffset - index into `uv` where this glyph's 4-float UV rect starts
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {number} opacity - multiplied into the color's alpha channel
+         * @returns {void}
+         */
         push(x, y, width, height, uv, uvOffset, color, opacity) {
             if (this.count >= this.capacity) {
                 this.capacity *= 2;
@@ -417,6 +585,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             data[offset + 11] = color[3] * opacity;
         }
 
+        /**
+         * Bind the active gradient (if any) to a program's `u_use_gradient`/
+         * `u_gradient_type`/`u_gradient_angle`/`u_gradient` uniforms. Shared by both
+         * the glyph and surface programs.
+         *
+         * @private
+         * @param {WebGLProgram} program - program whose uniforms should be set (must declare the gradient uniform set)
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} gradient - active gradient, or null to disable it for this draw
+         * @returns {void}
+         */
         _gradientUniforms(program, gradient) {
             const gl = this.gl;
             const texture = gradient ? this.gradientTextures.get(gradient.textureKey) : null;
@@ -431,6 +609,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Upload the accumulated glyph instance batch and draw it in one instanced
+         * call. A no-op if nothing was pushed this frame.
+         *
+         * @param {number} width - viewport width in device pixels, for NDC conversion in the shader
+         * @param {number} height - viewport height in device pixels, for NDC conversion in the shader
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} [gradient] - active gradient applied uniformly to every glyph in the batch, or null
+         * @returns {void}
+         */
         flush(width, height, gradient = null) {
             if (!this.count) return;
             const gl = this.gl;
@@ -449,7 +636,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
         }
 
-        /** Reads adapter strings once, only for explicitly enabled diagnostics. */
+        /**
+         * Reads adapter strings once, only for explicitly enabled diagnostics
+         * (`showStats`/`extendedStats`); caches the result for subsequent calls since
+         * `WEBGL_debug_renderer_info` queries are not free and the answer can't change
+         * mid-session. Falls back to generic `VENDOR`/`RENDERER` parameters, then to
+         * placeholder strings, if the debug extension or query itself is unavailable
+         * (privacy controls commonly reject `WEBGL_debug_renderer_info`).
+         *
+         * @returns {{vendor: string, renderer: string}} best-effort adapter description
+         */
         getAdapterInfo() {
             if (this._adapterInfo) return this._adapterInfo;
             const gl = this.gl;
@@ -471,6 +667,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._adapterInfo;
         }
 
+        /**
+         * Release every GPU resource this renderer owns (atlas texture, gradient
+         * textures, buffers, shader programs). Does not lose the WebGL context itself.
+         *
+         * @returns {void}
+         */
         destroy() {
             const gl = this.gl;
             if (this.atlasTexture) gl.deleteTexture(this.atlasTexture);
@@ -482,11 +684,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Experimental WebGPU presentation backend.
-     * The instance still resolves animation cells; this class owns only the
-     * configured canvas, atlas, instance buffer, and GPU command submission.
+     * WebGPUGlyphRenderer
+     * ─────────────────────────────────────────────
+     * Experimental WebGPU presentation backend. The owning `asciiam` instance still
+     * resolves animation cells; this class owns only the configured canvas, atlas,
+     * instance buffer, and GPU command submission. Initialization is asynchronous
+     * (`ready`, a Promise resolving to `this`) — callers must not draw until it
+     * settles, since adapter/device acquisition can fail or simply take time.
+     *
+     * @class
+     * @private
+     * @since 0.24.0
      */
     class WebGPUGlyphRenderer {
+        /**
+         * @param {HTMLCanvasElement} canvas - canvas to acquire a `webgpu` context from
+         * @param {Object} [options]
+         * @param {"high-performance"|"low-power"|"default"} [options.powerPreference="high-performance"] - forwarded to `requestAdapter()`
+         */
         constructor(canvas, options = {}) {
             this.canvas = canvas;
             this.capacity = 4096;
@@ -503,6 +718,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.ready = this._initialize(options);
         }
 
+        /**
+         * Acquire a GPU adapter/device and configure the canvas context. Sets
+         * `this.device`/`this.adapter`/`this.context`/`this.format` and builds the
+         * render pipelines on success. Assigned to `this.ready` by the constructor;
+         * callers await that rather than calling this directly.
+         *
+         * @private
+         * @async
+         * @param {Object} options - see constructor options
+         * @returns {Promise<WebGPUGlyphRenderer>} resolves to `this` once ready to draw
+         * @throws {Error} if not in a secure context, no adapter/device/context is available
+         */
         async _initialize(options) {
             if (!globalThis.isSecureContext || !globalThis.navigator?.gpu) throw new Error("WebGPU unavailable: secure context or navigator.gpu missing");
             const adapter = await globalThis.navigator.gpu.requestAdapter({ powerPreference: options.powerPreference || "high-performance" });
@@ -524,6 +751,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
+        /**
+         * Compile the shared WGSL shader module, build the glyph and surface render
+         * pipelines (premultiplied-alpha "one, one-minus-src-alpha" blending, matching
+         * the WebGL2 backend), and allocate the static corner/instance/sampler/1x1
+         * fallback-texture GPU resources. Called once from {@link WebGPUGlyphRenderer#_initialize}.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildPipelines() {
             const device = this.device;
             const shader = device.createShaderModule({ code: `
@@ -611,6 +847,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             device.queue.writeTexture({ texture: this._emptyTexture }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
         }
 
+        /**
+         * Record the target presentation size. A no-op while the device isn't ready
+         * yet — {@link WebGPUGlyphRenderer#_initialize} sets `_resizePending` in that
+         * case so the caller can detect a resize is still owed once it settles.
+         *
+         * @param {number} width - drawing-buffer width in device pixels
+         * @param {number} height - drawing-buffer height in device pixels
+         * @returns {void}
+         */
         resize(width, height) {
             if (!this.device) return;
             this.width = width;
@@ -618,6 +863,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._resizePending = false;
         }
 
+        /**
+         * Upload a new glyph atlas texture, replacing the current one, and clear the
+         * bind-group cache (every cached glyph bind group referenced the old atlas
+         * view). A no-op while the device isn't ready, or if `key` already matches the
+         * currently-bound atlas.
+         *
+         * @param {CanvasImageSource} source - the atlas canvas/image to upload
+         * @param {string} key - opaque cache key identifying this atlas's content
+         * @returns {void}
+         */
         setAtlas(source, key) {
             if (!this.device || key === this.atlasKey) return;
             this.atlasTexture?.destroy();
@@ -629,8 +884,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.bindGroups.clear();
         }
 
+        /**
+         * @param {string} key - gradient cache key, see {@link WebGPUGlyphRenderer#setGradient}
+         * @returns {boolean} true if a gradient texture is already cached under `key`
+         */
         hasGradient(key) { return this.gradientSources.has(key); }
 
+        /**
+         * Upload a gradient strip texture, or reuse the already-cached one for `key`.
+         * The texture (and its matching view) cache is capped at 8 entries with FIFO
+         * eviction; the bind-group cache is only invalidated when an eviction actually
+         * happens here, not on every new key — an animated gradient (a new key roughly
+         * every 50ms) would otherwise defeat WebGPU bind-group caching for the whole
+         * scene on every frame.
+         *
+         * @param {CanvasImageSource|null} source - a 1D gradient strip (e.g. a 256x1 canvas); ignored if `key` is already cached or the device isn't ready
+         * @param {string} key - opaque cache key identifying this gradient's content (and, for animated gradients, its current time step)
+         * @returns {void}
+         */
         setGradient(source, key) {
             if (!this.device || !source || this.gradientSources.has(key)) return;
             const textureUsage = globalThis.GPUTextureUsage;
@@ -654,6 +925,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Begin a frame: reset the glyph instance count and uniform-slot pool index,
+         * open a command encoder and render pass, and either clear the canvas to
+         * `clearColor` or preserve its current contents (for the trail-persistence
+         * effect). A no-op while the device isn't ready.
+         *
+         * @param {number[]} clearColor - `[r, g, b, a]` in 0-1, used only when `preserve` is false
+         * @param {boolean} [preserve=false] - skip the clear, leaving prior frame content (`loadOp: "load"` instead of `"clear"`)
+         * @returns {void}
+         */
         begin(clearColor, preserve = false) {
             if (!this.device) return;
             this.count = 0;
@@ -662,14 +943,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.pass = this.encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), clearValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: clearColor[3] }, loadOp: preserve ? "load" : "clear", storeOp: "store" }] });
         }
 
-        // Returns a distinct { buffer } for each draw call within one frame (index reset
-        // by begin()/_beginLoadedPass()), growing the pool lazily and reusing it across
-        // frames. Every draw recorded before queue.submit() must read its *own* uniform
-        // buffer — writeBuffer() calls made before submit() all land before any of that
-        // submission's draws execute, so draws that shared one buffer would all read
-        // whichever draw's uniforms were written *last*, not their own (this is how the
-        // trail/backdrop "surface" quads used to render solid white: flush()'s own,
-        // unrelated glyph-pipeline uniform write of [1,1,1,1] always happened last).
+        /**
+         * Returns a distinct `{ buffer }` for each draw call within one frame (index
+         * reset by {@link WebGPUGlyphRenderer#begin}/{@link WebGPUGlyphRenderer#_beginLoadedPass}),
+         * growing the pool lazily and reusing it across frames. Every draw recorded
+         * before `queue.submit()` must read its *own* uniform buffer —
+         * `writeBuffer()` calls made before `submit()` all land before any of that
+         * submission's draws execute, so draws that shared one buffer would all read
+         * whichever draw's uniforms were written *last*, not their own (this is how the
+         * trail/backdrop "surface" quads used to render solid white: `flush()`'s own,
+         * unrelated glyph-pipeline uniform write of `[1,1,1,1]` always happened last).
+         *
+         * @private
+         * @returns {{buffer: GPUBuffer}} the next pooled uniform slot for this frame
+         */
         _acquireUniformSlot() {
             let slot = this._uniformSlots[this._uniformSlotIndex];
             if (!slot) {
@@ -681,6 +968,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return slot;
         }
 
+        /**
+         * Write one draw call's uniform values (viewport, color, gradient flag) into a
+         * pooled slot's buffer. WGSL struct layout: `viewport` (vec2f, offset 0) is
+         * padded to 16 bytes so `color` (vec4f) can start at its required 16-byte
+         * alignment (offset 4 in float units), and the struct itself rounds up to a
+         * 16-byte multiple (48 bytes / 12 floats) to hold trailing `useGradient` (f32,
+         * offset 8).
+         *
+         * @private
+         * @param {{buffer: GPUBuffer}} slot - target slot, see {@link WebGPUGlyphRenderer#_acquireUniformSlot}
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {boolean} [useGradient=false] - whether the shader should sample the bound gradient texture instead of using `color` directly
+         * @returns {void}
+         */
         _uniforms(slot, color, useGradient = false) {
             // WGSL struct layout: viewport (vec2f, offset 0) is padded to 16 bytes so
             // color (vec4f) can start at its required 16-byte alignment (offset 4 in
@@ -693,6 +994,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.device.queue.writeBuffer(slot.buffer, 0, values);
         }
 
+        /**
+         * Write `slot`'s uniforms, then return a bind group referencing it — cached
+         * per (uniform-slot ordinal position, pipeline, gradient key) so a repeat draw
+         * shape within a frame doesn't re-create a `GPUBindGroup` every time.
+         *
+         * @private
+         * @param {{buffer: GPUBuffer}} slot - target slot, see {@link WebGPUGlyphRenderer#_acquireUniformSlot}
+         * @param {GPURenderPipeline} pipeline - `this.glyphPipeline` or `this.surfacePipeline`; determines which bind group layout/entries are built
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {boolean} [useGradient=false] - whether the shader should sample the bound gradient texture instead of using `color` directly
+         * @returns {GPUBindGroup} the bind group for this draw
+         */
         _bindGroup(slot, pipeline, color, useGradient = false) {
             this._uniforms(slot, color, useGradient);
             const cacheKey = `${this._uniformSlotIndex}:${pipeline === this.glyphPipeline ? `glyph:${this._gradientKey || "none"}` : "surface"}`;
@@ -710,6 +1023,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return bindGroup;
         }
 
+        /**
+         * Draw one full-viewport flat or gradient-filled quad — used for the trail
+         * overlay and the backdrop layer. If no pass is already open (called outside
+         * a `begin()`/`flush()` bracket), opens a self-contained load-preserving pass
+         * and submits it immediately afterward; otherwise draws into the currently
+         * open pass, leaving submission to the caller.
+         *
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} [gradient] - active gradient, or null for a flat fill
+         * @returns {void}
+         */
         surface(color, gradient = null) {
             if (!this.device) return;
             const standalone = !this.pass;
@@ -727,12 +1051,36 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Open a render pass that preserves existing canvas content (`loadOp: "load"`)
+         * instead of clearing it — used by {@link WebGPUGlyphRenderer#surface} when
+         * called outside a `begin()`/`flush()` bracket.
+         *
+         * @private
+         * @returns {void}
+         */
         _beginLoadedPass() {
             this._uniformSlotIndex = 0;
             this.encoder = this.device.createCommandEncoder();
             this.pass = this.encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: "load", storeOp: "store" }] });
         }
 
+        /**
+         * Append one glyph instance to the pending batch, growing the backing typed
+         * array and re-creating the GPU instance buffer (doubling capacity) if full.
+         * Instances accumulate here across many calls within a frame and are uploaded
+         * together by {@link WebGPUGlyphRenderer#flush}.
+         *
+         * @param {number} x - destination pixel x (top-left, atlas padding already subtracted by the caller)
+         * @param {number} y - destination pixel y (top-left, atlas padding already subtracted by the caller)
+         * @param {number} width - destination tile width in pixels
+         * @param {number} height - destination tile height in pixels
+         * @param {Float32Array} uv - flat atlas UV rect array, 4 floats per tile (`[u0, v0, u1, v1, ...]`)
+         * @param {number} uvOffset - index into `uv` where this glyph's 4-float UV rect starts
+         * @param {number[]} color - `[r, g, b, a]` in 0-1
+         * @param {number} opacity - multiplied into the color's alpha channel
+         * @returns {void}
+         */
         push(x, y, width, height, uv, uvOffset, color, opacity) {
             if (this.count >= this.capacity) {
                 this.capacity *= 2;
@@ -748,6 +1096,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             data[offset + 8] = color[0]; data[offset + 9] = color[1]; data[offset + 10] = color[2]; data[offset + 11] = color[3] * opacity;
         }
 
+        /**
+         * Upload the accumulated glyph instance batch (if any and if an atlas is
+         * bound), draw it, then end and submit the render pass opened by
+         * {@link WebGPUGlyphRenderer#begin}. The `color` uniform passed to the glyph
+         * pipeline (`[1,1,1,1]`) is an inert placeholder — `glyphFragment` reads
+         * per-instance color from the vertex buffer, not `uniforms.color`.
+         *
+         * @param {number} width - viewport width in device pixels, stored for the next frame's uniform writes
+         * @param {number} height - viewport height in device pixels, stored for the next frame's uniform writes
+         * @param {{textureKey: string, type?: "linear"|"radial", angle?: number}|null} [gradient] - active gradient applied uniformly to every glyph in the batch, or null
+         * @returns {void}
+         */
         flush(width, height, gradient = null) {
             if (!this.device || !this.pass) return;
             this.width = width; this.height = height;
@@ -766,10 +1126,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.pass = null;
         }
 
+        /**
+         * @returns {{vendor: string, renderer: string}} best-effort adapter description from `GPUAdapter.info` (falls back to placeholder strings if unavailable — `info` is not supported by every browser)
+         */
         getAdapterInfo() {
             return { vendor: "WebGPU", renderer: this.adapter?.info?.description || this.adapter?.info?.device || "available" };
         }
 
+        /**
+         * Release every GPU resource this renderer owns (atlas texture, gradient
+         * textures, pooled uniform buffers, instance/corner/fallback buffers/textures)
+         * and the device itself. Safe to call even if `_initialize()` never completed
+         * (e.g. adapter acquisition failed) — every field it touches is initialized in
+         * the constructor.
+         *
+         * @returns {void}
+         */
         destroy() {
             this._destroyed = true;
             this.atlasTexture?.destroy();
@@ -787,8 +1159,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Owns one ASCII animation surface, its renderer, timing, image source, and
-     * optional sequence state. Running instances share a frame scheduler.
+     * asciiam
+     * ─────────────────────────────────────────────
+     * Owns one ASCII animation surface, its renderer, timing, image/mesh source,
+     * and optional sequence state. Resolves a presentation backend (WebGPU, then
+     * WebGL2, then Canvas 2D) per instance and shares one requestAnimationFrame
+     * scheduler across every running instance on the page. Degrades safely when
+     * canvas or a 2D context is unsupported — most public methods become no-ops
+     * rather than throwing.
+     *
+     * @class
+     * @since 0.1.0
+     *
+     * @example
+     * const anim = new asciiam('#hero', { mode: 'wave', color: '#4FA8FF' });
+     * anim.start();
      */
     class asciiam {
         static QUALITY = {
@@ -1009,23 +1394,64 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         static _waveBaseLayerLimit = 8;
         static _activeInstances = new Set();
         static _schedulerRaf = null;
-        /** Ensures all running instances are served by one animation-frame callback. */
+        /**
+         * Ensures all running instances are served by one shared `requestAnimationFrame`
+         * callback rather than one RAF loop per instance. A no-op if a frame is already
+         * scheduled or no instance is currently running.
+         *
+         * @private
+         * @static
+         * @returns {void}
+         */
         static _scheduleFrame() {
             if (asciiam._schedulerRaf !== null || !asciiam._activeInstances.size) return;
             asciiam._schedulerRaf = requestAnimationFrame(asciiam._tickFrame);
         }
-        /** Advances every active instance, then schedules the next shared frame. */
+        /**
+         * The shared scheduler's `requestAnimationFrame` callback: advances every
+         * active instance for this tick, then reschedules the next shared frame.
+         *
+         * @private
+         * @static
+         * @param {DOMHighResTimeStamp} t - timestamp supplied by `requestAnimationFrame`
+         * @returns {void}
+         */
         static _tickFrame(t) {
             asciiam._schedulerRaf = null;
             for (const instance of asciiam._activeInstances) instance._runFrame(t);
             asciiam._scheduleFrame();
         }
-        /** Registers a process-wide named cell callback. */
+        /**
+         * Registers a process-wide named cell callback usable as `mode: name` on any
+         * instance — the plugin-mode registration mechanism.
+         *
+         * @static
+         * @param {string} name - mode name to register, referenced later via `mode`/`setMode()`
+         * @param {(api: Object) => ({char: string, opacity?: number, intensity?: number, bold?: boolean, color?: string|null}|null)} fn - per-cell callback; receives the same `api` shape as `customCell`
+         * @returns {void}
+         *
+         * @example
+         * asciiam.registerMode('checkerboard', (api) => ({
+         *   char: (api.col + api.row) % 2 === 0 ? '#' : ' ',
+         *   opacity: 1,
+         * }));
+         */
         static registerMode(name, fn) {
             asciiam._registry[name] = fn;
         }
 
-        /** Create dependency-free geometry suitable for setMesh(). */
+        /**
+         * Create dependency-free procedural geometry suitable for `setMesh()`.
+         *
+         * @static
+         * @param {"cube"|"plane"|"icosphere"|"torus"} name - primitive to generate
+         * @param {Object} [options] - forwarded to the matching `create*Mesh()` helper in mesh.js
+         * @returns {Readonly<Object>} normalized mesh, see `normalizeMeshData` in mesh.js
+         * @throws {TypeError} if `name` is not a recognized primitive
+         *
+         * @example
+         * anim.setMesh(asciiam.createMeshPrimitive('torus', { majorSegments: 64 }));
+         */
         static createMeshPrimitive(name, options) {
             if (name === "cube") return createCubeMesh(options?.size);
             if (name === "plane") return createPlaneMesh(options);
@@ -1034,37 +1460,90 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             throw new TypeError(`asciiam: unknown mesh primitive "${name}"`);
         }
 
-        /** Decode a glTF 2.0 or GLB v2 source without constructing a renderer. */
+        /**
+         * Decode a glTF 2.0 or GLB v2 source without constructing a renderer instance —
+         * useful for pre-loading/caching a model before calling `setModel()`.
+         *
+         * @static
+         * @async
+         * @param {string|Blob|ArrayBuffer|ArrayBufferView|Object} source - model source, see `loadGltf()` in gltf.js
+         * @param {Object} [options] - forwarded to `loadGltf()` in gltf.js
+         * @returns {Promise<Readonly<Object>>} normalized mesh, see `normalizeMeshData` in mesh.js
+         * @throws {TypeError} if the source or document is invalid/unsupported
+         */
         static loadModel(source, options) {
             return loadGltf(source, options);
         }
 
-        /** Register a custom decoder callback for a compressed glTF extension (e.g. KHR_draco_mesh_compression). */
+        /**
+         * Register a custom decoder callback for a compressed glTF extension (e.g.
+         * `KHR_draco_mesh_compression`). Forwards to `registerGltfDecoder()` in gltf.js.
+         *
+         * @static
+         * @param {string} name - the glTF extension name as it appears in `extensionsUsed`/`extensionsRequired`
+         * @param {Function} decoderFn - decoder callback (shape defined by the extension/caller)
+         * @returns {void}
+         * @throws {TypeError} if `name` isn't a string or `decoderFn` isn't a function
+         */
         static registerGltfDecoder(name, decoderFn) {
             return registerGltfDecoder(name, decoderFn);
         }
 
-        /** Returns list of registered glTF extension decoders. */
+        /**
+         * @static
+         * @returns {string[]} names of every glTF extension with a registered decoder
+         */
         static getGltfDecoders() {
             return getGltfDecoders();
         }
 
-        /** Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision. */
+        /**
+         * Measures font metrics (charW, charH, ascent, descent, baselineOffset) with
+         * subpixel precision. Forwards to the module-level `calibrateFontMetrics()`.
+         *
+         * @static
+         * @param {CanvasRenderingContext2D|string} [target] - a 2D context to measure with, or (if a string) the font family
+         * @param {string} [fontFamily="monospace"] - CSS font family
+         * @param {number} [fontSize=14] - font size in pixels
+         * @returns {{charW: number, charH: number, ascent: number, descent: number, baselineOffset: number}} measured or estimated metrics
+         */
         static calibrateFontMetrics(target, fontFamily, fontSize) {
             return calibrateFontMetrics(target, fontFamily, fontSize);
         }
 
-        /** Headless cell frame generator for Node.js, Bun, Deno, or CLI text outputs. */
+        /**
+         * Headless cell frame generator for Node.js, Bun, Deno, or CLI text output.
+         * Forwards to the module-level `renderFrame()`.
+         *
+         * @static
+         * @param {Object} [options] - see the module-level `renderFrame()`
+         * @returns {{char: string, r: number, g: number, b: number, a: number}[][]} a `rows`-length array of `cols`-length cell arrays
+         */
         static renderFrame(options) {
             return renderFrame(options);
         }
 
-        /** Headless ASCII multi-line text generator for SSR, terminal, or CLI output. */
+        /**
+         * Headless ASCII multi-line text generator for SSR, terminal, or CLI output.
+         * Forwards to the module-level `renderToString()`.
+         *
+         * @static
+         * @param {Object} [options] - see the module-level `renderToString()`
+         * @returns {string} newline-joined rows of characters
+         */
         static renderToString(options) {
             return renderToString(options);
         }
 
-        /** Feature-detect before constructing, for graceful fallback in older browsers. */
+        /**
+         * Feature-detect before constructing, for graceful fallback in older browsers
+         * or restricted environments. A `new asciiam(...)` call itself never throws
+         * even if this would return false — it degrades to a disabled, no-op instance
+         * instead — but callers wanting to skip construction entirely can check first.
+         *
+         * @static
+         * @returns {boolean} true if a canvas element can provide a WebGL2 or 2D context
+         */
         static isSupported() {
             try {
                 const c = document.createElement("canvas");
@@ -1074,7 +1553,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Creates an instance around a container or application-owned canvas. */
+        /**
+         * Creates an instance around a container element (a canvas is created and
+         * managed internally) or an application-owned `<canvas>` (drawn into directly,
+         * never resized/replaced by asciiam). Never throws on an unsupported
+         * environment — falls back to a disabled instance whose public methods are
+         * safe no-ops instead.
+         *
+         * @param {string|HTMLElement} target - a CSS selector, a container element, or a `<canvas>` element
+         * @param {Object} [opts] - see the options reference table in README.md / docs/content/api/_index.md for the full list
+         * @throws {Error} if `target` is a selector that matches no element
+         *
+         * @example
+         * const anim = new asciiam('#hero', { mode: 'wave', color: '#4FA8FF', speed: 1 });
+         * anim.start();
+         */
         constructor(target, opts = {}) {
             const el = typeof target === "string" ? document.querySelector(target) : target;
             if (!el) throw new Error("asciiam: target not found");
@@ -1504,7 +1997,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- public API ----
-        /** Starts or resumes this instance on the shared frame scheduler. */
+        /**
+         * Starts or resumes this instance on the shared frame scheduler. A no-op if
+         * already running, destroyed, or the instance was disabled at construction
+         * (unsupported environment). If `prefers-reduced-motion` is respected and
+         * active, draws exactly one static frame instead of starting the loop.
+         *
+         * @returns {void}
+         */
         start() {
             if (this._disabled || this._destroyed || this._running) return;
             if (this._reduced) {
@@ -1516,7 +2016,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             asciiam._activeInstances.add(this);
             asciiam._scheduleFrame();
         }
-        /** Stops frame scheduling while retaining renderer and animation state. */
+        /**
+         * Stops frame scheduling while retaining renderer and animation state — a
+         * subsequent {@link asciiam#start} resumes rather than restarting. A no-op if
+         * not currently running.
+         *
+         * @returns {void}
+         */
         stop() {
             if (!this._running) return;
             this._running = false;
@@ -1527,7 +2033,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 asciiam._schedulerRaf = null;
             }
         }
-        /** Releases observers, listeners, renderer resources, and owned DOM. */
+        /**
+         * Releases observers, listeners, and renderer resources, and removes the
+         * canvas from the DOM — including an application-owned canvas passed in
+         * directly, not only one asciiam created itself around a container target.
+         * {@link asciiam#start} becomes a permanent no-op afterward.
+         *
+         * @returns {void}
+         */
         destroy() {
             this._destroyed = true;
             this.stop();
@@ -1565,7 +2078,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._events.clear();
         }
 
-        /** Advances time-dependent state in a fixed order before presenting a frame. */
+        /**
+         * Advances time-dependent state in a fixed order before presenting a frame:
+         * morph/sequence timelines, simulation time, pointer-interaction decay, image
+         * frame playback, then the actual draw. Skips entirely while not running, the
+         * document is hidden, or the instance is off-screen; self-throttles to
+         * `targetFPS` when set. Called once per tick by the shared scheduler
+         * ({@link asciiam._tickFrame}), never directly by user code.
+         *
+         * @private
+         * @param {DOMHighResTimeStamp} t - timestamp supplied by `requestAnimationFrame`
+         * @returns {void}
+         * @fires asciiam#frame
+         */
         _runFrame(t) {
             if (!this._running) return;
             if (document.hidden || !this._visible) {
@@ -1625,6 +2150,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * `setOption('resolutionScale'|'quality', ...)` both trigger a real `_resize()`
          * (rebuilds seed/edge-fade/spatial caches, forces a layout reflow), so adjustments
          * must stay infrequent, not per-frame.
+         *
+         * @private
+         * @param {number} frameWorkMs - this frame's measured CPU work time in milliseconds
+         * @returns {void}
+         * @fires asciiam#autoQualityChange
          */
         _updateAutoQuality(frameWorkMs) {
             const now = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
@@ -1689,7 +2219,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Subscribe to a lifecycle event. Returns an unsubscribe function. */
+        /**
+         * Subscribe to a lifecycle event (`frame`, `resize`, `rendererChange`,
+         * `rendererFallback`, `autoQualityChange`, `sequenceStart`/`sequenceStepStart`/
+         * etc., `imageFramesReady`, and more — see the events reference in
+         * docs/content/api/_index.md for the full list and payload shapes).
+         *
+         * @param {string} event - event name
+         * @param {Function} listener - called with an event-specific detail object
+         * @returns {() => void} an unsubscribe function equivalent to `off(event, listener)`
+         * @throws {TypeError} if `listener` is not a function
+         * @listens asciiam#frame
+         *
+         * @example
+         * const stop = anim.on('rendererFallback', ({ backend }) => console.warn(`fell back to ${backend}`));
+         * stop(); // unsubscribe
+         */
         on(event, listener) {
             if (typeof listener !== "function") throw new TypeError("asciiam: event listener must be a function");
             let listeners = this._events.get(event);
@@ -1700,14 +2245,32 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             listeners.add(listener);
             return () => this.off(event, listener);
         }
-        /** Removes a previously registered lifecycle listener. */
+        /**
+         * Removes a previously registered lifecycle listener. A no-op if `event`/
+         * `listener` isn't currently registered.
+         *
+         * @param {string} event - event name passed to the original {@link asciiam#on} call
+         * @param {Function} listener - the exact listener function passed to the original {@link asciiam#on} call
+         * @returns {void}
+         */
         off(event, listener) {
             const listeners = this._events.get(event);
             if (!listeners) return;
             listeners.delete(listener);
             if (!listeners.size) this._events.delete(event);
         }
-        /** Changes the algorithm and restarts its mode-local timeline. */
+        /**
+         * Changes the animation algorithm and restarts its mode-local timeline (so a
+         * one-shot mode like `fadeIn` always plays from the start when freshly
+         * selected, even on a long-running instance). Interrupts an in-progress
+         * sequence step unless `fromSequence` is true (the sequence engine's own
+         * internal call path, which manages its own step lifecycle).
+         *
+         * @param {string} mode - a built-in mode name (see `asciiam.BUILT_IN_MODES`), a name registered via `asciiam.registerMode()`, or `"custom"` (paired with the `customCell` option)
+         * @param {boolean} [fromSequence=false] - true when called internally by the sequence engine; suppresses the sequence-interrupt side effect
+         * @returns {void}
+         * @fires asciiam#sequenceInterrupt
+         */
         setMode(mode, fromSequence = false) {
             if (!fromSequence && this._sequence?.running) {
                 if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("mode-change");
@@ -1730,7 +2293,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (mode === "starfield") this._initStarfield();
             if (mode === "orbit") this._initOrbit();
         }
-        /** Updates one option and rebuilds only its dependent state or caches. */
+        /**
+         * Updates one option and rebuilds only its dependent state or caches — e.g.
+         * changing `fontSize` rebuilds the font cache and grid, but changing `color`
+         * only invalidates the glyph atlas, and most options touch nothing beyond the
+         * `opts` object itself, taking effect on the very next frame. `key: "layers"`
+         * and `key: "mode"` delegate to {@link asciiam#setLayers}/{@link asciiam#setMode}
+         * respectively rather than being set directly. See the options reference table
+         * in README.md / docs/content/api/_index.md for the full option list and defaults.
+         *
+         * @param {string} key - option name
+         * @param {*} value - new value; an empty `charSet` falls back to the default ramp rather than being accepted as-is
+         * @returns {void}
+         */
         setOption(key, value) {
             if (key === "layers") {
                 this.setLayers(value);
@@ -1847,7 +2422,25 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Sets an array of layer configurations to composite in order during frame rendering. */
+        /**
+         * Sets an array of layer configurations to composite in order during frame
+         * rendering — each layer can run its own mode, opacity, blend mode, and
+         * (independent of the instance's shared image/mesh) its own image or 3D model
+         * source. Re-calling with a layer whose media fields are unchanged from the
+         * previous call reuses the already-loaded source instead of reloading it.
+         *
+         * @param {Object[]} layers - layer configs; see README.md / docs/content/api/_index.md for the full per-layer field list
+         * @param {string} layers[].mode - animation mode for this layer
+         * @param {Object} [layers[].options] - per-layer option overrides applied only during this layer's draw pass
+         * @param {number} [layers[].opacity=1] - layer opacity, clamped to [0, 1]
+         * @param {string} [layers[].blendMode="source-over"] - canvas `globalCompositeOperation` value
+         * @param {string|null} [layers[].image] - image source independent of the instance-wide image
+         * @param {Object} [layers[].imageOptions] - forwarded to this layer's own image sampling pass
+         * @param {string|null} [layers[].meshPrimitive] - procedural mesh primitive independent of the instance-wide mesh
+         * @param {*} [layers[].model] - glTF/GLB model source independent of the instance-wide model
+         * @param {Object} [layers[].modelOptions] - forwarded to this layer's own model load
+         * @returns {asciiam} `this`, for chaining
+         */
         setLayers(layers) {
             this._layers = this._normalizeLayers(layers);
             this.opts.layers = this._layers;
@@ -1855,7 +2448,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Returns the current list of active composition layers. */
+        /**
+         * @returns {Object[]} a snapshot of the current composition layers (deep-copied `options`/`imageOptions`/`modelOptions`), or `[]` if none are set
+         */
         getLayers() {
             return this._layers ? this._layers.map((l) => ({
                 mode: l.mode,
@@ -1874,8 +2469,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * Temporarily overlays a layer's `options` onto `this.opts` for the duration
          * of that layer's draw pass, so every mode-cell function (which reads
          * `this.opts.*` directly) picks up per-layer overrides without a broader
-         * refactor. Returns the key list to hand back to `_restoreLayerOptions()`;
-         * `null` when the layer has no per-layer options.
+         * refactor.
+         *
+         * @private
+         * @param {Object} layer - a normalized layer, see {@link asciiam#_normalizeLayers}
+         * @returns {string[]|null} the key list to hand back to {@link asciiam#_restoreLayerOptions}; `null` when the layer has no per-layer options
          */
         _applyLayerOptions(layer) {
             const keys = layer._optionKeys;
@@ -1889,7 +2487,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return keys;
         }
 
-        /** Restores `this.opts` fields saved by `_applyLayerOptions()`. */
+        /**
+         * Restores `this.opts` fields saved by {@link asciiam#_applyLayerOptions}. A
+         * no-op if `keys` is null (the layer had no per-layer options to restore).
+         *
+         * @private
+         * @param {string[]|null} keys - key list returned by {@link asciiam#_applyLayerOptions}
+         * @returns {void}
+         */
         _restoreLayerOptions(keys) {
             if (!keys) return;
             const restore = this._layerRestoreScratch;
@@ -1908,6 +2513,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * `setLayers()` call carries its already-loaded `_imageGrid`/`_mesh` forward
          * instead of reloading, so re-calling `setLayers()` for an unrelated tweak
          * (opacity, blend mode) doesn't re-fetch or re-decode anything.
+         *
+         * @private
+         * @param {Object[]} layers - raw layer configs, see {@link asciiam#setLayers}
+         * @returns {Object[]|null} normalized, internally-augmented layer objects, or `null` if `layers` is empty/not an array
          */
         _normalizeLayers(layers) {
             if (!Array.isArray(layers) || layers.length === 0) return null;
@@ -1959,7 +2568,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        /** Kicks off (or skips, if already loaded — see `_normalizeLayers()`) each layer's own independent image/mesh source. */
+        /**
+         * Kicks off (or skips, if already loaded — see {@link asciiam#_normalizeLayers})
+         * each layer's own independent image/mesh source.
+         *
+         * @private
+         * @returns {void}
+         */
         _loadLayerMedia() {
             if (!this._layers) return;
             for (const layer of this._layers) {
@@ -1968,7 +2583,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Decodes one layer's independent image source; does not touch the shared `_imageGrid`. */
+        /**
+         * Decodes one layer's independent image source; does not touch the shared
+         * `_imageGrid`.
+         *
+         * @private
+         * @param {Object} layer - a normalized layer with an `image` source, see {@link asciiam#_normalizeLayers}
+         * @returns {void}
+         */
         _loadLayerImage(layer) {
             const token = ++layer._imageLoadToken;
             const img = new Image();
@@ -1995,6 +2617,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * another load resolving mid-swap. `layer.imageOptions` overlays `this.opts`
          * for the same window (same pattern as `_applyLayerOptions`) so per-layer
          * fit/scale/rotation/luminance options affect only that layer's sampling pass.
+         *
+         * @private
+         * @param {Object} layer - a normalized layer with a decoded `_sourceImage`, see {@link asciiam#_normalizeLayers}
+         * @returns {void}
          */
         _resampleLayerImage(layer) {
             if (!layer._sourceImage || !this.cols || !this.rows) return;
@@ -2025,6 +2651,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * synchronously, mirroring `setOption('meshPrimitive', ...)`) or a glTF/GLB
          * `model` (async, mirroring `setModel()`, with its own per-layer cancellation
          * token/abort controller so two layers' loads can never race each other).
+         *
+         * @private
+         * @param {Object} layer - a normalized layer with `meshPrimitive` and/or `model` set, see {@link asciiam#_normalizeLayers}
+         * @returns {void}
          */
         _loadLayerModel(layer) {
             if (layer.meshPrimitive) {
@@ -2073,6 +2703,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * `setImage()`/`setModel()` loaded instance-wide, exactly as before this existed.
          * Uses pooled scratch fields, not an allocated object, since this runs per layer
          * per frame.
+         *
+         * @private
+         * @param {Object} layer - a normalized layer, see {@link asciiam#_normalizeLayers}
+         * @returns {void}
          */
         _applyLayerMedia(layer) {
             this._layerMediaScratchImageGrid = this._imageGrid;
@@ -2091,7 +2725,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Restores state saved by `_applyLayerMedia()`. */
+        /**
+         * Restores state saved by {@link asciiam#_applyLayerMedia}.
+         *
+         * @private
+         * @returns {void}
+         */
         _restoreLayerMedia() {
             this._imageGrid = this._layerMediaScratchImageGrid;
             this._mesh = this._layerMediaScratchMesh;
@@ -2100,7 +2739,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.opts.meshEnabled = this._layerMediaScratchMeshEnabled;
         }
 
-        /** Validate and retain typed-array geometry for the mesh animation mode. */
+        /**
+         * Validate and retain typed-array geometry for the mesh animation mode
+         * (requires `meshEnabled: true`, or `mode: "mesh"`, to actually render). Clears
+         * any `meshPrimitive` set previously, since an explicit mesh takes precedence.
+         *
+         * @param {Object} mesh - raw mesh data, see `normalizeMeshData()` in mesh.js
+         * @returns {asciiam} `this`, for chaining
+         * @throws {TypeError} if `mesh` is malformed, see `normalizeMeshData()` in mesh.js
+         * @throws {RangeError} if `mesh` exceeds `meshMaxVertices`/`meshMaxPrimitives`
+         * @fires asciiam#meshReady
+         */
         setMesh(mesh) {
             this._mesh = normalizeMeshData(mesh, {
                 maxVertices: this.opts.meshMaxVertices,
@@ -2115,7 +2764,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Release retained geometry and raster buffers. */
+        /**
+         * Release retained geometry and raster buffers. Does not cancel an in-flight
+         * `setModel()` load — see {@link asciiam#clearModel} for that.
+         *
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#meshClear
+         */
         clearMesh() {
             this._mesh = null;
             this.opts.mesh = null;
@@ -2125,7 +2780,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Report normalized topology without exposing mutable internal buffers. */
+        /**
+         * Report normalized mesh topology without exposing mutable internal buffers.
+         *
+         * @returns {{loaded: boolean, vertexCount: number, primitiveCount: number, primitive: string|null, style: string, projection: string}} current mesh state summary
+         */
         getMeshInfo() {
             return {
                 loaded: !!this._mesh,
@@ -2137,7 +2796,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
-        /** Decode and retain a glTF 2.0 or GLB v2 model with cancellation and progress events. */
+        /**
+         * Decode and retain a glTF 2.0 or GLB v2 model with cancellation and progress
+         * events, applying it via {@link asciiam#setMesh} once loaded. A new call
+         * aborts any load already in flight. Passing a nullish/empty `source` clears
+         * the model instead of loading (equivalent to {@link asciiam#clearModel}).
+         *
+         * @async
+         * @param {string|Blob|ArrayBuffer|ArrayBufferView|Object|null} source - model source, see `loadGltf()` in gltf.js; nullish/empty clears instead of loading
+         * @param {Object} [options] - forwarded to `loadGltf()` in gltf.js
+         * @param {AbortSignal} [options.signal] - external signal that also aborts this load; combined with the internal one this method manages
+         * @param {(progress: {loaded: number, total: number|null}) => void} [options.onProgress] - forwarded, and re-emitted as the `modelProgress` event
+         * @returns {Promise<Readonly<Object>|null>} the normalized mesh once ready, or `null` if cleared or superseded by a later call
+         * @throws {*} re-throws any load error that isn't from being superseded/aborted, after emitting `modelError` and calling `opts.onModelError` if set
+         * @fires asciiam#modelLoadStart
+         * @fires asciiam#modelProgress
+         * @fires asciiam#modelReady
+         * @fires asciiam#modelError
+         */
         async setModel(source, options = {}) {
             if (source === null || source === undefined || source === "") {
                 this.clearModel();
@@ -2182,7 +2858,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Cancel model loading and release its retained geometry. */
+        /**
+         * Cancel any in-flight {@link asciiam#setModel} load and release its retained
+         * geometry.
+         *
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#modelClear
+         */
         clearModel() {
             this._modelLoadToken++;
             this._modelAbortController?.abort();
@@ -2194,8 +2876,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Copy public mesh options into stable arrays consumed by the hot raster loop. */
+        /**
+         * Copy public mesh transform/style options into stable typed arrays and a
+         * pooled rasterize-options object, consumed by the hot raster loop without
+         * per-frame allocation or repeated option lookups.
+         *
+         * @private
+         * @returns {void}
+         */
         _syncMeshOptions() {
+            /**
+             * @callback CopyVector
+             * @param {ArrayLike<number>|undefined} value - candidate 3-component vector
+             * @param {Float64Array} output - three-element buffer written in place
+             * @param {number[]} fallback - default used for a non-finite component
+             * @returns {void}
+             */
             const copyVector = (value, output, fallback) => {
                 for (let index = 0; index < 3; index++) {
                     const candidate = Number(value?.[index]);
@@ -2213,7 +2909,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._meshRasterOptions.light = this.opts.meshLight;
         }
 
-        /** Generates a 2D grid of cell character and color data for the current state or specified options. */
+        /**
+         * Generates a headless 2D grid of cell character/color data, seeded from this
+         * instance's current grid size and options (overridable per call), without
+         * touching the canvas. Delegates to the module-level `renderFrame()`.
+         *
+         * @param {Object} [options] - overrides merged over this instance's current `cols`/`rows`/`mode`/`charSet`/`invert`/`color`/`align`; see the module-level `renderFrame()` for the full option list
+         * @returns {{char: string, r: number, g: number, b: number, a: number}[][]} a `rows`-length array of `cols`-length cell arrays
+         */
         renderFrame(options = {}) {
             return renderFrame({
                 cols: this.cols || 80,
@@ -2227,7 +2930,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        /** Generates a multi-line ASCII string for the current state or specified options without requiring DOM canvas. */
+        /**
+         * Generates a headless multi-line ASCII string, seeded from this instance's
+         * current grid size and options (overridable per call), without requiring a
+         * DOM canvas. Delegates to the module-level `renderToString()`.
+         *
+         * @param {Object} [options] - overrides merged over this instance's current `cols`/`rows`/`mode`/`charSet`/`invert`/`color`/`align`; see the module-level `renderToString()` for the full option list
+         * @returns {string} newline-joined rows of characters
+         */
         renderToString(options = {}) {
             return renderToString({
                 cols: this.cols || 80,
@@ -2241,7 +2951,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        /** Move the existing renderer to another container without creating a second animation loop. */
+        /**
+         * Move the existing renderer/canvas to another container without creating a
+         * second animation loop or renderer instance. A no-op resize (not a full
+         * re-target) if `target` resolves to the current container.
+         *
+         * @param {string|HTMLElement} target - a CSS selector or a new container element
+         * @returns {void}
+         * @throws {Error} if `target` is a selector that matches no element
+         */
         setTarget(target) {
             const next = typeof target === "string" ? document.querySelector(target) : target;
             if (!next) throw new Error("asciiam: target not found");
@@ -2265,7 +2983,45 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._resize();
         }
 
-        /** Configure an ordered set of mode steps without starting it. */
+        /**
+         * Configure an ordered set of mode steps without starting playback — call
+         * {@link asciiam#playSequence} to begin. Interrupts and pauses an
+         * already-running sequence first if one exists. See
+         * docs/content/guides/sequences.md for the full step/transition contract.
+         *
+         * @param {Object[]} steps - ordered step definitions
+         * @param {string} steps[].mode - animation mode for this step
+         * @param {number} [steps[].duration=5] - step duration in seconds; non-positive/non-finite falls back to the default
+         * @param {number} [steps[].delay=0] - delay in seconds before this step starts, after the previous one completes
+         * @param {boolean} [steps[].repeat] - whether this step's own mode timeline loops within its duration; defaults from `steps[].options.loop` for backward compatibility, else `false`
+         * @param {string|null} [steps[].image] - omit to retain the current image, `null` to clear it, a string to load a new one before the step's duration begins
+         * @param {Object} [steps[].imageOptions] - forwarded to image sampling for this step
+         * @param {*} [steps[].model] - omit to retain the current model, `null` to clear it, a source to load and wait on before the step's duration begins
+         * @param {Object} [steps[].modelOptions] - forwarded to `setModel()` for this step
+         * @param {Object} [steps[].options] - per-step option overrides applied via `setOption()` when this step activates
+         * @param {Object} [steps[].transition] - `{ type: 'cut'|'blend'|'morph', duration, easing, style, spread }`; unrecognized `type` falls back to an instant `cut`
+         * @param {(detail: Object) => void} [steps[].onStart] - called when this step activates
+         * @param {(detail: Object) => void} [steps[].onComplete] - called when this step finishes normally
+         * @param {(detail: Object) => void} [steps[].onInterrupt] - called if this step is interrupted (manual mode change, reconfigure, etc.)
+         * @param {(detail: Object) => void} [steps[].onError] - called if this step's image/model fails to load
+         * @param {Object} [options] - sequence-level options
+         * @param {boolean} [options.loop=true] - whether the sequence restarts from step 0 after the last step completes
+         * @param {boolean} [options.autoplay=false] - recorded on `opts.sequenceOptions` for code-export/inspection purposes; does not itself start playback — call `playSequence()`
+         * @param {(detail: Object) => void} [options.onStepStart]
+         * @param {(detail: Object) => void} [options.onStepComplete]
+         * @param {(detail: Object) => void} [options.onStepInterrupt]
+         * @param {(detail: Object) => void} [options.onComplete] - called when the sequence completes (only reachable when `loop` is false)
+         * @returns {asciiam} `this`, for chaining
+         * @throws {TypeError} if `steps` isn't an array, or a step is missing/malformed
+         * @fires asciiam#sequenceInterrupt
+         *
+         * @example
+         * anim.setSequence([
+         *   { mode: 'wave', duration: 4 },
+         *   { mode: 'matrix', duration: 4, transition: { type: 'blend', duration: 1 } },
+         * ], { loop: true });
+         * anim.playSequence();
+         */
         setSequence(steps, options = {}) {
             if (!Array.isArray(steps)) throw new TypeError("asciiam: sequence steps must be an array");
             if (this._sequence?.running) {
@@ -2340,7 +3096,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Start or resume the configured sequence. Also starts the renderer if needed. */
+        /**
+         * Start or resume the configured sequence, and start the renderer if it isn't
+         * already running. Restarts from step 0 (or `startIndex`) if the sequence
+         * hasn't been started yet or previously completed; otherwise resumes from
+         * wherever it was paused.
+         *
+         * @param {number} [startIndex] - step index to (re)start from (wraparound-normalized); omit to resume/continue from the current position
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#sequenceStart
+         * @fires asciiam#sequenceResume
+         */
         playSequence(startIndex) {
             const sequence = this._sequence;
             if (!sequence || !sequence.steps.length) return this;
@@ -2355,7 +3121,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Pauses sequence time without stopping the renderer. */
+        /**
+         * Pauses sequence time without stopping the renderer — the current step's
+         * mode keeps animating, but its own timeline and the sequence's step timer
+         * stop advancing. A no-op if not currently running.
+         *
+         * @param {string} [reason="pause"] - included in the `sequencePause` event detail
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#sequencePause
+         */
         pauseSequence(reason = "pause") {
             if (!this._sequence?.running) return this;
             this._sequence.running = false;
@@ -2363,7 +3137,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Stops sequence playback and resets its position. */
+        /**
+         * Stops sequence playback and resets its position to before step 0, clearing
+         * any in-progress morph transition. A no-op if no sequence is configured.
+         *
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#sequenceStop
+         */
         stopSequence() {
             if (!this._sequence) return this;
             if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("stop");
@@ -2381,7 +3161,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Removes the configured sequence and transient morph state. */
+        /**
+         * Stops playback (see {@link asciiam#stopSequence}) and removes the configured
+         * sequence entirely — a subsequent `setSequence()` call is required before
+         * playing again.
+         *
+         * @returns {asciiam} `this`, for chaining
+         */
         clearSequence() {
             this.stopSequence();
             this._sequence = null;
@@ -2390,7 +3176,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Selects a step using normalized wraparound indexing. */
+        /**
+         * Selects a step using normalized wraparound indexing (negative or
+         * out-of-range indices wrap into range), interrupting the active step first
+         * if one is in progress.
+         *
+         * @param {number} index - target step index; wraps via {@link asciiam#_normalizeSequenceIndex}
+         * @returns {asciiam} `this`, for chaining
+         */
         seekSequence(index) {
             if (!this._sequence?.steps.length) return this;
             if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("seek");
@@ -2398,7 +3191,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Interrupts the active step and advances according to loop policy. */
+        /**
+         * Interrupts the active step and advances to the next one, honoring the
+         * sequence's loop policy (wraps to step 0 and fires `sequenceLoop` if looping,
+         * otherwise completes the sequence at the end).
+         *
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#sequenceLoop
+         */
         nextSequenceStep() {
             const sequence = this._sequence;
             if (!sequence?.steps.length) return this;
@@ -2412,7 +3212,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Returns a serializable snapshot of sequence playback state. */
+        /**
+         * @returns {{configured: boolean, running: boolean, completed: boolean, index: number, length: number, loop: boolean, elapsed: number, waiting: boolean, loading: boolean, morphing: boolean, morphProgress: number}} a serializable snapshot of sequence playback state
+         */
         getSequenceState() {
             const sequence = this._sequence;
             return {
@@ -2430,7 +3232,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
-        /** Reports requested policy and the resolved presentation backend. */
+        /**
+         * @returns {{requested: "auto"|"webgl2"|"webgpu"|"canvas2d", backend: "webgl2"|"webgpu"|"canvas2d", gpuPreferred: boolean, acceleration: "gpu-api-preferred"|"browser-managed"|"not-requested", desynchronized: boolean, willReadFrequently: boolean}} the requested renderer policy and the currently-resolved backend
+         */
         getRendererInfo() {
             const context = this._webgl?.gl || this.ctx;
             const attributes = typeof context?.getContextAttributes === "function" ? context.getContextAttributes() : null;
@@ -2444,7 +3248,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
-        /** Replaces presentation resources while retaining instance-level state. */
+        /**
+         * Explicitly switches the presentation backend, replacing the canvas and
+         * renderer resources while retaining instance-level state (options, grid,
+         * timing). A no-op returning the current backend if `renderer` already
+         * resolves to what's active. `"auto"`/`"webgpu"` initialize asynchronously —
+         * `rendererChange` fires once WebGPU is actually ready, not immediately.
+         *
+         * @param {"auto"|"webgl2"|"webgpu"|"canvas2d"} renderer - backend to switch to
+         * @param {string} [requestedRenderer=renderer] - the policy recorded on `opts.renderer`/`getRendererInfo().requested`; distinct from `renderer` only in fallback call paths recording what was originally asked for
+         * @returns {"webgl2"|"webgpu"|"canvas2d"} the backend now active (may not equal `renderer` yet if `"webgpu"` init is still pending)
+         * @throws {TypeError} if `renderer` isn't one of the four valid values
+         * @throws {Error} if no backend (including the Canvas 2D fallback) could be initialized
+         * @fires asciiam#rendererChange
+         * @fires asciiam#rendererFallback
+         */
         setRenderer(renderer, requestedRenderer = renderer) {
             if (!["auto", "webgl2", "webgpu", "canvas2d"].includes(renderer)) {
                 throw new TypeError('asciiam: renderer must be "auto", "webgl2", "webgpu", or "canvas2d"');
@@ -2530,7 +3348,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._renderer;
         }
 
-        /** Replaces an unavailable WebGPU surface with the established 2D fallback. */
+        /**
+         * Replaces an unavailable WebGPU surface with WebGL2 (preferred) or Canvas 2D.
+         * Called on WebGPU init failure/rejection or device loss. A no-op if the
+         * instance is disabled or the current renderer isn't WebGPU (guards against a
+         * stale async callback firing after a later, unrelated renderer change).
+         *
+         * @private
+         * @param {Error|string} [reason] - the WebGPU failure reason; logged as a warning and included in the `rendererFallback` event
+         * @returns {void}
+         * @fires asciiam#rendererFallback
+         */
         _fallbackFromWebGPU(reason) {
             if (this._disabled || this._renderer !== "webgpu") return;
             if (reason) console.warn("asciiam: WebGPU initialization failed; using Canvas 2D.", reason);
@@ -2568,6 +3396,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * observed element that gets detached from the document (`replaceWith` here) never
          * reports `isIntersecting` again, which would otherwise leave `_visible` stuck at
          * `false` and `_runFrame()` permanently skipping every frame.
+         *
+         * @private
+         * @returns {HTMLCanvasElement} the new canvas, now assigned to `this.canvas`
          */
         _replacePresentationCanvas() {
             const oldCanvas = this.canvas;
@@ -2587,6 +3418,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return replacement;
         }
 
+        /**
+         * Attaches a `webglcontextlost` listener that falls back to Canvas 2D — a lost
+         * WebGL2 context is generally unrecoverable in-place, so this recovers by
+         * switching backends rather than attempting `webglcontextrestored`.
+         *
+         * @private
+         * @returns {void}
+         * @listens webglcontextlost
+         * @fires asciiam#rendererFallback
+         */
         _bindWebGLFallback() {
             this._onWebGLContextLost = (event) => {
                 event.preventDefault();
@@ -2597,11 +3438,27 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.canvas.addEventListener("webglcontextlost", this._onWebGLContextLost, false);
         }
 
+        /**
+         * Clamp and round a caller-supplied step index into `[0, steps.length - 1]`.
+         *
+         * @private
+         * @param {number} index - candidate step index
+         * @returns {number} the clamped, rounded index
+         */
         _normalizeSequenceIndex(index) {
             const last = Math.max(0, this._sequence.steps.length - 1);
             return Math.max(0, Math.min(last, Math.round(Number(index) || 0)));
         }
 
+        /**
+         * Reset per-step playback state and jump to `index`, starting it immediately
+         * if it has no delay, or leaving it pending for `_advanceSequence()` to start
+         * once the delay elapses.
+         *
+         * @private
+         * @param {number} index - step index to activate, already normalized
+         * @returns {void}
+         */
         _activateSequenceStep(index) {
             const sequence = this._sequence;
             if (sequence.stepLoading) this._cancelSequenceLoads();
@@ -2615,6 +3472,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (sequence.steps[index].delay === 0) this._startSequenceStep();
         }
 
+        /**
+         * Starts loading whatever the active step's `image`/`model` requires (skipping
+         * a source already loaded), preparing an outgoing morph snapshot first if this
+         * isn't the sequence's first step. Commits the step immediately if nothing
+         * needs loading, otherwise defers to {@link asciiam#_commitSequenceStep} once
+         * loading resolves. A no-op if the step is already started or loading.
+         *
+         * @private
+         * @returns {void}
+         * @fires asciiam#sequenceStepError
+         */
         _startSequenceStep() {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
@@ -2658,7 +3526,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._commitSequenceStep(step);
         }
 
-        /** Applies a decoded sequence step and starts its timed lifecycle. */
+        /**
+         * Applies a decoded sequence step's options/mode and starts its timed
+         * lifecycle — the step is now actively animating.
+         *
+         * @private
+         * @param {Object} step - the normalized step to commit, see {@link asciiam#setSequence}
+         * @returns {void}
+         * @fires asciiam#sequenceStepStart
+         */
         _commitSequenceStep(step) {
             const sequence = this._sequence;
             this._applyingSequence = true;
@@ -2683,6 +3559,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._emit("sequenceStepStart", detail);
         }
 
+        /**
+         * Fires a step's completion callbacks/event when its duration elapses
+         * naturally (called by {@link asciiam#_advanceSequence}, not user code).
+         *
+         * @private
+         * @returns {void}
+         * @fires asciiam#sequenceStepComplete
+         */
         _completeSequenceStep() {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
@@ -2693,6 +3577,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             sequence.stepStarted = false;
         }
 
+        /**
+         * Cancels the active step's pending loads/morph and fires its interrupt
+         * callbacks/event — called before manually seeking, skipping, stopping, or
+         * reconfiguring a step that hasn't completed on its own.
+         *
+         * @private
+         * @param {string} reason - included in the `sequenceStepInterrupt` event detail (e.g. `"seek"`, `"skip"`, `"stop"`, `"mode-change"`, `"reconfigure"`)
+         * @returns {void}
+         * @fires asciiam#sequenceStepInterrupt
+         */
         _interruptSequenceStep(reason) {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
@@ -2707,6 +3601,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             sequence.activationToken++;
         }
 
+        /**
+         * Marks the sequence complete (only reachable when `loop` is false and the
+         * last step finishes) and fires its completion callback/event.
+         *
+         * @private
+         * @returns {void}
+         * @fires asciiam#sequenceComplete
+         */
         _completeSequence() {
             const sequence = this._sequence;
             sequence.running = false;
@@ -2716,6 +3618,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._emit("sequenceComplete", detail);
         }
 
+        /**
+         * Builds the common detail object passed to sequence callbacks/events.
+         *
+         * @private
+         * @param {Object} [extra={}] - additional fields merged into (and overriding) the base detail
+         * @returns {{index: number, length: number, loop: boolean, elapsed: number, step: Object|null}} sequence event detail
+         */
         _sequenceDetail(extra = {}) {
             const sequence = this._sequence;
             return {
@@ -2728,6 +3637,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
+        /**
+         * Invoke a user-supplied sequence/step callback, catching and logging (rather
+         * than propagating) any error it throws so one broken callback can't stall
+         * sequence playback.
+         *
+         * @private
+         * @param {((detail: Object, instance: asciiam) => void)|null|undefined} callback - the callback to invoke, if any
+         * @param {Object} detail - event detail, see {@link asciiam#_sequenceDetail}
+         * @returns {void}
+         */
         _callSequenceCallback(callback, detail) {
             if (!callback) return;
             try {
@@ -2744,6 +3663,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * an async image/model load (`retainDuringLoad`), fall back to the original
          * whole-canvas crossfade — a real per-cell morph has no "after" cells to work
          * with until that load finishes, so there is nothing to morph toward yet.
+         *
+         * @private
+         * @param {Object} transition - the incoming step's transition config, see {@link asciiam#setSequence}
+         * @param {boolean} [retainDuringLoad=false] - true when bridging an async image/model load rather than an immediate mode change
+         * @returns {void}
          */
         _prepareMorph(transition, retainDuringLoad = false) {
             this._clearMorph();
@@ -2763,6 +3687,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * grid-mismatch recovery path (called right after mutation but before the next
          * paint, so the canvas — not yet repainted — still shows the outgoing content
          * there too).
+         *
+         * @private
+         * @param {Object} transition - the transition config, see {@link asciiam#setSequence}
+         * @param {boolean} isBlend - true for a real `type: 'blend'` fade; false when only bridging an async load (`retainDuringLoad`) with no actual fade requested
+         * @returns {void}
          */
         _createBlendSnapshot(transition, isBlend) {
             const duration = Math.max(0.05, Number(transition?.duration) || 0.8) * 1000;
@@ -2793,6 +3722,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * active scene can't be captured cell-by-cell: a composited `setLayers()` scene
          * has no single per-cell color (multiple layers blend at the pixel level, not
          * the cell level), and an empty grid has nothing to capture.
+         *
+         * @private
+         * @param {Object} transition - the `type: 'morph'` transition config, see {@link asciiam#setSequence}
+         * @returns {boolean} true if real per-cell morph state was prepared; false if the caller should fall back to a whole-canvas blend
          */
         _prepareRealMorph(transition) {
             if ((this._layers && this._layers.length) || !this.cols || !this.rows) return false;
@@ -2823,6 +3756,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * inside their own draw loop, so this passes `dt = 0` to avoid double-advancing
          * particle state — this call is a snapshot of the current instant, not an extra
          * animation tick.
+         *
+         * @private
+         * @param {"_morphCaptureA"|"_morphCaptureB"} bufferProp - which pooled instance buffer to write into
+         * @returns {Object|null} the filled buffer (`this[bufferProp]`), or `null` if the current scene can't be captured (composited layers, or an empty grid)
          */
         _captureMorphFrame(bufferProp) {
             if ((this._layers && this._layers.length) || !this.cols || !this.rows) return null;
@@ -2856,7 +3793,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return buffer;
         }
 
-        /** Pooled cols*rows cell-capture buffer; grown (never shrunk) across transitions. */
+        /**
+         * Pooled cols*rows cell-capture buffer; grown (never shrunk) across
+         * transitions to avoid repeated allocation for a stable grid size.
+         *
+         * @private
+         * @param {Object|null} buffer - existing pooled buffer to reuse/grow, or null to allocate fresh
+         * @param {number} cols - current grid column count
+         * @param {number} rows - current grid row count
+         * @returns {{cols: number, rows: number, chars: (string|null)[], colors: (string|null)[], opacity: Float32Array, level: Uint8Array, bold: Uint8Array}} the buffer, ready to be filled
+         */
         _ensureMorphBuffer(buffer, cols, rows) {
             const n = cols * rows;
             if (!buffer || buffer.chars.length < n) {
@@ -2876,7 +3822,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return buffer;
         }
 
-        /** Reads a captured cell back into a pooled scratch object; null if that cell was blank. */
+        /**
+         * Reads a captured cell back into a pooled scratch object; null if that cell
+         * was blank (never captured, or captured as blank).
+         *
+         * @private
+         * @param {Object|null} buffer - a filled capture buffer, see {@link asciiam#_ensureMorphBuffer}
+         * @param {number} index - flat cell index (`row * cols + col`)
+         * @param {Object} scratch - pooled cell object written in place and returned
+         * @returns {Object|null} `scratch`, or `null` if `buffer` is missing or that cell was blank
+         */
         _readMorphCell(buffer, index, scratch) {
             if (!buffer) return null;
             const char = buffer.chars[index];
@@ -2898,6 +3853,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * cell-count ceiling, so it can't become a per-frame or unbounded cost. Degrades
          * to 'dissolve' whenever a same-size, non-layered "after" snapshot isn't
          * available — matching needs both snapshots at identical grid dimensions.
+         *
+         * @private
+         * @returns {void}
          */
         _buildMorphMatches() {
             const morph = this._morph;
@@ -2946,7 +3904,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             morph.matches = matches;
         }
 
-        /** Reveal the live incoming state beneath the retained outgoing frame. */
+        /**
+         * Reveal the live incoming state beneath the retained outgoing frame — called
+         * once the incoming step's options have already mutated `this.opts`, right
+         * after {@link asciiam#_prepareMorph} captured the outgoing state. Falls back
+         * to a whole-canvas blend if the step's own options resized the grid
+         * mid-transition (a real `morph` can't align mismatched captured/live indices).
+         *
+         * @private
+         * @param {Object} transition - the incoming step's transition config, see {@link asciiam#setSequence}
+         * @returns {void}
+         * @fires asciiam#sequenceMorphStart
+         */
         _startPreparedMorph(transition) {
             if (this._morph && this._morph.kind === "blend" && !this._morph.isBlend) {
                 this._clearMorph();
@@ -2975,6 +3944,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._emit("sequenceMorphStart", this._sequenceDetail({ transition }));
         }
 
+        /**
+         * Advances the active transition's eased progress and, for a `blend`
+         * transition, the outgoing snapshot's CSS opacity. Emits `sequenceMorphComplete`
+         * and clears transition state once progress reaches 1. A no-op if no
+         * transition has started.
+         *
+         * @private
+         * @param {number} dt - elapsed time since the last frame, in milliseconds
+         * @returns {void}
+         * @fires asciiam#sequenceMorphComplete
+         */
         _advanceMorph(dt) {
             const morph = this._morph;
             if (!morph?.started) return;
@@ -3005,12 +3985,28 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Removes an active `blend` transition's DOM overlay (if any) and clears
+         * transition state entirely. Safe to call whether or not a transition is
+         * active.
+         *
+         * @private
+         * @returns {void}
+         */
         _clearMorph() {
             if (this._morph?.kind === "blend" && this._morph.canvas.parentElement) this._morph.canvas.remove();
             this._morph = null;
         }
 
-        /** Cancel every source preparation owned by an interrupted sequence step. */
+        /**
+         * Cancel every source preparation owned by an interrupted sequence step:
+         * bumps every load-cancellation token (so an already-in-flight load's
+         * `.then()`/`.onload` sees a mismatched token and no-ops) and aborts the
+         * active model load's `AbortController`.
+         *
+         * @private
+         * @returns {void}
+         */
         _cancelSequenceLoads() {
             this._imageLoadToken++;
             this._imageCaptureToken++;
@@ -3018,6 +4014,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._modelAbortController?.abort();
         }
 
+        /**
+         * Consumes elapsed time against the active step's delay-then-duration
+         * timeline, starting the step once its delay elapses and completing/advancing
+         * it once its duration elapses — looping within one call if `dt` spans
+         * multiple step boundaries (e.g. after a long tab-hidden gap). A no-op if no
+         * sequence is configured or running.
+         *
+         * @private
+         * @param {number} dt - elapsed time since the last frame, in milliseconds
+         * @returns {void}
+         */
         _advanceSequence(dt) {
             const sequence = this._sequence;
             if (!sequence?.running || !sequence.steps.length) return;
@@ -3050,7 +4057,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 } else this._completeSequence();
             }
         }
-        /** Returns a Promise that resolves once the image is sampled into the ASCII grid. */
+        /**
+         * Loads and samples an image (raster, SVG, or animated GIF) into the ASCII
+         * grid (requires `imageEnabled: true`, or `mode: "image"`, to actually render).
+         * A new call cancels any load already in flight. Passing a nullish/empty `src`
+         * clears the image instead of loading (equivalent to {@link asciiam#clearImage}).
+         *
+         * @param {string|null} src - image URL, or nullish/empty to clear instead of loading
+         * @param {Object} [options]
+         * @param {boolean} [options.animated] - force animated-GIF handling on/off; auto-detected from `src`'s extension/data URI when omitted
+         * @returns {Promise<HTMLImageElement|null>} the loaded `<img>` once sampled, or `null` if cleared, failed, or superseded by a later call
+         * @throws {*} rejects with the underlying `<img>` error event if loading fails and wasn't superseded
+         */
         setImage(src, options = {}) {
             if (src === null || src === undefined || src === "") {
                 this.clearImage();
@@ -3106,7 +4124,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        /** Clears the sampled image while retaining the active procedural mode. */
+        /**
+         * Clears the sampled image (and any captured GIF frames) while retaining the
+         * active procedural mode. Cancels a load already in flight.
+         *
+         * @returns {asciiam} `this`, for chaining
+         */
         clearImage() {
             this._imageLoadToken++;
             this._imageCaptureToken++;
@@ -3126,7 +4149,23 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Decodes a GIF once and stores per-frame ASCII grids instead of bitmaps. */
+        /**
+         * Decodes a GIF once via `ImageDecoder` (WebCodecs) and stores per-frame ASCII
+         * grids instead of retaining raw bitmaps, so playback afterward is just
+         * grid-swapping. Falls back silently (returns `false`) when `ImageDecoder` or
+         * GIF decoding support is unavailable — the caller then relies on
+         * browser-timed `<img>` frame sampling instead. Yields to the main thread
+         * periodically so a long GIF's decode doesn't block interaction.
+         *
+         * @private
+         * @async
+         * @param {string|null} src - GIF URL to fetch; `null` reuses already-fetched bytes (see {@link asciiam#_scheduleAnimatedFrameCapture})
+         * @param {number} [token] - image-load cancellation token to check against `this._imageLoadToken`
+         * @param {number} [captureToken] - capture-specific cancellation token to check against `this._imageCaptureToken`
+         * @returns {Promise<boolean>} true if frames were captured; false if unsupported, cancelled, or the GIF has fewer than 2 frames
+         * @throws {Error} if the fetch itself fails (network error or non-ok response)
+         * @fires asciiam#imageFramesReady
+         */
         async _captureAnimatedImageFrames(src, token = this._imageLoadToken, captureToken = this._imageCaptureToken) {
             const Decoder = globalThis.ImageDecoder;
             if (typeof Decoder !== "function") return false;
@@ -3185,7 +4224,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Debounces GIF recapture after geometry or sampling options change. */
+        /**
+         * Debounces GIF recapture (180ms) after geometry or sampling options change —
+         * re-decoding every frame at the new grid size on every intermediate resize
+         * tick would be wasteful, so this coalesces rapid changes into one recapture.
+         * A no-op if no animated GIF is currently loaded.
+         *
+         * @private
+         * @returns {void}
+         */
         _scheduleAnimatedFrameCapture() {
             if (!this._animatedImage || !this._animatedImageData || this._destroyed) return;
             this._capturedImageFrames = null;
@@ -3202,7 +4249,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }, 180);
         }
 
-        /** Advances captured frames or the browser-timed compatibility sampler. */
+        /**
+         * Advances animated-image playback: steps through `_capturedImageFrames` by
+         * their own decoded durations if available, otherwise falls back to the
+         * browser-timed compatibility sampler at `opts.imageFrameRate`. A no-op unless
+         * an animated image is loaded and `opts.animateImageFrames` is enabled.
+         *
+         * @private
+         * @param {number} dt - elapsed time since the last frame, in milliseconds
+         * @returns {void}
+         */
         _advanceImageFrames(dt) {
             if (!this._animatedImage || !this.opts.animateImageFrames || !this._sourceImage) return;
             if (this._capturedImageFrames?.length) {
@@ -3228,17 +4284,42 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._imageFrameAccumulator %= interval;
             this._resampleImage();
         }
-        /** Programmatically drive the cursor-reactive modifier (e.g. for touch, audio-sync, demos). Pass null to clear. */
+        /**
+         * Programmatically drive the cursor-reactive modifier (`hoverField` mode, the
+         * `cursor` glow option) — useful for touch, audio-sync, or scripted demos
+         * where there's no real pointer to track.
+         *
+         * @param {number|null} x - canvas-relative x in pixels; `null` (with `y` omitted) clears it
+         * @param {number} [y] - canvas-relative y in pixels
+         * @returns {void}
+         */
         setCursor(x, y) {
             this._cursor = x === null || x === undefined ? null : { x, y };
         }
 
-        /** Starts a click-zone pulse at supplied coordinates or the configured alignment origin. */
+        /**
+         * Starts a click-zone pulse at the supplied coordinates, or the configured
+         * alignment origin if omitted. A no-op if the resolved coordinates aren't
+         * finite numbers.
+         *
+         * @param {number} [x=this._originX] - canvas-relative x in pixels
+         * @param {number} [y=this._originY] - canvas-relative y in pixels
+         * @returns {void}
+         */
         triggerInteraction(x = this._originX, y = this._originY) {
             if (!Number.isFinite(x) || !Number.isFinite(y)) return;
             this._interaction = { x, y, elapsed: 0 };
         }
 
+        /**
+         * Synchronously invokes every listener registered for `event` via
+         * {@link asciiam#on}, passing `detail` and this instance.
+         *
+         * @private
+         * @param {string} event - event name
+         * @param {Object} detail - event-specific payload
+         * @returns {void}
+         */
         _emit(event, detail) {
             const listeners = this._events.get(event);
             if (!listeners) return;
@@ -3246,6 +4327,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- lifecycle ----
+        /**
+         * Wires up off-screen auto-pausing (`IntersectionObserver`), tab-visibility
+         * resume, and resize detection (`ResizeObserver`, falling back to a `window`
+         * `resize` listener where unsupported). Called once from the constructor.
+         *
+         * @private
+         * @returns {void}
+         * @listens visibilitychange
+         */
         _bindLifecycle() {
             if ("IntersectionObserver" in window) {
                 this._io = new IntersectionObserver(
@@ -3271,6 +4361,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 window.addEventListener("resize", this._onResize);
             }
         }
+        /**
+         * Debounces `_resize()` to at most once per animation frame — a
+         * `ResizeObserver`/`window resize` callback can fire multiple times before
+         * the next paint, and `_resize()` itself is comparatively expensive (rebuilds
+         * caches, forces layout reads).
+         *
+         * @private
+         * @returns {void}
+         */
         _scheduleResize() {
             if (this._resizePending) return;
             this._resizePending = true;
@@ -3281,8 +4380,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        // Pointer tracking supplies cursor modifiers and interactive modes. The
-        // presentation canvas remains pointer-transparent; listeners belong to target.
+        /**
+         * Binds pointer tracking (supplies cursor modifiers and `hoverZone`/`clickZone`
+         * interactive modes) to the container, not the canvas — the presentation
+         * canvas remains pointer-transparent (`pointer-events: none`-equivalent
+         * behavior via not listening on it), so page content stacked above/below it
+         * stays interactive.
+         *
+         * @private
+         * @returns {void}
+         */
         _bindCursor() {
             const target = this.container || this.canvas.parentElement;
             if (!target) return;
@@ -3301,6 +4408,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             target.addEventListener("pointerleave", this._onPointerLeave, { passive: true });
             target.addEventListener("pointerdown", this._onPointerDown, { passive: true });
         }
+        /**
+         * Removes pointer listeners bound by {@link asciiam#_bindCursor}. A no-op if
+         * they were never bound.
+         *
+         * @private
+         * @returns {void}
+         */
         _unbindCursor() {
             const target = this.container || this.canvas.parentElement;
             if (target && this._onPointerMove) {
@@ -3311,6 +4425,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- sizing / measurement ----
+        /**
+         * Rebuilds font metrics and the regular/bold font-string cache for every
+         * `fontLevels` shading level, from `fontSize`/`fontFamily`/`resolutionScale`/
+         * `density`. Called whenever any of those change.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildFontCache() {
             // resolutionScale changes logical grid detail independently of the
             // canvas backing-store DPR. Bound it because cell work grows roughly
@@ -3339,7 +4461,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._waveBaseLayer = null;
         }
 
-        /** Deduped characters an atlas needs to rasterize: the active charSet plus any image/chart characters currently in play. Shared by _getGlyphAtlas() (Canvas 2D) and _getWebGLAtlas() (WebGL2/WebGPU) so the two atlases can't drift apart. */
+        /**
+         * Deduped characters an atlas needs to rasterize: the active charSet plus any
+         * image/chart characters currently in play. Shared by
+         * {@link asciiam#_getGlyphAtlas} (Canvas 2D) and `_getWebGLAtlas()`
+         * (WebGL2/WebGPU) so the two atlases can't drift apart.
+         *
+         * @private
+         * @returns {string[]} deduped characters, in first-seen order
+         */
         _computeAtlasCharacterSet() {
             const chartCharacters = (this.opts.mode === "chart" || this.opts.chartData || (this._layers && this._layers.some((l) => l.mode === "chart")))
                 ? this._getChartCharacters()
@@ -3348,6 +4478,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return [...new Set(this.opts.charSet + imageCharacters + chartCharacters)];
         }
 
+        /**
+         * Builds (or reuses, from an instance-level or shared static cache) the
+         * Canvas 2D glyph atlas: every character x bold x font-level combination
+         * pre-rasterized into one offscreen canvas, so per-cell painting is a cheap
+         * `drawImage()` instead of a `fillText()` call. Returns `null` when atlasing
+         * is disabled or incompatible with the active options (a gradient, animated
+         * color, or image-derived color all need per-cell color, which a shared atlas
+         * can't represent).
+         *
+         * @private
+         * @returns {Object|null} the atlas (`{canvas, characterIndex, characters, sourceX, sourceY, tileWidth, tileHeight, baseline, padding}`), or `null` if atlasing isn't applicable right now
+         */
         _getGlyphAtlas() {
             if (!this.opts.useGlyphAtlas || this.opts.gradient || this.opts.colorAnimation || this.opts.colorFromImage) return null;
             const characters = this._computeAtlasCharacterSet();
@@ -3414,6 +4556,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return atlas;
         }
 
+        /**
+         * Records the built/reused atlas and the exact config it's valid for, so
+         * {@link asciiam#_getGlyphAtlas}'s cheap instance-level check can skip the
+         * shared-cache lookup entirely on unchanged frames.
+         *
+         * @private
+         * @param {Object} atlas - the atlas to cache, see {@link asciiam#_getGlyphAtlas}
+         * @param {string} [characterSet=this.opts.charSet] - the exact character set this atlas covers
+         * @returns {void}
+         */
         _cacheGlyphAtlas(atlas, characterSet = this.opts.charSet) {
             this._glyphAtlas = atlas;
             this._glyphAtlasCharSet = characterSet;
@@ -3423,7 +4575,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._glyphAtlasCharHeight = this.charH;
         }
 
-        /** Re-measures the grid and invalidates geometry-dependent state and caches. */
+        /**
+         * Re-measures the container, resizes the canvas backing store and logical
+         * grid, and invalidates every geometry-dependent cache (spatial, seed,
+         * current-field, edge-fade, gradients, glyph atlas, wave-layer cache). Also
+         * re-samples the active image and rebuilds sparse-mode particle state to fit
+         * the new grid (preserving trajectories where possible via
+         * {@link asciiam#_adaptStateOnResize}). Called on construction, container
+         * resize, and any option change affecting cell/font geometry.
+         *
+         * @private
+         * @returns {void}
+         * @fires asciiam#resize
+         */
         _resize() {
             const oldCols = this.cols || 0;
             const oldRows = this.rows || 0;
@@ -3497,6 +4661,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Rescales and extends/trims sparse-mode particle state (matrix columns,
+         * snow/sparkle/fire/starfield/orbit particles) proportionally to a grid
+         * resize, instead of discarding and reseeding everything — keeps trajectories
+         * visually continuous across a resize rather than resetting all animation.
+         *
+         * @private
+         * @param {number} oldCols - grid column count before the resize
+         * @param {number} oldRows - grid row count before the resize
+         * @param {number} newCols - grid column count after the resize
+         * @param {number} newRows - grid row count after the resize
+         * @returns {void}
+         */
         _adaptStateOnResize(oldCols, oldRows, newCols, newRows) {
             const colScale = newCols / oldCols;
             const rowScale = newRows / oldRows;
@@ -3603,6 +4780,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Precomputes a per-cell vignette multiplier from `opts.edgeFade`, so the hot
+         * paint loop can look it up instead of recomputing a radial falloff every
+         * frame. Clears the cache (falls back to no vignette) when `edgeFade` is
+         * falsy or the grid has zero size.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildEdgeFadeCache() {
             if (!this.opts.edgeFade || !this.cols || !this.rows || !this.w || !this.h) {
                 this._edgeFadeCache = null;
@@ -3621,6 +4807,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Precomputes a stable per-cell pseudo-random value (and the same value for
+         * the next row down) for every cell — the deterministic noise source used by
+         * `assemble`/`breakApart`/dissolve/iris reveal wavefronts and the real per-cell
+         * morph transition, so their staggering doesn't need fresh randomness each
+         * frame.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildSeedCache() {
             const count = this.cols * this.rows;
             this._seedCache = new Float32Array(count);
@@ -3634,6 +4830,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Precomputes per-cell sin/cos phase values for the `current` mode's three
+         * overlapping wave phases (X, Y, and diagonal), so its per-frame cell compute
+         * only needs a cheap phase-shift combination instead of six fresh
+         * trigonometric calls per cell.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildCurrentCache() {
             const count = this.cols * this.rows;
             this._currentSinX = new Float32Array(count);
@@ -3663,6 +4868,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Resolves the alignment origin (`opts.align`) into pixel coordinates, then
+         * precomputes per-cell sin/cos/falloff values for every radial/spatial mode
+         * (ripple, vortex, plasma, image ripple) relative to that origin — the same
+         * caching strategy as {@link asciiam#_buildCurrentCache}, trading memory for
+         * avoiding per-frame trigonometry.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildSpatialCache() {
             if (!this.cols || !this.rows) return;
             switch (this.opts.align) {
@@ -3721,12 +4936,29 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Deterministic pseudo-random value in [0, 1) for a grid cell — a classic
+         * sine-hash noise function, stable across frames for the same `(col, row)`.
+         *
+         * @private
+         * @param {number} col - grid column
+         * @param {number} row - grid row
+         * @returns {number} a pseudo-random value in [0, 1)
+         */
         _seed(col, row) {
             const n = Math.sin(col * 12.9898 + row * 78.233) * 43758.5453;
             return n - Math.floor(n);
         }
 
         // ---- gradient (built once per frame at most, never per cell) ----
+        /**
+         * Builds (or reuses, cached by a content+size+time key) the Canvas 2D
+         * `CanvasGradient` for `opts.gradient`. Returns `null` if no gradient is
+         * configured.
+         *
+         * @private
+         * @returns {CanvasGradient|null} the active foreground gradient, or `null`
+         */
         _getGradient() {
             const g = this.opts.gradient;
             if (!g) return null;
@@ -3758,6 +4990,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return grad;
         }
 
+        /**
+         * Builds (or reuses, cached by a content+size+time key) the Canvas 2D
+         * `CanvasGradient` for a backdrop's own gradient config — separate cache from
+         * {@link asciiam#_getGradient} since the foreground gradient and backdrop
+         * gradient are independent and can differ.
+         *
+         * @private
+         * @param {Object|null} g - the backdrop's gradient config (`opts.backdrop.gradient`)
+         * @returns {CanvasGradient|null} the backdrop gradient, or `null` if `g` has no stops
+         */
         _getBackdropGradient(g) {
             if (!g || !g.stops) return null;
             const key = JSON.stringify(g) + `:${this.w}x${this.h}` + (g.animate ? `:${Math.floor(this._time * 20)}` : "");
@@ -3782,6 +5024,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return grad;
         }
 
+        /**
+         * Expands a gradient config into concrete `{offset, color}` stops. Explicit
+         * object stops (with their own `offset`) pass through sorted by offset;
+         * a plain color-string array instead generates `steps` evenly-spaced stops,
+         * interpolated between the given colors (smoothstep-eased for `type: "cubic"`).
+         *
+         * @private
+         * @param {Object} gradient - `opts.gradient` or a backdrop's gradient config
+         * @param {(string|{offset?: number, color: string})[]} [gradient.stops] - explicit stops, or plain colors to interpolate between; defaults to a blue-to-purple pair
+         * @param {number} [gradient.steps=2] - stop count when `stops` are plain colors, 1-6
+         * @param {"linear"|"cubic"} [gradient.type] - `"cubic"` eases the interpolation between plain-color stops
+         * @returns {{offset: number, color: string}[]} expanded, offset-sorted stops
+         */
         _expandGradientStops(gradient) {
             const raw = gradient.stops || ["#4FA8FF", "#C04FFF"];
             if (raw.some((stop) => typeof stop === "object" && stop !== null)) {
@@ -3812,6 +5067,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- animated color: one calculation per frame, never per cell ----
+        /**
+         * Resolves `opts.colorAnimation` into `this._animatedColor` once per frame —
+         * `"hueRotate"` produces an HSL string that cycles hue over time, `"breathe"`
+         * lerps between two colors on a sine wave. Sets `null` (no override) when no
+         * animation is configured or the type is unrecognized.
+         *
+         * @private
+         * @returns {void}
+         */
         _updateAnimatedColor() {
             const ca = this.opts.colorAnimation;
             if (!ca) {
@@ -3830,6 +5094,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 this._animatedColor = null;
             }
         }
+        /**
+         * Linearly interpolates between two 6-digit hex colors.
+         *
+         * @private
+         * @param {string} a - starting hex color (`#rrggbb`)
+         * @param {string} b - ending hex color (`#rrggbb`)
+         * @param {number} t - interpolation factor, typically 0-1
+         * @returns {string} an `rgb(r,g,b)` string, or `a` unchanged if either input isn't a valid 6-digit hex color (a 3-digit `#rgb` shorthand is *not* accepted by {@link asciiam#_hexToRgb})
+         */
         _lerpColor(a, b, t) {
             const pa = this._hexToRgb(a),
                 pb = this._hexToRgb(b);
@@ -3839,13 +5112,31 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t);
             return `rgb(${r},${g},${bl})`;
         }
+        /**
+         * Parses a 6-digit hex color string into RGB components. Does not accept the
+         * 3-digit `#rgb` shorthand.
+         *
+         * @private
+         * @param {string} hex - a `#rrggbb` (or `rrggbb`, without `#`) hex color string
+         * @returns {number[]|null} `[r, g, b]` (0-255 each), or `null` if `hex` doesn't match the 6-digit format
+         */
         _hexToRgb(hex) {
             const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
         }
 
         // ---- image sampling ----
-        /** Converts the current image source into glyph, color, and range-mask arrays. */
+        /**
+         * Rasterizes the current image/video/frame source into `this._imageGrid` — a
+         * `cols*rows` grid of glyph characters, per-cell colors, and an optional
+         * animation range-mask. Applies fit/scale/rotation/flip geometry, brightness and
+         * contrast tone mapping, and auto or explicit luminance inversion. No-op if there
+         * is no source image or the grid has zero size. Degrades to a no-op (after
+         * warning once) instead of throwing if the sample canvas is tainted by a
+         * cross-origin source without CORS headers.
+         *
+         * @returns {void}
+         */
         _resampleImage() {
             const img = this._sourceImage;
             if (!img || !this.cols || !this.rows) return;
@@ -4025,6 +5316,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- sparse mode state ----
+        /**
+         * (Re)builds the falling-column state for `matrix` mode, one column per grid
+         * column, with randomized fall speed and trail length.
+         *
+         * @returns {void}
+         */
         _initMatrix() {
             this._matrix = [];
             for (let c = 0; c < this.cols; c++) {
@@ -4035,6 +5332,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 });
             }
         }
+        /**
+         * (Re)builds the drifting flake state for `snow` mode. Particle count scales
+         * with grid area and `opts.snowDensity`.
+         *
+         * @returns {void}
+         */
         _initSnow() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.snowDensity));
             this._snow = [];
@@ -4048,6 +5351,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 });
             }
         }
+        /**
+         * (Re)builds the twinkling-point state for `sparkle` mode. Particle count
+         * scales with grid area and `opts.sparkleDensity`.
+         *
+         * @returns {void}
+         */
         _initSparkle() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.sparkleDensity));
             this._sparkle = [];
@@ -4060,11 +5369,28 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 });
             }
         }
+        /**
+         * (Re)builds the rising-ember state for `fire` mode. Particle count scales
+         * with grid area and `opts.fireDensity`; each starts pre-distributed across
+         * its life cycle via `_resetFireParticle(particle, true)` so the effect
+         * doesn't visibly "start from zero" on mode entry.
+         *
+         * @returns {void}
+         */
         _initFire() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.fireDensity));
             this._fire = [];
             for (let i = 0; i < count; i++) this._resetFireParticle({}, true);
         }
+        /**
+         * Respawns one fire particle in place (or appends it to `this._fire` if not
+         * already tracked), randomizing its column, speed, phase, drift, and remaining
+         * life. Called both for initial population and whenever a particle burns out.
+         *
+         * @param {Object} particle - particle object to mutate in place
+         * @param {boolean} [distribute=false] - start partway up its rise (initial population) instead of at the bottom (a respawn)
+         * @returns {void}
+         */
         _resetFireParticle(particle, distribute = false) {
             particle.col = Math.random() * this.cols;
             particle.y = distribute ? this.rows * (0.58 + Math.random() * 0.48) : this.rows + Math.random() * 2;
@@ -4074,11 +5400,26 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             particle.life = 0.45 + Math.random() * 0.55;
             if (!this._fire.includes(particle)) this._fire.push(particle);
         }
+        /**
+         * (Re)builds the depth-star state for `starfield` mode. Particle count scales
+         * with grid area and `opts.starfieldDensity`; each starts pre-distributed
+         * across its depth range via `_resetStar(star, true)`.
+         *
+         * @returns {void}
+         */
         _initStarfield() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.starfieldDensity));
             this._starfield = [];
             for (let i = 0; i < count; i++) this._resetStar({}, true);
         }
+        /**
+         * Respawns one star in place (or appends it to `this._starfield` if not
+         * already tracked) at a random position in normalized `[-1, 1]` space.
+         *
+         * @param {Object} star - star object to mutate in place
+         * @param {boolean} [distribute=false] - start at a random depth (initial population) instead of at the far plane (a respawn)
+         * @returns {void}
+         */
         _resetStar(star, distribute = false) {
             star.x = Math.random() * 2 - 1;
             star.y = Math.random() * 2 - 1;
@@ -4086,6 +5427,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             star.speed = 0.22 + Math.random() * 0.42;
             if (!this._starfield.includes(star)) this._starfield.push(star);
         }
+        /**
+         * (Re)builds the orbiting-point state for `orbit` mode. Particle count scales
+         * with grid area and `opts.orbitDensity`; orbit radius is bounded by the
+         * smaller of the stage's half-width or half-height.
+         *
+         * @returns {void}
+         */
         _initOrbit() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.orbitDensity));
             const radiusLimit = Math.max(this.charW, Math.min(this.w, this.h) * 0.5);
@@ -4101,9 +5449,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- main draw loop ----
-        /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
-        // ---- main draw loop ----
-        /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
+        /**
+         * Renders one frame. Delegates to `_drawWebGL(dt)` when a WebGL2/WebGPU
+         * renderer is active (returning immediately while a WebGPU device is still
+         * being asynchronously acquired, to avoid per-frame CPU work during startup).
+         * Otherwise renders through the Canvas 2D backend directly: fills or clears
+         * the background (or composites the trail-persistence overlay), draws the
+         * backdrop if placed behind content, dispatches to the dense, sparse, mesh,
+         * or image-backed draw path per the active mode (or per layer, for a
+         * `setLayers()` composite), and draws the backdrop again if placed over
+         * content.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds
+         * @returns {void}
+         */
         _draw(dt) {
             // WebGPU adapter/device creation is asynchronous. Avoid entering the
             // GPU composition path at all while it is pending; this keeps the
@@ -4225,7 +5584,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._lastDrawnCount = drawn;
         }
 
-        /** Draws the configured Canvas backdrop at its exact clamped alpha. */
+        /**
+         * Fills the full Canvas 2D surface with the configured backdrop color or
+         * gradient, at its opacity clamped to `[0, 1]`. Called before or after the
+         * mode's own draw pass depending on `backdrop.placement`.
+         *
+         * @returns {void}
+         */
         _drawCanvasBackdrop() {
             const backdrop = this.opts.backdrop;
             const ctx = this.ctx;
@@ -4240,6 +5605,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             ctx.restore();
         }
 
+        /**
+         * Precomputes per-frame trigonometry and sweep position shared by every cell
+         * of the active mode this frame (`wave`, `current`, `ripple`, `vortex`,
+         * `plasma`, `image`), so each per-cell compute function does zero
+         * `Math.sin`/`Math.cos` calls of its own — a fixed, small number of
+         * transcendental calls per frame instead of one (or several) per cell.
+         * No-op for modes that don't precompute shared per-frame state.
+         *
+         * @returns {void}
+         */
         _prepareModeFrame() {
             if (this.opts.mode === "wave") {
                 const extent = this.opts.direction === "diagonal" ? this.w + this.h : this.opts.direction === "vertical" ? this.h : this.w;
@@ -4273,6 +5648,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Renders one frame through the WebGL2 or WebGPU backend (both implement the
+         * same `begin`/`surface`/`push`/`flush` interface behind `this._webgl`, so
+         * this one method drives either). Begins the GPU pass (preserving the prior
+         * frame's contents instead of clearing when `trail > 0`, then compositing the
+         * trail-persistence overlay), draws the backdrop if placed behind content,
+         * dispatches to the mesh, sparse, or dense draw path per the active mode (or
+         * per layer, for a `setLayers()` composite), flushes the accumulated glyph
+         * instances in one draw call, and draws the backdrop again if placed over
+         * content.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds
+         * @returns {void}
+         */
         _drawWebGL(dt) {
             const background = this._colorToRgba(this.opts.background === "transparent" ? "transparent" : this.opts.background);
             const preserve = this.opts.trail > 0;
@@ -4353,7 +5742,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._webglGradient = null;
         }
 
-        /** Draws the configured WebGL backdrop before or after glyph instances. */
+        /**
+         * Draws the configured backdrop as a fullscreen colored (and optionally
+         * gradient-textured) quad via the active WebGL2/WebGPU renderer's `surface()`
+         * draw call, before or after glyph instances depending on
+         * `backdrop.placement`.
+         *
+         * @returns {void}
+         */
         _drawWebGLBackdrop() {
             const backdrop = this.opts.backdrop;
             const base = this._colorToRgba(backdrop.color || "#0a0c10");
@@ -4363,6 +5759,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._webgl.surface(color, gradient);
         }
 
+        /**
+         * Builds the character set a glyph atlas must include to render chart mode:
+         * the fixed box-drawing/block/digit/punctuation ramp chart cells draw from,
+         * plus the literal characters of the configured chart title and any
+         * data-item labels/names (so a chart with, say, Cyrillic labels still gets
+         * those glyphs rasterized into the atlas).
+         *
+         * @returns {string} characters to fold into the active glyph atlas
+         */
         _getChartCharacters() {
             let chars = " ▂▃▄▅▆▇█▏▎▍▌▋▊▉░▒▓┌└│─┘╱╲0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,:;%+-*·/\\_~!?()[]{}#@$^&=<>|'\"`";
             if (this.opts.chartTitle) chars += this.opts.chartTitle;
@@ -4379,6 +5784,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return chars;
         }
 
+        /**
+         * Returns the WebGL2/WebGPU glyph atlas for the current character set, font,
+         * and cell height — an offscreen canvas with one white-on-transparent tile
+         * per (bold × font-level × character) combination, plus UV rects into it, an
+         * `Uint16`-free UV `Float32Array`, and a `character -> tile index` map.
+         * Cached per instance (`this._webglAtlas`) and only rebuilt when the
+         * content-derived cache key changes; unlike `_getGlyphAtlas()`'s Canvas 2D
+         * counterpart, this atlas is not shared across instances (tiles are tinted
+         * per-cell via the instance color attribute, not the atlas pixels
+         * themselves, so there's no cross-instance color coupling to avoid).
+         *
+         * @returns {{canvas: HTMLCanvasElement, key: string, characterIndex: Map<string, number>, characters: number, uv: Float32Array, tileWidth: number, tileHeight: number, padding: number, baseline: number}} the (possibly cached) atlas
+         */
         _getWebGLAtlas() {
             const characters = this._computeAtlasCharacterSet();
             const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.charH]);
@@ -4415,6 +5833,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._webglAtlas;
         }
 
+        /**
+         * Resolves a gradient config into a 256×1 gradient strip texture (uploading it
+         * to the active WebGL2/WebGPU renderer if not already cached under its
+         * content-derived key) and returns a copy of the gradient annotated with that
+         * `textureKey` and, for `gradient.animate`, a time-advanced `angle`. An
+         * animated gradient's cache key changes roughly every 50ms, so its texture
+         * (and stale-view/bind-group state referencing it) is expected to churn
+         * through the renderer's own bounded eviction rather than accumulate.
+         *
+         * @param {Object} gradient - gradient config (`type`, `stops`, `angle`, `animate`, etc.)
+         * @returns {Object} the gradient, shallow-copied with `textureKey` (and, if animated, an advanced `angle`) added
+         */
         _prepareWebGLGradient(gradient) {
             const stops = this._expandGradientStops(gradient);
             const key = JSON.stringify(stops) + (gradient.animate ? Math.floor(this._time * 20) : "");
@@ -4432,6 +5862,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return { ...gradient, textureKey: key, angle: (gradient.angle || 0) + (gradient.animate ? this._time * 20 : 0) };
         }
 
+        /**
+         * Parses a CSS color string (`#rgb`/`#rrggbb`, `rgb()`/`rgba()`, or any other
+         * CSS color the browser understands, resolved via an offscreen 2D context as
+         * a last resort) into a normalized `[r, g, b, a]` array with each channel in
+         * `[0, 1]` — the format WebGL2/WebGPU uniforms expect. Results are cached per
+         * color string (cleared once the cache exceeds 512 entries) since this runs
+         * on the per-cell hot path. Falls back to a mid-blue placeholder color for
+         * anything unparseable rather than returning `null`/throwing.
+         *
+         * @param {string} color - any CSS color string, or `"transparent"`/falsy for fully transparent
+         * @returns {number[]} `[r, g, b, a]`, each channel in `[0, 1]`
+         */
         _colorToRgba(color) {
             if (!this._rgbaCache) this._rgbaCache = new Map();
             const cached = this._rgbaCache.get(color);
@@ -4456,6 +5898,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return result;
         }
 
+        /**
+         * `cacheStaticWave` optimization for the `ultra` quality tier: horizontal
+         * `wave` mode's cell pattern only depends on `x` (not `y`), so most of a frame
+         * is redundant identical rows. When every disqualifying condition is absent
+         * (no image, no trail, no backdrop/gradient/pulse/cursor/animated color, only
+         * `direction: 'horizontal'`), returns a full-canvas pre-rendered static wave
+         * field — reused across frames via an instance-level identity check, and
+         * across *instances* with identical size/charSet/color/font via a small
+         * shared, class-level cache (`asciiam._waveBaseLayers`) — so
+         * `_drawCachedHorizontalWave()` only needs to blit it and redraw the moving
+         * band on top. Returns `null` if any disqualifying condition applies, in
+         * which case the caller falls back to the normal per-cell dense draw.
+         *
+         * @returns {{canvas: HTMLCanvasElement}|null} the cached static wave field, or `null` if the current config can't use it
+         */
         _getWaveBaseLayer() {
             if (
                 this.opts.mode !== "wave"
@@ -4575,6 +6032,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._waveBaseLayer;
         }
 
+        /**
+         * Records `layer` as the active static wave field and snapshots every option
+         * `_getWaveBaseLayer()`'s cache-validity check compares against next frame, so
+         * a later config change (color, charSet, ambient, etc.) is detected and
+         * triggers a rebuild instead of silently reusing a now-stale field.
+         *
+         * @param {{canvas: HTMLCanvasElement}} layer - the static wave field to adopt as current
+         * @returns {void}
+         */
         _setWaveBaseLayer(layer) {
             this._waveBaseLayer = layer;
             this._waveBaseCharSet = this.opts.charSet;
@@ -4589,6 +6055,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._waveBaseAtlas = this._activeGlyphAtlas;
         }
 
+        /**
+         * Blits the pre-rendered static wave field, then clears and redraws only the
+         * narrow moving band around the current sweep position (plus a small margin)
+         * with the real per-cell `_waveCell()` computation — the only part of a
+         * horizontal wave frame that actually changes frame to frame under the
+         * `cacheStaticWave` optimization.
+         *
+         * @param {{canvas: HTMLCanvasElement, drawn: number}} base - the static field from `_getWaveBaseLayer()`
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null`
+         * @returns {number} cells drawn this frame (the static field's count plus the dynamic band's)
+         */
         _drawCachedHorizontalWave(base, globalGradient) {
             const margin = this.charW * 2;
             const start = Math.max(0, this._wavePosition - this._waveBand - margin);
@@ -4609,6 +6086,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return dynamicDrawn + 1;
         }
 
+        /**
+         * Full `cols*rows` scan: computes and paints every cell via `_computeCell()`
+         * / `_paintCell()`. The default draw path for any mode not in
+         * `SPARSE_MODES` and not `mesh`.
+         *
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null`
+         * @returns {number} cells actually painted (a cell can compute to fully transparent/blank and not count)
+         */
         _drawDense(globalGradient) {
             let drawn = 0;
             const columnX = this._columnX;
@@ -4624,7 +6109,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return drawn;
         }
 
-        /** Rasterize the retained mesh once, then paint only occupied ASCII cells. */
+        /**
+         * Rasterizes the retained 3D mesh (`this._mesh`, via `this._meshRasterizer`)
+         * into a `cols*rows` grid once this frame — applying auto-rotation if
+         * enabled and the active mode isn't static — then paints only the occupied
+         * cells that grid reports. A no-op if there's no mesh/rasterizer, or if
+         * `meshEnabled` is explicitly `false`.
+         *
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null`
+         * @returns {number} cells painted (0 if meshEnabled is false or there's nothing to rasterize)
+         */
         _drawMesh(globalGradient) {
             if (!this._mesh || !this._meshRasterizer) return 0;
             if (this.opts.meshEnabled === false) return 0;
@@ -4666,6 +6160,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return drawn;
         }
 
+        /**
+         * Paints the resampled image/video source as a full-grid base layer,
+         * `applyImageSource: false` so its own resolved character/color are used
+         * verbatim instead of being re-resolved from the active mode's cell
+         * function. Used when a sparse particle mode (`matrix`, `snow`, `fire`, …) is
+         * composited *over* an image, so the image renders first as the backdrop.
+         *
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null` (unused when `colorFromImage` supplies per-cell color)
+         * @returns {number} cells painted
+         */
         _drawImageSourceBase(globalGradient) {
             const grid = this._imageGrid;
             let drawn = 0;
@@ -4685,7 +6189,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return drawn;
         }
 
-        /** Advances and paints sparse particles without scanning the complete grid. */
+        /**
+         * Advances and paints the active sparse particle mode (`matrix`, `snow`,
+         * `sparkle`, `fire`, `starfield`, `orbit`) — lazily initializing particle
+         * state on first use — by iterating each mode's own particle list instead of
+         * scanning every grid cell, so cost scales with active particle count rather
+         * than grid size.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null`
+         * @returns {number} cells painted
+         */
         _drawSparse(dt, globalGradient) {
             let drawn = 0;
             const mode = this.opts.mode;
@@ -5015,6 +6529,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return true;
         }
 
+        /**
+         * Advances every `matrix` column's fall position by `dt`, respawning a
+         * column (new start position, speed, and trail length) once it fully
+         * scrolls past the bottom row.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceMatrix(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let c = 0; c < this._matrix.length; c++) {
@@ -5027,6 +6549,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 }
             }
         }
+        /**
+         * Advances every `snow` flake's fall position by `dt`, respawning a flake
+         * (new column and speed, back to the top) once it scrolls past the bottom row.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceSnow(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let i = 0; i < this._snow.length; i++) {
@@ -5039,6 +6568,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 }
             }
         }
+        /**
+         * Advances every `fire` particle's rise and remaining life by `dt`,
+         * respawning a particle via `_resetFireParticle()` once it scrolls past the
+         * top row or burns out.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceFire(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let i = 0; i < this._fire.length; i++) {
@@ -5048,6 +6585,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 if (p.y < -1 || p.life <= 0) this._resetFireParticle(p);
             }
         }
+        /**
+         * Advances every `starfield` star's depth (`z`, toward the viewer) by `dt`,
+         * respawning a star via `_resetStar()` once it passes the near clip
+         * threshold.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceStarfield(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let i = 0; i < this._starfield.length; i++) {
@@ -5056,11 +6601,35 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 if (p.z <= 0.035) this._resetStar(p);
             }
         }
+        /**
+         * Advances every `orbit` point's angle by `dt` — orbit points don't respawn,
+         * they simply keep circling indefinitely at their own radius and speed
+         * (positive or negative, set once in `_initOrbit()`).
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceOrbit(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let i = 0; i < this._orbit.length; i++) this._orbit[i].angle += this._orbit[i].speed * dtS;
         }
 
+        /**
+         * Resolves one dense-mode grid cell to its character/opacity/color/bold state.
+         * If `opts.chartData` is set and the active mode isn't already `chart`, a
+         * chart cell is computed first and wins outright whenever it's non-blank
+         * (overlaying chart content on top of any base animation mode); otherwise
+         * dispatches on `opts.mode` — first to `opts.customCell` for `mode: 'custom'`,
+         * then to a plugin mode registered via `asciiam.registerMode()`, then to the
+         * matching built-in per-mode cell function, falling back to `_waveCell()` for
+         * an unrecognized mode.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell's left edge
+         * @param {number} y - pixel y-coordinate of the cell's top edge
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: (string|null)}} the resolved cell (the shared pooled `this._cell` object — copy fields out before the next call if retaining them)
+         */
         _computeCell(col, row, x, y) {
             const mode = this.opts.mode;
             if (this.opts.chartData && mode !== "chart") {
@@ -5130,6 +6699,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Invokes a `customCell`-shaped callback (the `mode: 'custom'` handler, or a
+         * plugin mode registered via `asciiam.registerMode()`) with a populated,
+         * reused API object (`this._api`) exposing the current cell's coordinates,
+         * clock, grid size, and stage size, plus `seed()`/`set()` helpers. Accepts
+         * either return convention: the callback can call `api.set(char, opacity,
+         * intensity, bold)` and return that same pooled cell object directly, or
+         * return a plain `{char, opacity, intensity, bold}` object.
+         *
+         * @param {Function} fn - the custom cell callback (`opts.customCell`, or a registered mode's function)
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell's left edge
+         * @param {number} y - pixel y-coordinate of the cell's top edge
+         * @returns {{char: string, opacity: number, level: number, bold: boolean}|null} the resolved cell, or `null` if the callback returned a falsy value
+         */
         _callCustom(fn, col, row, x, y) {
             const api = this._api;
             api.col = col;
@@ -5149,6 +6734,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(result.char, result.opacity, result.intensity || 0, !!result.bold);
         }
 
+        /**
+         * Writes a resolved cell's fields into the single pooled `this._cell` object
+         * and returns it — the allocation-free sink every per-mode cell function
+         * funnels through. `intensity` is quantized to a discrete `level` in
+         * `[0, fontLevels - 1]` here, which is what selects the glyph atlas
+         * bold/weight tile a painted cell actually uses.
+         *
+         * @param {string} char - the glyph to render for this cell
+         * @param {number} opacity - cell opacity, typically `[0, 1]`
+         * @param {number} intensity - normalized brightness/peak value, `[0, 1]`, quantized into `level`
+         * @param {boolean} bold - whether to use the bold font variant
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the shared pooled cell object
+         */
         _setCell(char, opacity, intensity, bold) {
             const c = this._cell;
             c.char = char;
@@ -5159,6 +6757,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return c;
         }
 
+        /**
+         * `wave` mode's per-cell function: a soft-edged band (smoothstepped) sweeping
+         * along `direction` (`horizontal`/`vertical`/`diagonal`) at `_wavePosition`,
+         * blended with per-cell ambient noise from `_seedCache`.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _waveCell(col, row, x, y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak, direction, ambient, bandWidth } = this.opts;
             let coord, extent;
@@ -5189,6 +6798,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             );
         }
 
+        /**
+         * `current` mode's per-cell function: three superimposed sinusoidal fields at
+         * different weights/frequencies, precomputed per-cell in `_buildCurrentCache()`
+         * and combined with the current frame's shared trig terms from
+         * `_prepareModeFrame()` — no per-cell `Math.sin`/`Math.cos` calls.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _currentCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const index = row * this.cols + col;
@@ -5200,6 +6821,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * n, n, boldOnPeak && n > 0.72);
         }
 
+        /**
+         * `ripple` mode's per-cell function: a radial sinusoidal wave from cached
+         * per-cell distance terms, shaped by a precomputed radial falloff so it fades
+         * out toward the edges.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _rippleCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const index = row * this.cols + col;
@@ -5210,6 +6842,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * combined, combined, boldOnPeak && combined > 0.6);
         }
 
+        /**
+         * `vortex` mode's per-cell function: a rotating spiral-arm sinusoid, shaped
+         * by the same precomputed radial falloff `ripple` uses plus a touch of
+         * ambient noise so the arms don't look perfectly clean.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _vortexCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const index = row * this.cols + col;
@@ -5226,6 +6869,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             );
         }
 
+        /**
+         * `plasma` mode's per-cell function: three superimposed sinusoidal layers at
+         * different frequencies, averaged and normalized into `[0, 1]` — the classic
+         * "plasma effect" pattern, built entirely from cached per-cell terms and this
+         * frame's shared trig values.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _plasmaCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const index = row * this.cols + col;
@@ -5242,6 +6897,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             );
         }
 
+        /**
+         * `glitch` mode's per-cell function: a scanning "active band" of rows (driven
+         * by a coarse, quantized frame clock so the glitch reads as discrete bursts
+         * rather than smooth motion) that horizontally displaces sampled cell content
+         * by a noise-derived offset; rows outside the active band show dim ambient
+         * noise instead.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _glitchCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const frame = Math.floor(this._time * 12);
@@ -5263,6 +6931,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             );
         }
 
+        /**
+         * `typewriter` mode's per-cell function: reveals cells in raster order (row
+         * by row, left to right) up to a progress-driven cursor index, rendering a
+         * blinking-style `_` cursor glyph at the current position and `null` (fully
+         * unrevealed, not even a blank space) for cells past it. Loops on a
+         * duration-plus-pause cycle when `opts.loop` is set.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {({char: string, opacity: number, level: number, bold: boolean, color: null}|null)} the resolved cell, or `null` for a cell not yet reached by the cursor
+         */
         _typewriterCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
             const count = Math.max(1, this.cols * this.rows);
@@ -5278,6 +6959,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(isCursor ? "_" : charSet[charIdx] || "0", isCursor ? 1 : maxOpacity, isCursor ? 1 : seed, isCursor);
         }
 
+        /**
+         * `fadeIn` mode's per-cell function: each cell eases its opacity from 0 to
+         * `maxOpacity` on a per-cell-delayed timeline, where the delay is driven by
+         * `_revealProgress()` (honoring `opts.revealDirection`/`delayCurve`) plus a
+         * small per-cell jitter so the sweep front isn't perfectly straight. A subtle
+         * per-cell shimmer varies peak brightness slightly.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _fadeInCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
             const totalDuration = Math.max(0.1, Number(this.opts.sweepDuration || this.opts.revealDuration) || 2.2);
@@ -5291,6 +6985,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || " ", eased * maxOpacity * shimmer, 0, false);
         }
 
+        /**
+         * `fadeOut` mode's per-cell function: the mirror of `_fadeInCell()` — each
+         * cell eases its opacity from `maxOpacity` down to 0 on the same
+         * `_revealProgress()`-delayed, per-cell-jittered timeline and shimmer.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _fadeOutCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
             const totalDuration = Math.max(0.1, Number(this.opts.sweepDuration || this.opts.revealDuration) || 2.2);
@@ -5305,6 +7010,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || " ", remaining * maxOpacity * shimmer, 0, false);
         }
 
+        /**
+         * Converts a cell's grid position into a normalized `[0, 1]` "when should
+         * this cell reveal" progress value, per `opts.revealDirection`
+         * (`left-to-right`/`right-to-left`/`top-to-bottom`/`bottom-to-top`/`diagonal`/
+         * `edges`/center-out default) and then reshaped by `opts.delayCurve`
+         * (`easeIn`/`easeOut`/`easeInOut`/`stagger`/linear default). Shared by every
+         * directional reveal mode (`fadeIn`/`fadeOut`/`assemble`/`breakApart`) as the
+         * deterministic per-cell delay/threshold term.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} [row=0] - zero-based grid row
+         * @returns {number} reveal progress in `[0, 1]`, before the curve can push it slightly outside that range for `stagger`
+         */
         _revealProgress(col, row = 0) {
             const position = col / Math.max(1, this.cols - 1);
             const vertical = row / Math.max(1, this.rows - 1);
@@ -5325,6 +7043,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return p;
         }
 
+        /**
+         * `irisIn`/`irisOut` mode's per-cell function: a circular wavefront
+         * (feathered edge, like a camera iris) expanding outward from
+         * `(this._originX, this._originY)`, reaching cells in order of their
+         * distance from that origin.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @param {boolean} reverse - `true` for `irisOut` (closing/hiding), `false` for `irisIn` (opening/revealing)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _irisCell(col, row, x, y, reverse) {
             const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
@@ -5340,6 +7071,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.74);
         }
 
+        /**
+         * `dissolveIn`/`dissolveOut` mode's per-cell function: a staggered wavefront
+         * (per-cell threshold blending `_seedCache` noise with directional progress
+         * from `_revealProgress()`) that reveals or hides cells in a scattered,
+         * noise-driven order rather than a clean geometric sweep.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {boolean} reverse - `true` for `dissolveOut` (hiding), `false` for `dissolveIn` (revealing)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _dissolveCell(col, row, reverse) {
             const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
@@ -5352,6 +7094,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", visible * this.opts.maxOpacity, visible, visible > 0.82);
         }
 
+        /**
+         * `assemble` mode's per-cell function: fragments fly in and settle using the
+         * same staggered-threshold wavefront `_dissolveCell()` uses, but additionally
+         * lets each fragment's own noise value blend its character and brightness as
+         * it locks into place, for a "coalescing" look rather than a flat crossfade.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _assembleCell(col, row) {
             const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
@@ -5367,6 +7119,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.78);
         }
 
+        /**
+         * `breakApart` mode's per-cell function: the exit mirror of `_assembleCell()`
+         * — fragments break away and fade using the same staggered-threshold
+         * wavefront, with each fragment's noise value blending its character and
+         * brightness as it dissolves out.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _breakApartCell(col, row) {
             const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
@@ -5383,6 +7145,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.8);
         }
 
+        /**
+         * `lumaFold` mode's per-cell function: a diagonal sinusoidal "fold" pattern
+         * sharpened into a ridge (via a power curve on `1 - fold`) for a faceted,
+         * luminance-creased look rather than a smooth wave.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _lumaFoldCell(col, row, x, y) {
             const nx = x / Math.max(1, this.w);
             const ny = y / Math.max(1, this.h);
@@ -5393,6 +7166,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, ridge > 0.58);
         }
 
+        /**
+         * `riftLace` mode's per-cell function: two independent diagonal sinusoids
+         * whose *difference* is sharpened into a thin, lace-like "seam" wherever they
+         * nearly cancel out, blended with a touch of ambient noise.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _riftLaceCell(col, row, x, y) {
             const a = Math.sin(x * 0.037 + y * 0.018 + this._time * 2.1);
             const b = Math.sin(y * 0.052 - x * 0.013 - this._time * 1.45);
@@ -5403,6 +7187,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, seam > 0.72);
         }
 
+        /**
+         * `echoBloom` mode's per-cell function: three concentric ring pulses expanding
+         * outward from `(this._originX, this._originY)` at different speeds and
+         * strengths, combined by taking the strongest one at each point and cubing it
+         * for a sharp "bloom" falloff rather than a soft ripple.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _echoBloomCell(col, row, x, y) {
             const distance = Math.hypot(x - this._originX, y - this._originY) * 0.055;
             const phase = distance - this._time * 3.1;
@@ -5414,6 +7210,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, intensity > 0.76);
         }
 
+        /**
+         * `hoverZone` mode's per-cell function: a soft-edged glow radius following
+         * the live pointer position (`this._cursor`), with a subtle expanding ripple
+         * layered on top. Falls back to a dim ambient shimmer when no pointer is
+         * currently hovering.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _hoverZoneCell(col, row, x, y) {
             const index = row * this.cols + col;
             const origin = this._cursor;
@@ -5433,6 +7241,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", opacity, intensity, intensity > 0.72);
         }
 
+        /**
+         * `clickZone` mode's per-cell function: an expanding ring pulse plus a
+         * fading center glow triggered by `triggerInteraction()`/a click, timed
+         * against `this._interaction.elapsed` over `opts.interactionDuration`. Falls
+         * back to a dim ambient shimmer when no interaction is currently active.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _clickZoneCell(col, row, x, y) {
             const index = row * this.cols + col;
             const interaction = this._interaction;
@@ -5455,6 +7275,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", opacity, intensity, intensity > 0.72);
         }
 
+        /**
+         * `mode: 'image'`'s per-cell function (legacy — images are normally composed
+         * as media layers, not a standalone mode). Returns `null` if there's no image
+         * grid, `imageEnabled` is `false`, or the sampled character is blank.
+         * When `opts.animateImageMask` is set, reveals/pulses the image through one
+         * of several mask sweep patterns (`waveSweep` default, `scanlinePass`,
+         * `radialRipple`, `thermalNoise`, `halftonePulse`, or `fullStatic`) instead of
+         * showing it at flat full opacity.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {({char: string, opacity: number, level: number, bold: boolean, color: (string|null)}|null)} the resolved cell, or `null` if there's nothing to show at this cell
+         */
         _imageCell(col, row, x, y) {
             if (!this._imageGrid) return null;
             if (this.opts.imageEnabled === false) return null;
@@ -5515,8 +7350,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         /**
-         * Overlays sampled glyph and color data without replacing the selected
-         * mode's opacity, timing, or particle geometry.
+         * Overlays sampled image glyph and color data onto an already-computed
+         * effect cell, without replacing that mode's own opacity/timing/particle
+         * geometry — used when a sparse or dense animation mode is composited over
+         * an image source. For a cell the animation mask excludes from animating,
+         * ignores `effectCell` entirely and returns a flat full-opacity image cell
+         * instead. Returns `null` if there's no image grid, the position is out of
+         * the image grid's bounds, or the sampled character is blank.
+         *
+         * @param {({char: string, opacity: number, level: number, bold: boolean}|null)} effectCell - the active mode's own resolved cell to overlay onto, or `null`
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @returns {({char: string, opacity: number, level: number, bold: boolean, color: (string|null)}|null)} the overlaid cell, or `null` if there's nothing to show
          */
         _applyImageSource(effectCell, col, row) {
             const grid = this._imageGrid;
@@ -5537,8 +7382,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return cell;
         }
 
-        // Sparse matrix cell: called only for rows within a column's active trail
-        // range (see _drawSparse), never scanned across the full grid.
+        /**
+         * `matrix` mode's per-cell function. Called only for rows within one
+         * column's active falling-trail range (see `_drawSparse()`'s matrix branch),
+         * never scanned across the full grid — cost scales with active trail length,
+         * not grid size. The leading ("head") row of a column is rendered bold; the
+         * character is re-randomized per frame for a flickering-glyph effect.
+         *
+         * @param {number} col - zero-based grid column (matches the falling column's index)
+         * @param {number} row - zero-based grid row within the column's active trail
+         * @param {Object} d - the column's particle state from `_matrix` (`{y, speed, length}`)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _matrixCellAt(col, row, d) {
             const dist = d.y - row;
             const intensity = Math.max(0, 1 - dist / d.length);
@@ -5549,6 +7404,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || "0", intensity * maxOpacity, intensity, isHead);
         }
 
+        /**
+         * ASCII chart mode's per-cell function — renders one cell of whichever chart
+         * `opts.chartType` selects (`bar`, `horizontalBar`, `line`, `sparkline`,
+         * `heatmap`, `donut`), including axis guides, scale labels, title, legend,
+         * per-item value labels, and per-series/per-item staggered reveal animation
+         * when `opts.chartAnimateItems` is set. Returns a blank cell (not `null`) when
+         * charting is disabled or there's no data, so callers that composite chart
+         * cells over another mode's own cell (`_computeCell()`) can distinguish "blank
+         * chart cell" from "no chart active."
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: (string|null)}} the resolved cell
+         */
         _chartCell(col, row, _x, _y) {
             if (this.opts.chartEnabled === false) return this._setCell(" ", 0, 0, false);
             const data = this.opts.chartData;
@@ -5852,7 +7723,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(" ", 0, 0, false);
         }
 
-        /** Lazily allocates diagnostic history only while extended output is enabled. */
+        /**
+         * Lazily allocates and returns the extended-diagnostics history state
+         * (rolling frame-work-time and occupancy sample buffers), only the first
+         * time it's actually needed — a compact-stats instance never pays this
+         * allocation.
+         *
+         * @returns {Object} the extended-stats accumulator/history state
+         */
         _ensureExtendedStats() {
             if (!this._extendedStats) {
                 this._extendedStats = {
@@ -5869,7 +7747,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._extendedStats;
         }
 
-        /** Estimates active display cadence from raw animation-frame intervals. */
+        /**
+         * Estimates the display's actual refresh cadence from raw animation-frame
+         * intervals, exponentially smoothed. Only samples plausible vsync-driven
+         * deltas (`4`-`50` ms, i.e. roughly 20-250 Hz) so an interval stretched by a
+         * dropped frame or a background tab doesn't skew the estimate.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds
+         * @returns {void}
+         */
         _sampleDisplayRefresh(dt) {
             if (!(dt >= 4 && dt <= 50)) return;
             const stats = this._ensureExtendedStats();
@@ -5878,6 +7764,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 : dt;
         }
 
+        /**
+         * Finalizes the current stats window's averaged CPU frame-work time and
+         * records both it and cell occupancy into the rolling ring-buffer history
+         * used to render the extended-diagnostics sparkline charts.
+         *
+         * @param {number} occupancy - fraction of the grid actually drawn this window, `[0, 1]`
+         * @returns {void}
+         */
         _pushExtendedStats(occupancy) {
             const stats = this._ensureExtendedStats();
             stats.frameWorkMs = stats.frameWorkAccum / stats.frameWorkSamples;
@@ -5889,7 +7783,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             stats.historyCount = Math.min(STATS_HISTORY_LENGTH, stats.historyCount + 1);
         }
 
-        /** Returns a read-only diagnostic snapshot without starting any observers. */
+        /**
+         * Returns a read-only diagnostic snapshot of the instance's current
+         * performance and renderer state — FPS, estimated display refresh rate, CPU
+         * frame-work time (when extended stats are enabled), grid occupancy,
+         * resolved renderer/adapter info, quality tier, DPR, and mesh/model status.
+         * Safe to call at any time; never starts an observer or allocates history on
+         * its own (that's `_ensureExtendedStats()`'s job, driven by `opts.showStats`).
+         *
+         * @returns {Object} the diagnostic snapshot
+         */
         getStats() {
             const cells = this.cols * this.rows;
             const occupancy = cells ? Math.min(1, this._lastDrawnCount / cells) : 0;
@@ -5913,6 +7816,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
+        /**
+         * Formats a `getStats()` snapshot plus rolling history into the multi-line
+         * extended-diagnostics overlay text: FPS/grid/drawn summary, display
+         * refresh/backend/quality/DPR line, CPU frame-work time with an inline
+         * sparkline, fill-rate percentage with an inline sparkline, and (when
+         * present) a GPU adapter line and a 3D mesh/model summary line.
+         *
+         * @param {Object} snapshot - a `getStats()` result
+         * @returns {string} the formatted, newline-joined diagnostics text
+         */
         _formatExtendedStats(snapshot) {
             const stats = this._extendedStats;
             const refresh = snapshot.estimatedRefreshRate ? `~${Math.round(snapshot.estimatedRefreshRate)} Hz` : "measuring";
@@ -5939,6 +7852,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return lines.join("\n");
         }
 
+        /**
+         * Accumulates per-frame CPU work time (when extended stats are enabled) and,
+         * once every ~500ms window, recomputes FPS and refreshes the attached stats
+         * element's text — compact one-line summary normally, or the full
+         * `_formatExtendedStats()` multi-line overlay when `opts.extendedStats` is
+         * set. A no-op past frame counting if no stats element is attached.
+         *
+         * @param {number} timestamp - current frame timestamp (same clock as `requestAnimationFrame`)
+         * @param {number} frameWorkMs - this frame's measured CPU work time in milliseconds (`0` if not measured)
+         * @returns {void}
+         */
         _updateStats(timestamp, frameWorkMs) {
             this._frames++;
             if (this.opts.extendedStats) {
@@ -5964,7 +7888,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 }
             }
         }
-        /** Selects the text element updated by the optional diagnostics counter. */
+        /**
+         * Selects the DOM element `_updateStats()` writes its diagnostics text into.
+         * Pass `null` to detach (stats keep computing internally, just stop being
+         * written anywhere).
+         *
+         * @param {(Element|null)} el - element to receive the diagnostics text, or `null` to detach
+         * @returns {void}
+         */
         attachStats(el) {
             this._statsEl = el;
         }
@@ -6058,7 +7989,31 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this.exportImage({ format, filename, scale, download: true });
         }
 
-        /** Installs chart data and enables ASCII chart rendering mode. */
+        /**
+         * Installs chart data and enables ASCII chart rendering — the primary entry
+         * point for chart mode, independent of `setMode('chart')` (chart cells
+         * composite over the active animation mode automatically once data is
+         * present, per `_computeCell()`). Any option omitted from `options` keeps its
+         * current value rather than being reset, so repeated calls can update just
+         * the data or just a single display option.
+         *
+         * @param {(number[]|Object[])} data - flat numeric values, or objects with `value`/`label`/`color` fields (shape accepted depends on `opts.chartType`)
+         * @param {Object} [options={}]
+         * @param {boolean} [options.enabled] - explicitly enable/disable chart rendering (default: enabled)
+         * @param {string} [options.type] - chart type (`'bar'`, `'horizontalBar'`, `'line'`, `'sparkline'`, `'heatmap'`, `'donut'`)
+         * @param {string} [options.title] - chart title text
+         * @param {boolean} [options.showValues] - show per-item value labels
+         * @param {boolean} [options.showAxes] - show axis guides and scale labels
+         * @param {boolean} [options.showLegend] - show the legend
+         * @param {string[]} [options.colors] - per-item/per-series color palette
+         * @param {number} [options.scaleMin] - explicit Y-axis minimum (auto if omitted)
+         * @param {number} [options.scaleMax] - explicit Y-axis maximum (auto if omitted)
+         * @param {boolean} [options.animateItems] - stagger-reveal items on entry
+         * @returns {asciiam} `this`, for chaining
+         *
+         * @example
+         * anim.setChartData([12, 34, 8, 21], { type: "bar", title: "Requests/min" });
+         */
         setChartData(data, options = {}) {
             this.opts.chartData = data;
             this.opts.chartEnabled = options.enabled !== undefined ? options.enabled : true;
@@ -6074,7 +8029,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Clears active chart data and resets animation mode. */
+        /**
+         * Clears active chart data, disables chart rendering, and — if `opts.mode`
+         * was explicitly set to `'chart'` — switches back to `'wave'`. Data set via
+         * `setChartData()` while composited over a different mode is simply removed
+         * without changing that mode.
+         *
+         * @returns {asciiam} `this`, for chaining
+         */
         clearChart() {
             this.opts.chartData = null;
             this.opts.chartEnabled = false;
@@ -6086,7 +8048,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Returns metadata for the active ASCII chart. */
+        /**
+         * Returns a read-only metadata snapshot of the active ASCII chart —
+         * whether it's active/enabled, its type, data length, title, legend/color
+         * flags, resolved scale bounds, and whether item animation is on.
+         *
+         * @returns {{active: boolean, enabled: boolean, type: string, dataLength: number, title: string, showLegend: boolean, hasColors: boolean, scaleMin: (number|null), scaleMax: (number|null), animateItems: boolean}} the chart metadata snapshot
+         */
         getChartInfo() {
             const data = this.opts.chartData;
             const isArray = Array.isArray(data);

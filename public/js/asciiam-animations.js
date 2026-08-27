@@ -6,7 +6,7 @@
  * @license MIT
  */
 
-import asciiam from "../libs/asciiam.esm.js?v=d4fa821ae835";
+import asciiam from "../libs/asciiam.esm.js?v=f9d36768bfca";
 
 const HERO_RAMP = '  .\'`,^:";~+_(){}[]<>!?ilI|/\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$';
 const LOGO_URL = new URL("../branding/asciiam-logo.svg", import.meta.url).href;
