@@ -499,16 +499,18 @@ function renderSequenceEditor() {
         const up = document.createElement("button");
         up.className = "mode-btn";
         up.type = "button";
-        up.textContent = "←";
+        up.textContent = "◀";
         up.disabled = index === 0;
         up.setAttribute("aria-label", `Move node ${index + 1} earlier`);
+        up.setAttribute("data-lume", "Move earlier");
         up.onclick = () => moveSequenceStep(index, -1);
         const down = document.createElement("button");
         down.className = "mode-btn";
         down.type = "button";
-        down.textContent = "→";
+        down.textContent = "▶";
         down.disabled = index === sequenceDraft.length - 1;
         down.setAttribute("aria-label", `Move node ${index + 1} later`);
+        down.setAttribute("data-lume", "Move later");
         down.onclick = () => moveSequenceStep(index, 1);
         const remove = document.createElement("button");
         remove.className = "mode-btn";
@@ -2215,11 +2217,11 @@ function usageSource() {
     const colorMode = document.getElementById("colorMode").value;
     const options = {
         mode: anim.opts.mode,
-        quality: document.getElementById("quality").value,
+        quality: anim.opts.quality,
         targetFPS: Number(targetFPS.value),
         resolutionScale: anim.opts.resolutionScale,
         autoQuality: anim.opts.autoQuality,
-        renderer: document.getElementById("renderer").value,
+        renderer: anim.opts.renderer,
         charSet: anim.opts.charSet,
         align: anim.opts.align,
         color: anim.opts.color,
@@ -2716,9 +2718,13 @@ if (copyPictureBtn) {
     };
 }
 
+// Fallback coverage only: a control that already has its own explicit .oninput/.onchange
+// handler ends by calling renderUsage() itself (per the pattern used throughout this file),
+// so attaching a second, blanket listener here as well ran it twice on every interaction.
+// Only fill the gap for controls that don't already call it on their own.
 document.querySelectorAll("select, input").forEach((control) => {
-    control.addEventListener("input", renderUsage);
-    control.addEventListener("change", renderUsage);
+    if (!control.oninput) control.addEventListener("input", renderUsage);
+    if (!control.onchange) control.addEventListener("change", renderUsage);
 });
 syncControlsFromOpts();
 if (requestedConfig || requestedImageSource) document.getElementById("preset").value = "";
