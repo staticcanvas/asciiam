@@ -2054,14 +2054,14 @@ function syncControlsFromOpts() {
     customCharSetGroup.hidden = !!charSetEntry;
     if (!charSetEntry) customCharSet.value = anim.opts.charSet;
     document.getElementById("speed").value = anim.opts.speed;
-    document.getElementById("speedVal").textContent = anim.opts.speed.toFixed(1);
+    document.getElementById("speedVal").textContent = Number(anim.opts.speed).toFixed(1);
     document.getElementById("revealDirection").value = anim.opts.revealDirection || "center";
     document.getElementById("edgeFade").value = anim.opts.edgeFade;
-    document.getElementById("edgeFadeVal").textContent = anim.opts.edgeFade.toFixed(2);
+    document.getElementById("edgeFadeVal").textContent = Number(anim.opts.edgeFade).toFixed(2);
     document.getElementById("trail").value = anim.opts.trail;
-    document.getElementById("trailVal").textContent = anim.opts.trail.toFixed(2);
+    document.getElementById("trailVal").textContent = Number(anim.opts.trail).toFixed(2);
     document.getElementById("pulse").value = anim.opts.pulse ? anim.opts.pulse.amplitude : 0;
-    document.getElementById("pulseVal").textContent = (anim.opts.pulse ? anim.opts.pulse.amplitude : 0).toFixed(2);
+    document.getElementById("pulseVal").textContent = Number(anim.opts.pulse ? anim.opts.pulse.amplitude : 0).toFixed(2);
     document.getElementById("interactionRadius").value = String(anim.opts.interactionRadius || 180);
     document.getElementById("interactionRadiusVal").textContent = `${anim.opts.interactionRadius || 180}px`;
     document.getElementById("interactionDuration").value = String(anim.opts.interactionDuration || 1.1);
@@ -2147,11 +2147,11 @@ function syncControlsFromOpts() {
         });
     }
     document.getElementById("imageScale").value = anim.opts.imageScale;
-    document.getElementById("imageScaleVal").textContent = anim.opts.imageScale.toFixed(2) + "×";
+    document.getElementById("imageScaleVal").textContent = Number(anim.opts.imageScale).toFixed(2) + "×";
     document.getElementById("imageScaleX").value = anim.opts.imageScaleX || 1;
-    document.getElementById("imageScaleXVal").textContent = (anim.opts.imageScaleX || 1).toFixed(2) + "×";
+    document.getElementById("imageScaleXVal").textContent = Number(anim.opts.imageScaleX || 1).toFixed(2) + "×";
     document.getElementById("imageScaleY").value = anim.opts.imageScaleY || 1;
-    document.getElementById("imageScaleYVal").textContent = (anim.opts.imageScaleY || 1).toFixed(2) + "×";
+    document.getElementById("imageScaleYVal").textContent = Number(anim.opts.imageScaleY || 1).toFixed(2) + "×";
     document.getElementById("animateImageFramesToggle").checked = anim.opts.animateImageFrames !== false;
     document.getElementById("animateImageFramesToggle").setAttribute("aria-checked", String(anim.opts.animateImageFrames !== false));
     document.getElementById("imageFrameRate").value = anim.opts.imageFrameRate || 12;

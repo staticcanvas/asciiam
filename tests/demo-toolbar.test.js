@@ -86,6 +86,23 @@ describe('demo toolbar quality-of-life controls', () => {
     expect(document.getElementById('presetDirtyIndicator').textContent).toBe('Docs example');
   });
 
+  it('does not crash on a saved/shared config with non-numeric option values', () => {
+    // Regression test for a real bug: syncControlsFromOpts() called `anim.opts.speed.toFixed(1)`
+    // (and the same pattern for edgeFade/trail/imageScale/imageScaleX/imageScaleY/pulse.amplitude)
+    // directly, with no Number() coercion. The engine itself accepts any value for these options
+    // (setOption() is a generic passthrough), so a config with a non-numeric value for one of
+    // them — hand-edited JSON, a corrupted saved preset, an old shared link — reached
+    // "not-a-number".toFixed and threw, breaking the whole toolbar sync on load.
+    const options = { mode: 'wave', speed: 'not-a-number', edgeFade: 'x', trail: null, imageScaleX: 'wide', pulse: { amplitude: 'big', speed: 1 } };
+    const encoded = Buffer.from(JSON.stringify(options), 'utf8').toString('base64url');
+    expect(() => {
+      activeDom = createDemo([], `https://demo.test/webutil/?config=${encodeURIComponent(encoded)}`);
+    }).not.toThrow();
+    const { document } = activeDom.window;
+    expect(document.getElementById('modeToolbarStatus').textContent).toBe('wave');
+    expect(document.getElementById('speedVal').textContent).not.toBe('');
+  });
+
   it('renders included image manifest entries as selectable defaults', async () => {
     activeDom = createDemo([
       { name: 'Bird Silhouette', src: './assets/images/bird-silhouette.svg', thumbnail: './assets/thumbnails/bird.webp' },
