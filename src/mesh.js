@@ -344,7 +344,6 @@ export function createTorusMesh(options = {}) {
  * stable mesh can be re-evaluated every frame without allocating in the hot path.
  *
  * @class
- * @since 0.9.0
  *
  * @example
  * const rasterizer = new MeshCellRasterizer(80, 24);
