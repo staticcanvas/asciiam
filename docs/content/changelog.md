@@ -26,6 +26,7 @@ keywords: [asciiam changelog, release notes, upgrade notes]
 - **Fixed:** `_resampleImage()` threw uncaught on a tainted (cross-origin, no CORS headers) image source instead of degrading gracefully.
 - **Fixed (WebGPU):** `gradientViews` grew without bound for the life of an instance using any gradient, worst-case an animated one (`gradient.animate: true`) whose cache key changes roughly every 50ms forever; the underlying GPU texture cache was already correctly capped, but this parallel cache wasn't trimmed alongside it. Bind-group caching was also being defeated on effectively every frame for an animated gradient specifically. Both fixed.
 - Calling `start()` after `destroy()` is now a no-op instead of silently resuming the render loop against torn-down state.
+- Web Utility playground: every slider, dropdown, and toggle now has an in-context Lume tooltip — a quick tip on the label, and for controls with real nuance, a small "i" badge with a richer, structured explanation. Not a library API change.
 
 ## 0.11.0
 
