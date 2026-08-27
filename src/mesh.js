@@ -18,7 +18,15 @@ const DEFAULT_CAMERA = Object.freeze({
     orthographicScale: 2.5,
 });
 
-/** Copy a finite three-component vector into reusable storage. */
+/**
+ * Copy a finite three-component vector into reusable storage, falling back to a
+ * default when the source is missing, too short, or contains non-finite numbers.
+ *
+ * @param {ArrayLike<number>|null|undefined} value - candidate vector (array or typed array, length >= 3)
+ * @param {ArrayLike<number>} fallback - three-component vector used when `value` is invalid
+ * @param {Float64Array} output - three-element buffer written in place
+ * @returns {Float64Array} `output`, for chaining
+ */
 function readVector3(value, fallback, output) {
     const source = value && value.length >= 3 ? value : fallback;
     const x = Number(source[0]);
@@ -36,7 +44,17 @@ function readVector3(value, fallback, output) {
     return output;
 }
 
-/** Normalize one vector into the supplied three-number output array. */
+/**
+ * Normalize one vector into the supplied three-number output array. A
+ * near-zero-length input (within `EPSILON`) resolves to the zero vector
+ * rather than dividing by a near-zero length.
+ *
+ * @param {number} x - vector x component
+ * @param {number} y - vector y component
+ * @param {number} z - vector z component
+ * @param {Float64Array} output - three-element buffer written in place
+ * @returns {Float64Array} `output`, for chaining
+ */
 function normalize3(x, y, z, output) {
     const length = Math.hypot(x, y, z);
     if (length <= EPSILON) {
@@ -54,6 +72,19 @@ function normalize3(x, y, z, output) {
 /**
  * Validate and normalize application geometry without copying compatible typed arrays.
  * Positions contain XYZ triples. Indices are optional and default to vertex order.
+ *
+ * @param {Object} mesh - raw mesh description
+ * @param {Float32Array|Float64Array} mesh.positions - flat XYZ triples, one per vertex
+ * @param {Uint8Array|Uint16Array|Uint32Array|null} [mesh.indices] - vertex indices; omit to use vertex order directly
+ * @param {"points"|"lines"|"triangles"} [mesh.primitive="triangles"] - element topology
+ * @param {Float32Array|null} [mesh.normals] - flat XYZ triples matching `positions`, one per vertex
+ * @param {Float32Array|null} [mesh.colors] - flat RGBA quadruples, one per vertex
+ * @param {Object} [limits] - safety bounds
+ * @param {number} [limits.maxVertices=100000] - throws if the vertex count exceeds this
+ * @param {number} [limits.maxPrimitives=100000] - throws if the primitive count exceeds this
+ * @returns {Readonly<Object>} frozen, normalized mesh with `positions`, `indices`, `normals`, `colors`, `primitive`, `vertexCount`, `primitiveCount`
+ * @throws {TypeError} if `mesh` is missing, malformed, or a field has the wrong type
+ * @throws {RangeError} if the geometry is empty, index-out-of-bounds, mis-grouped for its primitive, or exceeds `limits`
  */
 export function normalizeMeshData(mesh, limits = {}) {
     if (!mesh || typeof mesh !== "object") throw new TypeError("asciiam: mesh must be an object");
@@ -104,7 +135,15 @@ export function normalizeMeshData(mesh, limits = {}) {
     return Object.freeze({ positions, indices, normals, colors, primitive, vertexCount, primitiveCount });
 }
 
-/** Generate an indexed cube centered at the origin. */
+/**
+ * Generate an indexed cube centered at the origin.
+ *
+ * @param {number} [size=2] - edge length; clamped above zero
+ * @returns {Readonly<Object>} normalized mesh, see {@link normalizeMeshData}
+ *
+ * @example
+ * const cube = createCubeMesh(1.5);
+ */
 export function createCubeMesh(size = 2) {
     const half = Math.max(EPSILON, Number(size) || 2) * 0.5;
     return normalizeMeshData({
@@ -120,7 +159,19 @@ export function createCubeMesh(size = 2) {
     });
 }
 
-/** Generate an indexed XY plane centered at the origin. */
+/**
+ * Generate an indexed XY plane centered at the origin.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.width=2] - full width along X; clamped above zero
+ * @param {number} [options.height=2] - full height along Y; clamped above zero
+ * @param {number} [options.columns=1] - grid subdivisions along X, 1-256
+ * @param {number} [options.rows=1] - grid subdivisions along Y, 1-256
+ * @returns {Readonly<Object>} normalized mesh, see {@link normalizeMeshData}
+ *
+ * @example
+ * const plane = createPlaneMesh({ width: 4, height: 2, columns: 8, rows: 4 });
+ */
 export function createPlaneMesh(options = {}) {
     const width = Math.max(EPSILON, Number(options.width ?? 2));
     const height = Math.max(EPSILON, Number(options.height ?? 2));
@@ -158,7 +209,18 @@ export function createPlaneMesh(options = {}) {
     return normalizeMeshData({ positions, indices });
 }
 
-/** Generate an indexed icosphere; subdivision work occurs only during construction. */
+/**
+ * Generate an indexed icosphere; subdivision work occurs only during construction,
+ * never per frame.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.radius=1] - sphere radius; clamped above zero
+ * @param {number} [options.subdivisions=2] - recursive subdivision level, 0-5 (vertex count grows exponentially with this)
+ * @returns {Readonly<Object>} normalized mesh, see {@link normalizeMeshData}
+ *
+ * @example
+ * const sphere = createIcosphereMesh({ radius: 2, subdivisions: 3 });
+ */
 export function createIcosphereMesh(options = {}) {
     const radius = Math.max(EPSILON, Number(options.radius ?? 1));
     const subdivisions = Math.max(0, Math.min(5, Math.round(options.subdivisions ?? 2)));
@@ -217,7 +279,19 @@ export function createIcosphereMesh(options = {}) {
     return normalizeMeshData({ positions, indices: new IndexType(faces) });
 }
 
-/** Generate a torus with shared vertices for near-limit benchmark and demo geometry. */
+/**
+ * Generate a torus with shared vertices for near-limit benchmark and demo geometry.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.majorSegments=48] - segments around the ring, 3-512
+ * @param {number} [options.minorSegments=24] - segments around the tube cross-section, 3-256
+ * @param {number} [options.majorRadius=1] - distance from the origin to the tube's center
+ * @param {number} [options.minorRadius=0.38] - tube cross-section radius
+ * @returns {Readonly<Object>} normalized mesh, see {@link normalizeMeshData}
+ *
+ * @example
+ * const torus = createTorusMesh({ majorSegments: 64, minorSegments: 32 });
+ */
 export function createTorusMesh(options = {}) {
     const majorSegments = Math.max(3, Math.min(512, Math.round(options.majorSegments ?? 48)));
     const minorSegments = Math.max(3, Math.min(256, Math.round(options.minorSegments ?? 24)));
@@ -261,10 +335,26 @@ export function createTorusMesh(options = {}) {
 }
 
 /**
- * Rasterize a normalized mesh into reusable cell-resolution depth, intensity, and
- * occupancy buffers. It deliberately does not know about canvas or glyph rendering.
+ * MeshCellRasterizer
+ * ─────────────────────────────────────────────
+ * Rasterizes a normalized mesh into reusable cell-resolution depth, intensity, and
+ * occupancy buffers. It deliberately does not know about canvas or glyph rendering —
+ * callers turn `result.depth`/`result.intensity`/`result.occupied` into characters.
+ * All working buffers are allocated once and reused across `rasterize()` calls, so a
+ * stable mesh can be re-evaluated every frame without allocating in the hot path.
+ *
+ * @class
+ * @since 0.9.0
+ *
+ * @example
+ * const rasterizer = new MeshCellRasterizer(80, 24);
+ * const { depth, intensity, occupied, drawn } = rasterizer.rasterize(mesh, { style: 'solid' });
  */
 export class MeshCellRasterizer {
+    /**
+     * @param {number} cols - initial grid column count
+     * @param {number} rows - initial grid row count
+     */
     constructor(cols, rows) {
         this._forward = new Float64Array(3);
         this._right = new Float64Array(3);
@@ -282,7 +372,14 @@ export class MeshCellRasterizer {
         this.resize(cols, rows);
     }
 
-    /** Resize cell buffers only when the grid dimensions change. */
+    /**
+     * Resize cell buffers only when the grid dimensions change — a no-op otherwise,
+     * safe to call every frame.
+     *
+     * @param {number} cols - target grid column count (rounded, floored at 1)
+     * @param {number} rows - target grid row count (rounded, floored at 1)
+     * @returns {void}
+     */
     resize(cols, rows) {
         const nextCols = Math.max(1, Math.round(cols));
         const nextRows = Math.max(1, Math.round(rows));
@@ -298,7 +395,14 @@ export class MeshCellRasterizer {
         this.result.occupied = this.occupied;
     }
 
-    /** Ensure projected and world-coordinate buffers fit the active vertex count. */
+    /**
+     * Ensure the projected/world-coordinate/visibility buffers fit the active vertex
+     * count, growing (never shrinking) them only when needed.
+     *
+     * @private
+     * @param {number} vertexCount - vertex count the buffers must accommodate
+     * @returns {void}
+     */
     _ensureVertices(vertexCount) {
         const length = vertexCount * 3;
         if (!this.projected || this.projected.length < length) {
@@ -308,7 +412,17 @@ export class MeshCellRasterizer {
         }
     }
 
-    /** Build a camera basis once per rasterized frame. */
+    /**
+     * Build an orthonormal camera basis (forward/right/up) once per rasterized frame,
+     * writing into the instance's reusable `_forward`/`_right`/`_up` buffers.
+     *
+     * @private
+     * @param {Object} [camera] - camera description; missing fields fall back to `DEFAULT_CAMERA`
+     * @param {ArrayLike<number>} [camera.position] - world-space eye position
+     * @param {ArrayLike<number>} [camera.target] - world-space look-at point
+     * @param {ArrayLike<number>} [camera.up] - approximate up direction
+     * @returns {void}
+     */
     _prepareCamera(camera) {
         const position = readVector3(camera?.position, DEFAULT_CAMERA.position, this._cameraPosition);
         const target = readVector3(camera?.target, DEFAULT_CAMERA.target, this._cameraTarget);
@@ -328,7 +442,19 @@ export class MeshCellRasterizer {
         );
     }
 
-    /** Project every model vertex and retain world coordinates for face lighting. */
+    /**
+     * Project every model vertex through a combined model/view/perspective (or
+     * orthographic) transform into grid-cell space, and retain world coordinates
+     * (needed for face-normal lighting) and per-vertex near/far visibility.
+     *
+     * @private
+     * @param {Object} mesh - normalized mesh, see {@link normalizeMeshData}
+     * @param {Object} options - rasterize() options (camera, transform, projection)
+     * @param {Object} [options.camera] - see {@link MeshCellRasterizer#_prepareCamera}
+     * @param {Object} [options.transform] - `{ position, rotation, scale }` model transform
+     * @param {"perspective"|"orthographic"} [options.projection="perspective"] - projection mode
+     * @returns {void}
+     */
     _project(mesh, options) {
         this._ensureVertices(mesh.vertexCount);
         const camera = options.camera;
@@ -430,7 +556,18 @@ export class MeshCellRasterizer {
         }
     }
 
-    /** Store one visible sample when it is nearer than the current cell value. */
+    /**
+     * Store one sample into the nearest cell (round-to-nearest) when it is closer than
+     * the depth already recorded there — the rasterizer's depth test. Silently
+     * discards samples outside the grid or at non-positive depth.
+     *
+     * @private
+     * @param {number} x - projected column coordinate (fractional)
+     * @param {number} y - projected row coordinate (fractional)
+     * @param {number} depth - view-space depth used for the nearest-wins test
+     * @param {number} intensity - lighting intensity to store if this sample wins
+     * @returns {void}
+     */
     _sample(x, y, depth, intensity) {
         const col = Math.round(x);
         const row = Math.round(y);
@@ -442,7 +579,17 @@ export class MeshCellRasterizer {
         this.occupied[index] = 1;
     }
 
-    /** Draw a depth-interpolated edge with a cell-space DDA. */
+    /**
+     * Draw a depth-interpolated edge between two projected vertices using a
+     * cell-space DDA (digital differential analyzer) walk. No-ops if either
+     * endpoint failed the near/far visibility test.
+     *
+     * @private
+     * @param {number} a - index of the first vertex
+     * @param {number} b - index of the second vertex
+     * @param {number} intensity - lighting intensity applied to every sample on the edge
+     * @returns {void}
+     */
     _line(a, b, intensity) {
         if (!this.visible[a] || !this.visible[b]) return;
         const pa = a * 3;
@@ -460,7 +607,18 @@ export class MeshCellRasterizer {
         }
     }
 
-    /** Fill one projected triangle with barycentric depth interpolation. */
+    /**
+     * Fill one projected triangle using a barycentric-coordinate scanline test over
+     * its screen-space bounding box, depth-interpolating each covered cell. No-ops
+     * if any vertex failed visibility or the triangle is degenerate (near-zero area).
+     *
+     * @private
+     * @param {number} a - index of the first vertex
+     * @param {number} b - index of the second vertex
+     * @param {number} c - index of the third vertex
+     * @param {number} intensity - flat lighting intensity applied across the face
+     * @returns {void}
+     */
     _triangle(a, b, c, intensity) {
         if (!this.visible[a] || !this.visible[b] || !this.visible[c]) return;
         const pa = a * 3;
@@ -495,7 +653,19 @@ export class MeshCellRasterizer {
         }
     }
 
-    /** Resolve flat face lighting from transformed world coordinates. */
+    /**
+     * Resolve flat (per-face) lighting intensity from transformed world coordinates:
+     * the face normal's alignment with the light direction, unsigned (so a face lit
+     * from either side reads as lit, rather than going dark from behind).
+     *
+     * @private
+     * @param {number} a - index of the first vertex
+     * @param {number} b - index of the second vertex
+     * @param {number} c - index of the third vertex
+     * @param {number} ambient - flat intensity floor, 0-1
+     * @param {number} strength - diffuse contribution multiplier
+     * @returns {number} intensity in [0, 1]
+     */
     _faceIntensity(a, b, c, ambient, strength) {
         const pa = a * 3;
         const pb = b * 3;
@@ -511,7 +681,24 @@ export class MeshCellRasterizer {
         return Math.min(1, ambient + diffuse * strength);
     }
 
-    /** Rasterize one frame and return stable buffer references plus occupied count. */
+    /**
+     * Rasterize one frame: projects the mesh, resolves per-face or per-point lighting,
+     * and fills the depth/intensity/occupancy buffers. `meshInput` is normalized via
+     * {@link normalizeMeshData} automatically if it isn't already (no `vertexCount`).
+     *
+     * @param {Object} meshInput - a normalized mesh, or raw mesh data to normalize first
+     * @param {Object} [options]
+     * @param {Object} [options.camera] - see {@link MeshCellRasterizer#_prepareCamera}
+     * @param {Object} [options.transform] - see {@link MeshCellRasterizer#_project}
+     * @param {"perspective"|"orthographic"} [options.projection] - projection mode
+     * @param {"solid"|"wireframe"|"points"} [options.style] - fill style; defaults to `"solid"` for triangle meshes, else the mesh's own primitive
+     * @param {Object} [options.light]
+     * @param {ArrayLike<number>} [options.light.direction] - light direction, see `DEFAULT_LIGHT`
+     * @param {number} [options.light.ambient=0.15] - ambient floor, 0-1
+     * @param {number} [options.light.intensity=0.85] - diffuse strength multiplier
+     * @param {Object} [options.limits] - forwarded to {@link normalizeMeshData} when `meshInput` needs normalizing
+     * @returns {{depth: Float32Array, intensity: Float32Array, occupied: Uint8Array, drawn: number}} stable buffer references (reused across calls — copy out before the next `rasterize()` if retaining) plus the occupied-cell count
+     */
     rasterize(meshInput, options = {}) {
         const mesh = meshInput.vertexCount ? meshInput : normalizeMeshData(meshInput, options.limits);
         this.depth.fill(Infinity);
