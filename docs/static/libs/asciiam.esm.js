@@ -45,7 +45,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
      * Works with 2D canvas context or creates a temporary offscreen measurement canvas.
      */
     function calibrateFontMetrics(target, fontFamily = "monospace", fontSize = 14) {
-        let ctx = target && typeof target.measureText === "function" ? target : null;
+        const ctx = target && typeof target.measureText === "function" ? target : null;
         if (!ctx && typeof target === "string") {
             fontSize = typeof fontFamily === "number" ? fontFamily : fontSize;
             fontFamily = target;
@@ -774,6 +774,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             [this.cornerBuffer, this.instanceBuffer, this._emptyTexture].forEach((resource) => resource?.destroy?.());
             if (this.pass) this.pass.end();
             this.pass = null;
+            this.device?.destroy?.();
         }
     }
 
@@ -1344,6 +1345,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 },
                 opts,
             );
+            // Every mode indexes into charSet by `charSet.length - 1`; an empty string
+            // makes that a character-less lookup that reaches ctx.fillText(undefined, ...)
+            // — which renders the literal text "undefined" across the canvas instead of
+            // nothing. Fall back to the default ramp rather than let that surface.
+            if (!this.opts.charSet) this.opts.charSet = asciiam.CHARACTER_SETS.asciiExtended;
 
             this._time = 0;
             this._raf = null;
@@ -1483,7 +1489,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         // ---- public API ----
         /** Starts or resumes this instance on the shared frame scheduler. */
         start() {
-            if (this._disabled || this._running) return;
+            if (this._disabled || this._destroyed || this._running) return;
             if (this._reduced) {
                 this._draw(16.7);
                 return;
@@ -1519,6 +1525,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._unbindCursor();
             if (this._onWebGLContextLost) this.canvas.removeEventListener("webglcontextlost", this._onWebGLContextLost);
             if (this._webgl) this._webgl.destroy();
+            this._webgl = null;
             this._sourceImage = null;
             this._imageGrid = null;
             this._capturedImageFrames = null;
@@ -1726,6 +1733,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 return;
             }
             this.opts[key] = value;
+            if (key === "charSet" && !value) this.opts.charSet = asciiam.CHARACTER_SETS.asciiExtended;
             if (key === "extendedStats" && !value) this._extendedStats = null;
             if (key === "fontSize" || key === "density" || key === "resolutionScale") {
                 this._buildFontCache();
@@ -1892,15 +1900,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 const image = typeof layer.image === "string" ? layer.image : null;
                 const meshPrimitive = typeof layer.meshPrimitive === "string" ? layer.meshPrimitive : null;
                 const model = layer.model !== undefined && layer.model !== null ? layer.model : null;
+                const options = layer.options && typeof layer.options === "object" ? Object.assign({}, layer.options) : null;
+                // An empty charSet override would otherwise reach every mode's
+                // `charSet[Math.floor(x * (charSet.length - 1))]` lookup as a character-less
+                // index — drop the override entirely so the layer falls back to the shared
+                // charSet, same as _applyLayerOptions() bypasses setOption()'s own guard.
+                if (options && "charSet" in options && !options.charSet) delete options.charSet;
                 const normalized = {
                     mode: typeof layer.mode === "string" ? layer.mode : "wave",
-                    options: layer.options && typeof layer.options === "object" ? Object.assign({}, layer.options) : null,
+                    options,
                     // Precomputed once per setLayers() call so the per-frame apply/restore
                     // path below never allocates. `mode` is excluded: layer.mode is always
                     // authoritative, so a stray `options.mode` can't fight with it.
-                    _optionKeys: layer.options && typeof layer.options === "object"
-                        ? Object.keys(layer.options).filter((key) => key !== "mode")
-                        : null,
+                    _optionKeys: options ? Object.keys(options).filter((key) => key !== "mode") : null,
                     opacity: typeof layer.opacity === "number" ? Math.max(0, Math.min(1, layer.opacity)) : 1.0,
                     blendMode: typeof layer.blendMode === "string" ? layer.blendMode : "source-over",
                     image,
@@ -3310,13 +3322,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._waveBaseLayer = null;
         }
 
-        _getGlyphAtlas() {
-            if (!this.opts.useGlyphAtlas || this.opts.gradient || this.opts.colorAnimation || this.opts.colorFromImage) return null;
+        /** Deduped characters an atlas needs to rasterize: the active charSet plus any image/chart characters currently in play. Shared by _getGlyphAtlas() (Canvas 2D) and _getWebGLAtlas() (WebGL2/WebGPU) so the two atlases can't drift apart. */
+        _computeAtlasCharacterSet() {
             const chartCharacters = (this.opts.mode === "chart" || this.opts.chartData || (this._layers && this._layers.some((l) => l.mode === "chart")))
                 ? this._getChartCharacters()
                 : "";
             const imageCharacters = this._imageGrid ? (this.opts.imageChars || "") : "";
-            const atlasCharacterSet = [...new Set(this.opts.charSet + imageCharacters + chartCharacters)].join("");
+            return [...new Set(this.opts.charSet + imageCharacters + chartCharacters)];
+        }
+
+        _getGlyphAtlas() {
+            if (!this.opts.useGlyphAtlas || this.opts.gradient || this.opts.colorAnimation || this.opts.colorFromImage) return null;
+            const characters = this._computeAtlasCharacterSet();
+            const atlasCharacterSet = characters.join("");
             if (
                 this._glyphAtlas
                 && this._glyphAtlasCharSet === atlasCharacterSet
@@ -3325,8 +3343,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 && this._glyphAtlasBold === this._fontBold
                 && this._glyphAtlasCharHeight === this.charH
             ) return this._glyphAtlas;
-            const characters = [...atlasCharacterSet];
-            const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.opts.color, this.charH]);
+            const key = JSON.stringify([atlasCharacterSet, this._fontRegular, this._fontBold, this.opts.color, this.charH]);
             const cached = asciiam._glyphAtlases.get(key);
             if (cached) {
                 asciiam._glyphAtlases.delete(key);
@@ -3915,7 +3932,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     sampleContext = orientedContext;
                 }
             }
-            const data = sampleContext.getImageData(0, 0, cols, rows).data;
+            let data;
+            try {
+                data = sampleContext.getImageData(0, 0, cols, rows).data;
+            } catch (error) {
+                if (!this._warnedTaintedImage) {
+                    console.warn("asciiam: could not sample the image source (tainted canvas — the image likely needs CORS headers or crossOrigin set).", error);
+                    this._warnedTaintedImage = true;
+                }
+                return;
+            }
 
             const chars = new Array(cols * rows),
                 colors = new Array(cols * rows);
@@ -3945,8 +3971,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const luminanceMode = this.opts.imageLuminance || "auto";
             const invertLuminance = luminanceMode === "invert"
                 || (luminanceMode === "auto" && transparentCount > 0 && opaqueCount > 0 && opaqueBrightness / opaqueCount < 0.45);
-            const userBrightness = Math.max(0, Number(this.opts.imageBrightness) ?? 1);
-            const userContrast = Math.max(0, Number(this.opts.imageContrast) ?? 1);
+            const userBrightness = Math.max(0, Number(this.opts.imageBrightness ?? 1));
+            const userContrast = Math.max(0, Number(this.opts.imageContrast ?? 1));
             const applyTone = userBrightness !== 1 || userContrast !== 1;
 
             for (let i = 0; i < cols * rows; i++) {
@@ -4337,11 +4363,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         _getWebGLAtlas() {
-            const chartCharacters = (this.opts.mode === "chart" || this.opts.chartData || (this._layers && this._layers.some((l) => l.mode === "chart")))
-                ? this._getChartCharacters()
-                : "";
-            const imageCharacters = this._imageGrid ? (this.opts.imageChars || "") : "";
-            const characters = [...new Set(this.opts.charSet + imageCharacters + chartCharacters)];
+            const characters = this._computeAtlasCharacterSet();
             const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.charH]);
             if (this._webglAtlas?.key === key) return this._webglAtlas;
             const padding = 2;
@@ -5552,8 +5574,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const usableCols = Math.max(1, axisColEnd - axisCol - 1);
             const axisRow = rows - marginRowBottom;
 
-            const scaleMin = this.opts.chartScaleMin != null ? this.opts.chartScaleMin : 0;
-            const scaleMax = this.opts.chartScaleMax != null ? this.opts.chartScaleMax : Math.max(1, ...values);
+            const scaleMin = this.opts.chartScaleMin ?? 0;
+            const scaleMax = this.opts.chartScaleMax ?? Math.max(1, ...values);
             const scaleRange = Math.max(1, scaleMax - scaleMin);
 
             const palette = Array.isArray(this.opts.chartColors) ? this.opts.chartColors : null;
