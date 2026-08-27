@@ -2349,4 +2349,116 @@ describe("asciiam lifecycle", () => {
             animation.destroy();
         });
     });
+
+    describe("Edge cases and robustness", () => {
+        const host = () => {
+            const el = document.querySelector("#host");
+            Object.defineProperties(el, {
+                clientWidth: { configurable: true, value: 320 },
+                clientHeight: { configurable: true, value: 180 },
+            });
+            return el;
+        };
+
+        it("falls back to the default character ramp when constructed with an empty charSet", () => {
+            const animation = new asciiam(host(), { charSet: "", respectReducedMotion: false });
+            expect(animation.opts.charSet.length).toBeGreaterThan(0);
+            animation.destroy();
+        });
+
+        it("falls back to the default character ramp when setOption('charSet', '') is called", () => {
+            const animation = new asciiam(host(), { respectReducedMotion: false });
+            animation.setOption("charSet", "");
+            expect(animation.opts.charSet.length).toBeGreaterThan(0);
+            animation.start();
+            expect(() => animation._runFrame(16.7)).not.toThrow();
+            animation.destroy();
+        });
+
+        it("drops an empty per-layer charSet override instead of leaving the layer with none", () => {
+            const animation = new asciiam(host(), { mode: "wave", charSet: "01", respectReducedMotion: false });
+            animation.setLayers([{ mode: "wave", options: { charSet: "" } }]);
+            expect(animation._layers[0].options?.charSet).toBeUndefined();
+            animation.start();
+            expect(() => animation._runFrame(16.7)).not.toThrow();
+            animation.destroy();
+        });
+
+        it("ignores start() called after destroy() instead of resuming the render loop on torn-down state", () => {
+            const animation = new asciiam(host(), { respectReducedMotion: false });
+            animation.start();
+            animation.destroy();
+            expect(() => animation.start()).not.toThrow();
+            expect(animation._running).toBe(false);
+            expect(asciiam._activeInstances.has(animation)).toBe(false);
+        });
+
+        it("degrades an image source gracefully instead of throwing when the sample canvas is tainted", () => {
+            const taintedContext = {
+                ...makeContext(),
+                getImageData: jest.fn(() => {
+                    throw new DOMException("The canvas has been tainted by cross-origin data.", "SecurityError");
+                }),
+            };
+            HTMLCanvasElement.prototype.getContext = jest.fn(() => taintedContext);
+            const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+            const pendingImages = [];
+            globalThis.Image = class MockImage {
+                constructor() {
+                    this.naturalWidth = 4;
+                    this.naturalHeight = 4;
+                }
+                set src(value) {
+                    this.currentSrc = value;
+                    pendingImages.push(this);
+                }
+                get src() {
+                    return this.currentSrc;
+                }
+            };
+            const animation = new asciiam(host(), { mode: "image", imageEnabled: true, respectReducedMotion: false });
+            expect(() => animation.setImage("https://cross-origin.example/leaf.png")).not.toThrow();
+            expect(() => pendingImages[0].onload()).not.toThrow();
+            expect(animation._imageGrid).toBeFalsy();
+            expect(warn).toHaveBeenCalled();
+            animation.destroy();
+            warn.mockRestore();
+        });
+
+        it("does not corrupt sampled image colors when imageBrightness/imageContrast are explicitly undefined", () => {
+            const pixels = new Uint8ClampedArray([120, 60, 200, 255]);
+            HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+                ...makeContext(),
+                getImageData: jest.fn(() => ({ data: pixels })),
+            }));
+            const pendingImages = [];
+            globalThis.Image = class MockImage {
+                constructor() {
+                    this.naturalWidth = 4;
+                    this.naturalHeight = 4;
+                }
+                set src(value) {
+                    this.currentSrc = value;
+                    pendingImages.push(this);
+                }
+                get src() {
+                    return this.currentSrc;
+                }
+            };
+            const animation = new asciiam(host(), {
+                mode: "image",
+                imageEnabled: true,
+                imageBrightness: undefined,
+                imageContrast: undefined,
+                respectReducedMotion: false,
+            });
+            animation.setImage("/leaf.png");
+            pendingImages[0].onload();
+            expect(animation._imageGrid).toBeTruthy();
+            for (const color of animation._imageGrid.colors) {
+                if (color) expect(color).not.toContain("NaN");
+            }
+            animation.destroy();
+        });
+    });
 });
