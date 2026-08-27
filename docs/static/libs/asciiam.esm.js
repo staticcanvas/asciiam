@@ -638,11 +638,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.device.queue.copyExternalImageToTexture({ source }, { texture }, [source.width, source.height]);
             this.gradientSources.set(key, texture);
             this.gradientViews.set(key, texture.createView());
-            this.bindGroups.clear();
             if (this.gradientSources.size > 8) {
                 const oldest = this.gradientSources.keys().next().value;
                 this.gradientSources.get(oldest)?.destroy();
                 this.gradientSources.delete(oldest);
+                // gradientViews shares gradientTextures/gradientSources' keys but was never
+                // trimmed alongside it — left to grow forever, and any cached bind group
+                // that still names the evicted key would keep pointing at a view of an
+                // already-destroyed texture. Only clear bindGroups here, on an actual
+                // eviction, rather than on every new gradient key: an animated gradient
+                // (a new key roughly every 50ms) would otherwise defeat bind-group caching
+                // for the entire scene on every single frame.
+                this.gradientViews.delete(oldest);
+                this.bindGroups.clear();
             }
         }
 
@@ -986,10 +994,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
 
         // Registry for user-defined named modes: asciiam.registerMode('name', fn)
         static _registry = {};
+        // A currently-running instance keeps its built atlas/wave-layer alive via its own
+        // direct reference regardless of this shared cache's eviction, so a small limit
+        // never forces a running instance to rebuild every frame — it only determines
+        // whether a *newly (re)created* instance with a previously-seen configuration can
+        // reuse an already-built one instead of rebuilding from scratch. A limit of 2 was
+        // narrower than real concurrent-instance pages actually need: the gallery runs up
+        // to 6 distinctly-configured instances at once (`maximumActive` in gallery.js) and
+        // destroys/recreates them as cards scroll in and out of view, so revisiting a card
+        // was a near-guaranteed cache miss under the old limit.
         static _glyphAtlases = new Map();
-        static _glyphAtlasLimit = 2;
+        static _glyphAtlasLimit = 8;
         static _waveBaseLayers = new Map();
-        static _waveBaseLayerLimit = 2;
+        static _waveBaseLayerLimit = 8;
         static _activeInstances = new Set();
         static _schedulerRaf = null;
         /** Ensures all running instances are served by one animation-frame callback. */

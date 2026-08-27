@@ -4,7 +4,7 @@
  * @module docs
  */
 
-import { Lume } from "../libs/lume/lume.mjs?v=ac5ba54ce55a";
+import { Lume } from "../libs/lume/lume.mjs?v=d4fa821ae835";
 
 // Auto-discovers every current and future [data-lume]/[data-lume-content] element on the page.
 new Lume({ tier: "minimal" });
@@ -400,7 +400,7 @@ if (document.readyState === "loading") {
     initThemeToggle();
 }
 
-import { initAllHeroCompactElements } from "./asciiam-animations.js?v=ac5ba54ce55a";
+import { initAllHeroCompactElements } from "./asciiam-animations.js?v=d4fa821ae835";
 
 // Mount ASCII background animations on all .hero.hero-compact page header elements
 const mountCompactHeroes = () => {
