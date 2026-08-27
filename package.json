@@ -58,7 +58,8 @@
     "docs:build": "npm run build && npm run prepare:docs && node scripts/build-docs.js",
     "docs:serve": "npm run build && npm run prepare:docs && hugo server --source docs --buildDrafts --disableFastRender",
     "site:build": "npm run docs:build",
-    "site:serve": "npm run site:build && http-server public -p 8085",
+    "cache:purge": "node scripts/purge-cache.js",
+    "site:serve": "npm run cache:purge && npm run site:build && http-server public -p 8085 -c-1",
     "benchmark": "node scripts/benchmark-renderer.js",
     "benchmark:stats": "node scripts/benchmark-stats.js",
     "benchmark:mesh": "node scripts/benchmark-mesh.js",
@@ -70,7 +71,7 @@
     "lint": "eslint src/**/*.js tests/**/*.js",
     "lint:fix": "eslint src/**/*.js tests/**/*.js --fix",
     "update:npm": "npm install -g npm@latest",
-    "serve:example": "npm run docs:build && http-server public -p 8001 -c-1",
+    "serve:example": "npm run cache:purge && npm run docs:build && http-server public -p 8001 -c-1",
     "publish:npm": "npm run lint:fix && npm run build && cd dist/asciiam && echo //registry.npmjs.org/:_authToken=${NPM_API_KEY} > .npmrc && npm publish --access public",
     "publish:jsr": "npm run lint:fix && npm run build && cd dist/asciiam && npx jsr publish --allow-dirty"
   },
