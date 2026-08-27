@@ -269,7 +269,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
      *
      * @class
      * @private
-     * @since 0.9.0
      */
     class WebGL2GlyphRenderer {
         /**
@@ -694,7 +693,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
      *
      * @class
      * @private
-     * @since 0.24.0
      */
     class WebGPUGlyphRenderer {
         /**
@@ -1169,7 +1167,6 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
      * rather than throwing.
      *
      * @class
-     * @since 0.1.0
      *
      * @example
      * const anim = new asciiam('#hero', { mode: 'wave', color: '#4FA8FF' });
