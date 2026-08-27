@@ -4,9 +4,9 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=ec711a9a40d8";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=ec711a9a40d8";
-import { Lume } from "../libs/lume/lume.mjs?v=ec711a9a40d8";
+import { highlightJavaScript } from "./webutil-code.js?v=13f57e1c5791";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=13f57e1c5791";
+import { Lume } from "../libs/lume/lume.mjs?v=13f57e1c5791";
 
 const asciiam = window.asciiam;
 // Auto-discovers every current and future [data-lume]/[data-lume-content] element;

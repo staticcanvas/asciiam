@@ -2452,11 +2452,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                     willReadFrequently: false,
                 });
                 if (!this.ctx && wantsGPU) {
-                    this._replacePresentationCanvas();
-                    if (this._io) {
-                        this._io.disconnect();
-                        this._io.observe(this.canvas);
-                    }
+                    this._replacePresentationCanvas(); // also re-targets the IntersectionObserver
                     this.ctx = this.canvas.getContext("2d", {
                         alpha: true,
                         desynchronized: this._desynchronized,
@@ -2507,6 +2503,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._emit("rendererFallback", { reason: "webgpu-unavailable", detail: String(reason?.message || reason || "unavailable"), ...this.getRendererInfo() });
         }
 
+        /**
+         * Swaps in a fresh presentation canvas (used when falling back off a backend that
+         * failed to initialize). Always re-targets the IntersectionObserver at the new
+         * element — the observer was bound to the old canvas in `_bindLifecycle()`, and an
+         * observed element that gets detached from the document (`replaceWith` here) never
+         * reports `isIntersecting` again, which would otherwise leave `_visible` stuck at
+         * `false` and `_runFrame()` permanently skipping every frame.
+         */
         _replacePresentationCanvas() {
             const oldCanvas = this.canvas;
             const replacement = document.createElement("canvas");
@@ -2516,6 +2520,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (oldCanvas.parentNode) oldCanvas.replaceWith(replacement);
             this.canvas = replacement;
             this._ownsCanvas = true;
+            if (this._io) {
+                this._io.disconnect();
+                this._io.observe(replacement);
+                this._visible = true;
+                this._lastT = null;
+            }
             return replacement;
         }
 
