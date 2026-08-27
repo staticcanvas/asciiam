@@ -43,7 +43,7 @@ describe('Hugo documentation source', () => {
     expect(template).toContain('data-example-canvas="sequence"');
     expect(template).toContain('data-example-canvas="image"');
     expect(template).toContain('data-example-canvas="mesh"');
-    expect(template).toContain('classic_laptop_2k.gltf.zip.glb');
+    expect(template).toContain('classic-laptop-2k.glb');
     expect(script).toContain('sequenceExample?.setSequence([');
     expect(script).toContain('{ loop: true }');
     expect(script).toContain('imageExample?.setImage(exampleBox.dataset.exampleImage)');
@@ -348,7 +348,7 @@ describe('Hugo documentation source', () => {
   it('renders the start-page image sequence and complete footer treatment', () => {
     const home = projectFile('docs/layouts/index.html');
     const homeScript = projectFile('docs/static/js/home.js') + projectFile('docs/static/js/asciiam-animations.js');
-    const generator = projectFile('scripts/generate-docs-data.js');
+    const assetManifestGenerator = projectFile('scripts/generate-asset-manifest.js');
     const stylesheet = projectFile('docs/static/css/docs.css');
 
     expect(home).toContain('data-asciiam-hero');
@@ -358,7 +358,7 @@ describe('Hugo documentation source', () => {
     expect(homeScript).toContain('mode: "fadeIn"');
     expect(homeScript).not.toContain('imageMaskMode');
     expect(homeScript).toContain('anim.start()');
-    expect(generator).toContain('domitian-tunnel-5122424_1920.jpg');
+    expect(assetManifestGenerator).toContain('domitian-tunnel-5122424_1920.jpg');
     expect(stylesheet).toMatch(/\.topbar \{[\s\S]*border-bottom: 0/);
     expect(stylesheet).toMatch(/\.hero \{[\s\S]*border-bottom: 0/);
     expect(stylesheet).toMatch(/\.toc-panel nav a,[\s\S]*font-size: 17px/);

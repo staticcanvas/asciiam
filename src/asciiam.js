@@ -1355,6 +1355,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             imageReveal: {
                 mode: "image",
                 imageEnabled: true,
+                // Site-root-absolute so this resolves identically from the gallery, the
+                // docs splash, and the Web Utility playground alike — see the
+                // sharedImageNames convention in scripts/generate-asset-manifest.js.
+                image: "/images/vilkasss-ai-generated-9599760.jpg",
                 color: "#4FA8FF",
                 imageScale: 1,
                 imageScaleX: 1,

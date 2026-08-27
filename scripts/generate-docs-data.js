@@ -13,7 +13,6 @@ const docsLibrary = new URL("../docs/static/libs/", import.meta.url);
 const docsLumeLibrary = new URL("../docs/static/libs/lume/", import.meta.url);
 const lumeModule = new URL("../node_modules/@staticcanvas/lume/", import.meta.url);
 const docsBranding = new URL("../docs/static/branding/", import.meta.url);
-const docsImages = new URL("../docs/static/images/", import.meta.url);
 
 const sparseModes = new Set(["matrix", "snow", "sparkle", "fire", "starfield", "orbit"]);
 const revealModes = new Set(["fadeIn", "fadeOut", "typewriter"]);
@@ -47,7 +46,6 @@ await Promise.all([
     mkdir(docsLibrary, { recursive: true }),
     mkdir(docsLumeLibrary, { recursive: true }),
     mkdir(docsBranding, { recursive: true }),
-    mkdir(docsImages, { recursive: true }),
 ]);
 await Promise.all([
     writeFile(new URL("presets.json", docsData), `${JSON.stringify({ version: packageMetadata.version, builtInModeCount: asciiam.BUILT_IN_MODES.length, presets }, null, 2)}\n`),
@@ -56,7 +54,10 @@ await Promise.all([
     cp(new URL("../src/mesh.js", import.meta.url), new URL("mesh.js", docsLibrary)),
     cp(new URL("../src/gltf.js", import.meta.url), new URL("gltf.js", docsLibrary)),
     cp(new URL("../branding/asciiam-logo.svg", import.meta.url), new URL("asciiam-logo.svg", docsBranding)),
-    cp(new URL("../docs/static/webutil/assets/images/domitian-tunnel-5122424_1920.jpg", import.meta.url), new URL("domitian-tunnel-5122424_1920.jpg", docsImages)),
+    // The docs splash hero image itself is staged by scripts/generate-asset-manifest.js
+    // (npm run prepare:bg, which runs first via the "prebuild"/"predev" hooks) — it's
+    // sourced from docs/assets/images/ by convention (see sharedImageNames there), not
+    // copied here.
     // Vendor the tooltip engine used site-wide, rather than pulling it from a CDN at runtime.
     cp(new URL("dist/lume.mjs", lumeModule), new URL("lume.mjs", docsLumeLibrary)),
     cp(new URL("dist/lume.mjs.map", lumeModule), new URL("lume.mjs.map", docsLumeLibrary)),

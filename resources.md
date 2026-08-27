@@ -37,7 +37,7 @@ documentation bundles one uncompressed CC0 demonstration model and no compressio
 
 | Resource | Maintained use | License or integration note |
 | --- | --- | --- |
-| [Classic Laptop](https://polyhaven.com/a/classic_laptop) | `classic_laptop_2k.gltf.zip.glb`; splash-page live 3D canvas. | Poly Haven CC0; author Arrangemonk; 14,450 triangles; 2,594,928-byte staged GLB. |
+| [Classic Laptop](https://polyhaven.com/a/classic_laptop) | `classic-laptop-2k.glb`; splash-page live 3D canvas. | Poly Haven CC0; author Arrangemonk; 14,450 triangles; 2,594,928-byte staged GLB. |
 | [Poly Haven models](https://polyhaven.com/models) | Candidate CC0 models for optional demonstrations and visual verification. | Poly Haven publishes its models under CC0. Retain the exact model URL and source metadata even though attribution is not required. |
 | [Poly Haven license](https://polyhaven.com/license) | License authority for selected Poly Haven assets. | Recheck before adding or redistributing an asset. |
 | [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) | Parser fixtures, compatibility cases, and example geometry. | License and attribution requirements vary by model. Read the selected model directory's README before use. |

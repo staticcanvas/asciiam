@@ -33,8 +33,8 @@ The image library contains demonstration and rendering-test media sourced from [
 The documentation bundles Poly Haven's [Classic Laptop](https://polyhaven.com/a/classic_laptop)
 GLB as the live 3D canvas on the splash page. The model is by Arrangemonk, contains
 14,450 triangles, and is distributed under Poly Haven's CC0 asset license. The staged
-2K GLB is `classic_laptop_2k.gltf.zip.glb`; materials and textures are not rendered by
-asciiam's bounded mesh pipeline.
+2K GLB is `classic-laptop-2k.glb`; materials and textures are not rendered by asciiam's
+bounded mesh pipeline.
 
 The dependency-free glTF/GLB loader also uses the following format and candidate sources:
 

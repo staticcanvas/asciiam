@@ -49,7 +49,7 @@
     "visualization"
   ],
   "scripts": {
-    "prepare:bg": "node scripts/generate-bg-manifest.js",
+    "prepare:bg": "node scripts/generate-asset-manifest.js",
     "prepare:docs": "node scripts/generate-docs-data.js",
     "predev": "npm run prepare:bg",
     "prebuild": "npm run prepare:bg",

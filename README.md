@@ -123,15 +123,21 @@ The Image popover provides two image sources:
 | Included defaults | Selects an image listed in `docs/static/webutil/assets/backgrounds.json`.                                           |
 | Upload            | Reads a file selected from the user's device through a temporary object URL; the file is not uploaded or persisted. |
 
-To add images to a clone:
+To add images or 3D meshes to a clone:
 
-1. Copy PNG, JPEG, GIF, WebP, AVIF, or SVG files into `docs/static/webutil/assets/images`.
-2. Run `npm run prepare:bg` to regenerate `docs/static/webutil/assets/backgrounds.json`.
-3. Reload the demo and open Image to select the new entry.
+1. Copy the file into `docs/assets/images/<png|webp|svg|jpg|gifs>` by format, or a GLB
+   into `docs/assets/meshes`. Name it descriptively in kebab-case — a display name is
+   derived automatically from the filename (`forest-road.jpg` → "Forest Road") unless an
+   override is added to `friendlyNames` in `scripts/generate-asset-manifest.js`.
+2. Run `npm run prepare:bg` to stage the file and regenerate
+   `docs/static/webutil/assets/backgrounds.json`/`meshes.json`.
+3. Reload the demo and open Image (or the 3D popover) to select the new entry.
 
-`npm run dev` and `npm run build` run the manifest generator automatically. The
-generated manifest contains display names and deployment-relative `./assets/images/...` paths;
-it does not embed image data.
+`npm run dev` and `npm run build` run the manifest generator automatically via the
+`predev`/`prebuild` hooks — adding or replacing a file under `docs/assets/` is the only
+step; nothing needs wiring by hand in the playground, docs splash, or gallery. The
+generated image manifest contains display names and deployment-relative `./assets/images/...`
+paths; it does not embed image data.
 
 When ImageMagick is available, the generator also creates static 320×180 WebP previews
 in `docs/static/webutil/assets/thumbnails`. Animated sources use their first frame and EXIF
