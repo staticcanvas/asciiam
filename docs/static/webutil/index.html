@@ -1233,7 +1233,7 @@
             }
             #pop-code .code-window pre {
                 min-block-size: clamp(22rem, 58dvh, 38rem);
-                max-block-size: calc(100dvh - 15rem) !important;
+                max-block-size: calc(100dvh - 15rem);
                 overflow: auto;
                 padding: var(--space-md);
                 white-space: pre;
@@ -1339,7 +1339,7 @@
                 }
                 #pop-code .code-window pre {
                     min-block-size: 18rem;
-                    max-block-size: calc(100dvh - 17rem) !important;
+                    max-block-size: calc(100dvh - 17rem);
                 }
                 .custom-charset-input { inline-size: 100%; }
             }
@@ -1622,14 +1622,14 @@
                 max-inline-size: min(440px, calc(100vw - (var(--space-md) * 2)));
             }
             .btn-row-grid {
-                display: grid !important;
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 4px !important;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
                 margin-block-start: 4px;
             }
             @media (min-width: 380px) {
                 .btn-row-grid {
-                    grid-template-columns: repeat(3, 1fr) !important;
+                    grid-template-columns: repeat(3, 1fr);
                 }
             }
             .cpop-grid-2col {
@@ -1664,39 +1664,39 @@
             /* ── Full-Screen About Overlay (fluent-ui-v1) ── */
             .ctrl-popover--fullscreen {
                 position: fixed;
-                inset: 0 !important;
-                top: 0 !important;
-                left: 0 !important;
-                bottom: 0 !important;
-                right: 0 !important;
-                inline-size: 100vw !important;
-                block-size: 100dvh !important;
-                max-inline-size: 100vw !important;
-                max-block-size: 100dvh !important;
-                margin: 0 !important;
-                border: none !important;
-                border-radius: 0 !important;
+                inset: 0;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                inline-size: 100vw;
+                block-size: 100dvh;
+                max-inline-size: 100vw;
+                max-block-size: 100dvh;
+                margin: 0;
+                border: none;
+                border-radius: 0;
                 background:
                     radial-gradient(circle at 12% 18%, oklch(from var(--clr-primary) l c h / 0.16), transparent 38%),
                     radial-gradient(circle at 88% 76%, oklch(from var(--clr-accent2) l c h / 0.12), transparent 42%),
-                    linear-gradient(145deg, oklch(0.07 0.02 255 / 0.62), oklch(0.11 0.025 270 / 0.48)) !important;
-                backdrop-filter: blur(8px) saturate(150%) !important;
-                -webkit-backdrop-filter: blur(8px) saturate(150%) !important;
-                box-shadow: none !important;
-                overflow-y: auto !important;
+                    linear-gradient(145deg, oklch(0.07 0.02 255 / 0.62), oklch(0.11 0.025 270 / 0.48));
+                backdrop-filter: blur(8px) saturate(150%);
+                -webkit-backdrop-filter: blur(8px) saturate(150%);
+                box-shadow: none;
+                overflow-y: auto;
                 opacity: 0;
                 transform: scale(0.98);
                 transition:
                     opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
                     transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
                     display 220ms allow-discrete;
-                z-index: var(--z-modal) !important;
+                z-index: var(--z-modal);
             }
             [data-theme="light"] .ctrl-popover--fullscreen {
                 background:
                     radial-gradient(circle at 12% 18%, oklch(from var(--clr-primary) l c h / 0.12), transparent 38%),
                     radial-gradient(circle at 88% 76%, oklch(from var(--clr-accent2) l c h / 0.09), transparent 42%),
-                    linear-gradient(145deg, oklch(0.98 0.01 250 / 0.72), oklch(0.94 0.02 270 / 0.64)) !important;
+                    linear-gradient(145deg, oklch(0.98 0.01 250 / 0.72), oklch(0.94 0.02 270 / 0.64));
             }
             .ctrl-popover--fullscreen:popover-open {
                 opacity: 1;
@@ -2040,7 +2040,7 @@
                 padding: var(--space-sm) var(--space-md);
             }
             .chk input { width: auto; }
-            .chk label { margin: 0 !important; color: inherit; text-transform: none; letter-spacing: normal; }
+            .chk label { margin: 0; color: inherit; text-transform: none; letter-spacing: normal; }
             #flipGradientBtn { margin-inline-start: auto; }
 
             .sequence-toolbar,
@@ -2654,7 +2654,7 @@
                     </div>
                 </div>
                 <div class="chk" id="gradAnimateRow" style="display:none">
-                    <input type="checkbox" id="gradAnimate" /><label for="gradAnimate" style="margin:0">Animate angle</label>
+                    <input type="checkbox" id="gradAnimate" /><label for="gradAnimate">Animate angle</label>
                     <button class="mode-btn" id="flipGradientBtn" type="button" title="Reverse the gradient stop order">Flip direction</button>
                 </div>
                 <div class="cpop-group">
