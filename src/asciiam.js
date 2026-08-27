@@ -1159,8 +1159,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
     }
 
     /**
-     * Owns one ASCII animation surface, its renderer, timing, image source, and
-     * optional sequence state. Running instances share a frame scheduler.
+     * asciiam
+     * ─────────────────────────────────────────────
+     * Owns one ASCII animation surface, its renderer, timing, image/mesh source,
+     * and optional sequence state. Resolves a presentation backend (WebGPU, then
+     * WebGL2, then Canvas 2D) per instance and shares one requestAnimationFrame
+     * scheduler across every running instance on the page. Degrades safely when
+     * canvas or a 2D context is unsupported — most public methods become no-ops
+     * rather than throwing.
+     *
+     * @class
+     * @since 0.1.0
+     *
+     * @example
+     * const anim = new asciiam('#hero', { mode: 'wave', color: '#4FA8FF' });
+     * anim.start();
      */
     class asciiam {
         static QUALITY = {
@@ -1381,23 +1394,64 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         static _waveBaseLayerLimit = 8;
         static _activeInstances = new Set();
         static _schedulerRaf = null;
-        /** Ensures all running instances are served by one animation-frame callback. */
+        /**
+         * Ensures all running instances are served by one shared `requestAnimationFrame`
+         * callback rather than one RAF loop per instance. A no-op if a frame is already
+         * scheduled or no instance is currently running.
+         *
+         * @private
+         * @static
+         * @returns {void}
+         */
         static _scheduleFrame() {
             if (asciiam._schedulerRaf !== null || !asciiam._activeInstances.size) return;
             asciiam._schedulerRaf = requestAnimationFrame(asciiam._tickFrame);
         }
-        /** Advances every active instance, then schedules the next shared frame. */
+        /**
+         * The shared scheduler's `requestAnimationFrame` callback: advances every
+         * active instance for this tick, then reschedules the next shared frame.
+         *
+         * @private
+         * @static
+         * @param {DOMHighResTimeStamp} t - timestamp supplied by `requestAnimationFrame`
+         * @returns {void}
+         */
         static _tickFrame(t) {
             asciiam._schedulerRaf = null;
             for (const instance of asciiam._activeInstances) instance._runFrame(t);
             asciiam._scheduleFrame();
         }
-        /** Registers a process-wide named cell callback. */
+        /**
+         * Registers a process-wide named cell callback usable as `mode: name` on any
+         * instance — the plugin-mode registration mechanism.
+         *
+         * @static
+         * @param {string} name - mode name to register, referenced later via `mode`/`setMode()`
+         * @param {(api: Object) => ({char: string, opacity?: number, intensity?: number, bold?: boolean, color?: string|null}|null)} fn - per-cell callback; receives the same `api` shape as `customCell`
+         * @returns {void}
+         *
+         * @example
+         * asciiam.registerMode('checkerboard', (api) => ({
+         *   char: (api.col + api.row) % 2 === 0 ? '#' : ' ',
+         *   opacity: 1,
+         * }));
+         */
         static registerMode(name, fn) {
             asciiam._registry[name] = fn;
         }
 
-        /** Create dependency-free geometry suitable for setMesh(). */
+        /**
+         * Create dependency-free procedural geometry suitable for `setMesh()`.
+         *
+         * @static
+         * @param {"cube"|"plane"|"icosphere"|"torus"} name - primitive to generate
+         * @param {Object} [options] - forwarded to the matching `create*Mesh()` helper in mesh.js
+         * @returns {Readonly<Object>} normalized mesh, see `normalizeMeshData` in mesh.js
+         * @throws {TypeError} if `name` is not a recognized primitive
+         *
+         * @example
+         * anim.setMesh(asciiam.createMeshPrimitive('torus', { majorSegments: 64 }));
+         */
         static createMeshPrimitive(name, options) {
             if (name === "cube") return createCubeMesh(options?.size);
             if (name === "plane") return createPlaneMesh(options);
@@ -1406,37 +1460,90 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             throw new TypeError(`asciiam: unknown mesh primitive "${name}"`);
         }
 
-        /** Decode a glTF 2.0 or GLB v2 source without constructing a renderer. */
+        /**
+         * Decode a glTF 2.0 or GLB v2 source without constructing a renderer instance —
+         * useful for pre-loading/caching a model before calling `setModel()`.
+         *
+         * @static
+         * @async
+         * @param {string|Blob|ArrayBuffer|ArrayBufferView|Object} source - model source, see `loadGltf()` in gltf.js
+         * @param {Object} [options] - forwarded to `loadGltf()` in gltf.js
+         * @returns {Promise<Readonly<Object>>} normalized mesh, see `normalizeMeshData` in mesh.js
+         * @throws {TypeError} if the source or document is invalid/unsupported
+         */
         static loadModel(source, options) {
             return loadGltf(source, options);
         }
 
-        /** Register a custom decoder callback for a compressed glTF extension (e.g. KHR_draco_mesh_compression). */
+        /**
+         * Register a custom decoder callback for a compressed glTF extension (e.g.
+         * `KHR_draco_mesh_compression`). Forwards to `registerGltfDecoder()` in gltf.js.
+         *
+         * @static
+         * @param {string} name - the glTF extension name as it appears in `extensionsUsed`/`extensionsRequired`
+         * @param {Function} decoderFn - decoder callback (shape defined by the extension/caller)
+         * @returns {void}
+         * @throws {TypeError} if `name` isn't a string or `decoderFn` isn't a function
+         */
         static registerGltfDecoder(name, decoderFn) {
             return registerGltfDecoder(name, decoderFn);
         }
 
-        /** Returns list of registered glTF extension decoders. */
+        /**
+         * @static
+         * @returns {string[]} names of every glTF extension with a registered decoder
+         */
         static getGltfDecoders() {
             return getGltfDecoders();
         }
 
-        /** Measures font metrics (charW, charH, ascent, descent, baselineOffset) with subpixel precision. */
+        /**
+         * Measures font metrics (charW, charH, ascent, descent, baselineOffset) with
+         * subpixel precision. Forwards to the module-level `calibrateFontMetrics()`.
+         *
+         * @static
+         * @param {CanvasRenderingContext2D|string} [target] - a 2D context to measure with, or (if a string) the font family
+         * @param {string} [fontFamily="monospace"] - CSS font family
+         * @param {number} [fontSize=14] - font size in pixels
+         * @returns {{charW: number, charH: number, ascent: number, descent: number, baselineOffset: number}} measured or estimated metrics
+         */
         static calibrateFontMetrics(target, fontFamily, fontSize) {
             return calibrateFontMetrics(target, fontFamily, fontSize);
         }
 
-        /** Headless cell frame generator for Node.js, Bun, Deno, or CLI text outputs. */
+        /**
+         * Headless cell frame generator for Node.js, Bun, Deno, or CLI text output.
+         * Forwards to the module-level `renderFrame()`.
+         *
+         * @static
+         * @param {Object} [options] - see the module-level `renderFrame()`
+         * @returns {{char: string, r: number, g: number, b: number, a: number}[][]} a `rows`-length array of `cols`-length cell arrays
+         */
         static renderFrame(options) {
             return renderFrame(options);
         }
 
-        /** Headless ASCII multi-line text generator for SSR, terminal, or CLI output. */
+        /**
+         * Headless ASCII multi-line text generator for SSR, terminal, or CLI output.
+         * Forwards to the module-level `renderToString()`.
+         *
+         * @static
+         * @param {Object} [options] - see the module-level `renderToString()`
+         * @returns {string} newline-joined rows of characters
+         */
         static renderToString(options) {
             return renderToString(options);
         }
 
-        /** Feature-detect before constructing, for graceful fallback in older browsers. */
+        /**
+         * Feature-detect before constructing, for graceful fallback in older browsers
+         * or restricted environments. A `new asciiam(...)` call itself never throws
+         * even if this would return false — it degrades to a disabled, no-op instance
+         * instead — but callers wanting to skip construction entirely can check first.
+         *
+         * @static
+         * @returns {boolean} true if a canvas element can provide a WebGL2 or 2D context
+         */
         static isSupported() {
             try {
                 const c = document.createElement("canvas");
@@ -1446,7 +1553,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Creates an instance around a container or application-owned canvas. */
+        /**
+         * Creates an instance around a container element (a canvas is created and
+         * managed internally) or an application-owned `<canvas>` (drawn into directly,
+         * never resized/replaced by asciiam). Never throws on an unsupported
+         * environment — falls back to a disabled instance whose public methods are
+         * safe no-ops instead.
+         *
+         * @param {string|HTMLElement} target - a CSS selector, a container element, or a `<canvas>` element
+         * @param {Object} [opts] - see the options reference table in README.md / docs/content/api/_index.md for the full list
+         * @throws {Error} if `target` is a selector that matches no element
+         *
+         * @example
+         * const anim = new asciiam('#hero', { mode: 'wave', color: '#4FA8FF', speed: 1 });
+         * anim.start();
+         */
         constructor(target, opts = {}) {
             const el = typeof target === "string" ? document.querySelector(target) : target;
             if (!el) throw new Error("asciiam: target not found");
@@ -1876,7 +1997,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- public API ----
-        /** Starts or resumes this instance on the shared frame scheduler. */
+        /**
+         * Starts or resumes this instance on the shared frame scheduler. A no-op if
+         * already running, destroyed, or the instance was disabled at construction
+         * (unsupported environment). If `prefers-reduced-motion` is respected and
+         * active, draws exactly one static frame instead of starting the loop.
+         *
+         * @returns {void}
+         */
         start() {
             if (this._disabled || this._destroyed || this._running) return;
             if (this._reduced) {
@@ -1888,7 +2016,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             asciiam._activeInstances.add(this);
             asciiam._scheduleFrame();
         }
-        /** Stops frame scheduling while retaining renderer and animation state. */
+        /**
+         * Stops frame scheduling while retaining renderer and animation state — a
+         * subsequent {@link asciiam#start} resumes rather than restarting. A no-op if
+         * not currently running.
+         *
+         * @returns {void}
+         */
         stop() {
             if (!this._running) return;
             this._running = false;
@@ -1899,7 +2033,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 asciiam._schedulerRaf = null;
             }
         }
-        /** Releases observers, listeners, renderer resources, and owned DOM. */
+        /**
+         * Releases observers, listeners, and renderer resources, and removes the
+         * canvas from the DOM — including an application-owned canvas passed in
+         * directly, not only one asciiam created itself around a container target.
+         * {@link asciiam#start} becomes a permanent no-op afterward.
+         *
+         * @returns {void}
+         */
         destroy() {
             this._destroyed = true;
             this.stop();
@@ -1937,7 +2078,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._events.clear();
         }
 
-        /** Advances time-dependent state in a fixed order before presenting a frame. */
+        /**
+         * Advances time-dependent state in a fixed order before presenting a frame:
+         * morph/sequence timelines, simulation time, pointer-interaction decay, image
+         * frame playback, then the actual draw. Skips entirely while not running, the
+         * document is hidden, or the instance is off-screen; self-throttles to
+         * `targetFPS` when set. Called once per tick by the shared scheduler
+         * ({@link asciiam._tickFrame}), never directly by user code.
+         *
+         * @private
+         * @param {DOMHighResTimeStamp} t - timestamp supplied by `requestAnimationFrame`
+         * @returns {void}
+         * @fires asciiam#frame
+         */
         _runFrame(t) {
             if (!this._running) return;
             if (document.hidden || !this._visible) {
@@ -1997,6 +2150,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * `setOption('resolutionScale'|'quality', ...)` both trigger a real `_resize()`
          * (rebuilds seed/edge-fade/spatial caches, forces a layout reflow), so adjustments
          * must stay infrequent, not per-frame.
+         *
+         * @private
+         * @param {number} frameWorkMs - this frame's measured CPU work time in milliseconds
+         * @returns {void}
+         * @fires asciiam#autoQualityChange
          */
         _updateAutoQuality(frameWorkMs) {
             const now = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
@@ -2061,7 +2219,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Subscribe to a lifecycle event. Returns an unsubscribe function. */
+        /**
+         * Subscribe to a lifecycle event (`frame`, `resize`, `rendererChange`,
+         * `rendererFallback`, `autoQualityChange`, `sequenceStart`/`sequenceStepStart`/
+         * etc., `imageFramesReady`, and more — see the events reference in
+         * docs/content/api/_index.md for the full list and payload shapes).
+         *
+         * @param {string} event - event name
+         * @param {Function} listener - called with an event-specific detail object
+         * @returns {() => void} an unsubscribe function equivalent to `off(event, listener)`
+         * @throws {TypeError} if `listener` is not a function
+         * @listens asciiam#frame
+         *
+         * @example
+         * const stop = anim.on('rendererFallback', ({ backend }) => console.warn(`fell back to ${backend}`));
+         * stop(); // unsubscribe
+         */
         on(event, listener) {
             if (typeof listener !== "function") throw new TypeError("asciiam: event listener must be a function");
             let listeners = this._events.get(event);
@@ -2072,14 +2245,32 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             listeners.add(listener);
             return () => this.off(event, listener);
         }
-        /** Removes a previously registered lifecycle listener. */
+        /**
+         * Removes a previously registered lifecycle listener. A no-op if `event`/
+         * `listener` isn't currently registered.
+         *
+         * @param {string} event - event name passed to the original {@link asciiam#on} call
+         * @param {Function} listener - the exact listener function passed to the original {@link asciiam#on} call
+         * @returns {void}
+         */
         off(event, listener) {
             const listeners = this._events.get(event);
             if (!listeners) return;
             listeners.delete(listener);
             if (!listeners.size) this._events.delete(event);
         }
-        /** Changes the algorithm and restarts its mode-local timeline. */
+        /**
+         * Changes the animation algorithm and restarts its mode-local timeline (so a
+         * one-shot mode like `fadeIn` always plays from the start when freshly
+         * selected, even on a long-running instance). Interrupts an in-progress
+         * sequence step unless `fromSequence` is true (the sequence engine's own
+         * internal call path, which manages its own step lifecycle).
+         *
+         * @param {string} mode - a built-in mode name (see `asciiam.BUILT_IN_MODES`), a name registered via `asciiam.registerMode()`, or `"custom"` (paired with the `customCell` option)
+         * @param {boolean} [fromSequence=false] - true when called internally by the sequence engine; suppresses the sequence-interrupt side effect
+         * @returns {void}
+         * @fires asciiam#sequenceInterrupt
+         */
         setMode(mode, fromSequence = false) {
             if (!fromSequence && this._sequence?.running) {
                 if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("mode-change");
@@ -2102,7 +2293,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (mode === "starfield") this._initStarfield();
             if (mode === "orbit") this._initOrbit();
         }
-        /** Updates one option and rebuilds only its dependent state or caches. */
+        /**
+         * Updates one option and rebuilds only its dependent state or caches — e.g.
+         * changing `fontSize` rebuilds the font cache and grid, but changing `color`
+         * only invalidates the glyph atlas, and most options touch nothing beyond the
+         * `opts` object itself, taking effect on the very next frame. `key: "layers"`
+         * and `key: "mode"` delegate to {@link asciiam#setLayers}/{@link asciiam#setMode}
+         * respectively rather than being set directly. See the options reference table
+         * in README.md / docs/content/api/_index.md for the full option list and defaults.
+         *
+         * @param {string} key - option name
+         * @param {*} value - new value; an empty `charSet` falls back to the default ramp rather than being accepted as-is
+         * @returns {void}
+         */
         setOption(key, value) {
             if (key === "layers") {
                 this.setLayers(value);
@@ -2219,7 +2422,25 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Sets an array of layer configurations to composite in order during frame rendering. */
+        /**
+         * Sets an array of layer configurations to composite in order during frame
+         * rendering — each layer can run its own mode, opacity, blend mode, and
+         * (independent of the instance's shared image/mesh) its own image or 3D model
+         * source. Re-calling with a layer whose media fields are unchanged from the
+         * previous call reuses the already-loaded source instead of reloading it.
+         *
+         * @param {Object[]} layers - layer configs; see README.md / docs/content/api/_index.md for the full per-layer field list
+         * @param {string} layers[].mode - animation mode for this layer
+         * @param {Object} [layers[].options] - per-layer option overrides applied only during this layer's draw pass
+         * @param {number} [layers[].opacity=1] - layer opacity, clamped to [0, 1]
+         * @param {string} [layers[].blendMode="source-over"] - canvas `globalCompositeOperation` value
+         * @param {string|null} [layers[].image] - image source independent of the instance-wide image
+         * @param {Object} [layers[].imageOptions] - forwarded to this layer's own image sampling pass
+         * @param {string|null} [layers[].meshPrimitive] - procedural mesh primitive independent of the instance-wide mesh
+         * @param {*} [layers[].model] - glTF/GLB model source independent of the instance-wide model
+         * @param {Object} [layers[].modelOptions] - forwarded to this layer's own model load
+         * @returns {asciiam} `this`, for chaining
+         */
         setLayers(layers) {
             this._layers = this._normalizeLayers(layers);
             this.opts.layers = this._layers;
@@ -2227,7 +2448,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Returns the current list of active composition layers. */
+        /**
+         * @returns {Object[]} a snapshot of the current composition layers (deep-copied `options`/`imageOptions`/`modelOptions`), or `[]` if none are set
+         */
         getLayers() {
             return this._layers ? this._layers.map((l) => ({
                 mode: l.mode,
@@ -2246,8 +2469,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * Temporarily overlays a layer's `options` onto `this.opts` for the duration
          * of that layer's draw pass, so every mode-cell function (which reads
          * `this.opts.*` directly) picks up per-layer overrides without a broader
-         * refactor. Returns the key list to hand back to `_restoreLayerOptions()`;
-         * `null` when the layer has no per-layer options.
+         * refactor.
+         *
+         * @private
+         * @param {Object} layer - a normalized layer, see {@link asciiam#_normalizeLayers}
+         * @returns {string[]|null} the key list to hand back to {@link asciiam#_restoreLayerOptions}; `null` when the layer has no per-layer options
          */
         _applyLayerOptions(layer) {
             const keys = layer._optionKeys;
@@ -2261,7 +2487,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return keys;
         }
 
-        /** Restores `this.opts` fields saved by `_applyLayerOptions()`. */
+        /**
+         * Restores `this.opts` fields saved by {@link asciiam#_applyLayerOptions}. A
+         * no-op if `keys` is null (the layer had no per-layer options to restore).
+         *
+         * @private
+         * @param {string[]|null} keys - key list returned by {@link asciiam#_applyLayerOptions}
+         * @returns {void}
+         */
         _restoreLayerOptions(keys) {
             if (!keys) return;
             const restore = this._layerRestoreScratch;
@@ -2280,6 +2513,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * `setLayers()` call carries its already-loaded `_imageGrid`/`_mesh` forward
          * instead of reloading, so re-calling `setLayers()` for an unrelated tweak
          * (opacity, blend mode) doesn't re-fetch or re-decode anything.
+         *
+         * @private
+         * @param {Object[]} layers - raw layer configs, see {@link asciiam#setLayers}
+         * @returns {Object[]|null} normalized, internally-augmented layer objects, or `null` if `layers` is empty/not an array
          */
         _normalizeLayers(layers) {
             if (!Array.isArray(layers) || layers.length === 0) return null;
@@ -2331,7 +2568,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        /** Kicks off (or skips, if already loaded — see `_normalizeLayers()`) each layer's own independent image/mesh source. */
+        /**
+         * Kicks off (or skips, if already loaded — see {@link asciiam#_normalizeLayers})
+         * each layer's own independent image/mesh source.
+         *
+         * @private
+         * @returns {void}
+         */
         _loadLayerMedia() {
             if (!this._layers) return;
             for (const layer of this._layers) {
@@ -2340,7 +2583,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Decodes one layer's independent image source; does not touch the shared `_imageGrid`. */
+        /**
+         * Decodes one layer's independent image source; does not touch the shared
+         * `_imageGrid`.
+         *
+         * @private
+         * @param {Object} layer - a normalized layer with an `image` source, see {@link asciiam#_normalizeLayers}
+         * @returns {void}
+         */
         _loadLayerImage(layer) {
             const token = ++layer._imageLoadToken;
             const img = new Image();
@@ -2367,6 +2617,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * another load resolving mid-swap. `layer.imageOptions` overlays `this.opts`
          * for the same window (same pattern as `_applyLayerOptions`) so per-layer
          * fit/scale/rotation/luminance options affect only that layer's sampling pass.
+         *
+         * @private
+         * @param {Object} layer - a normalized layer with a decoded `_sourceImage`, see {@link asciiam#_normalizeLayers}
+         * @returns {void}
          */
         _resampleLayerImage(layer) {
             if (!layer._sourceImage || !this.cols || !this.rows) return;
@@ -2397,6 +2651,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * synchronously, mirroring `setOption('meshPrimitive', ...)`) or a glTF/GLB
          * `model` (async, mirroring `setModel()`, with its own per-layer cancellation
          * token/abort controller so two layers' loads can never race each other).
+         *
+         * @private
+         * @param {Object} layer - a normalized layer with `meshPrimitive` and/or `model` set, see {@link asciiam#_normalizeLayers}
+         * @returns {void}
          */
         _loadLayerModel(layer) {
             if (layer.meshPrimitive) {
@@ -2445,6 +2703,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * `setImage()`/`setModel()` loaded instance-wide, exactly as before this existed.
          * Uses pooled scratch fields, not an allocated object, since this runs per layer
          * per frame.
+         *
+         * @private
+         * @param {Object} layer - a normalized layer, see {@link asciiam#_normalizeLayers}
+         * @returns {void}
          */
         _applyLayerMedia(layer) {
             this._layerMediaScratchImageGrid = this._imageGrid;
@@ -2463,7 +2725,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Restores state saved by `_applyLayerMedia()`. */
+        /**
+         * Restores state saved by {@link asciiam#_applyLayerMedia}.
+         *
+         * @private
+         * @returns {void}
+         */
         _restoreLayerMedia() {
             this._imageGrid = this._layerMediaScratchImageGrid;
             this._mesh = this._layerMediaScratchMesh;
@@ -2472,7 +2739,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.opts.meshEnabled = this._layerMediaScratchMeshEnabled;
         }
 
-        /** Validate and retain typed-array geometry for the mesh animation mode. */
+        /**
+         * Validate and retain typed-array geometry for the mesh animation mode
+         * (requires `meshEnabled: true`, or `mode: "mesh"`, to actually render). Clears
+         * any `meshPrimitive` set previously, since an explicit mesh takes precedence.
+         *
+         * @param {Object} mesh - raw mesh data, see `normalizeMeshData()` in mesh.js
+         * @returns {asciiam} `this`, for chaining
+         * @throws {TypeError} if `mesh` is malformed, see `normalizeMeshData()` in mesh.js
+         * @throws {RangeError} if `mesh` exceeds `meshMaxVertices`/`meshMaxPrimitives`
+         * @fires asciiam#meshReady
+         */
         setMesh(mesh) {
             this._mesh = normalizeMeshData(mesh, {
                 maxVertices: this.opts.meshMaxVertices,
@@ -2487,7 +2764,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Release retained geometry and raster buffers. */
+        /**
+         * Release retained geometry and raster buffers. Does not cancel an in-flight
+         * `setModel()` load — see {@link asciiam#clearModel} for that.
+         *
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#meshClear
+         */
         clearMesh() {
             this._mesh = null;
             this.opts.mesh = null;
@@ -2497,7 +2780,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Report normalized topology without exposing mutable internal buffers. */
+        /**
+         * Report normalized mesh topology without exposing mutable internal buffers.
+         *
+         * @returns {{loaded: boolean, vertexCount: number, primitiveCount: number, primitive: string|null, style: string, projection: string}} current mesh state summary
+         */
         getMeshInfo() {
             return {
                 loaded: !!this._mesh,
@@ -2509,7 +2796,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
-        /** Decode and retain a glTF 2.0 or GLB v2 model with cancellation and progress events. */
+        /**
+         * Decode and retain a glTF 2.0 or GLB v2 model with cancellation and progress
+         * events, applying it via {@link asciiam#setMesh} once loaded. A new call
+         * aborts any load already in flight. Passing a nullish/empty `source` clears
+         * the model instead of loading (equivalent to {@link asciiam#clearModel}).
+         *
+         * @async
+         * @param {string|Blob|ArrayBuffer|ArrayBufferView|Object|null} source - model source, see `loadGltf()` in gltf.js; nullish/empty clears instead of loading
+         * @param {Object} [options] - forwarded to `loadGltf()` in gltf.js
+         * @param {AbortSignal} [options.signal] - external signal that also aborts this load; combined with the internal one this method manages
+         * @param {(progress: {loaded: number, total: number|null}) => void} [options.onProgress] - forwarded, and re-emitted as the `modelProgress` event
+         * @returns {Promise<Readonly<Object>|null>} the normalized mesh once ready, or `null` if cleared or superseded by a later call
+         * @throws {*} re-throws any load error that isn't from being superseded/aborted, after emitting `modelError` and calling `opts.onModelError` if set
+         * @fires asciiam#modelLoadStart
+         * @fires asciiam#modelProgress
+         * @fires asciiam#modelReady
+         * @fires asciiam#modelError
+         */
         async setModel(source, options = {}) {
             if (source === null || source === undefined || source === "") {
                 this.clearModel();
@@ -2554,7 +2858,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
-        /** Cancel model loading and release its retained geometry. */
+        /**
+         * Cancel any in-flight {@link asciiam#setModel} load and release its retained
+         * geometry.
+         *
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#modelClear
+         */
         clearModel() {
             this._modelLoadToken++;
             this._modelAbortController?.abort();
@@ -2566,8 +2876,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Copy public mesh options into stable arrays consumed by the hot raster loop. */
+        /**
+         * Copy public mesh transform/style options into stable typed arrays and a
+         * pooled rasterize-options object, consumed by the hot raster loop without
+         * per-frame allocation or repeated option lookups.
+         *
+         * @private
+         * @returns {void}
+         */
         _syncMeshOptions() {
+            /**
+             * @callback CopyVector
+             * @param {ArrayLike<number>|undefined} value - candidate 3-component vector
+             * @param {Float64Array} output - three-element buffer written in place
+             * @param {number[]} fallback - default used for a non-finite component
+             * @returns {void}
+             */
             const copyVector = (value, output, fallback) => {
                 for (let index = 0; index < 3; index++) {
                     const candidate = Number(value?.[index]);
@@ -2585,7 +2909,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._meshRasterOptions.light = this.opts.meshLight;
         }
 
-        /** Generates a 2D grid of cell character and color data for the current state or specified options. */
+        /**
+         * Generates a headless 2D grid of cell character/color data, seeded from this
+         * instance's current grid size and options (overridable per call), without
+         * touching the canvas. Delegates to the module-level `renderFrame()`.
+         *
+         * @param {Object} [options] - overrides merged over this instance's current `cols`/`rows`/`mode`/`charSet`/`invert`/`color`/`align`; see the module-level `renderFrame()` for the full option list
+         * @returns {{char: string, r: number, g: number, b: number, a: number}[][]} a `rows`-length array of `cols`-length cell arrays
+         */
         renderFrame(options = {}) {
             return renderFrame({
                 cols: this.cols || 80,
@@ -2599,7 +2930,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        /** Generates a multi-line ASCII string for the current state or specified options without requiring DOM canvas. */
+        /**
+         * Generates a headless multi-line ASCII string, seeded from this instance's
+         * current grid size and options (overridable per call), without requiring a
+         * DOM canvas. Delegates to the module-level `renderToString()`.
+         *
+         * @param {Object} [options] - overrides merged over this instance's current `cols`/`rows`/`mode`/`charSet`/`invert`/`color`/`align`; see the module-level `renderToString()` for the full option list
+         * @returns {string} newline-joined rows of characters
+         */
         renderToString(options = {}) {
             return renderToString({
                 cols: this.cols || 80,
@@ -2613,7 +2951,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
         }
 
-        /** Move the existing renderer to another container without creating a second animation loop. */
+        /**
+         * Move the existing renderer/canvas to another container without creating a
+         * second animation loop or renderer instance. A no-op resize (not a full
+         * re-target) if `target` resolves to the current container.
+         *
+         * @param {string|HTMLElement} target - a CSS selector or a new container element
+         * @returns {void}
+         * @throws {Error} if `target` is a selector that matches no element
+         */
         setTarget(target) {
             const next = typeof target === "string" ? document.querySelector(target) : target;
             if (!next) throw new Error("asciiam: target not found");
@@ -2637,7 +2983,45 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._resize();
         }
 
-        /** Configure an ordered set of mode steps without starting it. */
+        /**
+         * Configure an ordered set of mode steps without starting playback — call
+         * {@link asciiam#playSequence} to begin. Interrupts and pauses an
+         * already-running sequence first if one exists. See
+         * docs/content/guides/sequences.md for the full step/transition contract.
+         *
+         * @param {Object[]} steps - ordered step definitions
+         * @param {string} steps[].mode - animation mode for this step
+         * @param {number} [steps[].duration=5] - step duration in seconds; non-positive/non-finite falls back to the default
+         * @param {number} [steps[].delay=0] - delay in seconds before this step starts, after the previous one completes
+         * @param {boolean} [steps[].repeat] - whether this step's own mode timeline loops within its duration; defaults from `steps[].options.loop` for backward compatibility, else `false`
+         * @param {string|null} [steps[].image] - omit to retain the current image, `null` to clear it, a string to load a new one before the step's duration begins
+         * @param {Object} [steps[].imageOptions] - forwarded to image sampling for this step
+         * @param {*} [steps[].model] - omit to retain the current model, `null` to clear it, a source to load and wait on before the step's duration begins
+         * @param {Object} [steps[].modelOptions] - forwarded to `setModel()` for this step
+         * @param {Object} [steps[].options] - per-step option overrides applied via `setOption()` when this step activates
+         * @param {Object} [steps[].transition] - `{ type: 'cut'|'blend'|'morph', duration, easing, style, spread }`; unrecognized `type` falls back to an instant `cut`
+         * @param {(detail: Object) => void} [steps[].onStart] - called when this step activates
+         * @param {(detail: Object) => void} [steps[].onComplete] - called when this step finishes normally
+         * @param {(detail: Object) => void} [steps[].onInterrupt] - called if this step is interrupted (manual mode change, reconfigure, etc.)
+         * @param {(detail: Object) => void} [steps[].onError] - called if this step's image/model fails to load
+         * @param {Object} [options] - sequence-level options
+         * @param {boolean} [options.loop=true] - whether the sequence restarts from step 0 after the last step completes
+         * @param {boolean} [options.autoplay=false] - recorded on `opts.sequenceOptions` for code-export/inspection purposes; does not itself start playback — call `playSequence()`
+         * @param {(detail: Object) => void} [options.onStepStart]
+         * @param {(detail: Object) => void} [options.onStepComplete]
+         * @param {(detail: Object) => void} [options.onStepInterrupt]
+         * @param {(detail: Object) => void} [options.onComplete] - called when the sequence completes (only reachable when `loop` is false)
+         * @returns {asciiam} `this`, for chaining
+         * @throws {TypeError} if `steps` isn't an array, or a step is missing/malformed
+         * @fires asciiam#sequenceInterrupt
+         *
+         * @example
+         * anim.setSequence([
+         *   { mode: 'wave', duration: 4 },
+         *   { mode: 'matrix', duration: 4, transition: { type: 'blend', duration: 1 } },
+         * ], { loop: true });
+         * anim.playSequence();
+         */
         setSequence(steps, options = {}) {
             if (!Array.isArray(steps)) throw new TypeError("asciiam: sequence steps must be an array");
             if (this._sequence?.running) {
@@ -2712,7 +3096,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Start or resume the configured sequence. Also starts the renderer if needed. */
+        /**
+         * Start or resume the configured sequence, and start the renderer if it isn't
+         * already running. Restarts from step 0 (or `startIndex`) if the sequence
+         * hasn't been started yet or previously completed; otherwise resumes from
+         * wherever it was paused.
+         *
+         * @param {number} [startIndex] - step index to (re)start from (wraparound-normalized); omit to resume/continue from the current position
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#sequenceStart
+         * @fires asciiam#sequenceResume
+         */
         playSequence(startIndex) {
             const sequence = this._sequence;
             if (!sequence || !sequence.steps.length) return this;
@@ -2727,7 +3121,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Pauses sequence time without stopping the renderer. */
+        /**
+         * Pauses sequence time without stopping the renderer — the current step's
+         * mode keeps animating, but its own timeline and the sequence's step timer
+         * stop advancing. A no-op if not currently running.
+         *
+         * @param {string} [reason="pause"] - included in the `sequencePause` event detail
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#sequencePause
+         */
         pauseSequence(reason = "pause") {
             if (!this._sequence?.running) return this;
             this._sequence.running = false;
@@ -2735,7 +3137,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Stops sequence playback and resets its position. */
+        /**
+         * Stops sequence playback and resets its position to before step 0, clearing
+         * any in-progress morph transition. A no-op if no sequence is configured.
+         *
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#sequenceStop
+         */
         stopSequence() {
             if (!this._sequence) return this;
             if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("stop");
@@ -2753,7 +3161,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Removes the configured sequence and transient morph state. */
+        /**
+         * Stops playback (see {@link asciiam#stopSequence}) and removes the configured
+         * sequence entirely — a subsequent `setSequence()` call is required before
+         * playing again.
+         *
+         * @returns {asciiam} `this`, for chaining
+         */
         clearSequence() {
             this.stopSequence();
             this._sequence = null;
@@ -2762,7 +3176,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Selects a step using normalized wraparound indexing. */
+        /**
+         * Selects a step using normalized wraparound indexing (negative or
+         * out-of-range indices wrap into range), interrupting the active step first
+         * if one is in progress.
+         *
+         * @param {number} index - target step index; wraps via {@link asciiam#_normalizeSequenceIndex}
+         * @returns {asciiam} `this`, for chaining
+         */
         seekSequence(index) {
             if (!this._sequence?.steps.length) return this;
             if (this._sequence.stepStarted || this._sequence.stepLoading) this._interruptSequenceStep("seek");
@@ -2770,7 +3191,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Interrupts the active step and advances according to loop policy. */
+        /**
+         * Interrupts the active step and advances to the next one, honoring the
+         * sequence's loop policy (wraps to step 0 and fires `sequenceLoop` if looping,
+         * otherwise completes the sequence at the end).
+         *
+         * @returns {asciiam} `this`, for chaining
+         * @fires asciiam#sequenceLoop
+         */
         nextSequenceStep() {
             const sequence = this._sequence;
             if (!sequence?.steps.length) return this;
@@ -2784,7 +3212,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Returns a serializable snapshot of sequence playback state. */
+        /**
+         * @returns {{configured: boolean, running: boolean, completed: boolean, index: number, length: number, loop: boolean, elapsed: number, waiting: boolean, loading: boolean, morphing: boolean, morphProgress: number}} a serializable snapshot of sequence playback state
+         */
         getSequenceState() {
             const sequence = this._sequence;
             return {
@@ -2802,7 +3232,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
-        /** Reports requested policy and the resolved presentation backend. */
+        /**
+         * @returns {{requested: "auto"|"webgl2"|"webgpu"|"canvas2d", backend: "webgl2"|"webgpu"|"canvas2d", gpuPreferred: boolean, acceleration: "gpu-api-preferred"|"browser-managed"|"not-requested", desynchronized: boolean, willReadFrequently: boolean}} the requested renderer policy and the currently-resolved backend
+         */
         getRendererInfo() {
             const context = this._webgl?.gl || this.ctx;
             const attributes = typeof context?.getContextAttributes === "function" ? context.getContextAttributes() : null;
@@ -2816,7 +3248,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
-        /** Replaces presentation resources while retaining instance-level state. */
+        /**
+         * Explicitly switches the presentation backend, replacing the canvas and
+         * renderer resources while retaining instance-level state (options, grid,
+         * timing). A no-op returning the current backend if `renderer` already
+         * resolves to what's active. `"auto"`/`"webgpu"` initialize asynchronously —
+         * `rendererChange` fires once WebGPU is actually ready, not immediately.
+         *
+         * @param {"auto"|"webgl2"|"webgpu"|"canvas2d"} renderer - backend to switch to
+         * @param {string} [requestedRenderer=renderer] - the policy recorded on `opts.renderer`/`getRendererInfo().requested`; distinct from `renderer` only in fallback call paths recording what was originally asked for
+         * @returns {"webgl2"|"webgpu"|"canvas2d"} the backend now active (may not equal `renderer` yet if `"webgpu"` init is still pending)
+         * @throws {TypeError} if `renderer` isn't one of the four valid values
+         * @throws {Error} if no backend (including the Canvas 2D fallback) could be initialized
+         * @fires asciiam#rendererChange
+         * @fires asciiam#rendererFallback
+         */
         setRenderer(renderer, requestedRenderer = renderer) {
             if (!["auto", "webgl2", "webgpu", "canvas2d"].includes(renderer)) {
                 throw new TypeError('asciiam: renderer must be "auto", "webgl2", "webgpu", or "canvas2d"');
@@ -2902,7 +3348,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._renderer;
         }
 
-        /** Replaces an unavailable WebGPU surface with the established 2D fallback. */
+        /**
+         * Replaces an unavailable WebGPU surface with WebGL2 (preferred) or Canvas 2D.
+         * Called on WebGPU init failure/rejection or device loss. A no-op if the
+         * instance is disabled or the current renderer isn't WebGPU (guards against a
+         * stale async callback firing after a later, unrelated renderer change).
+         *
+         * @private
+         * @param {Error|string} [reason] - the WebGPU failure reason; logged as a warning and included in the `rendererFallback` event
+         * @returns {void}
+         * @fires asciiam#rendererFallback
+         */
         _fallbackFromWebGPU(reason) {
             if (this._disabled || this._renderer !== "webgpu") return;
             if (reason) console.warn("asciiam: WebGPU initialization failed; using Canvas 2D.", reason);
@@ -2940,6 +3396,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * observed element that gets detached from the document (`replaceWith` here) never
          * reports `isIntersecting` again, which would otherwise leave `_visible` stuck at
          * `false` and `_runFrame()` permanently skipping every frame.
+         *
+         * @private
+         * @returns {HTMLCanvasElement} the new canvas, now assigned to `this.canvas`
          */
         _replacePresentationCanvas() {
             const oldCanvas = this.canvas;
@@ -2959,6 +3418,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return replacement;
         }
 
+        /**
+         * Attaches a `webglcontextlost` listener that falls back to Canvas 2D — a lost
+         * WebGL2 context is generally unrecoverable in-place, so this recovers by
+         * switching backends rather than attempting `webglcontextrestored`.
+         *
+         * @private
+         * @returns {void}
+         * @listens webglcontextlost
+         * @fires asciiam#rendererFallback
+         */
         _bindWebGLFallback() {
             this._onWebGLContextLost = (event) => {
                 event.preventDefault();
@@ -2969,11 +3438,27 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.canvas.addEventListener("webglcontextlost", this._onWebGLContextLost, false);
         }
 
+        /**
+         * Clamp and round a caller-supplied step index into `[0, steps.length - 1]`.
+         *
+         * @private
+         * @param {number} index - candidate step index
+         * @returns {number} the clamped, rounded index
+         */
         _normalizeSequenceIndex(index) {
             const last = Math.max(0, this._sequence.steps.length - 1);
             return Math.max(0, Math.min(last, Math.round(Number(index) || 0)));
         }
 
+        /**
+         * Reset per-step playback state and jump to `index`, starting it immediately
+         * if it has no delay, or leaving it pending for `_advanceSequence()` to start
+         * once the delay elapses.
+         *
+         * @private
+         * @param {number} index - step index to activate, already normalized
+         * @returns {void}
+         */
         _activateSequenceStep(index) {
             const sequence = this._sequence;
             if (sequence.stepLoading) this._cancelSequenceLoads();
@@ -2987,6 +3472,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (sequence.steps[index].delay === 0) this._startSequenceStep();
         }
 
+        /**
+         * Starts loading whatever the active step's `image`/`model` requires (skipping
+         * a source already loaded), preparing an outgoing morph snapshot first if this
+         * isn't the sequence's first step. Commits the step immediately if nothing
+         * needs loading, otherwise defers to {@link asciiam#_commitSequenceStep} once
+         * loading resolves. A no-op if the step is already started or loading.
+         *
+         * @private
+         * @returns {void}
+         * @fires asciiam#sequenceStepError
+         */
         _startSequenceStep() {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
@@ -3030,7 +3526,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._commitSequenceStep(step);
         }
 
-        /** Applies a decoded sequence step and starts its timed lifecycle. */
+        /**
+         * Applies a decoded sequence step's options/mode and starts its timed
+         * lifecycle — the step is now actively animating.
+         *
+         * @private
+         * @param {Object} step - the normalized step to commit, see {@link asciiam#setSequence}
+         * @returns {void}
+         * @fires asciiam#sequenceStepStart
+         */
         _commitSequenceStep(step) {
             const sequence = this._sequence;
             this._applyingSequence = true;
@@ -3055,6 +3559,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._emit("sequenceStepStart", detail);
         }
 
+        /**
+         * Fires a step's completion callbacks/event when its duration elapses
+         * naturally (called by {@link asciiam#_advanceSequence}, not user code).
+         *
+         * @private
+         * @returns {void}
+         * @fires asciiam#sequenceStepComplete
+         */
         _completeSequenceStep() {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
@@ -3065,6 +3577,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             sequence.stepStarted = false;
         }
 
+        /**
+         * Cancels the active step's pending loads/morph and fires its interrupt
+         * callbacks/event — called before manually seeking, skipping, stopping, or
+         * reconfiguring a step that hasn't completed on its own.
+         *
+         * @private
+         * @param {string} reason - included in the `sequenceStepInterrupt` event detail (e.g. `"seek"`, `"skip"`, `"stop"`, `"mode-change"`, `"reconfigure"`)
+         * @returns {void}
+         * @fires asciiam#sequenceStepInterrupt
+         */
         _interruptSequenceStep(reason) {
             const sequence = this._sequence;
             const step = sequence.steps[sequence.index];
@@ -3079,6 +3601,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             sequence.activationToken++;
         }
 
+        /**
+         * Marks the sequence complete (only reachable when `loop` is false and the
+         * last step finishes) and fires its completion callback/event.
+         *
+         * @private
+         * @returns {void}
+         * @fires asciiam#sequenceComplete
+         */
         _completeSequence() {
             const sequence = this._sequence;
             sequence.running = false;
@@ -3088,6 +3618,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._emit("sequenceComplete", detail);
         }
 
+        /**
+         * Builds the common detail object passed to sequence callbacks/events.
+         *
+         * @private
+         * @param {Object} [extra={}] - additional fields merged into (and overriding) the base detail
+         * @returns {{index: number, length: number, loop: boolean, elapsed: number, step: Object|null}} sequence event detail
+         */
         _sequenceDetail(extra = {}) {
             const sequence = this._sequence;
             return {
@@ -3100,6 +3637,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
+        /**
+         * Invoke a user-supplied sequence/step callback, catching and logging (rather
+         * than propagating) any error it throws so one broken callback can't stall
+         * sequence playback.
+         *
+         * @private
+         * @param {((detail: Object, instance: asciiam) => void)|null|undefined} callback - the callback to invoke, if any
+         * @param {Object} detail - event detail, see {@link asciiam#_sequenceDetail}
+         * @returns {void}
+         */
         _callSequenceCallback(callback, detail) {
             if (!callback) return;
             try {
@@ -3116,6 +3663,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * an async image/model load (`retainDuringLoad`), fall back to the original
          * whole-canvas crossfade — a real per-cell morph has no "after" cells to work
          * with until that load finishes, so there is nothing to morph toward yet.
+         *
+         * @private
+         * @param {Object} transition - the incoming step's transition config, see {@link asciiam#setSequence}
+         * @param {boolean} [retainDuringLoad=false] - true when bridging an async image/model load rather than an immediate mode change
+         * @returns {void}
          */
         _prepareMorph(transition, retainDuringLoad = false) {
             this._clearMorph();
@@ -3135,6 +3687,11 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * grid-mismatch recovery path (called right after mutation but before the next
          * paint, so the canvas — not yet repainted — still shows the outgoing content
          * there too).
+         *
+         * @private
+         * @param {Object} transition - the transition config, see {@link asciiam#setSequence}
+         * @param {boolean} isBlend - true for a real `type: 'blend'` fade; false when only bridging an async load (`retainDuringLoad`) with no actual fade requested
+         * @returns {void}
          */
         _createBlendSnapshot(transition, isBlend) {
             const duration = Math.max(0.05, Number(transition?.duration) || 0.8) * 1000;
@@ -3165,6 +3722,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * active scene can't be captured cell-by-cell: a composited `setLayers()` scene
          * has no single per-cell color (multiple layers blend at the pixel level, not
          * the cell level), and an empty grid has nothing to capture.
+         *
+         * @private
+         * @param {Object} transition - the `type: 'morph'` transition config, see {@link asciiam#setSequence}
+         * @returns {boolean} true if real per-cell morph state was prepared; false if the caller should fall back to a whole-canvas blend
          */
         _prepareRealMorph(transition) {
             if ((this._layers && this._layers.length) || !this.cols || !this.rows) return false;
@@ -3195,6 +3756,10 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * inside their own draw loop, so this passes `dt = 0` to avoid double-advancing
          * particle state — this call is a snapshot of the current instant, not an extra
          * animation tick.
+         *
+         * @private
+         * @param {"_morphCaptureA"|"_morphCaptureB"} bufferProp - which pooled instance buffer to write into
+         * @returns {Object|null} the filled buffer (`this[bufferProp]`), or `null` if the current scene can't be captured (composited layers, or an empty grid)
          */
         _captureMorphFrame(bufferProp) {
             if ((this._layers && this._layers.length) || !this.cols || !this.rows) return null;
@@ -3228,7 +3793,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return buffer;
         }
 
-        /** Pooled cols*rows cell-capture buffer; grown (never shrunk) across transitions. */
+        /**
+         * Pooled cols*rows cell-capture buffer; grown (never shrunk) across
+         * transitions to avoid repeated allocation for a stable grid size.
+         *
+         * @private
+         * @param {Object|null} buffer - existing pooled buffer to reuse/grow, or null to allocate fresh
+         * @param {number} cols - current grid column count
+         * @param {number} rows - current grid row count
+         * @returns {{cols: number, rows: number, chars: (string|null)[], colors: (string|null)[], opacity: Float32Array, level: Uint8Array, bold: Uint8Array}} the buffer, ready to be filled
+         */
         _ensureMorphBuffer(buffer, cols, rows) {
             const n = cols * rows;
             if (!buffer || buffer.chars.length < n) {
@@ -3248,7 +3822,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return buffer;
         }
 
-        /** Reads a captured cell back into a pooled scratch object; null if that cell was blank. */
+        /**
+         * Reads a captured cell back into a pooled scratch object; null if that cell
+         * was blank (never captured, or captured as blank).
+         *
+         * @private
+         * @param {Object|null} buffer - a filled capture buffer, see {@link asciiam#_ensureMorphBuffer}
+         * @param {number} index - flat cell index (`row * cols + col`)
+         * @param {Object} scratch - pooled cell object written in place and returned
+         * @returns {Object|null} `scratch`, or `null` if `buffer` is missing or that cell was blank
+         */
         _readMorphCell(buffer, index, scratch) {
             if (!buffer) return null;
             const char = buffer.chars[index];
@@ -3270,6 +3853,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * cell-count ceiling, so it can't become a per-frame or unbounded cost. Degrades
          * to 'dissolve' whenever a same-size, non-layered "after" snapshot isn't
          * available — matching needs both snapshots at identical grid dimensions.
+         *
+         * @private
+         * @returns {void}
          */
         _buildMorphMatches() {
             const morph = this._morph;
@@ -3318,7 +3904,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             morph.matches = matches;
         }
 
-        /** Reveal the live incoming state beneath the retained outgoing frame. */
+        /**
+         * Reveal the live incoming state beneath the retained outgoing frame — called
+         * once the incoming step's options have already mutated `this.opts`, right
+         * after {@link asciiam#_prepareMorph} captured the outgoing state. Falls back
+         * to a whole-canvas blend if the step's own options resized the grid
+         * mid-transition (a real `morph` can't align mismatched captured/live indices).
+         *
+         * @private
+         * @param {Object} transition - the incoming step's transition config, see {@link asciiam#setSequence}
+         * @returns {void}
+         * @fires asciiam#sequenceMorphStart
+         */
         _startPreparedMorph(transition) {
             if (this._morph && this._morph.kind === "blend" && !this._morph.isBlend) {
                 this._clearMorph();
@@ -3347,6 +3944,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._emit("sequenceMorphStart", this._sequenceDetail({ transition }));
         }
 
+        /**
+         * Advances the active transition's eased progress and, for a `blend`
+         * transition, the outgoing snapshot's CSS opacity. Emits `sequenceMorphComplete`
+         * and clears transition state once progress reaches 1. A no-op if no
+         * transition has started.
+         *
+         * @private
+         * @param {number} dt - elapsed time since the last frame, in milliseconds
+         * @returns {void}
+         * @fires asciiam#sequenceMorphComplete
+         */
         _advanceMorph(dt) {
             const morph = this._morph;
             if (!morph?.started) return;
@@ -3377,12 +3985,28 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Removes an active `blend` transition's DOM overlay (if any) and clears
+         * transition state entirely. Safe to call whether or not a transition is
+         * active.
+         *
+         * @private
+         * @returns {void}
+         */
         _clearMorph() {
             if (this._morph?.kind === "blend" && this._morph.canvas.parentElement) this._morph.canvas.remove();
             this._morph = null;
         }
 
-        /** Cancel every source preparation owned by an interrupted sequence step. */
+        /**
+         * Cancel every source preparation owned by an interrupted sequence step:
+         * bumps every load-cancellation token (so an already-in-flight load's
+         * `.then()`/`.onload` sees a mismatched token and no-ops) and aborts the
+         * active model load's `AbortController`.
+         *
+         * @private
+         * @returns {void}
+         */
         _cancelSequenceLoads() {
             this._imageLoadToken++;
             this._imageCaptureToken++;
@@ -3390,6 +4014,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._modelAbortController?.abort();
         }
 
+        /**
+         * Consumes elapsed time against the active step's delay-then-duration
+         * timeline, starting the step once its delay elapses and completing/advancing
+         * it once its duration elapses — looping within one call if `dt` spans
+         * multiple step boundaries (e.g. after a long tab-hidden gap). A no-op if no
+         * sequence is configured or running.
+         *
+         * @private
+         * @param {number} dt - elapsed time since the last frame, in milliseconds
+         * @returns {void}
+         */
         _advanceSequence(dt) {
             const sequence = this._sequence;
             if (!sequence?.running || !sequence.steps.length) return;
