@@ -1,4 +1,4 @@
-import asciiam from "../libs/asciiam.esm.js?v=13f57e1c5791";
+import asciiam from "../libs/asciiam.esm.js?v=23f89b7ff27c";
 
 const root = document.querySelector("[data-preset-gallery]");
 

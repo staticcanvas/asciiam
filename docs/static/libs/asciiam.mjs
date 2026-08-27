@@ -498,6 +498,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.gradientViews = new Map();
             this.bindGroups = new Map();
             this.uniformValues = new Float32Array(12);
+            this._uniformSlots = [];
+            this._uniformSlotIndex = 0;
             this.ready = this._initialize(options);
         }
 
@@ -597,7 +599,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             });
             const bufferUsage = globalThis.GPUBufferUsage;
             const textureUsage = globalThis.GPUTextureUsage;
-            this.uniformBuffer = device.createBuffer({ size: 48, usage: bufferUsage.UNIFORM | bufferUsage.COPY_DST });
+            // Pooled per-draw-call uniform state — see _acquireUniformSlot (initialized in
+            // the constructor since destroy() can run before this method ever does, e.g.
+            // when adapter/device acquisition itself fails).
             this.cornerBuffer = device.createBuffer({ size: 32, usage: bufferUsage.VERTEX | bufferUsage.COPY_DST });
             device.queue.writeBuffer(this.cornerBuffer, 0, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
             this.instanceBuffer = device.createBuffer({ size: this.instances.byteLength, usage: bufferUsage.VERTEX | bufferUsage.COPY_DST });
@@ -634,7 +638,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.device.queue.copyExternalImageToTexture({ source }, { texture }, [source.width, source.height]);
             this.gradientSources.set(key, texture);
             this.gradientViews.set(key, texture.createView());
-            this.bindGroups.delete(`glyph:${key}`);
+            this.bindGroups.clear();
             if (this.gradientSources.size > 8) {
                 const oldest = this.gradientSources.keys().next().value;
                 this.gradientSources.get(oldest)?.destroy();
@@ -645,11 +649,31 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         begin(clearColor, preserve = false) {
             if (!this.device) return;
             this.count = 0;
+            this._uniformSlotIndex = 0;
             this.encoder = this.device.createCommandEncoder();
             this.pass = this.encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), clearValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: clearColor[3] }, loadOp: preserve ? "load" : "clear", storeOp: "store" }] });
         }
 
-        _uniforms(color, useGradient = false) {
+        // Returns a distinct { buffer } for each draw call within one frame (index reset
+        // by begin()/_beginLoadedPass()), growing the pool lazily and reusing it across
+        // frames. Every draw recorded before queue.submit() must read its *own* uniform
+        // buffer — writeBuffer() calls made before submit() all land before any of that
+        // submission's draws execute, so draws that shared one buffer would all read
+        // whichever draw's uniforms were written *last*, not their own (this is how the
+        // trail/backdrop "surface" quads used to render solid white: flush()'s own,
+        // unrelated glyph-pipeline uniform write of [1,1,1,1] always happened last).
+        _acquireUniformSlot() {
+            let slot = this._uniformSlots[this._uniformSlotIndex];
+            if (!slot) {
+                const bufferUsage = globalThis.GPUBufferUsage;
+                slot = { buffer: this.device.createBuffer({ size: 48, usage: bufferUsage.UNIFORM | bufferUsage.COPY_DST }) };
+                this._uniformSlots[this._uniformSlotIndex] = slot;
+            }
+            this._uniformSlotIndex++;
+            return slot;
+        }
+
+        _uniforms(slot, color, useGradient = false) {
             // WGSL struct layout: viewport (vec2f, offset 0) is padded to 16 bytes so
             // color (vec4f) can start at its required 16-byte alignment (offset 4 in
             // float units), and the struct itself rounds up to a 16-byte multiple (48
@@ -658,15 +682,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             values[0] = this.width || 1; values[1] = this.height || 1;
             values[4] = color[0]; values[5] = color[1]; values[6] = color[2]; values[7] = color[3];
             values[8] = useGradient ? 1 : 0;
-            this.device.queue.writeBuffer(this.uniformBuffer, 0, values);
+            this.device.queue.writeBuffer(slot.buffer, 0, values);
         }
 
-        _bindGroup(pipeline, color, useGradient = false) {
-            this._uniforms(color, useGradient);
-            const cacheKey = pipeline === this.glyphPipeline ? `glyph:${this._gradientKey || "none"}` : "surface";
+        _bindGroup(slot, pipeline, color, useGradient = false) {
+            this._uniforms(slot, color, useGradient);
+            const cacheKey = `${this._uniformSlotIndex}:${pipeline === this.glyphPipeline ? `glyph:${this._gradientKey || "none"}` : "surface"}`;
             const cached = this.bindGroups.get(cacheKey);
             if (cached) return cached;
-            const entries = [{ binding: 0, resource: { buffer: this.uniformBuffer } }];
+            const entries = [{ binding: 0, resource: { buffer: slot.buffer } }];
             if (pipeline === this.glyphPipeline) entries.push(
                 { binding: 1, resource: this.atlasView || this._emptyTexture.createView() },
                 { binding: 2, resource: this.sampler },
@@ -683,8 +707,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const standalone = !this.pass;
             if (standalone) this._beginLoadedPass();
             this._gradientKey = gradient?.textureKey || "";
+            const slot = this._acquireUniformSlot();
             this.pass.setPipeline(this.surfacePipeline);
-            this.pass.setBindGroup(0, this._bindGroup(this.surfacePipeline, color, !!this._gradientKey));
+            this.pass.setBindGroup(0, this._bindGroup(slot, this.surfacePipeline, color, !!this._gradientKey));
             this.pass.setVertexBuffer(0, this.cornerBuffer);
             this.pass.draw(4);
             if (standalone) {
@@ -695,6 +720,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         _beginLoadedPass() {
+            this._uniformSlotIndex = 0;
             this.encoder = this.device.createCommandEncoder();
             this.pass = this.encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: "load", storeOp: "store" }] });
         }
@@ -720,8 +746,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             if (this.count && this.atlasTexture) {
                 this.device.queue.writeBuffer(this.instanceBuffer, 0, this.instances.subarray(0, this.count * this.stride));
                 this._gradientKey = gradient?.textureKey || "";
+                const slot = this._acquireUniformSlot();
                 this.pass.setPipeline(this.glyphPipeline);
-                this.pass.setBindGroup(0, this._bindGroup(this.glyphPipeline, [1, 1, 1, 1], !!this._gradientKey));
+                this.pass.setBindGroup(0, this._bindGroup(slot, this.glyphPipeline, [1, 1, 1, 1], !!this._gradientKey));
                 this.pass.setVertexBuffer(0, this.cornerBuffer);
                 this.pass.setVertexBuffer(1, this.instanceBuffer);
                 this.pass.draw(4, this.count);
@@ -742,7 +769,9 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this.gradientSources.clear();
             this.gradientViews.clear();
             this.bindGroups.clear();
-            [this.uniformBuffer, this.cornerBuffer, this.instanceBuffer, this._emptyTexture].forEach((resource) => resource?.destroy?.());
+            this._uniformSlots.forEach((slot) => slot.buffer?.destroy?.());
+            this._uniformSlots = [];
+            [this.cornerBuffer, this.instanceBuffer, this._emptyTexture].forEach((resource) => resource?.destroy?.());
             if (this.pass) this.pass.end();
             this.pass = null;
         }
