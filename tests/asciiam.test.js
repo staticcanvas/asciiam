@@ -818,6 +818,113 @@ describe("asciiam lifecycle", () => {
         }
     });
 
+    it("gives each WebGPU surface/glyph draw its own uniform buffer within a frame", async () => {
+        // Regression test for a real bug: surface() (trail overlay, backdrop) and flush()
+        // (glyph instances) used to share ONE uniform buffer for their per-draw color data.
+        // Because WebGPU command buffers don't execute until queue.submit(), and all the
+        // writeBuffer() calls for one frame happen before that single submit(), every draw
+        // recorded in the frame ended up reading whichever draw's uniforms were written
+        // *last* — which was always flush()'s own placeholder glyph color of [1,1,1,1]
+        // (opaque white), since glyphs are always flushed after trail/backdrop. That made
+        // any trail or backdrop overlay render solid white instead of its own color,
+        // reproducible only on a real WebGPU device (this environment has no adapter, so
+        // renderer: "auto" always fell back to WebGL2 in every other test here).
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+
+        const capturedBindGroups = [];
+        const mockPass = {
+            setPipeline: jest.fn(),
+            setBindGroup: jest.fn((_index, bindGroup) => capturedBindGroups.push(bindGroup)),
+            setVertexBuffer: jest.fn(),
+            draw: jest.fn(),
+            end: jest.fn(),
+        };
+        const makeGpuBuffer = ({ size }) => ({ data: new Float32Array(size / 4), destroy: jest.fn() });
+        const device = {
+            queue: {
+                writeBuffer: jest.fn((buffer, offset, src) => {
+                    const srcArray = ArrayBuffer.isView(src) ? new Float32Array(src.buffer, src.byteOffset, src.length) : new Float32Array(src);
+                    buffer.data.set(srcArray, offset / 4);
+                }),
+                writeTexture: jest.fn(),
+                copyExternalImageToTexture: jest.fn(),
+                submit: jest.fn(),
+            },
+            lost: new Promise(() => {}),
+            createBuffer: jest.fn(makeGpuBuffer),
+            createTexture: jest.fn(() => ({ createView: jest.fn(() => ({})), destroy: jest.fn() })),
+            createSampler: jest.fn(() => ({})),
+            createShaderModule: jest.fn(() => ({})),
+            createRenderPipeline: jest.fn(() => ({ getBindGroupLayout: jest.fn(() => ({})) })),
+            createBindGroup: jest.fn((descriptor) => ({ entries: descriptor.entries })),
+            createCommandEncoder: jest.fn(() => ({ beginRenderPass: jest.fn(() => mockPass), finish: jest.fn(() => ({})) })),
+        };
+        const gpuContext = { configure: jest.fn(), getCurrentTexture: jest.fn(() => ({ createView: jest.fn(() => ({})) })) };
+        const secureDescriptor = Object.getOwnPropertyDescriptor(globalThis, "isSecureContext");
+        const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis.navigator, "gpu");
+        const priorBufferUsage = globalThis.GPUBufferUsage;
+        const priorTextureUsage = globalThis.GPUTextureUsage;
+        globalThis.GPUBufferUsage = { UNIFORM: 1, COPY_DST: 2, VERTEX: 4 };
+        globalThis.GPUTextureUsage = { TEXTURE_BINDING: 1, COPY_DST: 2, RENDER_ATTACHMENT: 4 };
+        Object.defineProperty(globalThis, "isSecureContext", { configurable: true, value: true });
+        Object.defineProperty(globalThis.navigator, "gpu", {
+            configurable: true,
+            value: {
+                requestAdapter: jest.fn(() => Promise.resolve({ requestDevice: jest.fn(() => Promise.resolve(device)) })),
+                getPreferredCanvasFormat: jest.fn(() => "bgra8unorm"),
+            },
+        });
+        HTMLCanvasElement.prototype.getContext.mockImplementation((type) => (type === "webgpu" ? gpuContext : makeContext()));
+
+        let animation;
+        try {
+            animation = new asciiam(host, {
+                renderer: "webgpu",
+                mode: "wave",
+                trail: 0.34,
+                trailColor: "#070809",
+                backdrop: { enabled: true, opacity: 0.9, color: "#0a0c10", placement: "behind" },
+                respectReducedMotion: false,
+            });
+            await Promise.resolve();
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(animation.getRendererInfo().backend).toBe("webgpu");
+
+            animation.start();
+            capturedBindGroups.length = 0;
+            animation._runFrame(16.7);
+
+            // At least trail's surface() draw, backdrop's surface() draw, and glyph flush()'s
+            // draw each recorded a setBindGroup call this frame.
+            expect(capturedBindGroups.length).toBeGreaterThanOrEqual(3);
+            const buffers = capturedBindGroups.map((group) => group.entries[0].resource.buffer);
+            const uniqueBuffers = new Set(buffers);
+            expect(uniqueBuffers.size).toBe(buffers.length);
+
+            const [trailBuffer, backdropBuffer] = buffers;
+            // Trail's own buffer must still hold trail's color/alpha, not glyph flush's
+            // later [1,1,1,1] placeholder write to its own, separate buffer.
+            expect(trailBuffer.data[7]).toBeCloseTo(0.34, 5);
+            expect(trailBuffer.data[4]).toBeCloseTo(7 / 255, 3);
+            expect(backdropBuffer.data[7]).toBeCloseTo(0.9, 5);
+        } finally {
+            animation?.destroy();
+            if (secureDescriptor) Object.defineProperty(globalThis, "isSecureContext", secureDescriptor);
+            else delete globalThis.isSecureContext;
+            if (navigatorDescriptor) Object.defineProperty(globalThis.navigator, "gpu", navigatorDescriptor);
+            else delete globalThis.navigator.gpu;
+            if (priorBufferUsage === undefined) delete globalThis.GPUBufferUsage;
+            else globalThis.GPUBufferUsage = priorBufferUsage;
+            if (priorTextureUsage === undefined) delete globalThis.GPUTextureUsage;
+            else globalThis.GPUTextureUsage = priorTextureUsage;
+        }
+    });
+
     it("renders procedural meshes through the public Canvas 2D lifecycle", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {
