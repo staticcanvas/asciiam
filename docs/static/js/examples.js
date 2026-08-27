@@ -4,7 +4,7 @@
  * @module examples
  */
 
-import asciiam from "../libs/asciiam.esm.js";
+import asciiam from "../libs/asciiam.esm.js?v=__ASSET_REVISION__";
 
 const root = document.querySelector("[data-examples-playground]");
 

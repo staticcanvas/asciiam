@@ -23,7 +23,7 @@
       document.documentElement.dataset.theme = saved;
     })();
   </script>
-  <script type="module" src="{{ "js/docs.js" | relURL }}"></script>
+  <script type="module" src="{{ "js/docs.js" | relURL }}?v=__ASSET_REVISION__"></script>
   {{ block "head" . }}{{ end }}
 </head>
 <body{{ if .IsHome }} class="docs-splash"{{ end }}>

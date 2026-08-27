@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,7 +58,12 @@ if (localBuild.error?.code === 'ENOENT') {
 if (buildStatus !== 0) process.exit(buildStatus);
 
 // One content-derived revision prevents a deployment from combining new HTML
-// controls with cached utility/runtime JavaScript from an earlier build.
+// controls with cached utility/runtime JavaScript from an earlier build. This
+// covers both the Web Utility playground and the main docs site's own script
+// tags/module imports (docs.js, gallery.js, examples.js, home.js,
+// asciiam-animations.js) — every one of them ends up importing the same
+// core asciiam bundle, so a stale cached copy of any of them can keep
+// serving a fixed bug indefinitely even after a fresh deployment.
 const revisionSources = [
   'public/webutil/index.html',
   'public/webutil/js/webutil.js',
@@ -68,9 +73,20 @@ const revisionSources = [
 ];
 const sourceContents = await Promise.all(revisionSources.map((file) => readFile(resolve(projectRoot, file), 'utf8')));
 const assetRevision = createHash('sha256').update(sourceContents.join('\0')).digest('hex').slice(0, 12);
-await Promise.all(revisionSources.slice(0, 2).map(async (file) => {
-  const path = resolve(projectRoot, file);
+
+// The docs.js script tag lives in baseof.html, which every generated page
+// extends, and js/docs.js itself carries the placeholder too (its import of
+// asciiam-animations.js) — rather than hand-list every page, walk every
+// generated .html and public/js/*.js file and substitute wherever the
+// placeholder actually appears.
+const publicDir = resolve(projectRoot, 'public');
+const entries = await readdir(publicDir, { recursive: true, withFileTypes: true });
+const substitutionTargets = entries
+  .filter((entry) => entry.isFile() && (entry.name.endsWith('.html') || entry.name.endsWith('.js')))
+  .map((entry) => resolve(entry.parentPath ?? entry.path, entry.name));
+await Promise.all(substitutionTargets.map(async (path) => {
   const source = await readFile(path, 'utf8');
+  if (!source.includes('__ASSET_REVISION__')) return;
   await writeFile(path, source.replaceAll('__ASSET_REVISION__', assetRevision));
 }));
-console.log(`Web Utility asset revision: ${assetRevision}`);
+console.log(`Asset revision: ${assetRevision}`);
