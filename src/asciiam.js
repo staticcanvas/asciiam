@@ -7275,6 +7275,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", opacity, intensity, intensity > 0.72);
         }
 
+        /**
+         * `mode: 'image'`'s per-cell function (legacy — images are normally composed
+         * as media layers, not a standalone mode). Returns `null` if there's no image
+         * grid, `imageEnabled` is `false`, or the sampled character is blank.
+         * When `opts.animateImageMask` is set, reveals/pulses the image through one
+         * of several mask sweep patterns (`waveSweep` default, `scanlinePass`,
+         * `radialRipple`, `thermalNoise`, `halftonePulse`, or `fullStatic`) instead of
+         * showing it at flat full opacity.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {({char: string, opacity: number, level: number, bold: boolean, color: (string|null)}|null)} the resolved cell, or `null` if there's nothing to show at this cell
+         */
         _imageCell(col, row, x, y) {
             if (!this._imageGrid) return null;
             if (this.opts.imageEnabled === false) return null;
@@ -7335,8 +7350,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         /**
-         * Overlays sampled glyph and color data without replacing the selected
-         * mode's opacity, timing, or particle geometry.
+         * Overlays sampled image glyph and color data onto an already-computed
+         * effect cell, without replacing that mode's own opacity/timing/particle
+         * geometry — used when a sparse or dense animation mode is composited over
+         * an image source. For a cell the animation mask excludes from animating,
+         * ignores `effectCell` entirely and returns a flat full-opacity image cell
+         * instead. Returns `null` if there's no image grid, the position is out of
+         * the image grid's bounds, or the sampled character is blank.
+         *
+         * @param {({char: string, opacity: number, level: number, bold: boolean}|null)} effectCell - the active mode's own resolved cell to overlay onto, or `null`
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @returns {({char: string, opacity: number, level: number, bold: boolean, color: (string|null)}|null)} the overlaid cell, or `null` if there's nothing to show
          */
         _applyImageSource(effectCell, col, row) {
             const grid = this._imageGrid;
@@ -7357,8 +7382,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return cell;
         }
 
-        // Sparse matrix cell: called only for rows within a column's active trail
-        // range (see _drawSparse), never scanned across the full grid.
+        /**
+         * `matrix` mode's per-cell function. Called only for rows within one
+         * column's active falling-trail range (see `_drawSparse()`'s matrix branch),
+         * never scanned across the full grid — cost scales with active trail length,
+         * not grid size. The leading ("head") row of a column is rendered bold; the
+         * character is re-randomized per frame for a flickering-glyph effect.
+         *
+         * @param {number} col - zero-based grid column (matches the falling column's index)
+         * @param {number} row - zero-based grid row within the column's active trail
+         * @param {Object} d - the column's particle state from `_matrix` (`{y, speed, length}`)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _matrixCellAt(col, row, d) {
             const dist = d.y - row;
             const intensity = Math.max(0, 1 - dist / d.length);
@@ -7369,6 +7404,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || "0", intensity * maxOpacity, intensity, isHead);
         }
 
+        /**
+         * ASCII chart mode's per-cell function — renders one cell of whichever chart
+         * `opts.chartType` selects (`bar`, `horizontalBar`, `line`, `sparkline`,
+         * `heatmap`, `donut`), including axis guides, scale labels, title, legend,
+         * per-item value labels, and per-series/per-item staggered reveal animation
+         * when `opts.chartAnimateItems` is set. Returns a blank cell (not `null`) when
+         * charting is disabled or there's no data, so callers that composite chart
+         * cells over another mode's own cell (`_computeCell()`) can distinguish "blank
+         * chart cell" from "no chart active."
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: (string|null)}} the resolved cell
+         */
         _chartCell(col, row, _x, _y) {
             if (this.opts.chartEnabled === false) return this._setCell(" ", 0, 0, false);
             const data = this.opts.chartData;
@@ -7672,7 +7723,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(" ", 0, 0, false);
         }
 
-        /** Lazily allocates diagnostic history only while extended output is enabled. */
+        /**
+         * Lazily allocates and returns the extended-diagnostics history state
+         * (rolling frame-work-time and occupancy sample buffers), only the first
+         * time it's actually needed — a compact-stats instance never pays this
+         * allocation.
+         *
+         * @returns {Object} the extended-stats accumulator/history state
+         */
         _ensureExtendedStats() {
             if (!this._extendedStats) {
                 this._extendedStats = {
@@ -7689,7 +7747,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._extendedStats;
         }
 
-        /** Estimates active display cadence from raw animation-frame intervals. */
+        /**
+         * Estimates the display's actual refresh cadence from raw animation-frame
+         * intervals, exponentially smoothed. Only samples plausible vsync-driven
+         * deltas (`4`-`50` ms, i.e. roughly 20-250 Hz) so an interval stretched by a
+         * dropped frame or a background tab doesn't skew the estimate.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds
+         * @returns {void}
+         */
         _sampleDisplayRefresh(dt) {
             if (!(dt >= 4 && dt <= 50)) return;
             const stats = this._ensureExtendedStats();
@@ -7698,6 +7764,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 : dt;
         }
 
+        /**
+         * Finalizes the current stats window's averaged CPU frame-work time and
+         * records both it and cell occupancy into the rolling ring-buffer history
+         * used to render the extended-diagnostics sparkline charts.
+         *
+         * @param {number} occupancy - fraction of the grid actually drawn this window, `[0, 1]`
+         * @returns {void}
+         */
         _pushExtendedStats(occupancy) {
             const stats = this._ensureExtendedStats();
             stats.frameWorkMs = stats.frameWorkAccum / stats.frameWorkSamples;
@@ -7709,7 +7783,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             stats.historyCount = Math.min(STATS_HISTORY_LENGTH, stats.historyCount + 1);
         }
 
-        /** Returns a read-only diagnostic snapshot without starting any observers. */
+        /**
+         * Returns a read-only diagnostic snapshot of the instance's current
+         * performance and renderer state — FPS, estimated display refresh rate, CPU
+         * frame-work time (when extended stats are enabled), grid occupancy,
+         * resolved renderer/adapter info, quality tier, DPR, and mesh/model status.
+         * Safe to call at any time; never starts an observer or allocates history on
+         * its own (that's `_ensureExtendedStats()`'s job, driven by `opts.showStats`).
+         *
+         * @returns {Object} the diagnostic snapshot
+         */
         getStats() {
             const cells = this.cols * this.rows;
             const occupancy = cells ? Math.min(1, this._lastDrawnCount / cells) : 0;
@@ -7733,6 +7816,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             };
         }
 
+        /**
+         * Formats a `getStats()` snapshot plus rolling history into the multi-line
+         * extended-diagnostics overlay text: FPS/grid/drawn summary, display
+         * refresh/backend/quality/DPR line, CPU frame-work time with an inline
+         * sparkline, fill-rate percentage with an inline sparkline, and (when
+         * present) a GPU adapter line and a 3D mesh/model summary line.
+         *
+         * @param {Object} snapshot - a `getStats()` result
+         * @returns {string} the formatted, newline-joined diagnostics text
+         */
         _formatExtendedStats(snapshot) {
             const stats = this._extendedStats;
             const refresh = snapshot.estimatedRefreshRate ? `~${Math.round(snapshot.estimatedRefreshRate)} Hz` : "measuring";
@@ -7759,6 +7852,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return lines.join("\n");
         }
 
+        /**
+         * Accumulates per-frame CPU work time (when extended stats are enabled) and,
+         * once every ~500ms window, recomputes FPS and refreshes the attached stats
+         * element's text — compact one-line summary normally, or the full
+         * `_formatExtendedStats()` multi-line overlay when `opts.extendedStats` is
+         * set. A no-op past frame counting if no stats element is attached.
+         *
+         * @param {number} timestamp - current frame timestamp (same clock as `requestAnimationFrame`)
+         * @param {number} frameWorkMs - this frame's measured CPU work time in milliseconds (`0` if not measured)
+         * @returns {void}
+         */
         _updateStats(timestamp, frameWorkMs) {
             this._frames++;
             if (this.opts.extendedStats) {
@@ -7784,7 +7888,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 }
             }
         }
-        /** Selects the text element updated by the optional diagnostics counter. */
+        /**
+         * Selects the DOM element `_updateStats()` writes its diagnostics text into.
+         * Pass `null` to detach (stats keep computing internally, just stop being
+         * written anywhere).
+         *
+         * @param {(Element|null)} el - element to receive the diagnostics text, or `null` to detach
+         * @returns {void}
+         */
         attachStats(el) {
             this._statsEl = el;
         }
@@ -7878,7 +7989,31 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this.exportImage({ format, filename, scale, download: true });
         }
 
-        /** Installs chart data and enables ASCII chart rendering mode. */
+        /**
+         * Installs chart data and enables ASCII chart rendering — the primary entry
+         * point for chart mode, independent of `setMode('chart')` (chart cells
+         * composite over the active animation mode automatically once data is
+         * present, per `_computeCell()`). Any option omitted from `options` keeps its
+         * current value rather than being reset, so repeated calls can update just
+         * the data or just a single display option.
+         *
+         * @param {(number[]|Object[])} data - flat numeric values, or objects with `value`/`label`/`color` fields (shape accepted depends on `opts.chartType`)
+         * @param {Object} [options={}]
+         * @param {boolean} [options.enabled] - explicitly enable/disable chart rendering (default: enabled)
+         * @param {string} [options.type] - chart type (`'bar'`, `'horizontalBar'`, `'line'`, `'sparkline'`, `'heatmap'`, `'donut'`)
+         * @param {string} [options.title] - chart title text
+         * @param {boolean} [options.showValues] - show per-item value labels
+         * @param {boolean} [options.showAxes] - show axis guides and scale labels
+         * @param {boolean} [options.showLegend] - show the legend
+         * @param {string[]} [options.colors] - per-item/per-series color palette
+         * @param {number} [options.scaleMin] - explicit Y-axis minimum (auto if omitted)
+         * @param {number} [options.scaleMax] - explicit Y-axis maximum (auto if omitted)
+         * @param {boolean} [options.animateItems] - stagger-reveal items on entry
+         * @returns {asciiam} `this`, for chaining
+         *
+         * @example
+         * anim.setChartData([12, 34, 8, 21], { type: "bar", title: "Requests/min" });
+         */
         setChartData(data, options = {}) {
             this.opts.chartData = data;
             this.opts.chartEnabled = options.enabled !== undefined ? options.enabled : true;
@@ -7894,7 +8029,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Clears active chart data and resets animation mode. */
+        /**
+         * Clears active chart data, disables chart rendering, and — if `opts.mode`
+         * was explicitly set to `'chart'` — switches back to `'wave'`. Data set via
+         * `setChartData()` while composited over a different mode is simply removed
+         * without changing that mode.
+         *
+         * @returns {asciiam} `this`, for chaining
+         */
         clearChart() {
             this.opts.chartData = null;
             this.opts.chartEnabled = false;
@@ -7906,7 +8048,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this;
         }
 
-        /** Returns metadata for the active ASCII chart. */
+        /**
+         * Returns a read-only metadata snapshot of the active ASCII chart —
+         * whether it's active/enabled, its type, data length, title, legend/color
+         * flags, resolved scale bounds, and whether item animation is on.
+         *
+         * @returns {{active: boolean, enabled: boolean, type: string, dataLength: number, title: string, showLegend: boolean, hasColors: boolean, scaleMin: (number|null), scaleMax: (number|null), animateItems: boolean}} the chart metadata snapshot
+         */
         getChartInfo() {
             const data = this.opts.chartData;
             const isArray = Array.isArray(data);
