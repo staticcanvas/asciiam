@@ -26,6 +26,69 @@ const makeContext = () => ({
     translate: jest.fn(),
 });
 
+// Sets up a mocked WebGPU device/context/globals so a `renderer: "webgpu"` instance
+// initializes successfully in jsdom (which has no real WebGPU). Returns { device,
+// gpuContext, teardown } — call teardown() in a finally block once done. Tracks buffer
+// identity/content through createBuffer/writeBuffer and bind groups through
+// createBindGroup, since that's what the WebGPU-only regression tests in this file need
+// to assert on (jsdom can't exercise actual GPU rendering either way).
+const setupMockWebGPU = ({ mockPass } = {}) => {
+    const pass = mockPass || {
+        setPipeline: jest.fn(),
+        setBindGroup: jest.fn(),
+        setVertexBuffer: jest.fn(),
+        draw: jest.fn(),
+        end: jest.fn(),
+    };
+    const makeGpuBuffer = ({ size }) => ({ data: new Float32Array(size / 4), destroy: jest.fn() });
+    const device = {
+        queue: {
+            writeBuffer: jest.fn((buffer, offset, src) => {
+                const srcArray = ArrayBuffer.isView(src) ? new Float32Array(src.buffer, src.byteOffset, src.length) : new Float32Array(src);
+                buffer.data.set(srcArray, offset / 4);
+            }),
+            writeTexture: jest.fn(),
+            copyExternalImageToTexture: jest.fn(),
+            submit: jest.fn(),
+        },
+        lost: new Promise(() => {}),
+        createBuffer: jest.fn(makeGpuBuffer),
+        createTexture: jest.fn(() => ({ createView: jest.fn(() => ({})), destroy: jest.fn() })),
+        createSampler: jest.fn(() => ({})),
+        createShaderModule: jest.fn(() => ({})),
+        createRenderPipeline: jest.fn(() => ({ getBindGroupLayout: jest.fn(() => ({})) })),
+        createBindGroup: jest.fn((descriptor) => ({ entries: descriptor.entries })),
+        createCommandEncoder: jest.fn(() => ({ beginRenderPass: jest.fn(() => pass), finish: jest.fn(() => ({})) })),
+    };
+    const gpuContext = { configure: jest.fn(), getCurrentTexture: jest.fn(() => ({ createView: jest.fn(() => ({})) })) };
+    const secureDescriptor = Object.getOwnPropertyDescriptor(globalThis, "isSecureContext");
+    const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis.navigator, "gpu");
+    const priorBufferUsage = globalThis.GPUBufferUsage;
+    const priorTextureUsage = globalThis.GPUTextureUsage;
+    globalThis.GPUBufferUsage = { UNIFORM: 1, COPY_DST: 2, VERTEX: 4 };
+    globalThis.GPUTextureUsage = { TEXTURE_BINDING: 1, COPY_DST: 2, RENDER_ATTACHMENT: 4 };
+    Object.defineProperty(globalThis, "isSecureContext", { configurable: true, value: true });
+    Object.defineProperty(globalThis.navigator, "gpu", {
+        configurable: true,
+        value: {
+            requestAdapter: jest.fn(() => Promise.resolve({ requestDevice: jest.fn(() => Promise.resolve(device)) })),
+            getPreferredCanvasFormat: jest.fn(() => "bgra8unorm"),
+        },
+    });
+    HTMLCanvasElement.prototype.getContext.mockImplementation((type) => (type === "webgpu" ? gpuContext : makeContext()));
+    const teardown = () => {
+        if (secureDescriptor) Object.defineProperty(globalThis, "isSecureContext", secureDescriptor);
+        else delete globalThis.isSecureContext;
+        if (navigatorDescriptor) Object.defineProperty(globalThis.navigator, "gpu", navigatorDescriptor);
+        else delete globalThis.navigator.gpu;
+        if (priorBufferUsage === undefined) delete globalThis.GPUBufferUsage;
+        else globalThis.GPUBufferUsage = priorBufferUsage;
+        if (priorTextureUsage === undefined) delete globalThis.GPUTextureUsage;
+        else globalThis.GPUTextureUsage = priorTextureUsage;
+    };
+    return { device, gpuContext, pass, teardown };
+};
+
 const makeWebGL2 = () => {
     let attribute = 0;
     return {
@@ -843,42 +906,7 @@ describe("asciiam lifecycle", () => {
             draw: jest.fn(),
             end: jest.fn(),
         };
-        const makeGpuBuffer = ({ size }) => ({ data: new Float32Array(size / 4), destroy: jest.fn() });
-        const device = {
-            queue: {
-                writeBuffer: jest.fn((buffer, offset, src) => {
-                    const srcArray = ArrayBuffer.isView(src) ? new Float32Array(src.buffer, src.byteOffset, src.length) : new Float32Array(src);
-                    buffer.data.set(srcArray, offset / 4);
-                }),
-                writeTexture: jest.fn(),
-                copyExternalImageToTexture: jest.fn(),
-                submit: jest.fn(),
-            },
-            lost: new Promise(() => {}),
-            createBuffer: jest.fn(makeGpuBuffer),
-            createTexture: jest.fn(() => ({ createView: jest.fn(() => ({})), destroy: jest.fn() })),
-            createSampler: jest.fn(() => ({})),
-            createShaderModule: jest.fn(() => ({})),
-            createRenderPipeline: jest.fn(() => ({ getBindGroupLayout: jest.fn(() => ({})) })),
-            createBindGroup: jest.fn((descriptor) => ({ entries: descriptor.entries })),
-            createCommandEncoder: jest.fn(() => ({ beginRenderPass: jest.fn(() => mockPass), finish: jest.fn(() => ({})) })),
-        };
-        const gpuContext = { configure: jest.fn(), getCurrentTexture: jest.fn(() => ({ createView: jest.fn(() => ({})) })) };
-        const secureDescriptor = Object.getOwnPropertyDescriptor(globalThis, "isSecureContext");
-        const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis.navigator, "gpu");
-        const priorBufferUsage = globalThis.GPUBufferUsage;
-        const priorTextureUsage = globalThis.GPUTextureUsage;
-        globalThis.GPUBufferUsage = { UNIFORM: 1, COPY_DST: 2, VERTEX: 4 };
-        globalThis.GPUTextureUsage = { TEXTURE_BINDING: 1, COPY_DST: 2, RENDER_ATTACHMENT: 4 };
-        Object.defineProperty(globalThis, "isSecureContext", { configurable: true, value: true });
-        Object.defineProperty(globalThis.navigator, "gpu", {
-            configurable: true,
-            value: {
-                requestAdapter: jest.fn(() => Promise.resolve({ requestDevice: jest.fn(() => Promise.resolve(device)) })),
-                getPreferredCanvasFormat: jest.fn(() => "bgra8unorm"),
-            },
-        });
-        HTMLCanvasElement.prototype.getContext.mockImplementation((type) => (type === "webgpu" ? gpuContext : makeContext()));
+        const { teardown } = setupMockWebGPU({ mockPass });
 
         let animation;
         try {
@@ -914,14 +942,48 @@ describe("asciiam lifecycle", () => {
             expect(backdropBuffer.data[7]).toBeCloseTo(0.9, 5);
         } finally {
             animation?.destroy();
-            if (secureDescriptor) Object.defineProperty(globalThis, "isSecureContext", secureDescriptor);
-            else delete globalThis.isSecureContext;
-            if (navigatorDescriptor) Object.defineProperty(globalThis.navigator, "gpu", navigatorDescriptor);
-            else delete globalThis.navigator.gpu;
-            if (priorBufferUsage === undefined) delete globalThis.GPUBufferUsage;
-            else globalThis.GPUBufferUsage = priorBufferUsage;
-            if (priorTextureUsage === undefined) delete globalThis.GPUTextureUsage;
-            else globalThis.GPUTextureUsage = priorTextureUsage;
+            teardown();
+        }
+    });
+
+    it("evicts WebGPU gradient views and stale bind groups alongside gradient textures, not just textures alone", async () => {
+        // Regression test for a real leak: gradientSources (the GPU texture Map) was
+        // capped at 8 entries with LRU eviction, but gradientViews — keyed the same way,
+        // used by every glyph bind group — was never trimmed alongside it, so it grew
+        // without bound for the life of the instance. Worse, bindGroups.clear() ran on
+        // *every* new gradient key rather than only on an actual eviction, which defeats
+        // bind-group caching entirely for an animated gradient (a new key every ~50ms,
+        // forever) — real wasted GPU/driver work on a documented, common feature.
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const { teardown } = setupMockWebGPU();
+
+        let animation;
+        try {
+            animation = new asciiam(host, { renderer: "webgpu", mode: "wave", respectReducedMotion: false });
+            await Promise.resolve();
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(animation.getRendererInfo().backend).toBe("webgpu");
+
+            const renderer = animation._webgl;
+            const fakeCanvas = { width: 4, height: 4 };
+            for (let i = 0; i < 12; i++) renderer.setGradient(fakeCanvas, `gradient-${i}`);
+
+            expect(renderer.gradientSources.size).toBeLessThanOrEqual(8);
+            expect(renderer.gradientViews.size).toBeLessThanOrEqual(8);
+            expect(renderer.gradientViews.size).toBe(renderer.gradientSources.size);
+            // The 4 oldest (0-3) must be gone from both maps, not just gradientSources.
+            for (let i = 0; i < 4; i++) {
+                expect(renderer.gradientSources.has(`gradient-${i}`)).toBe(false);
+                expect(renderer.gradientViews.has(`gradient-${i}`)).toBe(false);
+            }
+        } finally {
+            animation?.destroy();
+            teardown();
         }
     });
 
