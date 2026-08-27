@@ -4,7 +4,7 @@
  * @module home
  */
 
-import { initHeroAnimation, initExampleCards, initShowcaseCards } from "./asciiam-animations.js";
+import { initHeroAnimation, initExampleCards, initShowcaseCards } from "./asciiam-animations.js?v=13f57e1c5791";
 
 /**
  * Initializes homepage animations when the DOM is ready.
