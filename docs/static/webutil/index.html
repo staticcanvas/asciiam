@@ -2008,6 +2008,28 @@
                 scrollbar-color: var(--clr-border) transparent;
             }
 
+            /* Per-field detailed-help trigger: a small, always-visible "i" badge next to a
+               control's label. Reuses lume's own .lume-info-icon shape (border-radius circle,
+               centered glyph) for visual consistency with the icon lume itself renders inside
+               an advanced-tier tooltip's header. */
+            .field-help {
+                margin-inline-start: 6px;
+                color: var(--clr-text-muted);
+                cursor: help;
+                vertical-align: middle;
+                font-size: 9px;
+                transition: color 0.15s ease, border-color 0.15s ease;
+            }
+            .field-help:hover,
+            .field-help:focus-visible {
+                color: var(--clr-primary);
+                border-color: currentColor;
+            }
+            .field-help-label-text {
+                display: inline-flex;
+                align-items: center;
+            }
+
             /* Chk (legacy checkbox inline — kept for gradAnimate) */
             .chk {
                 display: flex;

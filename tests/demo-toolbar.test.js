@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { highlightJavaScript } from '../docs/static/webutil/js/webutil-code.js';
 import { normalizeSequenceDraft, serializeSequenceDraft } from '../docs/static/webutil/js/webutil-sequence.js';
+import { applyOptionHelp } from '../docs/static/webutil/js/webutil-help.js';
 import { Lume } from '@staticcanvas/lume';
 
 const projectFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -58,10 +59,11 @@ function createDemo(includedImages = [], url = 'https://demo.test/webutil/') {
   window.fetch = async (resource) =>
     Response.json(String(resource) === './assets/backgrounds.json' ? includedImages : []);
   window.eval(projectFile('docs/static/webutil/libs/asciiam.js'));
-  window.__webutilModules = { highlightJavaScript, normalizeSequenceDraft, serializeSequenceDraft, Lume };
+  window.__webutilModules = { highlightJavaScript, normalizeSequenceDraft, serializeSequenceDraft, applyOptionHelp, Lume };
   const utilityScript = projectFile('docs/static/webutil/js/webutil.js')
     .replace(/import \{ highlightJavaScript \}[^\n]+\n/, 'const { highlightJavaScript } = window.__webutilModules;\n')
     .replace(/import \{ normalizeSequenceDraft, serializeSequenceDraft \}[^\n]+\n/, 'const { normalizeSequenceDraft, serializeSequenceDraft } = window.__webutilModules;\n')
+    .replace(/import \{ applyOptionHelp \}[^\n]+\n/, 'const { applyOptionHelp } = window.__webutilModules;\n')
     .replace(/import \{ Lume \}[^\n]+\n/, 'const { Lume } = window.__webutilModules;\n');
   window.eval(`(() => {\n${utilityScript}\n})();`);
   return dom;

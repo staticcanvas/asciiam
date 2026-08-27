@@ -69,6 +69,7 @@ const revisionSources = [
   'public/webutil/js/webutil.js',
   'public/webutil/js/webutil-code.js',
   'public/webutil/js/webutil-sequence.js',
+  'public/webutil/js/webutil-help.js',
   'public/webutil/libs/asciiam.js',
 ];
 const sourceContents = await Promise.all(revisionSources.map((file) => readFile(resolve(projectRoot, file), 'utf8')));

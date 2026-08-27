@@ -174,10 +174,10 @@ describe('Hugo documentation source', () => {
     const moduleRevisions = [...builtScript.matchAll(/\?v=([a-f0-9]{12})/g)].map((match) => match[1]);
 
     expect(sourcePage.match(/__ASSET_REVISION__/g)).toHaveLength(3);
-    expect(sourceScript.match(/__ASSET_REVISION__/g)).toHaveLength(3);
+    expect(sourceScript.match(/__ASSET_REVISION__/g)).toHaveLength(4);
     expect(pageRevision).toBeDefined();
     expect(scriptRevision).toBe(pageRevision);
-    expect(moduleRevisions).toEqual([pageRevision, pageRevision, pageRevision]);
+    expect(moduleRevisions).toEqual([pageRevision, pageRevision, pageRevision, pageRevision]);
     expect(buildScript).toContain("createHash('sha256')");
     expect(builtPage).not.toContain('__ASSET_REVISION__');
     expect(builtScript).not.toContain('__ASSET_REVISION__');
