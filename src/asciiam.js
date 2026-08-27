@@ -6529,6 +6529,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return true;
         }
 
+        /**
+         * Advances every `matrix` column's fall position by `dt`, respawning a
+         * column (new start position, speed, and trail length) once it fully
+         * scrolls past the bottom row.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceMatrix(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let c = 0; c < this._matrix.length; c++) {
@@ -6541,6 +6549,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 }
             }
         }
+        /**
+         * Advances every `snow` flake's fall position by `dt`, respawning a flake
+         * (new column and speed, back to the top) once it scrolls past the bottom row.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceSnow(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let i = 0; i < this._snow.length; i++) {
@@ -6553,6 +6568,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 }
             }
         }
+        /**
+         * Advances every `fire` particle's rise and remaining life by `dt`,
+         * respawning a particle via `_resetFireParticle()` once it scrolls past the
+         * top row or burns out.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceFire(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let i = 0; i < this._fire.length; i++) {
@@ -6562,6 +6585,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 if (p.y < -1 || p.life <= 0) this._resetFireParticle(p);
             }
         }
+        /**
+         * Advances every `starfield` star's depth (`z`, toward the viewer) by `dt`,
+         * respawning a star via `_resetStar()` once it passes the near clip
+         * threshold.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceStarfield(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let i = 0; i < this._starfield.length; i++) {
@@ -6570,11 +6601,35 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 if (p.z <= 0.035) this._resetStar(p);
             }
         }
+        /**
+         * Advances every `orbit` point's angle by `dt` — orbit points don't respawn,
+         * they simply keep circling indefinitely at their own radius and speed
+         * (positive or negative, set once in `_initOrbit()`).
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds (clamped to a 0.1s step internally)
+         * @returns {void}
+         */
         _advanceOrbit(dt) {
             const dtS = Math.min(0.1, dt / 1000);
             for (let i = 0; i < this._orbit.length; i++) this._orbit[i].angle += this._orbit[i].speed * dtS;
         }
 
+        /**
+         * Resolves one dense-mode grid cell to its character/opacity/color/bold state.
+         * If `opts.chartData` is set and the active mode isn't already `chart`, a
+         * chart cell is computed first and wins outright whenever it's non-blank
+         * (overlaying chart content on top of any base animation mode); otherwise
+         * dispatches on `opts.mode` — first to `opts.customCell` for `mode: 'custom'`,
+         * then to a plugin mode registered via `asciiam.registerMode()`, then to the
+         * matching built-in per-mode cell function, falling back to `_waveCell()` for
+         * an unrecognized mode.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell's left edge
+         * @param {number} y - pixel y-coordinate of the cell's top edge
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: (string|null)}} the resolved cell (the shared pooled `this._cell` object — copy fields out before the next call if retaining them)
+         */
         _computeCell(col, row, x, y) {
             const mode = this.opts.mode;
             if (this.opts.chartData && mode !== "chart") {
@@ -6644,6 +6699,22 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Invokes a `customCell`-shaped callback (the `mode: 'custom'` handler, or a
+         * plugin mode registered via `asciiam.registerMode()`) with a populated,
+         * reused API object (`this._api`) exposing the current cell's coordinates,
+         * clock, grid size, and stage size, plus `seed()`/`set()` helpers. Accepts
+         * either return convention: the callback can call `api.set(char, opacity,
+         * intensity, bold)` and return that same pooled cell object directly, or
+         * return a plain `{char, opacity, intensity, bold}` object.
+         *
+         * @param {Function} fn - the custom cell callback (`opts.customCell`, or a registered mode's function)
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell's left edge
+         * @param {number} y - pixel y-coordinate of the cell's top edge
+         * @returns {{char: string, opacity: number, level: number, bold: boolean}|null} the resolved cell, or `null` if the callback returned a falsy value
+         */
         _callCustom(fn, col, row, x, y) {
             const api = this._api;
             api.col = col;
@@ -6663,6 +6734,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(result.char, result.opacity, result.intensity || 0, !!result.bold);
         }
 
+        /**
+         * Writes a resolved cell's fields into the single pooled `this._cell` object
+         * and returns it — the allocation-free sink every per-mode cell function
+         * funnels through. `intensity` is quantized to a discrete `level` in
+         * `[0, fontLevels - 1]` here, which is what selects the glyph atlas
+         * bold/weight tile a painted cell actually uses.
+         *
+         * @param {string} char - the glyph to render for this cell
+         * @param {number} opacity - cell opacity, typically `[0, 1]`
+         * @param {number} intensity - normalized brightness/peak value, `[0, 1]`, quantized into `level`
+         * @param {boolean} bold - whether to use the bold font variant
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the shared pooled cell object
+         */
         _setCell(char, opacity, intensity, bold) {
             const c = this._cell;
             c.char = char;
@@ -6673,6 +6757,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return c;
         }
 
+        /**
+         * `wave` mode's per-cell function: a soft-edged band (smoothstepped) sweeping
+         * along `direction` (`horizontal`/`vertical`/`diagonal`) at `_wavePosition`,
+         * blended with per-cell ambient noise from `_seedCache`.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _waveCell(col, row, x, y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak, direction, ambient, bandWidth } = this.opts;
             let coord, extent;
@@ -6703,6 +6798,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             );
         }
 
+        /**
+         * `current` mode's per-cell function: three superimposed sinusoidal fields at
+         * different weights/frequencies, precomputed per-cell in `_buildCurrentCache()`
+         * and combined with the current frame's shared trig terms from
+         * `_prepareModeFrame()` — no per-cell `Math.sin`/`Math.cos` calls.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _currentCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const index = row * this.cols + col;
@@ -6714,6 +6821,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * n, n, boldOnPeak && n > 0.72);
         }
 
+        /**
+         * `ripple` mode's per-cell function: a radial sinusoidal wave from cached
+         * per-cell distance terms, shaped by a precomputed radial falloff so it fades
+         * out toward the edges.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _rippleCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const index = row * this.cols + col;
@@ -6724,6 +6842,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || " ", minOpacity + (maxOpacity - minOpacity) * combined, combined, boldOnPeak && combined > 0.6);
         }
 
+        /**
+         * `vortex` mode's per-cell function: a rotating spiral-arm sinusoid, shaped
+         * by the same precomputed radial falloff `ripple` uses plus a touch of
+         * ambient noise so the arms don't look perfectly clean.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _vortexCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const index = row * this.cols + col;
@@ -6740,6 +6869,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             );
         }
 
+        /**
+         * `plasma` mode's per-cell function: three superimposed sinusoidal layers at
+         * different frequencies, averaged and normalized into `[0, 1]` — the classic
+         * "plasma effect" pattern, built entirely from cached per-cell terms and this
+         * frame's shared trig values.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _plasmaCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const index = row * this.cols + col;
@@ -6756,6 +6897,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             );
         }
 
+        /**
+         * `glitch` mode's per-cell function: a scanning "active band" of rows (driven
+         * by a coarse, quantized frame clock so the glitch reads as discrete bursts
+         * rather than smooth motion) that horizontally displaces sampled cell content
+         * by a noise-derived offset; rows outside the active band show dim ambient
+         * noise instead.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _glitchCell(col, row, _x, _y) {
             const { charSet, minOpacity, maxOpacity, boldOnPeak } = this.opts;
             const frame = Math.floor(this._time * 12);
@@ -6777,6 +6931,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             );
         }
 
+        /**
+         * `typewriter` mode's per-cell function: reveals cells in raster order (row
+         * by row, left to right) up to a progress-driven cursor index, rendering a
+         * blinking-style `_` cursor glyph at the current position and `null` (fully
+         * unrevealed, not even a blank space) for cells past it. Loops on a
+         * duration-plus-pause cycle when `opts.loop` is set.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {({char: string, opacity: number, level: number, bold: boolean, color: null}|null)} the resolved cell, or `null` for a cell not yet reached by the cursor
+         */
         _typewriterCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
             const count = Math.max(1, this.cols * this.rows);
@@ -6792,6 +6959,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(isCursor ? "_" : charSet[charIdx] || "0", isCursor ? 1 : maxOpacity, isCursor ? 1 : seed, isCursor);
         }
 
+        /**
+         * `fadeIn` mode's per-cell function: each cell eases its opacity from 0 to
+         * `maxOpacity` on a per-cell-delayed timeline, where the delay is driven by
+         * `_revealProgress()` (honoring `opts.revealDirection`/`delayCurve`) plus a
+         * small per-cell jitter so the sweep front isn't perfectly straight. A subtle
+         * per-cell shimmer varies peak brightness slightly.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _fadeInCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
             const totalDuration = Math.max(0.1, Number(this.opts.sweepDuration || this.opts.revealDuration) || 2.2);
@@ -6805,6 +6985,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || " ", eased * maxOpacity * shimmer, 0, false);
         }
 
+        /**
+         * `fadeOut` mode's per-cell function: the mirror of `_fadeInCell()` — each
+         * cell eases its opacity from `maxOpacity` down to 0 on the same
+         * `_revealProgress()`-delayed, per-cell-jittered timeline and shimmer.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} _x - unused (signature kept consistent with other cell functions)
+         * @param {number} _y - unused (signature kept consistent with other cell functions)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _fadeOutCell(col, row, _x, _y) {
             const { charSet, maxOpacity } = this.opts;
             const totalDuration = Math.max(0.1, Number(this.opts.sweepDuration || this.opts.revealDuration) || 2.2);
@@ -6819,6 +7010,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(charSet[charIdx] || " ", remaining * maxOpacity * shimmer, 0, false);
         }
 
+        /**
+         * Converts a cell's grid position into a normalized `[0, 1]` "when should
+         * this cell reveal" progress value, per `opts.revealDirection`
+         * (`left-to-right`/`right-to-left`/`top-to-bottom`/`bottom-to-top`/`diagonal`/
+         * `edges`/center-out default) and then reshaped by `opts.delayCurve`
+         * (`easeIn`/`easeOut`/`easeInOut`/`stagger`/linear default). Shared by every
+         * directional reveal mode (`fadeIn`/`fadeOut`/`assemble`/`breakApart`) as the
+         * deterministic per-cell delay/threshold term.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} [row=0] - zero-based grid row
+         * @returns {number} reveal progress in `[0, 1]`, before the curve can push it slightly outside that range for `stagger`
+         */
         _revealProgress(col, row = 0) {
             const position = col / Math.max(1, this.cols - 1);
             const vertical = row / Math.max(1, this.rows - 1);
@@ -6839,6 +7043,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return p;
         }
 
+        /**
+         * `irisIn`/`irisOut` mode's per-cell function: a circular wavefront
+         * (feathered edge, like a camera iris) expanding outward from
+         * `(this._originX, this._originY)`, reaching cells in order of their
+         * distance from that origin.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @param {boolean} reverse - `true` for `irisOut` (closing/hiding), `false` for `irisIn` (opening/revealing)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _irisCell(col, row, x, y, reverse) {
             const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
@@ -6854,6 +7071,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.74);
         }
 
+        /**
+         * `dissolveIn`/`dissolveOut` mode's per-cell function: a staggered wavefront
+         * (per-cell threshold blending `_seedCache` noise with directional progress
+         * from `_revealProgress()`) that reveals or hides cells in a scattered,
+         * noise-driven order rather than a clean geometric sweep.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {boolean} reverse - `true` for `dissolveOut` (hiding), `false` for `dissolveIn` (revealing)
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _dissolveCell(col, row, reverse) {
             const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
@@ -6866,6 +7094,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", visible * this.opts.maxOpacity, visible, visible > 0.82);
         }
 
+        /**
+         * `assemble` mode's per-cell function: fragments fly in and settle using the
+         * same staggered-threshold wavefront `_dissolveCell()` uses, but additionally
+         * lets each fragment's own noise value blend its character and brightness as
+         * it locks into place, for a "coalescing" look rather than a flat crossfade.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _assembleCell(col, row) {
             const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
@@ -6881,6 +7119,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.78);
         }
 
+        /**
+         * `breakApart` mode's per-cell function: the exit mirror of `_assembleCell()`
+         * — fragments break away and fade using the same staggered-threshold
+         * wavefront, with each fragment's noise value blending its character and
+         * brightness as it dissolves out.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _breakApartCell(col, row) {
             const duration = Math.max(0.1, Number(this.opts.revealDuration) || 2.2);
             const cycle = this.opts.loop ? this._time % (duration + 1.1) : Math.min(this._time, duration);
@@ -6897,6 +7145,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", intensity * this.opts.maxOpacity, intensity, intensity > 0.8);
         }
 
+        /**
+         * `lumaFold` mode's per-cell function: a diagonal sinusoidal "fold" pattern
+         * sharpened into a ridge (via a power curve on `1 - fold`) for a faceted,
+         * luminance-creased look rather than a smooth wave.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _lumaFoldCell(col, row, x, y) {
             const nx = x / Math.max(1, this.w);
             const ny = y / Math.max(1, this.h);
@@ -6907,6 +7166,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, ridge > 0.58);
         }
 
+        /**
+         * `riftLace` mode's per-cell function: two independent diagonal sinusoids
+         * whose *difference* is sharpened into a thin, lace-like "seam" wherever they
+         * nearly cancel out, blended with a touch of ambient noise.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _riftLaceCell(col, row, x, y) {
             const a = Math.sin(x * 0.037 + y * 0.018 + this._time * 2.1);
             const b = Math.sin(y * 0.052 - x * 0.013 - this._time * 1.45);
@@ -6917,6 +7187,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, seam > 0.72);
         }
 
+        /**
+         * `echoBloom` mode's per-cell function: three concentric ring pulses expanding
+         * outward from `(this._originX, this._originY)` at different speeds and
+         * strengths, combined by taking the strongest one at each point and cubing it
+         * for a sharp "bloom" falloff rather than a soft ripple.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _echoBloomCell(col, row, x, y) {
             const distance = Math.hypot(x - this._originX, y - this._originY) * 0.055;
             const phase = distance - this._time * 3.1;
@@ -6928,6 +7210,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", this.opts.minOpacity + intensity * (this.opts.maxOpacity - this.opts.minOpacity), intensity, intensity > 0.76);
         }
 
+        /**
+         * `hoverZone` mode's per-cell function: a soft-edged glow radius following
+         * the live pointer position (`this._cursor`), with a subtle expanding ripple
+         * layered on top. Falls back to a dim ambient shimmer when no pointer is
+         * currently hovering.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _hoverZoneCell(col, row, x, y) {
             const index = row * this.cols + col;
             const origin = this._cursor;
@@ -6947,6 +7241,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._setCell(this.opts.charSet[charIdx] || " ", opacity, intensity, intensity > 0.72);
         }
 
+        /**
+         * `clickZone` mode's per-cell function: an expanding ring pulse plus a
+         * fading center glow triggered by `triggerInteraction()`/a click, timed
+         * against `this._interaction.elapsed` over `opts.interactionDuration`. Falls
+         * back to a dim ambient shimmer when no interaction is currently active.
+         *
+         * @param {number} col - zero-based grid column
+         * @param {number} row - zero-based grid row
+         * @param {number} x - pixel x-coordinate of the cell
+         * @param {number} y - pixel y-coordinate of the cell
+         * @returns {{char: string, opacity: number, level: number, bold: boolean, color: null}} the resolved cell
+         */
         _clickZoneCell(col, row, x, y) {
             const index = row * this.cols + col;
             const interaction = this._interaction;
