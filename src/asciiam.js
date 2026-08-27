@@ -5126,7 +5126,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- image sampling ----
-        /** Converts the current image source into glyph, color, and range-mask arrays. */
+        /**
+         * Rasterizes the current image/video/frame source into `this._imageGrid` — a
+         * `cols*rows` grid of glyph characters, per-cell colors, and an optional
+         * animation range-mask. Applies fit/scale/rotation/flip geometry, brightness and
+         * contrast tone mapping, and auto or explicit luminance inversion. No-op if there
+         * is no source image or the grid has zero size. Degrades to a no-op (after
+         * warning once) instead of throwing if the sample canvas is tainted by a
+         * cross-origin source without CORS headers.
+         *
+         * @returns {void}
+         */
         _resampleImage() {
             const img = this._sourceImage;
             if (!img || !this.cols || !this.rows) return;
@@ -5306,6 +5316,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- sparse mode state ----
+        /**
+         * (Re)builds the falling-column state for `matrix` mode, one column per grid
+         * column, with randomized fall speed and trail length.
+         *
+         * @returns {void}
+         */
         _initMatrix() {
             this._matrix = [];
             for (let c = 0; c < this.cols; c++) {
@@ -5316,6 +5332,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 });
             }
         }
+        /**
+         * (Re)builds the drifting flake state for `snow` mode. Particle count scales
+         * with grid area and `opts.snowDensity`.
+         *
+         * @returns {void}
+         */
         _initSnow() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.snowDensity));
             this._snow = [];
@@ -5329,6 +5351,12 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 });
             }
         }
+        /**
+         * (Re)builds the twinkling-point state for `sparkle` mode. Particle count
+         * scales with grid area and `opts.sparkleDensity`.
+         *
+         * @returns {void}
+         */
         _initSparkle() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.sparkleDensity));
             this._sparkle = [];
@@ -5341,11 +5369,28 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 });
             }
         }
+        /**
+         * (Re)builds the rising-ember state for `fire` mode. Particle count scales
+         * with grid area and `opts.fireDensity`; each starts pre-distributed across
+         * its life cycle via `_resetFireParticle(particle, true)` so the effect
+         * doesn't visibly "start from zero" on mode entry.
+         *
+         * @returns {void}
+         */
         _initFire() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.fireDensity));
             this._fire = [];
             for (let i = 0; i < count; i++) this._resetFireParticle({}, true);
         }
+        /**
+         * Respawns one fire particle in place (or appends it to `this._fire` if not
+         * already tracked), randomizing its column, speed, phase, drift, and remaining
+         * life. Called both for initial population and whenever a particle burns out.
+         *
+         * @param {Object} particle - particle object to mutate in place
+         * @param {boolean} [distribute=false] - start partway up its rise (initial population) instead of at the bottom (a respawn)
+         * @returns {void}
+         */
         _resetFireParticle(particle, distribute = false) {
             particle.col = Math.random() * this.cols;
             particle.y = distribute ? this.rows * (0.58 + Math.random() * 0.48) : this.rows + Math.random() * 2;
@@ -5355,11 +5400,26 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             particle.life = 0.45 + Math.random() * 0.55;
             if (!this._fire.includes(particle)) this._fire.push(particle);
         }
+        /**
+         * (Re)builds the depth-star state for `starfield` mode. Particle count scales
+         * with grid area and `opts.starfieldDensity`; each starts pre-distributed
+         * across its depth range via `_resetStar(star, true)`.
+         *
+         * @returns {void}
+         */
         _initStarfield() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.starfieldDensity));
             this._starfield = [];
             for (let i = 0; i < count; i++) this._resetStar({}, true);
         }
+        /**
+         * Respawns one star in place (or appends it to `this._starfield` if not
+         * already tracked) at a random position in normalized `[-1, 1]` space.
+         *
+         * @param {Object} star - star object to mutate in place
+         * @param {boolean} [distribute=false] - start at a random depth (initial population) instead of at the far plane (a respawn)
+         * @returns {void}
+         */
         _resetStar(star, distribute = false) {
             star.x = Math.random() * 2 - 1;
             star.y = Math.random() * 2 - 1;
@@ -5367,6 +5427,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             star.speed = 0.22 + Math.random() * 0.42;
             if (!this._starfield.includes(star)) this._starfield.push(star);
         }
+        /**
+         * (Re)builds the orbiting-point state for `orbit` mode. Particle count scales
+         * with grid area and `opts.orbitDensity`; orbit radius is bounded by the
+         * smaller of the stage's half-width or half-height.
+         *
+         * @returns {void}
+         */
         _initOrbit() {
             const count = Math.max(1, Math.round(this.cols * this.rows * this.opts.orbitDensity));
             const radiusLimit = Math.max(this.charW, Math.min(this.w, this.h) * 0.5);
@@ -5382,9 +5449,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- main draw loop ----
-        /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
-        // ---- main draw loop ----
-        /** Selects dense, sparse, cached, or image-backed drawing for one frame. */
+        /**
+         * Renders one frame. Delegates to `_drawWebGL(dt)` when a WebGL2/WebGPU
+         * renderer is active (returning immediately while a WebGPU device is still
+         * being asynchronously acquired, to avoid per-frame CPU work during startup).
+         * Otherwise renders through the Canvas 2D backend directly: fills or clears
+         * the background (or composites the trail-persistence overlay), draws the
+         * backdrop if placed behind content, dispatches to the dense, sparse, mesh,
+         * or image-backed draw path per the active mode (or per layer, for a
+         * `setLayers()` composite), and draws the backdrop again if placed over
+         * content.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds
+         * @returns {void}
+         */
         _draw(dt) {
             // WebGPU adapter/device creation is asynchronous. Avoid entering the
             // GPU composition path at all while it is pending; this keeps the
@@ -5506,7 +5584,13 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._lastDrawnCount = drawn;
         }
 
-        /** Draws the configured Canvas backdrop at its exact clamped alpha. */
+        /**
+         * Fills the full Canvas 2D surface with the configured backdrop color or
+         * gradient, at its opacity clamped to `[0, 1]`. Called before or after the
+         * mode's own draw pass depending on `backdrop.placement`.
+         *
+         * @returns {void}
+         */
         _drawCanvasBackdrop() {
             const backdrop = this.opts.backdrop;
             const ctx = this.ctx;
@@ -5521,6 +5605,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             ctx.restore();
         }
 
+        /**
+         * Precomputes per-frame trigonometry and sweep position shared by every cell
+         * of the active mode this frame (`wave`, `current`, `ripple`, `vortex`,
+         * `plasma`, `image`), so each per-cell compute function does zero
+         * `Math.sin`/`Math.cos` calls of its own — a fixed, small number of
+         * transcendental calls per frame instead of one (or several) per cell.
+         * No-op for modes that don't precompute shared per-frame state.
+         *
+         * @returns {void}
+         */
         _prepareModeFrame() {
             if (this.opts.mode === "wave") {
                 const extent = this.opts.direction === "diagonal" ? this.w + this.h : this.opts.direction === "vertical" ? this.h : this.w;
@@ -5554,6 +5648,20 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Renders one frame through the WebGL2 or WebGPU backend (both implement the
+         * same `begin`/`surface`/`push`/`flush` interface behind `this._webgl`, so
+         * this one method drives either). Begins the GPU pass (preserving the prior
+         * frame's contents instead of clearing when `trail > 0`, then compositing the
+         * trail-persistence overlay), draws the backdrop if placed behind content,
+         * dispatches to the mesh, sparse, or dense draw path per the active mode (or
+         * per layer, for a `setLayers()` composite), flushes the accumulated glyph
+         * instances in one draw call, and draws the backdrop again if placed over
+         * content.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds
+         * @returns {void}
+         */
         _drawWebGL(dt) {
             const background = this._colorToRgba(this.opts.background === "transparent" ? "transparent" : this.opts.background);
             const preserve = this.opts.trail > 0;
@@ -5634,7 +5742,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._webglGradient = null;
         }
 
-        /** Draws the configured WebGL backdrop before or after glyph instances. */
+        /**
+         * Draws the configured backdrop as a fullscreen colored (and optionally
+         * gradient-textured) quad via the active WebGL2/WebGPU renderer's `surface()`
+         * draw call, before or after glyph instances depending on
+         * `backdrop.placement`.
+         *
+         * @returns {void}
+         */
         _drawWebGLBackdrop() {
             const backdrop = this.opts.backdrop;
             const base = this._colorToRgba(backdrop.color || "#0a0c10");
@@ -5644,6 +5759,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._webgl.surface(color, gradient);
         }
 
+        /**
+         * Builds the character set a glyph atlas must include to render chart mode:
+         * the fixed box-drawing/block/digit/punctuation ramp chart cells draw from,
+         * plus the literal characters of the configured chart title and any
+         * data-item labels/names (so a chart with, say, Cyrillic labels still gets
+         * those glyphs rasterized into the atlas).
+         *
+         * @returns {string} characters to fold into the active glyph atlas
+         */
         _getChartCharacters() {
             let chars = " ▂▃▄▅▆▇█▏▎▍▌▋▊▉░▒▓┌└│─┘╱╲0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,:;%+-*·/\\_~!?()[]{}#@$^&=<>|'\"`";
             if (this.opts.chartTitle) chars += this.opts.chartTitle;
@@ -5660,6 +5784,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return chars;
         }
 
+        /**
+         * Returns the WebGL2/WebGPU glyph atlas for the current character set, font,
+         * and cell height — an offscreen canvas with one white-on-transparent tile
+         * per (bold × font-level × character) combination, plus UV rects into it, an
+         * `Uint16`-free UV `Float32Array`, and a `character -> tile index` map.
+         * Cached per instance (`this._webglAtlas`) and only rebuilt when the
+         * content-derived cache key changes; unlike `_getGlyphAtlas()`'s Canvas 2D
+         * counterpart, this atlas is not shared across instances (tiles are tinted
+         * per-cell via the instance color attribute, not the atlas pixels
+         * themselves, so there's no cross-instance color coupling to avoid).
+         *
+         * @returns {{canvas: HTMLCanvasElement, key: string, characterIndex: Map<string, number>, characters: number, uv: Float32Array, tileWidth: number, tileHeight: number, padding: number, baseline: number}} the (possibly cached) atlas
+         */
         _getWebGLAtlas() {
             const characters = this._computeAtlasCharacterSet();
             const key = JSON.stringify([characters.join(""), this._fontRegular, this._fontBold, this.charH]);
@@ -5696,6 +5833,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._webglAtlas;
         }
 
+        /**
+         * Resolves a gradient config into a 256×1 gradient strip texture (uploading it
+         * to the active WebGL2/WebGPU renderer if not already cached under its
+         * content-derived key) and returns a copy of the gradient annotated with that
+         * `textureKey` and, for `gradient.animate`, a time-advanced `angle`. An
+         * animated gradient's cache key changes roughly every 50ms, so its texture
+         * (and stale-view/bind-group state referencing it) is expected to churn
+         * through the renderer's own bounded eviction rather than accumulate.
+         *
+         * @param {Object} gradient - gradient config (`type`, `stops`, `angle`, `animate`, etc.)
+         * @returns {Object} the gradient, shallow-copied with `textureKey` (and, if animated, an advanced `angle`) added
+         */
         _prepareWebGLGradient(gradient) {
             const stops = this._expandGradientStops(gradient);
             const key = JSON.stringify(stops) + (gradient.animate ? Math.floor(this._time * 20) : "");
@@ -5713,6 +5862,18 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return { ...gradient, textureKey: key, angle: (gradient.angle || 0) + (gradient.animate ? this._time * 20 : 0) };
         }
 
+        /**
+         * Parses a CSS color string (`#rgb`/`#rrggbb`, `rgb()`/`rgba()`, or any other
+         * CSS color the browser understands, resolved via an offscreen 2D context as
+         * a last resort) into a normalized `[r, g, b, a]` array with each channel in
+         * `[0, 1]` — the format WebGL2/WebGPU uniforms expect. Results are cached per
+         * color string (cleared once the cache exceeds 512 entries) since this runs
+         * on the per-cell hot path. Falls back to a mid-blue placeholder color for
+         * anything unparseable rather than returning `null`/throwing.
+         *
+         * @param {string} color - any CSS color string, or `"transparent"`/falsy for fully transparent
+         * @returns {number[]} `[r, g, b, a]`, each channel in `[0, 1]`
+         */
         _colorToRgba(color) {
             if (!this._rgbaCache) this._rgbaCache = new Map();
             const cached = this._rgbaCache.get(color);
@@ -5737,6 +5898,21 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return result;
         }
 
+        /**
+         * `cacheStaticWave` optimization for the `ultra` quality tier: horizontal
+         * `wave` mode's cell pattern only depends on `x` (not `y`), so most of a frame
+         * is redundant identical rows. When every disqualifying condition is absent
+         * (no image, no trail, no backdrop/gradient/pulse/cursor/animated color, only
+         * `direction: 'horizontal'`), returns a full-canvas pre-rendered static wave
+         * field — reused across frames via an instance-level identity check, and
+         * across *instances* with identical size/charSet/color/font via a small
+         * shared, class-level cache (`asciiam._waveBaseLayers`) — so
+         * `_drawCachedHorizontalWave()` only needs to blit it and redraw the moving
+         * band on top. Returns `null` if any disqualifying condition applies, in
+         * which case the caller falls back to the normal per-cell dense draw.
+         *
+         * @returns {{canvas: HTMLCanvasElement}|null} the cached static wave field, or `null` if the current config can't use it
+         */
         _getWaveBaseLayer() {
             if (
                 this.opts.mode !== "wave"
@@ -5856,6 +6032,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return this._waveBaseLayer;
         }
 
+        /**
+         * Records `layer` as the active static wave field and snapshots every option
+         * `_getWaveBaseLayer()`'s cache-validity check compares against next frame, so
+         * a later config change (color, charSet, ambient, etc.) is detected and
+         * triggers a rebuild instead of silently reusing a now-stale field.
+         *
+         * @param {{canvas: HTMLCanvasElement}} layer - the static wave field to adopt as current
+         * @returns {void}
+         */
         _setWaveBaseLayer(layer) {
             this._waveBaseLayer = layer;
             this._waveBaseCharSet = this.opts.charSet;
@@ -5870,6 +6055,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._waveBaseAtlas = this._activeGlyphAtlas;
         }
 
+        /**
+         * Blits the pre-rendered static wave field, then clears and redraws only the
+         * narrow moving band around the current sweep position (plus a small margin)
+         * with the real per-cell `_waveCell()` computation — the only part of a
+         * horizontal wave frame that actually changes frame to frame under the
+         * `cacheStaticWave` optimization.
+         *
+         * @param {{canvas: HTMLCanvasElement, drawn: number}} base - the static field from `_getWaveBaseLayer()`
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null`
+         * @returns {number} cells drawn this frame (the static field's count plus the dynamic band's)
+         */
         _drawCachedHorizontalWave(base, globalGradient) {
             const margin = this.charW * 2;
             const start = Math.max(0, this._wavePosition - this._waveBand - margin);
@@ -5890,6 +6086,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return dynamicDrawn + 1;
         }
 
+        /**
+         * Full `cols*rows` scan: computes and paints every cell via `_computeCell()`
+         * / `_paintCell()`. The default draw path for any mode not in
+         * `SPARSE_MODES` and not `mesh`.
+         *
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null`
+         * @returns {number} cells actually painted (a cell can compute to fully transparent/blank and not count)
+         */
         _drawDense(globalGradient) {
             let drawn = 0;
             const columnX = this._columnX;
@@ -5905,7 +6109,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return drawn;
         }
 
-        /** Rasterize the retained mesh once, then paint only occupied ASCII cells. */
+        /**
+         * Rasterizes the retained 3D mesh (`this._mesh`, via `this._meshRasterizer`)
+         * into a `cols*rows` grid once this frame — applying auto-rotation if
+         * enabled and the active mode isn't static — then paints only the occupied
+         * cells that grid reports. A no-op if there's no mesh/rasterizer, or if
+         * `meshEnabled` is explicitly `false`.
+         *
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null`
+         * @returns {number} cells painted (0 if meshEnabled is false or there's nothing to rasterize)
+         */
         _drawMesh(globalGradient) {
             if (!this._mesh || !this._meshRasterizer) return 0;
             if (this.opts.meshEnabled === false) return 0;
@@ -5947,6 +6160,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return drawn;
         }
 
+        /**
+         * Paints the resampled image/video source as a full-grid base layer,
+         * `applyImageSource: false` so its own resolved character/color are used
+         * verbatim instead of being re-resolved from the active mode's cell
+         * function. Used when a sparse particle mode (`matrix`, `snow`, `fire`, …) is
+         * composited *over* an image, so the image renders first as the backdrop.
+         *
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null` (unused when `colorFromImage` supplies per-cell color)
+         * @returns {number} cells painted
+         */
         _drawImageSourceBase(globalGradient) {
             const grid = this._imageGrid;
             let drawn = 0;
@@ -5966,7 +6189,17 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return drawn;
         }
 
-        /** Advances and paints sparse particles without scanning the complete grid. */
+        /**
+         * Advances and paints the active sparse particle mode (`matrix`, `snow`,
+         * `sparkle`, `fire`, `starfield`, `orbit`) — lazily initializing particle
+         * state on first use — by iterating each mode's own particle list instead of
+         * scanning every grid cell, so cost scales with active particle count rather
+         * than grid size.
+         *
+         * @param {number} dt - elapsed time since the previous frame, in milliseconds
+         * @param {Object|null} globalGradient - resolved gradient for this frame, or `null`
+         * @returns {number} cells painted
+         */
         _drawSparse(dt, globalGradient) {
             let drawn = 0;
             const mode = this.opts.mode;
