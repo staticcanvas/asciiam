@@ -446,10 +446,11 @@
       "title": "Image Reveal",
       "mode": "image",
       "category": "image",
-      "previewable": false,
+      "previewable": true,
       "options": {
         "mode": "image",
         "imageEnabled": true,
+        "image": "/images/vilkasss-ai-generated-9599760.jpg",
         "color": "#4FA8FF",
         "imageScale": 1,
         "imageScaleX": 1,
