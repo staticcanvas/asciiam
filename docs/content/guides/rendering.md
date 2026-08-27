@@ -265,8 +265,8 @@ Safari and WebKit engines exhibit known subpixel baseline text offsets. `calibra
 
 | Property or method | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `renderer` | `auto \| webgl2 \| canvas2d` | `auto` | Selects the presentation backend. |
-| `powerPreference` | `high-performance \| low-power \| default` | `high-performance` | Passes an adapter preference to WebGL2. |
+| `renderer` | `auto \| webgpu \| webgl2 \| canvas2d` | `auto` | Selects the presentation backend. `auto` probes WebGPU first, then falls back to WebGL2, then Canvas 2D. |
+| `powerPreference` | `high-performance \| low-power \| default` | `high-performance` | Passes an adapter preference to WebGPU or WebGL2. |
 | `quality` | quality name | `balanced` | Applies tier values. |
 | `resolutionScale` | number | `1` | Scales logical grid detail; clamped to `0.5`–`2`. |
 | `autoQuality` | boolean | `false` | Automatically steps `resolutionScale`, then `quality`, down under sustained frame-time pressure and back up under headroom — never past what was requested at construction. |

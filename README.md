@@ -4,7 +4,7 @@
 
 ## Purpose
 
-A dependency-free, efficient HTML5 Canvas and WebGL2 animation engine for procedural ASCII backgrounds, hero section animations, real-time image/GIF sampling, 3D GLTF model rendering, and morphing animation sequences. WebGL2 is selected first by default with instanced quad GPU batching, while Canvas 2D provides an automatic, reliable CPU fallback.
+A dependency-free, efficient HTML5 Canvas, WebGL2, and WebGPU animation engine for procedural ASCII backgrounds, hero section animations, real-time image/GIF sampling, 3D GLTF model rendering, and morphing animation sequences. WebGPU is selected first by default when supported, WebGL2 with instanced quad GPU batching is the fallback, and Canvas 2D provides an automatic, reliable CPU fallback beneath both.
 
 ## Capabilities
 
@@ -14,7 +14,7 @@ A dependency-free, efficient HTML5 Canvas and WebGL2 animation engine for proced
 - **3D GLTF / Mesh-to-ASCII Renderer**: Built-in 3D software rendering engine supporting `GLTF`/`GLB` models and `OBJ` primitives with perspective/orthographic projections, wireframe, point-cloud, and shaded surface styles.
 - **Playlist Sequencing & Morphing**: Chain multi-step animation sequences (`setSequence()`) with retained-frame `blend` crossfades or real per-cell `morph` transitions (`dissolve`, `scramble`, `flow` styles), step-level repeat controls (`repeat: false`), and sequence loop policies (`loop: false`).
 - **Backdrops & Quality Tiers**: Multi-stop linear, radial, and cubic gradients, edge fade (vignette), trails, custom character density palettes, off-screen auto-pausing, and full accessibility (`prefers-reduced-motion` aware).
-- **Interactive Web Utility**: Dedicated composition authoring tool with 27 presets, live controls, multi-column popovers, code export, image uploads, and sequence editing.
+- **Interactive Web Utility**: Dedicated composition authoring tool with 28 presets, live controls, multi-column popovers, code export, image uploads, and sequence editing.
 
 ## Roadmap
 
