@@ -4575,7 +4575,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             this._glyphAtlasCharHeight = this.charH;
         }
 
-        /** Re-measures the grid and invalidates geometry-dependent state and caches. */
+        /**
+         * Re-measures the container, resizes the canvas backing store and logical
+         * grid, and invalidates every geometry-dependent cache (spatial, seed,
+         * current-field, edge-fade, gradients, glyph atlas, wave-layer cache). Also
+         * re-samples the active image and rebuilds sparse-mode particle state to fit
+         * the new grid (preserving trajectories where possible via
+         * {@link asciiam#_adaptStateOnResize}). Called on construction, container
+         * resize, and any option change affecting cell/font geometry.
+         *
+         * @private
+         * @returns {void}
+         * @fires asciiam#resize
+         */
         _resize() {
             const oldCols = this.cols || 0;
             const oldRows = this.rows || 0;
@@ -4649,6 +4661,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Rescales and extends/trims sparse-mode particle state (matrix columns,
+         * snow/sparkle/fire/starfield/orbit particles) proportionally to a grid
+         * resize, instead of discarding and reseeding everything — keeps trajectories
+         * visually continuous across a resize rather than resetting all animation.
+         *
+         * @private
+         * @param {number} oldCols - grid column count before the resize
+         * @param {number} oldRows - grid row count before the resize
+         * @param {number} newCols - grid column count after the resize
+         * @param {number} newRows - grid row count after the resize
+         * @returns {void}
+         */
         _adaptStateOnResize(oldCols, oldRows, newCols, newRows) {
             const colScale = newCols / oldCols;
             const rowScale = newRows / oldRows;
@@ -4755,6 +4780,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Precomputes a per-cell vignette multiplier from `opts.edgeFade`, so the hot
+         * paint loop can look it up instead of recomputing a radial falloff every
+         * frame. Clears the cache (falls back to no vignette) when `edgeFade` is
+         * falsy or the grid has zero size.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildEdgeFadeCache() {
             if (!this.opts.edgeFade || !this.cols || !this.rows || !this.w || !this.h) {
                 this._edgeFadeCache = null;
@@ -4773,6 +4807,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Precomputes a stable per-cell pseudo-random value (and the same value for
+         * the next row down) for every cell — the deterministic noise source used by
+         * `assemble`/`breakApart`/dissolve/iris reveal wavefronts and the real per-cell
+         * morph transition, so their staggering doesn't need fresh randomness each
+         * frame.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildSeedCache() {
             const count = this.cols * this.rows;
             this._seedCache = new Float32Array(count);
@@ -4786,6 +4830,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Precomputes per-cell sin/cos phase values for the `current` mode's three
+         * overlapping wave phases (X, Y, and diagonal), so its per-frame cell compute
+         * only needs a cheap phase-shift combination instead of six fresh
+         * trigonometric calls per cell.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildCurrentCache() {
             const count = this.cols * this.rows;
             this._currentSinX = new Float32Array(count);
@@ -4815,6 +4868,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Resolves the alignment origin (`opts.align`) into pixel coordinates, then
+         * precomputes per-cell sin/cos/falloff values for every radial/spatial mode
+         * (ripple, vortex, plasma, image ripple) relative to that origin — the same
+         * caching strategy as {@link asciiam#_buildCurrentCache}, trading memory for
+         * avoiding per-frame trigonometry.
+         *
+         * @private
+         * @returns {void}
+         */
         _buildSpatialCache() {
             if (!this.cols || !this.rows) return;
             switch (this.opts.align) {
@@ -4873,12 +4936,29 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             }
         }
 
+        /**
+         * Deterministic pseudo-random value in [0, 1) for a grid cell — a classic
+         * sine-hash noise function, stable across frames for the same `(col, row)`.
+         *
+         * @private
+         * @param {number} col - grid column
+         * @param {number} row - grid row
+         * @returns {number} a pseudo-random value in [0, 1)
+         */
         _seed(col, row) {
             const n = Math.sin(col * 12.9898 + row * 78.233) * 43758.5453;
             return n - Math.floor(n);
         }
 
         // ---- gradient (built once per frame at most, never per cell) ----
+        /**
+         * Builds (or reuses, cached by a content+size+time key) the Canvas 2D
+         * `CanvasGradient` for `opts.gradient`. Returns `null` if no gradient is
+         * configured.
+         *
+         * @private
+         * @returns {CanvasGradient|null} the active foreground gradient, or `null`
+         */
         _getGradient() {
             const g = this.opts.gradient;
             if (!g) return null;
@@ -4910,6 +4990,16 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return grad;
         }
 
+        /**
+         * Builds (or reuses, cached by a content+size+time key) the Canvas 2D
+         * `CanvasGradient` for a backdrop's own gradient config — separate cache from
+         * {@link asciiam#_getGradient} since the foreground gradient and backdrop
+         * gradient are independent and can differ.
+         *
+         * @private
+         * @param {Object|null} g - the backdrop's gradient config (`opts.backdrop.gradient`)
+         * @returns {CanvasGradient|null} the backdrop gradient, or `null` if `g` has no stops
+         */
         _getBackdropGradient(g) {
             if (!g || !g.stops) return null;
             const key = JSON.stringify(g) + `:${this.w}x${this.h}` + (g.animate ? `:${Math.floor(this._time * 20)}` : "");
@@ -4934,6 +5024,19 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             return grad;
         }
 
+        /**
+         * Expands a gradient config into concrete `{offset, color}` stops. Explicit
+         * object stops (with their own `offset`) pass through sorted by offset;
+         * a plain color-string array instead generates `steps` evenly-spaced stops,
+         * interpolated between the given colors (smoothstep-eased for `type: "cubic"`).
+         *
+         * @private
+         * @param {Object} gradient - `opts.gradient` or a backdrop's gradient config
+         * @param {(string|{offset?: number, color: string})[]} [gradient.stops] - explicit stops, or plain colors to interpolate between; defaults to a blue-to-purple pair
+         * @param {number} [gradient.steps=2] - stop count when `stops` are plain colors, 1-6
+         * @param {"linear"|"cubic"} [gradient.type] - `"cubic"` eases the interpolation between plain-color stops
+         * @returns {{offset: number, color: string}[]} expanded, offset-sorted stops
+         */
         _expandGradientStops(gradient) {
             const raw = gradient.stops || ["#4FA8FF", "#C04FFF"];
             if (raw.some((stop) => typeof stop === "object" && stop !== null)) {
@@ -4964,6 +5067,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
         }
 
         // ---- animated color: one calculation per frame, never per cell ----
+        /**
+         * Resolves `opts.colorAnimation` into `this._animatedColor` once per frame —
+         * `"hueRotate"` produces an HSL string that cycles hue over time, `"breathe"`
+         * lerps between two colors on a sine wave. Sets `null` (no override) when no
+         * animation is configured or the type is unrecognized.
+         *
+         * @private
+         * @returns {void}
+         */
         _updateAnimatedColor() {
             const ca = this.opts.colorAnimation;
             if (!ca) {
@@ -4982,6 +5094,15 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 this._animatedColor = null;
             }
         }
+        /**
+         * Linearly interpolates between two 6-digit hex colors.
+         *
+         * @private
+         * @param {string} a - starting hex color (`#rrggbb`)
+         * @param {string} b - ending hex color (`#rrggbb`)
+         * @param {number} t - interpolation factor, typically 0-1
+         * @returns {string} an `rgb(r,g,b)` string, or `a` unchanged if either input isn't a valid 6-digit hex color (a 3-digit `#rgb` shorthand is *not* accepted by {@link asciiam#_hexToRgb})
+         */
         _lerpColor(a, b, t) {
             const pa = this._hexToRgb(a),
                 pb = this._hexToRgb(b);
@@ -4991,6 +5112,14 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
             const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t);
             return `rgb(${r},${g},${bl})`;
         }
+        /**
+         * Parses a 6-digit hex color string into RGB components. Does not accept the
+         * 3-digit `#rgb` shorthand.
+         *
+         * @private
+         * @param {string} hex - a `#rrggbb` (or `rrggbb`, without `#`) hex color string
+         * @returns {number[]|null} `[r, g, b]` (0-255 each), or `null` if `hex` doesn't match the 6-digit format
+         */
         _hexToRgb(hex) {
             const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
