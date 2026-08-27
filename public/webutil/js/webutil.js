@@ -4,11 +4,15 @@
  * @module webutil
  */
 
-import { highlightJavaScript } from "./webutil-code.js?v=eaf34d1e9e75";
-import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=eaf34d1e9e75";
-import { Lume } from "../libs/lume/lume.mjs?v=eaf34d1e9e75";
+import { highlightJavaScript } from "./webutil-code.js?v=ec2a65b6567d";
+import { normalizeSequenceDraft, serializeSequenceDraft } from "./webutil-sequence.js?v=ec2a65b6567d";
+import { applyOptionHelp } from "./webutil-help.js?v=ec2a65b6567d";
+import { Lume } from "../libs/lume/lume.mjs?v=ec2a65b6567d";
 
 const asciiam = window.asciiam;
+// Sets data-lume/data-lume-tier on every recognized control's label (and injects a
+// detailed-help badge where warranted) before Lume's own initial scan runs.
+applyOptionHelp(document);
 // Auto-discovers every current and future [data-lume]/[data-lume-content] element;
 // the toolbar's popovers and controls are built dynamically, so its DOM
 // mutation observer (not a one-shot bind) is what keeps tooltips working.

@@ -8,7 +8,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-        <link rel="stylesheet" href="./libs/lume/lume.css?v=eaf34d1e9e75" />
+        <link rel="stylesheet" href="./libs/lume/lume.css?v=ec2a65b6567d" />
         <style>
             /* ============================================================
                SOURCE OF TRUTH — asciiam demo page
@@ -2008,6 +2008,28 @@
                 scrollbar-color: var(--clr-border) transparent;
             }
 
+            /* Per-field detailed-help trigger: a small, always-visible "i" badge next to a
+               control's label. Reuses lume's own .lume-info-icon shape (border-radius circle,
+               centered glyph) for visual consistency with the icon lume itself renders inside
+               an advanced-tier tooltip's header. */
+            .field-help {
+                margin-inline-start: 6px;
+                color: var(--clr-text-muted);
+                cursor: help;
+                vertical-align: middle;
+                font-size: 9px;
+                transition: color 0.15s ease, border-color 0.15s ease;
+            }
+            .field-help:hover,
+            .field-help:focus-visible {
+                color: var(--clr-primary);
+                border-color: currentColor;
+            }
+            .field-help-label-text {
+                display: inline-flex;
+                align-items: center;
+            }
+
             /* Chk (legacy checkbox inline — kept for gradAnimate) */
             .chk {
                 display: flex;
@@ -3196,7 +3218,7 @@
             </nav>
         </footer>
 
-        <script src="./libs/asciiam.js?v=eaf34d1e9e75"></script>
-        <script type="module" src="./js/webutil.js?v=eaf34d1e9e75"></script>
+        <script src="./libs/asciiam.js?v=ec2a65b6567d"></script>
+        <script type="module" src="./js/webutil.js?v=ec2a65b6567d"></script>
     </body>
 </html>
