@@ -1,0 +1,2 @@
+{{- $label := .Get 0 | default "Open the web utility" -}}
+<p><a class="btn-primary" href="{{ partial "web-utility-url.html" .Page }}">{{ $label }}</a></p>

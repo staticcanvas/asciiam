@@ -100,6 +100,14 @@
   --lume-accent-safe: color-mix(in srgb, var(--lume-text) 76%, var(--lume-accent) 24%);
 }
 
+/* Popover API reset for top-layer positioning */
+.lume-tooltip:popover-open,
+.lume-tooltip[popover] {
+  margin: 0;
+  inset: unset;
+  overflow: visible;
+}
+
 /* Progressive theme grade: every theme receives the same measured surface
    hierarchy while retaining its own background, foreground, and accent. */
 .lume-tooltip[class*='lume-'] {

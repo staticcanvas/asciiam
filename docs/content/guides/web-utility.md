@@ -3,12 +3,14 @@ title: Web utility workflow
 description: Configure, validate, export, and persist asciiam settings in the browser utility.
 weight: 50
 date: 2026-08-13
-lastmod: 2026-08-14
+lastmod: 2026-08-27
 tags: [web utility, configuration, editor, export, presets, local storage]
 keywords: [asciiam web utility, animation configurator, preset editor, generated code, saved settings, image library, sequence editor]
 ---
 
 The web utility is an authoring surface for asciiam option objects; detailed runtime behavior remains defined by the package API.
+
+{{< webutil-button "Open the web utility" >}}
 
 ## Composition authoring & usage examples
 

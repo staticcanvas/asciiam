@@ -1,0 +1,25 @@
+/webutil/assets/images/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/webutil/assets/thumbnails/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/webutil/libs/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+/webutil/assets/backgrounds.json
+  Cache-Control: no-cache
+
+/css/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+/js/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+/libs/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

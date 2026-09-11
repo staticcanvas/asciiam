@@ -1,0 +1,3201 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>asciiam — background utility</title>
+        <link rel="icon" href="./assets/branding/asciiam-logo.svg" type="image/svg+xml" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+        <style>
+            /* ============================================================
+               SOURCE OF TRUTH — asciiam demo page
+               Fluent UI v1 / Staticcanvas design system
+               Material: Midnight glassmorphism (§6.6)
+               Colour space: oklch · Spacing: clamp() fluid tokens
+               Animation: transform / opacity / filter only (GPU-safe)
+               State: ARIA-attribute driven — no .is-active / .open
+               ============================================================ */
+
+            /* Thin custom scrollbars matching theme */
+            * {
+                scrollbar-width: thin;
+                scrollbar-color: var(--clr-border-hi) transparent;
+            }
+            ::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--clr-border);
+                border-radius: 9999px;
+                border: 1px solid transparent;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--clr-border-hi);
+            }
+            ::-webkit-scrollbar-corner {
+                background: transparent;
+            }
+
+            /* ── §1 Typed custom properties (@property) ── */
+            @property --fill {
+                syntax: '<percentage>';
+                inherits: true;
+                initial-value: 0%;
+            }
+            @property --gradient-angle {
+                syntax: '<angle>';
+                inherits: false;
+                initial-value: 135deg;
+            }
+
+            /* ── §2 Root token system ── */
+            :root {
+                /* Colour — oklch */
+                --clr-bg-base:       oklch(0.11 0.02 250);
+                --clr-bg-stage:      oklch(0.08 0.015 250);
+                --clr-surface:       oklch(0.16 0.03 260);
+                --clr-surface-2:     oklch(0.13 0.025 260);
+                --clr-surface-hi:    oklch(0.20 0.035 260);
+
+                --clr-primary:       oklch(0.75 0.155 198);
+                --clr-primary-glow:  oklch(from var(--clr-primary) l c h / 0.2);
+                --clr-primary-tint:  oklch(from var(--clr-primary) l c h / 0.07);
+                --clr-accent2:       oklch(0.70 0.185 52);
+                --clr-on-primary:    oklch(0.98 0.01 250);
+
+                --clr-text-main:     oklch(0.88 0.02 250);
+                --clr-text-muted:    oklch(0.58 0.05 250);
+                --clr-text-dim:      oklch(0.42 0.04 250);
+
+                --clr-border:        oklch(0.28 0.04 255);
+                --clr-border-hi:     oklch(0.36 0.05 255);
+
+                --clr-danger:        oklch(0.65 0.20 25);
+                --clr-success:       oklch(0.68 0.18 155);
+                --clr-warning:       oklch(0.75 0.16 85);
+
+                --font-ui: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+                --font-code: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+                --syntax-keyword: oklch(0.76 0.17 310);
+                --syntax-string: oklch(0.80 0.15 145);
+                --syntax-comment: oklch(0.58 0.04 250);
+                --syntax-number: oklch(0.78 0.16 65);
+                --syntax-property: oklch(0.76 0.16 250);
+
+                /* Midnight material token layer (morphism §6.6) */
+                --m-surface-r: 10;
+                --m-surface-g: 14;
+                --m-surface-b: 22;
+                --m-surface-alpha: 0.72;
+                --m-blur: 18px;
+                --m-saturate: 140%;
+                --m-border-alpha: 0.22;
+                --m-highlight-alpha: 0.14;
+                --m-shadow-alpha: 0.55;
+            }
+
+            /* ── §2.1 Light Theme tokens ── */
+            [data-theme="light"] {
+                --clr-bg-base:       oklch(0.97 0.01 250);
+                --clr-bg-stage:      oklch(0.94 0.015 250);
+                --clr-surface:       oklch(0.92 0.02 260);
+                --clr-surface-2:     oklch(0.96 0.02 260);
+                --clr-surface-hi:    oklch(0.88 0.025 260);
+
+                --clr-primary:       oklch(0.45 0.13 200);
+                --clr-primary-glow:  oklch(from var(--clr-primary) l c h / 0.25);
+                --clr-primary-tint:  oklch(from var(--clr-primary) l c h / 0.12);
+                --clr-accent2:       oklch(0.50 0.17 45);
+                --clr-on-primary:    oklch(0.10 0.02 250);
+
+                --clr-text-main:     oklch(0.18 0.03 250);
+                --clr-text-muted:    oklch(0.38 0.04 250);
+                --clr-text-dim:      oklch(0.52 0.04 250);
+
+                --clr-border:        oklch(0.82 0.03 255);
+                --clr-border-hi:     oklch(0.70 0.04 255);
+
+                --syntax-keyword: oklch(0.42 0.19 310);
+                --syntax-string: oklch(0.40 0.14 145);
+                --syntax-comment: oklch(0.46 0.03 250);
+                --syntax-number: oklch(0.46 0.16 55);
+                --syntax-property: oklch(0.42 0.18 250);
+
+                --m-surface-r: 245;
+                --m-surface-g: 247;
+                --m-surface-b: 252;
+                --m-surface-alpha: 0.88;
+                --m-shadow-alpha: 0.12;
+            }
+
+            :root {
+                /* Spacing — fluid clamp() */
+                --space-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
+                --space-sm: clamp(0.5rem,  0.4rem + 0.5vw,  0.875rem);
+                --space-md: clamp(0.875rem, 0.75rem + 0.75vw, 1.25rem);
+                --space-lg: clamp(1.25rem, 1rem + 1.25vw, 2rem);
+                --space-xl: clamp(2rem, 1.5rem + 2.5vw, 3.5rem);
+
+                /* Typography — fluid clamp() */
+                --font-xs:   clamp(0.65rem, 0.6rem + 0.2vw, 0.75rem);
+                --font-sm:   clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+                --font-base: clamp(0.875rem, 0.8rem + 0.3vw, 1rem);
+                --font-md:   clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
+                --font-lg:   clamp(1.25rem, 1rem + 1.25vw, 2rem);
+                --font-xl:   clamp(1.75rem, 1.25rem + 2.5vw, 3rem);
+
+                /* Motion */
+                --ease-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);
+                --ease-fluid:  cubic-bezier(0.4, 0,   0.2, 1);
+                --time-fast:   140ms;
+                --time-base:   260ms;
+                --time-slow:   420ms;
+
+                /* Shape */
+                --radius-sm: 2px;
+                --radius-md: 4px;
+                --radius-pill: 999px;
+
+                /* Z-layer */
+                --z-base:     1;
+                --z-content:  2;
+                --z-overlay:  10;
+                --z-sticky:   20;
+            }
+
+            /* ── §3 Global reset ── */
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            html {
+                -webkit-text-size-adjust: 100%;
+                text-size-adjust: 100%;
+                interpolate-size: allow-keywords;
+            }
+            body {
+                min-height: 100dvh;
+                background: var(--clr-bg-base);
+                color: var(--clr-text-main);
+                font-family: var(--font-ui);
+                font-size: var(--font-base);
+                line-height: 1.6;
+                -webkit-font-smoothing: antialiased;
+            }
+            img, picture, video, canvas, svg {
+                display: block;
+                max-width: 100%;
+                height: auto;
+            }
+            p, h1, h2, h3, h4 { overflow-wrap: break-word; }
+
+            /* ── §4 Midnight glass surface mixin ── */
+            .morph-midnight {
+                background: rgb(
+                    var(--m-surface-r)
+                    var(--m-surface-g)
+                    var(--m-surface-b)
+                    / var(--m-surface-alpha)
+                );
+                backdrop-filter: blur(var(--m-blur)) saturate(var(--m-saturate));
+                -webkit-backdrop-filter: blur(var(--m-blur)) saturate(var(--m-saturate));
+                border: 1px solid oklch(from var(--clr-primary) l c h / var(--m-border-alpha));
+                box-shadow:
+                    0 8px 32px rgb(0 0 0 / var(--m-shadow-alpha)),
+                    inset 0 1px 0 rgb(255 255 255 / var(--m-highlight-alpha));
+                contain: layout paint style;
+                isolation: isolate;
+            }
+            /* Fallback: no backdrop-filter support */
+            @supports not (backdrop-filter: blur(1px)) {
+                .morph-midnight {
+                    background: oklch(0.13 0.025 260 / 0.95);
+                }
+            }
+            /* Reduced transparency */
+            @media (prefers-reduced-transparency: reduce) {
+                .morph-midnight {
+                    backdrop-filter: none;
+                    background: var(--clr-surface-2);
+                }
+            }
+
+            /* ── §5 Stage / hero canvas ── */
+            .stage {
+                position: relative;
+                width: 100%;
+                height: 100dvh;
+                min-height: 100dvh;
+                border-bottom: 1px solid var(--clr-border);
+                overflow: hidden;
+                background: var(--clr-bg-stage);
+                contain: layout paint;
+            }
+            .stage canvas { display: block; }
+
+            /* Stage overlays — midnight glass chips */
+            .stage-label {
+                position: absolute;
+                inset-block-start: var(--space-sm);
+                inset-inline-start: var(--space-md);
+                display: inline-flex;
+                align-items: center;
+                gap: var(--space-xs);
+                padding: 5px var(--space-sm);
+                font-size: var(--font-xs);
+                letter-spacing: 0.12em;
+                color: var(--clr-text-muted);
+                text-transform: uppercase;
+                z-index: var(--z-content);
+                pointer-events: none;
+                /* midnight glass */
+                background: oklch(from var(--clr-bg-base) l c h / 0.72);
+                backdrop-filter: blur(12px) saturate(160%);
+                -webkit-backdrop-filter: blur(12px) saturate(160%);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.18);
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.10);
+            }
+            .stage-label > span { color: var(--clr-primary); }
+            .stage-label small  { font: inherit; letter-spacing: inherit; }
+            .brand-icon {
+                inline-size: var(--space-md);
+                block-size: var(--space-md);
+                flex: 0 0 auto;
+            }
+
+            .stage-title {
+                position: absolute;
+                inset-block-end: calc(var(--space-lg) + 5rem);
+                inset-inline-start: var(--space-lg);
+                font-size: var(--font-xl);
+                color: var(--clr-text-main);
+                z-index: var(--z-content);
+                pointer-events: none;
+                letter-spacing: 0.02em;
+                font-weight: 400;
+            }
+            .stage-title span { color: var(--clr-primary); }
+
+            .stats {
+                position: absolute;
+                inset-block-start: calc(var(--space-sm) + 2.75rem);
+                inset-inline-end: var(--space-md);
+                font-size: var(--font-xs);
+                color: var(--clr-primary);
+                z-index: var(--z-content);
+                text-align: right;
+                line-height: 1.7;
+                pointer-events: none;
+                padding: 4px var(--space-sm);
+                background: oklch(from var(--clr-bg-base) l c h / 0.72);
+                backdrop-filter: blur(12px) saturate(160%);
+                -webkit-backdrop-filter: blur(12px) saturate(160%);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.18);
+                white-space: pre;
+                font-variant-numeric: tabular-nums;
+            }
+            .stats[data-extended="true"] {
+                min-inline-size: min(34rem, calc(100vw - 2 * var(--space-md)));
+                max-inline-size: calc(100vw - 2 * var(--space-md));
+                text-align: left;
+                overflow: hidden;
+            }
+
+            .stage-top-actions {
+                position: absolute;
+                inset-block-start: var(--space-sm);
+                inset-inline-end: var(--space-md);
+                z-index: var(--z-overlay);
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
+            }
+            .stage-about-trigger,
+            .stage-fps-toggle {
+                display: inline-flex;
+                min-block-size: 2rem;
+                align-items: center;
+                padding: 4px var(--space-sm);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.18);
+                border-radius: var(--radius-pill);
+                background: oklch(from var(--clr-bg-base) l c h / 0.72);
+                backdrop-filter: blur(12px) saturate(160%);
+                -webkit-backdrop-filter: blur(12px) saturate(160%);
+                font-size: var(--font-xs);
+            }
+            .stage-about-trigger {
+                gap: 6px;
+                color: var(--clr-text-muted);
+                font-family: inherit;
+                line-height: 1;
+                text-decoration: none;
+                cursor: pointer;
+                transition:
+                    color var(--time-fast) var(--ease-fluid),
+                    border-color var(--time-fast) var(--ease-fluid),
+                    background var(--time-fast) var(--ease-fluid);
+            }
+            .stage-about-trigger:hover,
+            .stage-about-trigger[aria-expanded="true"] {
+                color: var(--clr-primary);
+                border-color: oklch(from var(--clr-primary) l c h / 0.5);
+                background: oklch(from var(--clr-bg-base) l c h / 0.88);
+            }
+            .stage-about-trigger svg {
+                inline-size: 1rem;
+                block-size: 1rem;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+            }
+            .stage-fps-toggle .ui-switch__track {
+                inline-size: 2.2rem;
+                block-size: 1.2rem;
+            }
+            .stage-fps-toggle .ui-switch__thumb {
+                inline-size: 0.9rem;
+                block-size: 0.9rem;
+            }
+            .stage-fps-toggle .ui-switch__control:checked + .ui-switch__track .ui-switch__thumb {
+                transform: translateX(1rem);
+            }
+
+            /* ── §6 Preview tab switcher ── */
+            .preview-switcher {
+                position: absolute;
+                inset-block-start: var(--space-sm);
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: var(--z-overlay);
+                display: flex;
+                gap: 0;
+                padding: 3px;
+                background: oklch(from var(--clr-bg-base) l c h / 0.78);
+                backdrop-filter: blur(14px) saturate(var(--m-saturate));
+                -webkit-backdrop-filter: blur(14px) saturate(var(--m-saturate));
+                border: 1px solid oklch(from var(--clr-border) l c h / 0.70);
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+            }
+            .preview-switcher button {
+                min-block-size: 2rem;
+                padding-block: 5px;
+                padding-inline: var(--space-md);
+                border: none;
+                border-block-end: 2px solid transparent;
+                background: transparent;
+                color: var(--clr-text-muted);
+                font: inherit;
+                font-size: var(--font-xs);
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                cursor: pointer;
+                /* GPU-safe: only colour + border-color */
+                transition:
+                    color var(--time-fast) var(--ease-fluid),
+                    border-color var(--time-fast) var(--ease-fluid);
+            }
+            .preview-switcher button:hover { color: var(--clr-text-main); }
+            .preview-switcher button[aria-pressed="true"] {
+                border-block-end-color: var(--clr-primary);
+                color: var(--clr-primary);
+                background: var(--clr-primary-tint);
+            }
+
+            /* ── §7 Preview scenes ── */
+            .preview-scene {
+                position: absolute;
+                inset: 0;
+                z-index: var(--z-content);
+                display: grid;
+                place-items: center;
+                padding: clamp(1.5rem, 6vw, 5rem);
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(10px);
+                transition:
+                    opacity var(--time-base) var(--ease-fluid),
+                    transform var(--time-base) var(--ease-snappy),
+                    visibility var(--time-base);
+                pointer-events: none;
+            }
+            .preview-scene[data-active="true"] {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+                pointer-events: auto;
+            }
+            .preview-scene-background { display: block; padding: 0; }
+            .ascii-media {
+                position: relative;
+                isolation: isolate;
+                overflow: hidden;
+                min-inline-size: 0;
+                background: var(--clr-bg-base);
+            }
+            .ascii-media::after {
+                content: "ASCII MEDIA";
+                position: absolute;
+                inset-block-end: var(--space-xs);
+                inset-inline-end: var(--space-sm);
+                color: var(--clr-text-dim);
+                font-size: 9px;
+                letter-spacing: 0.14em;
+                pointer-events: none;
+            }
+            .ascii-media > canvas { z-index: var(--z-base) !important; }
+
+            /* Hero card preview */
+            .hero-card-preview-stack {
+                display: grid;
+                justify-items: center;
+                gap: var(--space-sm);
+                width: 100%;
+            }
+            .hero-card-variants {
+                display: flex;
+                gap: 3px;
+                padding: 3px;
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-pill);
+                background: oklch(from var(--clr-surface) l c h / 0.82);
+                backdrop-filter: blur(12px);
+            }
+            .hero-card-variants button {
+                min-block-size: 36px;
+                padding-inline: var(--space-sm);
+                border: 0;
+                border-radius: var(--radius-pill);
+                background: transparent;
+                color: var(--clr-text-muted);
+                font: inherit;
+                font-size: var(--font-xs);
+                cursor: pointer;
+            }
+            .hero-card-variants button[aria-pressed="true"] {
+                color: var(--clr-on-primary);
+                background: var(--clr-primary);
+            }
+            .preview-hero-card {
+                width: min(620px, 100%);
+                padding: clamp(1.5rem, 5vw, 3.375rem);
+                /* midnight glass card */
+                background: oklch(0.10 0.02 255 / 0.88);
+                backdrop-filter: blur(20px) saturate(160%);
+                -webkit-backdrop-filter: blur(20px) saturate(160%);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.20);
+                box-shadow:
+                    12px 12px 0 oklch(from var(--clr-primary) l c h / 0.06),
+                    inset 0 1px 0 rgb(255 255 255 / 0.10);
+            }
+            .preview-kicker,
+            .preview-splash-nav { color: var(--clr-primary); font-size: var(--font-xs); letter-spacing: 0.12em; text-transform: uppercase; }
+            .preview-hero-card h2,
+            .preview-splash h2 { margin-block: var(--space-sm) var(--space-xs); color: var(--clr-text-main); font-size: var(--font-lg); font-weight: 400; line-height: 1.05; }
+            .preview-copy { max-width: 58ch; color: var(--clr-text-muted); font-size: var(--font-sm); line-height: 1.65; }
+            .preview-action {
+                display: inline-flex;
+                align-items: center;
+                margin-block-start: var(--space-md);
+                padding: 9px var(--space-md);
+                border: 1px solid var(--clr-primary);
+                color: var(--clr-primary);
+                font-size: var(--font-xs);
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                text-decoration: none;
+                transition: background var(--time-fast) var(--ease-fluid);
+            }
+            .preview-action:hover { background: var(--clr-primary-tint); }
+
+            /* Vertical Hero card preview with Image Reveal */
+            .preview-hero-card--vertical {
+                position: relative;
+                width: min(440px, 90vw);
+                padding: 0;
+                background: oklch(0.12 0.025 255 / 0.88);
+                backdrop-filter: blur(24px) saturate(180%);
+                -webkit-backdrop-filter: blur(24px) saturate(180%);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.35);
+                border-radius: var(--radius-lg);
+                box-shadow:
+                    0 20px 50px rgb(0 0 0 / 0.50),
+                    inset 0 1px 0 rgb(255 255 255 / 0.15);
+                overflow: hidden;
+                transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+            }
+            .hero-card-media {
+                min-block-size: clamp(9.5rem, 25vw, 13rem);
+                border-block-end: 1px solid var(--clr-border);
+            }
+            .preview-hero-card:hover {
+                transform: translateY(-4px);
+                border-color: var(--clr-primary);
+                box-shadow:
+                    0 28px 60px oklch(from var(--clr-primary) l c h / 0.25),
+                    inset 0 1px 0 rgb(255 255 255 / 0.25);
+            }
+            .preview-hero-card[data-hero-variant="split"] {
+                width: min(720px, 94vw);
+                display: grid;
+                grid-template-columns: minmax(15rem, 0.8fr) minmax(0, 1.2fr);
+            }
+            .preview-hero-card[data-hero-variant="split"] .hero-card-content {
+                justify-content: center;
+            }
+            .preview-hero-card[data-hero-variant="split"] .hero-card-media {
+                min-block-size: 20rem;
+                border-block-end: 0;
+                border-inline-end: 1px solid var(--clr-border);
+            }
+            .preview-hero-card[data-hero-variant="terminal"] {
+                width: min(560px, 92vw);
+                border-radius: var(--radius-sm);
+                border-color: oklch(0.72 0.18 150 / 0.55);
+                background: oklch(0.08 0.015 150 / 0.93);
+                box-shadow: 8px 8px 0 oklch(0.72 0.18 150 / 0.09);
+            }
+            .preview-hero-card[data-hero-variant="terminal"] .kicker-dot {
+                background: oklch(0.78 0.20 150);
+                box-shadow: 0 0 8px oklch(0.78 0.20 150);
+            }
+            .preview-hero-card[data-hero-variant="terminal"] h2::before { content: "> "; color: oklch(0.78 0.20 150); }
+            .hero-card-content {
+                position: relative;
+                z-index: 2;
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-xs);
+                padding: clamp(1.5rem, 4vw, 2.5rem);
+            }
+            .kicker-dot {
+                display: inline-block;
+                inline-size: 8px;
+                block-size: 8px;
+                border-radius: 50%;
+                background: var(--clr-primary);
+                box-shadow: 0 0 8px var(--clr-primary);
+                margin-inline-end: 6px;
+            }
+            .hero-card-actions {
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
+                margin-block-start: var(--space-md);
+                flex-wrap: wrap;
+            }
+            .hero-repo-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 14px;
+                border-radius: var(--radius-pill);
+                font-size: var(--font-xs);
+                font-weight: 500;
+                text-decoration: none;
+                transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+            }
+            .hero-repo-btn svg { width: 15px; height: 15px; }
+            .hero-repo-btn--github {
+                background: oklch(0.20 0.02 250 / 0.9);
+                border: 1px solid oklch(0.4 0.04 250);
+                color: var(--clr-text-main);
+            }
+            .hero-repo-btn--github:hover {
+                background: oklch(0.28 0.03 250);
+                border-color: var(--clr-text-main);
+                transform: translateY(-1px);
+            }
+            .hero-repo-btn--gitlab {
+                background: oklch(0.22 0.08 35 / 0.25);
+                border: 1px solid oklch(0.65 0.20 35 / 0.5);
+                color: oklch(0.85 0.15 35);
+            }
+            .hero-repo-btn--gitlab:hover {
+                background: oklch(0.65 0.20 35 / 0.25);
+                border-color: oklch(0.75 0.22 35);
+                transform: translateY(-1px);
+            }
+
+            .spatial-origin-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: var(--space-xs);
+                margin-block-start: var(--space-sm);
+            }
+            .spatial-btn {
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                color: var(--clr-text-muted);
+                border-radius: var(--radius-sm);
+                padding: 10px;
+                font-size: 12px;
+                font-family: inherit;
+                cursor: pointer;
+                transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+            }
+            .spatial-btn:hover,
+            .spatial-btn[aria-pressed="true"] {
+                color: var(--clr-primary);
+                border-color: var(--clr-primary);
+                background: var(--clr-primary-tint);
+            }
+
+            /* Splash preview */
+            .preview-splash-shell {
+                width: min(920px, 100%);
+                min-height: min(390px, calc(60vh - 80px));
+                display: grid;
+                grid-template-rows: auto 1fr auto;
+                padding: clamp(1.125rem, 4vw, 2.125rem);
+                background: oklch(0.08 0.015 255 / 0.82);
+                backdrop-filter: blur(20px) saturate(160%);
+                -webkit-backdrop-filter: blur(20px) saturate(160%);
+                border: 1px solid oklch(from var(--clr-border) l c h / 0.70);
+            }
+            .preview-splash-body {
+                display: grid;
+                grid-template-columns: minmax(0, 1.05fr) minmax(15rem, 0.95fr);
+                align-items: center;
+                gap: var(--space-lg);
+            }
+            .splash-ascii-media {
+                min-block-size: clamp(12rem, 32vw, 19rem);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.28);
+                box-shadow: 10px 10px 0 oklch(from var(--clr-primary) l c h / 0.07);
+            }
+            .preview-splash-nav, .preview-splash-meta {
+                display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);
+            }
+            .preview-splash-links { color: var(--clr-text-muted); word-spacing: var(--space-md); }
+            .preview-splash { align-self: center; max-width: 720px; }
+            .preview-splash-meta { color: var(--clr-text-muted); font-size: var(--font-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+
+            /* ── §8 Control panel ── */
+            .panel {
+                display: flex;
+                flex-wrap: wrap;
+                background: var(--clr-surface);
+                border-block-end: 1px solid var(--clr-border);
+            }
+
+            /* Panel section group headers */
+            .panel-group-header {
+                flex-basis: 100%;
+                padding: 5px var(--space-md);
+                border-block-end: 1px solid var(--clr-border);
+                border-block-start: 1px solid oklch(from var(--clr-border) l c h / 0.45);
+                background: oklch(from var(--clr-bg-base) l c h / 0.55);
+                display: flex;
+                align-items: center;
+                gap: var(--space-md);
+            }
+            .panel-group-header:first-child { border-block-start: none; }
+            .panel-group-label {
+                font-size: 9px;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+                color: oklch(from var(--clr-text-muted) l c h / 0.65);
+            }
+            .panel-group-line {
+                flex: 1;
+                block-size: 1px;
+                background: oklch(from var(--clr-border) l c h / 0.35);
+            }
+
+            /* Field cells */
+            .field {
+                flex: 1 1 clamp(9rem, 18vw, 14rem);
+                padding: var(--space-md);
+                border-inline-end: 1px solid var(--clr-border);
+                border-block-end: 1px solid var(--clr-border);
+            }
+            .field-mode, .field-motion { flex-basis: clamp(12rem, 22vw, 18rem); }
+            .field-motion { display: grid; align-content: start; gap: var(--space-sm); }
+            .field-motion .range-control label { margin-block-end: 2px; }
+            .field-title {
+                display: block;
+                color: var(--clr-text-muted);
+                font-size: var(--font-xs);
+                letter-spacing: 0.10em;
+                text-transform: uppercase;
+            }
+            .field-wide {
+                flex-basis: 100%;
+                border-inline-end: none;
+                max-block-size: 380px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: var(--clr-border) transparent;
+            }
+            .field label {
+                display: block;
+                font-size: var(--font-xs);
+                letter-spacing: 0.10em;
+                color: var(--clr-text-muted);
+                text-transform: uppercase;
+                margin-block-end: var(--space-xs);
+            }
+
+            /* ── §9 Form controls ── */
+            /* Select */
+            select {
+                inline-size: 100%;
+                appearance: none;
+                -webkit-appearance: none;
+                background:
+                    var(--clr-surface-2)
+                    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%237d8998' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E")
+                    no-repeat right 10px center;
+                border: 1px solid var(--clr-border);
+                color: var(--clr-text-main);
+                font: inherit;
+                font-size: var(--font-sm);
+                padding-block: 7px;
+                padding-inline: var(--space-sm) 1.75rem;
+                cursor: pointer;
+                transition: border-color var(--time-fast) var(--ease-fluid);
+            }
+            select:hover  { border-color: var(--clr-border-hi); }
+            select:focus  { border-color: var(--clr-primary); outline: none; }
+
+            /* Keep the native color control aligned with adjacent form controls. */
+            input[type="color"] {
+                appearance: none;
+                -webkit-appearance: none;
+                inline-size: 100%;
+                block-size: 36px;
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                padding: 3px 4px;
+                cursor: pointer;
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.10);
+                transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+            }
+            input[type="color"]::-webkit-color-swatch-wrapper {
+                padding: 0;
+            }
+            input[type="color"]::-webkit-color-swatch {
+                border: 1px solid rgb(255 255 255 / 0.20);
+                border-radius: 3px;
+                box-shadow: 0 0 4px rgb(0 0 0 / 0.4);
+            }
+            input[type="color"]::-moz-color-swatch {
+                border: 1px solid rgb(255 255 255 / 0.20);
+                border-radius: 3px;
+                box-shadow: 0 0 4px rgb(0 0 0 / 0.4);
+            }
+            input[type="color"]:hover {
+                border-color: var(--clr-primary);
+                box-shadow: 0 0 10px oklch(from var(--clr-primary) l c h / 0.35);
+            }
+            .grad-stops-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+                gap: var(--space-xs);
+                inline-size: 100%;
+            }
+
+            /* Range slider — GPU-safe, colour/background only */
+            input[type="range"] {
+                inline-size: 100%;
+                block-size: 4px;
+                appearance: none;
+                -webkit-appearance: none;
+                background: linear-gradient(
+                    to right,
+                    var(--clr-primary) 0%,
+                    var(--clr-primary) var(--fill, 0%),
+                    var(--clr-border)  var(--fill, 0%),
+                    var(--clr-border)  100%
+                );
+                border: none;
+                border-radius: var(--radius-pill);
+                outline: none;
+                cursor: pointer;
+                margin-block: 6px 2px;
+            }
+            input[type="range"]::-webkit-slider-thumb {
+                appearance: none;
+                -webkit-appearance: none;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                background: var(--clr-primary);
+                border: 2px solid var(--clr-bg-base);
+                box-shadow: 0 0 0 1px var(--clr-primary);
+                cursor: pointer;
+                transition: box-shadow var(--time-fast) var(--ease-snappy);
+            }
+            input[type="range"]::-moz-range-thumb {
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                background: var(--clr-primary);
+                border: 2px solid var(--clr-bg-base);
+                box-shadow: 0 0 0 1px var(--clr-primary);
+                cursor: pointer;
+            }
+            input[type="range"]:hover::-webkit-slider-thumb,
+            input[type="range"]:focus::-webkit-slider-thumb {
+                box-shadow: 0 0 0 4px var(--clr-primary-glow);
+            }
+            .opacity-control {
+                display: grid;
+                grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+                align-items: center;
+                gap: var(--space-sm);
+            }
+            .opacity-control input[type="number"] {
+                inline-size: 100%;
+                min-block-size: 2.25rem;
+                padding-inline: var(--space-sm);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                background: var(--clr-surface-2);
+                color: var(--clr-text-main);
+                font: inherit;
+                font-size: var(--font-sm);
+                font-variant-numeric: tabular-nums;
+            }
+            .opacity-control input[type="number"]:focus-visible {
+                outline: 2px solid var(--clr-primary);
+                outline-offset: 2px;
+            }
+
+            /* Color input */
+            input[type="color"] {
+                inline-size: 100%;
+                block-size: 32px;
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                padding: 2px 4px;
+                cursor: pointer;
+                transition: border-color var(--time-fast) var(--ease-fluid);
+            }
+            input[type="color"]:hover { border-color: var(--clr-border-hi); }
+
+            /* File input */
+            input[type="file"] {
+                inline-size: 100%;
+                background: var(--clr-surface-2);
+                border: 1px dashed var(--clr-border);
+                color: var(--clr-text-muted);
+                font: inherit;
+                font-size: var(--font-xs);
+                padding: var(--space-sm);
+                cursor: pointer;
+                transition:
+                    border-color var(--time-fast) var(--ease-fluid),
+                    color var(--time-fast) var(--ease-fluid);
+            }
+            input[type="file"]:hover { border-color: var(--clr-primary); color: var(--clr-text-main); }
+
+            /* Search input */
+            input[type="search"],
+            input[type="url"] {
+                min-inline-size: 0;
+                flex: 1;
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                color: var(--clr-text-main);
+                font: inherit;
+                font-size: var(--font-sm);
+                padding-block: var(--space-xs);
+                padding-inline: var(--space-sm);
+                transition: border-color var(--time-fast) var(--ease-fluid);
+            }
+            input[type="url"] { inline-size: 100%; }
+            input[type="search"]:focus,
+            input[type="url"]:focus { border-color: var(--clr-primary); outline: none; }
+
+            /* Global focus ring */
+            :focus-visible {
+                outline: 2px solid var(--clr-primary);
+                outline-offset: 2px;
+            }
+
+            /* Popover text / number inputs (chart title, labels, scale, colors) */
+            .code-export__textarea {
+                display: block;
+                inline-size: 100%;
+                box-sizing: border-box;
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                color: var(--clr-text-main);
+                font: inherit;
+                font-size: var(--font-sm);
+                padding-block: 6px;
+                padding-inline: var(--space-sm);
+                transition: border-color var(--time-fast) var(--ease-fluid);
+                appearance: textfield;
+            }
+            .code-export__textarea:hover { border-color: var(--clr-border-hi); }
+            .code-export__textarea:focus { border-color: var(--clr-primary); outline: none; }
+            .code-export__textarea::placeholder { color: var(--clr-text-muted); opacity: 0.6; }
+            /* Remove number spinner arrows */
+            .code-export__textarea::-webkit-outer-spin-button,
+            .code-export__textarea::-webkit-inner-spin-button { appearance: none; margin: 0; }
+
+            /* ── §10 Value display + layout helpers ── */
+            .val { color: var(--clr-primary); font-size: var(--font-xs); margin-inline-start: 6px; }
+            .row { display: flex; align-items: center; justify-content: space-between; }
+            .btn-row { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-block-start: 4px; }
+            .two-col { display: flex; gap: var(--space-xs); }
+            .two-col input[type="color"] { flex: 1; }
+
+            /* ── §11 Mode buttons ── */
+            button.mode-btn {
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                color: var(--clr-text-muted);
+                font: inherit;
+                font-size: var(--font-xs);
+                letter-spacing: 0.05em;
+                min-block-size: 2rem;
+                padding-block: 5px;
+                padding-inline: var(--space-sm);
+                cursor: pointer;
+                text-transform: uppercase;
+                transition:
+                    color var(--time-fast) var(--ease-fluid),
+                    border-color var(--time-fast) var(--ease-fluid),
+                    background-color var(--time-fast) var(--ease-fluid);
+            }
+            button.mode-btn[aria-pressed="true"] {
+                border-color: var(--clr-primary);
+                color: var(--clr-primary);
+                background: var(--clr-primary-tint);
+            }
+            button.mode-btn:hover {
+                color: var(--clr-text-main);
+                border-color: var(--clr-border-hi);
+                transform: translateY(-1px);
+            }
+            button.mode-btn:active { transform: scale(0.98); }
+
+            /* ── §12 Switch (ui-switch blueprint) ── */
+            .ui-switch {
+                display: inline-flex;
+                align-items: center;
+                gap: var(--space-sm);
+                cursor: pointer;
+                user-select: none;
+                margin-block-start: 8px;
+            }
+            .ui-switch__control {
+                position: absolute;
+                opacity: 0.0001;
+                inline-size: 1px;
+                block-size: 1px;
+            }
+            .ui-switch__track {
+                position: relative;
+                inline-size: 2.25rem;
+                block-size: 1.25rem;
+                border-radius: var(--radius-pill);
+                background: var(--clr-border);
+                border: 1px solid oklch(from var(--clr-border) l c h / 0.60);
+                transition:
+                    background-color var(--time-fast) var(--ease-fluid),
+                    border-color var(--time-fast) var(--ease-fluid);
+            }
+            .ui-switch__thumb {
+                position: absolute;
+                inset-block-start: 2px;
+                inset-inline-start: 2px;
+                inline-size: calc(1.25rem - 6px);
+                block-size: calc(1.25rem - 6px);
+                border-radius: 50%;
+                background: var(--clr-text-dim);
+                /* GPU-safe: transform only */
+                transition: transform var(--time-fast) var(--ease-snappy), background-color var(--time-fast) var(--ease-fluid);
+            }
+            .ui-switch__control:checked + .ui-switch__track {
+                background: oklch(from var(--clr-primary) l c h / 0.28);
+                border-color: var(--clr-primary);
+            }
+            .ui-switch__control:checked + .ui-switch__track .ui-switch__thumb {
+                transform: translateX(1rem);
+                background: var(--clr-primary);
+            }
+            .ui-switch__control:focus-visible + .ui-switch__track {
+                outline: 2px solid var(--clr-primary);
+                outline-offset: 2px;
+            }
+            .ui-switch__label {
+                font-size: var(--font-xs);
+                color: var(--clr-text-muted);
+                transition: color var(--time-fast) var(--ease-fluid);
+            }
+            .ui-switch:has(.ui-switch__control:checked) .ui-switch__label { color: var(--clr-text-main); }
+
+            /* ── §13 Image browser ── */
+            .image-browser-head {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: var(--space-md);
+                margin-block-end: var(--space-sm);
+            }
+            .image-browser-head label { margin: 0; }
+            .image-library-help {
+                max-inline-size: 38rem;
+                color: var(--clr-text-dim);
+                font-size: 10px;
+                line-height: 1.5;
+                text-align: end;
+            }
+            .image-library-help code { color: var(--clr-primary); }
+            .image-status {
+                min-block-size: 18px;
+                margin-block-end: var(--space-xs);
+                color: var(--clr-text-muted);
+                font-size: var(--font-xs);
+            }
+            .image-status[data-error="true"] { color: var(--clr-danger); }
+            .image-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                gap: var(--space-xs);
+            }
+            .image-grid:empty { display: none; }
+            .image-card {
+                position: relative;
+                min-block-size: 92px;
+                overflow: hidden;
+                text-align: start;
+                isolation: isolate;
+                contain: layout paint style;
+                content-visibility: auto;
+                contain-intrinsic-size: auto 140px;
+                border: 1px solid var(--clr-border);
+                background: var(--clr-surface-2);
+                /* GPU-safe interactive card */
+                transition: border-color var(--time-fast) var(--ease-fluid);
+            }
+            .image-card:hover,
+            .image-card:has(.image-select[aria-pressed="true"]) { border-color: var(--clr-primary); }
+            .image-select {
+                display: block;
+                inline-size: 100%;
+                padding: 0;
+                cursor: pointer;
+                border: none;
+                background: transparent;
+            }
+            .image-select[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--clr-primary); }
+            .image-card img {
+                display: block;
+                inline-size: 100%;
+                block-size: 92px;
+                object-fit: cover;
+                opacity: 0.72;
+                background: oklch(0.92 0.01 255);
+                transition: opacity var(--time-fast) var(--ease-fluid);
+            }
+            .image-card__placeholder {
+                display: grid;
+                place-items: center;
+                inline-size: 100%;
+                block-size: 92px;
+                color: var(--clr-text-dim);
+                background: var(--clr-surface-2);
+                font-size: var(--font-xs);
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .image-card:hover img,
+            .image-select[aria-pressed="true"] img { opacity: 1; }
+            .image-card figcaption {
+                min-block-size: 3rem;
+                padding: var(--space-xs);
+                background: oklch(from var(--clr-bg-base) l c h / 0.86);
+                font-size: 10px;
+                line-height: 1.35;
+            }
+            .image-section-title {
+                margin-block-end: var(--space-xs);
+                color: var(--clr-text-dim);
+                font-size: var(--font-xs);
+                font-weight: normal;
+                letter-spacing: 0.10em;
+                text-transform: uppercase;
+            }
+
+            /* ── §14 Usage / code section ── */
+            .note {
+                padding: clamp(1rem, 3vw, 1.75rem);
+                font-size: var(--font-sm);
+                color: var(--clr-text-muted);
+                line-height: 1.75;
+                border-block: 1px solid var(--clr-border);
+                background: oklch(from var(--clr-surface) l c h / 0.55);
+                content-visibility: auto;
+                contain-intrinsic-size: auto 540px;
+            }
+            .note-inner { max-inline-size: 820px; }
+            .note code {
+                color: var(--clr-primary);
+                background: var(--clr-surface-2);
+                padding: 1px 5px;
+                border: 1px solid var(--clr-border);
+            }
+            .note pre { margin: 0; white-space: pre-wrap; overflow-x: auto; padding: var(--space-sm); }
+            .note h2, .note h3 {
+                color: var(--clr-text-main);
+                font-size: var(--font-xs);
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                margin-block: var(--space-md) var(--space-xs);
+            }
+
+            /* Code window — midnight glass */
+            .code-window {
+                background: var(--clr-surface-2);
+                border: 1px solid var(--clr-border);
+                margin-block: var(--space-xs) var(--space-md);
+            }
+            .code-head {
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
+                padding: 7px var(--space-sm);
+                border-block-end: 1px solid var(--clr-border);
+                color: var(--clr-text-dim);
+                font-size: var(--font-xs);
+                text-transform: uppercase;
+                letter-spacing: 0.10em;
+            }
+            .code-dots { display: flex; gap: 5px; }
+            .code-dots i { inline-size: 8px; block-size: 8px; border-radius: 50%; }
+            .code-dots i:nth-child(1) { background: oklch(0.65 0.22 25); }
+            .code-dots i:nth-child(2) { background: oklch(0.75 0.18 80); }
+            .code-dots i:nth-child(3) { background: oklch(0.68 0.18 145); }
+            .code-lang { color: var(--clr-primary); margin-inline-start: 3px; }
+            .code-tab-switch { display: flex; gap: 4px; margin-inline-start: 6px; }
+            .code-tab-btn {
+                border: 1px solid transparent;
+                background: transparent;
+                color: var(--clr-text-dim);
+                font: inherit;
+                font-size: 11px;
+                cursor: pointer;
+                padding: 2px 8px;
+                border-radius: 3px;
+                transition: all var(--time-fast) var(--ease-fluid);
+            }
+            .code-tab-btn:hover { color: var(--clr-text-main); }
+            .code-tab-btn.active {
+                color: var(--clr-primary);
+                background: oklch(from var(--clr-primary) l c h / 0.12);
+                border-color: oklch(from var(--clr-primary) l c h / 0.35);
+            }
+            .copy-btn {
+                margin-inline-start: auto;
+                border: 1px solid var(--clr-border);
+                background: transparent;
+                color: var(--clr-text-dim);
+                font: inherit;
+                cursor: pointer;
+                padding: 3px var(--space-sm);
+                transition:
+                    color var(--time-fast) var(--ease-fluid),
+                    border-color var(--time-fast) var(--ease-fluid),
+                    background-color var(--time-fast) var(--ease-fluid);
+            }
+            .copy-btn:hover { color: var(--clr-text-main); border-color: var(--clr-primary); }
+            .copy-btn.copied {
+                color: var(--clr-success);
+                border-color: var(--clr-success);
+                background: oklch(from var(--clr-success) l c h / 0.08);
+            }
+            code, pre, .npm-install-cmd, .feature-tag { font-family: var(--font-code); }
+            .code-window code {
+                color: var(--clr-text-main);
+                background: transparent;
+                padding: 0;
+                border: 0;
+                font-variant-ligatures: contextual;
+                tab-size: 2;
+            }
+            #pop-code {
+                max-block-size: calc(100dvh - 7.5rem);
+            }
+            #pop-code .code-window pre {
+                min-block-size: clamp(22rem, 58dvh, 38rem);
+                max-block-size: calc(100dvh - 15rem) !important;
+                overflow: auto;
+                padding: var(--space-md);
+                white-space: pre;
+            }
+            .token-keyword  { color: var(--syntax-keyword); font-weight: 600; }
+            .token-string   { color: var(--syntax-string); }
+            .token-comment  { color: var(--syntax-comment); font-style: italic; }
+            .token-number   { color: var(--syntax-number); }
+            .token-property { color: var(--syntax-property); }
+            .token-tag      { color: var(--syntax-keyword); }
+
+            /* ── §15 Footer ── */
+            .site-footer {
+                display: grid;
+                grid-template-columns: minmax(220px, 1fr) minmax(280px, 2fr) auto;
+                align-items: start;
+                gap: clamp(1.5rem, 5vw, 4.5rem);
+                padding: clamp(1.625rem, 5vw, 3.375rem) var(--space-md);
+                border-block-start: 1px solid var(--clr-border);
+                background: oklch(0.09 0.018 255);
+                color: var(--clr-text-muted);
+                font-size: var(--font-xs);
+                line-height: 1.7;
+                content-visibility: auto;
+                contain-intrinsic-size: auto 240px;
+            }
+            .footer-brand,
+            .about-brand {
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
+            }
+            .footer-brand { margin-block-end: var(--space-xs); color: var(--clr-text-main); font-size: var(--font-md); }
+            .footer-brand span, .site-footer a { color: var(--clr-primary); }
+            .footer-copy { max-inline-size: 58ch; }
+            .footer-resources { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-md); margin-block-start: var(--space-sm); }
+            .footer-resources a, .social-link { text-underline-offset: 3px; }
+            .footer-socials { display: flex; gap: var(--space-xs); }
+            .social-link {
+                display: inline-flex;
+                align-items: center;
+                gap: var(--space-xs);
+                min-block-size: 2rem;
+                padding-block: 5px;
+                padding-inline: var(--space-sm);
+                border: 1px solid var(--clr-border);
+                color: var(--clr-text-muted);
+                text-decoration: none;
+                transition:
+                    border-color var(--time-fast) var(--ease-fluid),
+                    color var(--time-fast) var(--ease-fluid);
+            }
+            .social-link:hover { border-color: var(--clr-primary); color: var(--clr-text-main); }
+            .social-link svg { inline-size: 18px; block-size: 18px; fill: currentColor; }
+            .performance-policy {
+                margin-block-start: var(--space-sm);
+                color: var(--clr-text-dim);
+                font-size: var(--font-xs);
+                letter-spacing: 0.05em;
+                text-transform: uppercase;
+            }
+
+            /* ── §16 Responsive overrides (global layout only — media query allowed per skill) ── */
+            @media (max-width: 820px) {
+                .site-footer { grid-template-columns: 1fr; }
+            }
+            @media (max-width: 720px) {
+                .about-sticky-bar { padding-inline: var(--space-sm); }
+                .about-container { padding-inline: var(--space-sm); }
+                .about-footer { align-items: flex-start; flex-direction: column; }
+                .stage-title { font-size: var(--font-lg); }
+                .stage-label { inset-block-start: var(--space-sm); inset-inline-start: var(--space-sm); }
+                .stage-label small { display: none; }
+                .preview-switcher {
+                    inset-block-start: 3rem;
+                    inset-inline: var(--space-sm);
+                    left: auto;
+                    transform: none;
+                    overflow-x: auto;
+                }
+                .preview-switcher button { flex: 1 0 auto; padding-inline: var(--space-xs); font-size: 9px; }
+                .preview-scene { padding: 5.5rem var(--space-md) 4.5rem; }
+                .preview-splash-shell { min-block-size: 330px; }
+                .preview-splash-links { display: none; }
+                .image-browser-head { align-items: stretch; flex-direction: column; }
+                .image-library-help { text-align: start; }
+                .ctrl-bar {
+                    padding-inline: var(--space-xs);
+                    scroll-snap-type: x proximity;
+                    overscroll-behavior-inline: contain;
+                }
+                .ctrl-pill {
+                    min-block-size: 2.75rem;
+                    scroll-snap-align: start;
+                }
+                .ctrl-pill--code { margin-inline-start: 0; }
+                .ctrl-bar > .ctrl-pill .ctrl-pill__status { display: none; }
+                .ctrl-popover,
+                .ctrl-popover--wide {
+                    inline-size: calc(100vw - (var(--space-sm) * 2));
+                    min-inline-size: 0;
+                    max-inline-size: none;
+                }
+                #pop-code .code-window pre {
+                    min-block-size: 18rem;
+                    max-block-size: calc(100dvh - 17rem) !important;
+                }
+                .custom-charset-input { inline-size: 100%; }
+            }
+            @media (max-width: 640px) {
+                .preview-scene { padding-block-end: 13rem; }
+                .ctrl-bar {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    overflow-x: visible;
+                    gap: var(--space-xs);
+                }
+                .ctrl-bar__separator { display: none; }
+                .ctrl-bar > .ctrl-pill {
+                    inline-size: 100%;
+                    min-inline-size: 0;
+                    justify-content: center;
+                    padding-inline: var(--space-xs);
+                }
+                .ctrl-pill--code { order: initial; }
+                .ctrl-more__actions { grid-template-columns: 1fr; }
+            }
+            @media (max-width: 460px) {
+                .stage-about-trigger span { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+                .stage-fps-toggle .ui-switch__label { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+                .preview-hero-card--vertical { inline-size: 100%; }
+                .preview-hero-card[data-hero-variant="split"] .hero-card-content { display: flex; }
+                .preview-hero-card[data-hero-variant="split"] .hero-card-actions {
+                    padding-inline-start: 0;
+                    padding-block-start: var(--space-sm);
+                    border-inline-start: 0;
+                    border-block-start: 1px solid var(--clr-border);
+                }
+                .hero-card-actions { flex-direction: column; align-items: stretch; }
+                .hero-repo-btn { justify-content: center; }
+            }
+            @media (max-width: 720px) {
+                .preview-hero-card[data-hero-variant="split"] { display: block; }
+                .preview-hero-card[data-hero-variant="split"] .hero-card-media {
+                    min-block-size: 10rem;
+                    border-inline-end: 0;
+                    border-block-end: 1px solid var(--clr-border);
+                }
+                .preview-splash-body { grid-template-columns: 1fr; }
+                .splash-ascii-media { min-block-size: 9rem; }
+            }
+
+            /* ── §17 Accessibility — reduced motion ── */
+            @media (prefers-reduced-motion: reduce) {
+                *, *::before, *::after {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                    scroll-behavior: auto !important;
+                }
+            }
+
+            /* ── §18 Fade-in keyframe (GPU-safe: transform + opacity only) ── */
+            @keyframes ui-fade-in-up {
+                from { opacity: 0; transform: translateY(var(--space-sm)); }
+                to   { opacity: 1; transform: translateY(0); }
+            }
+
+            /* ── §19 Floating control bar ── */
+            .ctrl-bar {
+                /* Anchored to the bottom of the stage */
+                position: absolute;
+                inset-block-end: 0;
+                inset-inline: 0;
+                z-index: var(--z-overlay);
+                display: grid;
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+                align-items: center;
+                gap: var(--space-xs);
+                padding: var(--space-xs) var(--space-md);
+                /* Midnight glass strip */
+                background: oklch(from var(--clr-bg-base) l c h / 0.82);
+                backdrop-filter: blur(16px) saturate(var(--m-saturate));
+                -webkit-backdrop-filter: blur(16px) saturate(var(--m-saturate));
+                border-block-start: 1px solid oklch(from var(--clr-primary) l c h / 0.16);
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+                /* Ensure it sits inside the .stage */
+                pointer-events: auto;
+                overflow-x: hidden;
+                scrollbar-width: none;
+            }
+            .ctrl-bar::-webkit-scrollbar { display: none; }
+
+            /* UIverse-inspired Glassmorphic Pill Buttons */
+            .ctrl-pill {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                min-block-size: 2.25rem;
+                padding-block: 6px;
+                padding-inline: 14px;
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.28);
+                border-radius: var(--radius-pill);
+                background: oklch(0.14 0.025 255 / 0.85);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+                color: var(--clr-text-main);
+                font: inherit;
+                font-size: var(--font-xs);
+                font-weight: 500;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                cursor: pointer;
+                box-shadow:
+                    0 4px 14px rgb(0 0 0 / 0.45),
+                    inset 0 1px 0 rgb(255 255 255 / 0.14);
+                transition:
+                    color 180ms ease,
+                    border-color 180ms ease,
+                    background-color 180ms ease,
+                    box-shadow 180ms ease,
+                    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+                flex: 0 0 auto;
+            }
+            .ctrl-bar > .ctrl-pill {
+                inline-size: 100%;
+                min-inline-size: 0;
+                justify-content: center;
+            }
+            .ctrl-pill--code {
+                order: 100;
+                margin-inline-start: 0;
+            }
+            .ctrl-pill--utility {
+                padding-inline: var(--space-sm);
+                border-color: var(--clr-border);
+                background: oklch(from var(--clr-surface-2) l c h / 0.78);
+            }
+            .ctrl-pill--media {
+                background: oklch(from var(--clr-primary) l c h / 0.10);
+            }
+            .ctrl-pill--primary {
+                color: var(--clr-on-primary);
+                border-color: var(--clr-primary);
+                background: var(--clr-primary);
+                box-shadow:
+                    0 6px 20px oklch(from var(--clr-primary) l c h / 0.28),
+                    inset 0 1px 0 rgb(255 255 255 / 0.24);
+            }
+            .ctrl-bar__separator {
+                display: none;
+            }
+            .ctrl-more__actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: var(--space-xs);
+            }
+            .ctrl-more__actions .ctrl-pill {
+                inline-size: 100%;
+                min-inline-size: 0;
+                justify-content: flex-start;
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+            }
+            .ctrl-more__popovers { display: contents; }
+            .ctrl-pill:disabled {
+                color: var(--clr-text-dim);
+                border-color: var(--clr-border);
+                cursor: not-allowed;
+                opacity: 0.55;
+                transform: none;
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+            }
+            .ctrl-pill__status {
+                max-inline-size: 8ch;
+                overflow: hidden;
+                padding: 1px 5px;
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.15);
+                border-radius: var(--radius-pill);
+                background: oklch(from var(--clr-primary) l c h / 0.08);
+                color: var(--clr-text-muted);
+                font-size: 9px;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            #presetTriggerBtn[data-dirty="true"] .ctrl-pill__status {
+                color: var(--clr-warning);
+            }
+            #resetSettingsBtn:hover {
+                color: var(--clr-warning);
+                border-color: var(--clr-warning);
+                background: oklch(from var(--clr-warning) l c h / 0.12);
+            }
+            .ctrl-pill svg {
+                inline-size: 15px;
+                block-size: 15px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                opacity: 0.85;
+                transition: transform 180ms ease, opacity 180ms ease;
+            }
+            .ctrl-pill:hover {
+                color: var(--clr-on-primary);
+                border-color: var(--clr-primary);
+                background: oklch(from var(--clr-primary) l c h / 0.22);
+                box-shadow:
+                    0 6px 20px oklch(from var(--clr-primary) l c h / 0.35),
+                    inset 0 1px 0 rgb(255 255 255 / 0.25);
+                transform: translateY(-2px);
+            }
+            .ctrl-pill:hover svg {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            .ctrl-pill:active {
+                transform: translateY(0) scale(0.96);
+            }
+            .ctrl-pill[aria-expanded="true"],
+            .ctrl-pill:has(+ .ctrl-popover:popover-open) {
+                color: var(--clr-primary);
+                border-color: var(--clr-primary);
+                background: oklch(from var(--clr-primary) l c h / 0.28);
+                box-shadow:
+                    0 0 18px oklch(from var(--clr-primary) l c h / 0.40),
+                    inset 0 1px 0 rgb(255 255 255 / 0.25);
+            }
+
+            /* Popover panels — expand upward directly above their pill button */
+            .ctrl-popover {
+                position: fixed;
+                bottom: calc(var(--space-sm) + 5.25rem);
+                border: none;
+                padding: 0;
+                margin: 0;
+                /* Midnight glass surface */
+                background: oklch(0.12 0.025 255 / 0.94);
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.28);
+                border-radius: var(--radius-md);
+                box-shadow:
+                    0 -12px 36px rgb(0 0 0 / 0.60),
+                    0 0 0 1px oklch(from var(--clr-primary) l c h / 0.15),
+                    inset 0 1px 0 rgb(255 255 255 / 0.12);
+                inline-size: max-content;
+                min-inline-size: min(240px, calc(100vw - (var(--space-md) * 2)));
+                max-inline-size: min(420px, calc(100vw - (var(--space-md) * 2)));
+                max-block-size: min(460px, calc(100dvh - 140px));
+                overflow-y: auto;
+                overflow-x: hidden;
+                scrollbar-width: thin;
+                scrollbar-color: var(--clr-border) transparent;
+                /* Smooth spring transition */
+                opacity: 0;
+                transform: translateY(12px) scale(0.97);
+                transition:
+                    opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                    display 220ms allow-discrete;
+                z-index: var(--z-sticky);
+            }
+            .ctrl-popover:popover-open {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            @starting-style {
+                .ctrl-popover:popover-open {
+                    opacity: 0;
+                    transform: translateY(12px) scale(0.97);
+                }
+            }
+            /* Position each popover panel right over its button */
+            #pop-preset { left: var(--space-md); }
+            #pop-code   { left: auto; right: var(--space-md); }
+            #pop-more   { left: auto; right: var(--space-md); }
+
+            /* Wide & Multi-column Grid variants for popovers */
+            .ctrl-popover--wide {
+                inline-size: clamp(340px, 56vw, 560px);
+            }
+            .ctrl-popover--grid {
+                inline-size: min(440px, calc(100vw - (var(--space-md) * 2)));
+                max-inline-size: min(440px, calc(100vw - (var(--space-md) * 2)));
+            }
+            .btn-row-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 4px !important;
+                margin-block-start: 4px;
+            }
+            @media (min-width: 380px) {
+                .btn-row-grid {
+                    grid-template-columns: repeat(3, 1fr) !important;
+                }
+            }
+            .cpop-grid-2col {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--space-xs);
+            }
+            #pop-sequence {
+                left: var(--space-md);
+                right: var(--space-md);
+                inline-size: auto;
+                min-inline-size: 0;
+                max-inline-size: none;
+            }
+
+            .custom-charset-input {
+                inline-size: min(34rem, calc(100vw - (var(--space-lg) * 2)));
+                min-block-size: 5.5rem;
+                resize: vertical;
+                padding: var(--space-sm);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                background: var(--clr-surface-2);
+                color: var(--clr-text-main);
+                font: inherit;
+            }
+            .custom-charset-input:focus-visible {
+                outline: 2px solid var(--clr-primary);
+                outline-offset: 2px;
+            }
+
+            /* ── Full-Screen About Overlay (fluent-ui-v1) ── */
+            .ctrl-popover--fullscreen {
+                position: fixed;
+                inset: 0 !important;
+                top: 0 !important;
+                left: 0 !important;
+                bottom: 0 !important;
+                right: 0 !important;
+                inline-size: 100vw !important;
+                block-size: 100dvh !important;
+                max-inline-size: 100vw !important;
+                max-block-size: 100dvh !important;
+                margin: 0 !important;
+                border: none !important;
+                border-radius: 0 !important;
+                background:
+                    radial-gradient(circle at 12% 18%, oklch(from var(--clr-primary) l c h / 0.16), transparent 38%),
+                    radial-gradient(circle at 88% 76%, oklch(from var(--clr-accent2) l c h / 0.12), transparent 42%),
+                    linear-gradient(145deg, oklch(0.07 0.02 255 / 0.62), oklch(0.11 0.025 270 / 0.48)) !important;
+                backdrop-filter: blur(8px) saturate(150%) !important;
+                -webkit-backdrop-filter: blur(8px) saturate(150%) !important;
+                box-shadow: none !important;
+                overflow-y: auto !important;
+                opacity: 0;
+                transform: scale(0.98);
+                transition:
+                    opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                    display 220ms allow-discrete;
+                z-index: var(--z-modal) !important;
+            }
+            [data-theme="light"] .ctrl-popover--fullscreen {
+                background:
+                    radial-gradient(circle at 12% 18%, oklch(from var(--clr-primary) l c h / 0.12), transparent 38%),
+                    radial-gradient(circle at 88% 76%, oklch(from var(--clr-accent2) l c h / 0.09), transparent 42%),
+                    linear-gradient(145deg, oklch(0.98 0.01 250 / 0.72), oklch(0.94 0.02 270 / 0.64)) !important;
+            }
+            .ctrl-popover--fullscreen:popover-open {
+                opacity: 1;
+                transform: scale(1);
+            }
+            @starting-style {
+                .ctrl-popover--fullscreen:popover-open {
+                    opacity: 0;
+                    transform: scale(0.98);
+                }
+            }
+            .ctrl-popover--fullscreen::backdrop {
+                background: rgb(0 0 0 / 0.45);
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
+            }
+
+            .about-sticky-bar {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: var(--space-sm) var(--space-md);
+                background: oklch(0.10 0.02 255 / 0.55);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+                border-block-end: 1px solid oklch(from var(--clr-border) l c h / 0.40);
+            }
+
+            .about-container {
+                max-inline-size: 1160px;
+                margin-inline: auto;
+                padding-inline: var(--space-md);
+                padding-block: var(--space-md) var(--space-2xl);
+            }
+
+            .about-hero {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-sm);
+                margin-block-end: var(--space-xl);
+            }
+            .about-hero-title {
+                font-size: clamp(1.75rem, 4vw, 2.75rem);
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                color: var(--clr-text-main);
+                line-height: 1.15;
+                margin: 0;
+            }
+            .about-hero-subtitle {
+                font-size: clamp(1rem, 1.8vw, 1.2rem);
+                color: var(--clr-text-muted);
+                line-height: 1.55;
+                margin: 0;
+                max-inline-size: 820px;
+            }
+            .about-resource-nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: var(--space-xs);
+                margin-block-start: var(--space-xs);
+            }
+            .about-resource-nav a {
+                display: inline-flex;
+                align-items: center;
+                min-block-size: 34px;
+                padding-inline: 12px;
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-pill);
+                background: var(--clr-primary-tint);
+                color: var(--clr-text-main);
+                font-size: var(--font-xs);
+                text-decoration: none;
+                transition: transform 140ms ease, border-color 140ms ease, color 140ms ease;
+            }
+            .about-resource-nav a:hover {
+                transform: translateY(-1px);
+                border-color: var(--clr-primary);
+                color: var(--clr-primary);
+            }
+
+            .about-section-heading {
+                font-size: var(--font-xs);
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--clr-primary);
+                margin-block: var(--space-xl) var(--space-md);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .about-section-heading::after {
+                content: "";
+                flex: 1;
+                height: 1px;
+                background: oklch(from var(--clr-border) l c h / 0.35);
+            }
+            .about-reference-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: var(--space-md);
+            }
+            .about-reference-card {
+                padding: var(--space-md);
+                border: 1px solid oklch(from var(--clr-border) l c h / 0.55);
+                border-radius: var(--radius-md);
+                background: oklch(from var(--clr-surface-2) l c h / 0.58);
+                backdrop-filter: blur(12px);
+            }
+            .about-reference-card h3 {
+                margin-block-end: var(--space-xs);
+                color: var(--clr-text-main);
+                font-size: var(--font-sm);
+            }
+            .about-reference-card p,
+            .about-reference-card li {
+                color: var(--clr-text-muted);
+                font-size: var(--font-xs);
+                line-height: 1.65;
+            }
+            .about-reference-card ol,
+            .about-reference-card ul { padding-inline-start: var(--space-md); }
+            .about-reference-card li + li { margin-block-start: var(--space-xs); }
+            .about-docs-callout {
+                margin-block: var(--space-xl);
+                padding: clamp(var(--space-lg), 4vw, var(--space-2xl));
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.36);
+                border-radius: var(--radius-lg);
+                background:
+                    radial-gradient(circle at 88% 18%, oklch(from var(--clr-accent2) l c h / 0.14), transparent 42%),
+                    linear-gradient(145deg, oklch(from var(--clr-surface-2) l c h / 0.72), oklch(from var(--clr-bg-base) l c h / 0.58));
+            }
+            .about-docs-kicker {
+                margin: 0 0 var(--space-xs);
+                color: var(--clr-primary);
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+            }
+            .about-docs-callout h2 {
+                max-inline-size: 720px;
+                margin: 0;
+                color: var(--clr-text-main);
+                font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+                line-height: 1.08;
+                letter-spacing: -0.035em;
+            }
+            .about-docs-callout > p:not(.about-docs-kicker) {
+                max-inline-size: 760px;
+                margin: var(--space-md) 0 0;
+                color: var(--clr-text-muted);
+                line-height: 1.7;
+            }
+            .about-docs-actions {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: var(--space-sm);
+                margin-block-start: var(--space-lg);
+            }
+            .about-docs-actions > a:not(.about-cta-btn) {
+                color: var(--clr-text-muted);
+                font-size: var(--font-xs);
+                text-underline-offset: 4px;
+            }
+            .about-docs-actions > a:not(.about-cta-btn):hover {
+                color: var(--clr-primary);
+            }
+
+
+            /* NPM Install Bar & Package Badge */
+            .npm-install-bar {
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
+                background: oklch(0.08 0.015 250 / 0.85);
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.30);
+                border-radius: var(--radius-pill);
+                padding: 4px 6px 4px 14px;
+                box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.10);
+            }
+            .npm-install-cmd {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--clr-text-main);
+                flex: 1;
+                overflow: hidden;
+                white-space: nowrap;
+            }
+            .npm-prompt { color: var(--clr-primary); font-weight: bold; }
+            .npm-ver-badge {
+                font-size: 10px;
+                font-weight: 600;
+                background: var(--clr-primary-tint);
+                color: var(--clr-primary);
+                padding: 1px 6px;
+                border-radius: 4px;
+                border: 1px solid oklch(from var(--clr-primary) l c h / 0.3);
+            }
+            .npm-copy-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                background: oklch(from var(--clr-surface-2) l c h / 0.8);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-pill);
+                color: var(--clr-text-muted);
+                font-family: inherit;
+                font-size: 11px;
+                font-weight: 500;
+                padding: 3px 10px;
+                cursor: pointer;
+                transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+            }
+            .npm-copy-btn svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2; fill: none; }
+            .npm-copy-btn:hover { color: var(--clr-text-main); border-color: var(--clr-primary); background: var(--clr-primary-tint); }
+            .npm-copy-btn.copied { color: var(--clr-success); border-color: var(--clr-success); }
+            .npm-link-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 26px;
+                height: 26px;
+                border-radius: var(--radius-pill);
+                background: oklch(from var(--clr-surface-2) l c h / 0.8);
+                border: 1px solid var(--clr-border);
+                color: var(--clr-text-muted);
+                transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+            }
+            .npm-link-btn svg { width: 14px; height: 14px; }
+            .npm-link-btn:hover { color: #CB3837; border-color: #CB3837; background: oklch(0.55 0.22 25 / 0.15); }
+
+            .about-footer {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: var(--space-md);
+                margin-block-start: var(--space-xl);
+                padding-block-start: var(--space-md);
+                border-block-start: 1px solid oklch(from var(--clr-border) l c h / 0.30);
+            }
+            .about-cta-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 18px;
+                border: 1px solid var(--clr-primary);
+                border-radius: var(--radius-pill);
+                background: var(--clr-primary);
+                color: var(--clr-on-primary);
+                font: inherit;
+                font-size: var(--font-xs);
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                text-decoration: none;
+                cursor: pointer;
+                box-shadow: 0 4px 14px oklch(from var(--clr-primary) l c h / 0.40);
+                transition: transform 160ms ease, box-shadow 160ms ease;
+            }
+            .about-cta-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 20px oklch(from var(--clr-primary) l c h / 0.55);
+            }
+            .about-cta-btn:active { transform: scale(0.97); }
+            .about-version {
+                font-size: 11px;
+                color: var(--clr-text-dim);
+            }
+
+            /* Popover content groups */
+            .cpop-group {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-xs);
+                padding: var(--space-sm) var(--space-md);
+                border-block-end: 1px solid oklch(from var(--clr-border) l c h / 0.35);
+            }
+            .cpop-group:last-child { border-block-end: none; }
+            .cpop-group--compact-range {
+                display: grid;
+                grid-template-columns: minmax(7.5rem, auto) minmax(8rem, 1fr);
+                align-items: center;
+                column-gap: var(--space-sm);
+                padding-block: 7px;
+            }
+            .cpop-group--compact-range .cpop-label,
+            .cpop-group--compact-range input[type="range"] { margin-block: 0; }
+            .cpop-label {
+                display: block;
+                font-size: var(--font-xs);
+                letter-spacing: 0.10em;
+                color: var(--clr-text-muted);
+                text-transform: uppercase;
+                margin-block-end: 2px;
+            }
+            .cpop-browser {
+                max-block-size: 260px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: var(--clr-border) transparent;
+            }
+
+            /* Chk (legacy checkbox inline — kept for gradAnimate) */
+            .chk {
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
+                font-size: var(--font-xs);
+                color: var(--clr-text-muted);
+                padding: var(--space-sm) var(--space-md);
+            }
+            .chk input { width: auto; }
+            .chk label { margin: 0 !important; color: inherit; text-transform: none; letter-spacing: normal; }
+            #flipGradientBtn { margin-inline-start: auto; }
+
+            .sequence-toolbar,
+            .sequence-step__header,
+            .sequence-step__actions {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: var(--space-xs);
+            }
+            .sequence-toolbar { justify-content: space-between; }
+            .sequence-list {
+                display: grid;
+                grid-auto-flow: column;
+                grid-auto-columns: minmax(min(18rem, 82vw), 1fr);
+                gap: var(--space-md);
+                max-block-size: min(52dvh, 32rem);
+                padding-block-end: var(--space-xs);
+                overflow-x: auto;
+                overflow-y: hidden;
+                scroll-snap-type: inline proximity;
+                list-style: none;
+            }
+            .sequence-empty {
+                padding: var(--space-md);
+                border: 1px dashed var(--clr-border);
+                color: var(--clr-text-dim);
+                font-size: var(--font-xs);
+                text-align: center;
+            }
+            .sequence-step {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-sm);
+                padding: var(--space-sm);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                background: var(--clr-surface-2);
+                scroll-snap-align: start;
+            }
+            .sequence-step::after {
+                content: '';
+                position: absolute;
+                inset-block-start: 1.25rem;
+                inset-inline-end: calc(var(--space-md) * -1);
+                inline-size: var(--space-md);
+                border-block-start: 1px solid var(--clr-primary);
+                opacity: 0.55;
+            }
+            .sequence-step:last-child::after {
+                display: none;
+            }
+            .sequence-step[data-source='image'] {
+                border-block-start-color: var(--clr-accent2);
+            }
+            .sequence-step[aria-current="step"] {
+                border-color: var(--clr-primary);
+                box-shadow: inset 3px 0 0 var(--clr-primary);
+            }
+            .sequence-step__header { justify-content: space-between; }
+            .sequence-step__index {
+                color: var(--clr-primary);
+                font-size: var(--font-xs);
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+            .sequence-step__grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: var(--space-xs);
+            }
+            .sequence-step__grid label,
+            .sequence-step__options label {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                color: var(--clr-text-muted);
+                font-size: 10px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .sequence-step input[type="number"],
+            .sequence-step textarea {
+                inline-size: 100%;
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-sm);
+                background: var(--clr-bg-base);
+                color: var(--clr-text-main);
+                font: inherit;
+                padding: 7px var(--space-xs);
+            }
+            .sequence-step textarea {
+                min-block-size: 5.5rem;
+                resize: vertical;
+                font-family: "JetBrains Mono", ui-monospace, monospace;
+                font-size: 11px;
+            }
+            .sequence-step__options summary {
+                color: var(--clr-text-muted);
+                cursor: pointer;
+                font-size: var(--font-xs);
+            }
+            .sequence-step__error { color: var(--clr-danger); font-size: 10px; }
+            .sequence-status { color: var(--clr-text-muted); font-size: var(--font-xs); }
+            @media (max-width: 560px) {
+                .sequence-step__grid { grid-template-columns: 1fr 1fr; }
+                .sequence-step__grid label:first-child { grid-column: 1 / -1; }
+            }
+            /* Toolbar responsive rules live after the component SOT so they win the cascade. */
+            @media (max-width: 720px) {
+                .ctrl-bar > .ctrl-pill .ctrl-pill__status { display: none; }
+                .ctrl-bar > .ctrl-pill { min-block-size: 2.75rem; }
+                .ctrl-pill--code { margin-inline-start: 0; }
+                .ctrl-popover,
+                .ctrl-popover--wide {
+                    inline-size: calc(100vw - (var(--space-sm) * 2));
+                    min-inline-size: 0;
+                    max-inline-size: none;
+                }
+                #pop-sequence {
+                    left: var(--space-sm);
+                    right: var(--space-sm);
+                    inline-size: auto;
+                }
+            }
+            @media (max-width: 640px) {
+                .preview-scene { padding-block-end: 13rem; }
+                .ctrl-bar {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    overflow-x: visible;
+                    gap: var(--space-xs);
+                }
+                .ctrl-popover {
+                    bottom: calc(var(--space-sm) + 12rem);
+                }
+                .ctrl-bar__separator { display: none; }
+                .ctrl-bar > .ctrl-pill {
+                    inline-size: 100%;
+                    min-inline-size: 0;
+                    justify-content: center;
+                    padding-inline: var(--space-xs);
+                }
+                .ctrl-pill--code { order: initial; }
+                .ctrl-more__actions { grid-template-columns: 1fr; }
+            }
+        </style>
+
+    </head>
+    <body>
+        <main>
+        <section class="stage" id="stage" aria-labelledby="stageProductTag" data-preview="background">
+            <div class="stage-label" id="stageProductTag">
+                <img class="brand-icon" src="./assets/branding/asciiam-logo.svg" width="512" height="512" alt="" aria-hidden="true" />
+                staticcanvas <span>/// asciiam</span> <small>(Ascii Background Animator) <span data-package-version>v0.26.0</span></small>
+            </div>
+            <div class="preview-switcher" role="group" aria-label="Preview display type">
+                <button type="button" data-preview-type="background" aria-pressed="true">Background</button>
+                <button type="button" data-preview-type="hero-card" aria-pressed="false">Hero card</button>
+                <button type="button" data-preview-type="splash" aria-pressed="false">Splash page</button>
+            </div>
+            <div class="preview-scene preview-scene-background" data-preview-scene="background" data-ascii-target="background" data-active="true" aria-hidden="false">
+            </div>
+            <div class="preview-scene" data-preview-scene="hero-card" data-active="false" aria-hidden="true" inert>
+                <div class="hero-card-preview-stack">
+                <div class="hero-card-variants" role="group" aria-label="Hero card layout">
+                    <button type="button" data-hero-card-variant="vertical" aria-pressed="true">Vertical</button>
+                    <button type="button" data-hero-card-variant="split" aria-pressed="false">Split</button>
+                    <button type="button" data-hero-card-variant="terminal" aria-pressed="false">Terminal</button>
+                </div>
+                <article class="preview-hero-card preview-hero-card--vertical" data-hero-variant="vertical">
+                    <div class="ascii-media hero-card-media" data-ascii-target="hero-card" role="img" aria-label="Animated ASCII media generated by asciiam"></div>
+                    <div class="hero-card-content">
+                        <div class="preview-kicker">
+                            <span class="kicker-dot"></span> WebGL2 / Canvas ASCII Media
+                        </div>
+                        <h2>Elevate your background with ASCII.</h2>
+                        <p class="preview-copy">
+                            Contained vertical card treatment with live ASCII mask reveal, high-contrast typography, and spatial origin alignment.
+                        </p>
+                        <div class="hero-card-actions">
+                            <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="hero-repo-btn hero-repo-btn--github">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                                <span>GitHub Repo</span>
+                            </a>
+                            <a href="https://gitlab.com" target="_blank" rel="noopener noreferrer" class="hero-repo-btn hero-repo-btn--gitlab">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 0 1-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 0 1 5.5 2a.43.43 0 0 1 .4.28l2.44 7.49h7.32l2.44-7.49a.43.43 0 0 1 .4-.28.42.42 0 0 1 .39.21l2.44 7.51 1.22 3.78a.84.84 0 0 1-.3.94z"/></svg>
+                                <span>GitLab Repo</span>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+                </div>
+            </div>
+            <div class="preview-scene" data-preview-scene="splash" data-active="false" aria-hidden="true" inert>
+                <div class="preview-splash-shell">
+                    <div class="preview-splash-nav"><span>staticcanvas</span><span class="preview-splash-links">work notes contact</span></div>
+                    <div class="preview-splash-body">
+                        <div class="preview-splash">
+                            <div class="preview-kicker">Canvas-native experiences</div>
+                            <h2>Motion with a smaller footprint.</h2>
+                            <p class="preview-copy">A splash-page hero where asciiam replaces the conventional image region with generated ASCII media.</p>
+                        </div>
+                        <div class="ascii-media splash-ascii-media" data-ascii-target="splash" role="img" aria-label="Animated ASCII splash media generated by asciiam"></div>
+                    </div>
+                    <div class="preview-splash-meta"><span>asciiam / 01</span><span>scroll to configure</span></div>
+                </div>
+            </div>
+            <div class="stage-top-actions" role="group" aria-label="Stage information controls">
+                <a class="stage-about-trigger" id="documentationBtn" href="../"
+                   title="Open asciiam documentation" aria-label="Open asciiam documentation">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+                    <span>Documentation</span>
+                </a>
+                <button class="stage-about-trigger" id="aboutTriggerBtn" type="button"
+                        title="Open About and usage (Ctrl/Cmd+A)" aria-label="Open About and usage"
+                        aria-keyshortcuts="Control+A Meta+A" popovertarget="pop-about"
+                        aria-expanded="false" aria-controls="pop-about">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>About</span>
+                </button>
+                <button class="stage-about-trigger" id="exportPictureTriggerBtn" type="button"
+                        title="Export Picture Mode (PNG, JPG, WebP ASCII Art)" aria-label="Export Picture Mode"
+                        popovertarget="pop-export-picture" aria-expanded="false" aria-controls="pop-export-picture">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <span>Export Picture</span>
+                </button>
+                <label class="ui-switch stage-fps-toggle" for="statsToggle">
+                    <input class="ui-switch__control" type="checkbox" id="statsToggle" role="switch" aria-checked="false" />
+                    <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                    <span class="ui-switch__label">FPS</span>
+                </label>
+            </div>
+            <div class="ctrl-popover" id="pop-export-picture" popover>
+                <div class="cpop-group">
+                    <label class="cpop-label">Export Picture Mode</label>
+                    <p class="sequence-status" style="margin-top:2px">Export current rendered ASCII artwork from images, 3D meshes, or fields into high-resolution image files.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="exportFormat">Image Format</label>
+                    <select id="exportFormat">
+                        <option value="png" selected>PNG (Lossless)</option>
+                        <option value="jpg">JPG (Compressed)</option>
+                        <option value="webp">WebP (Modern)</option>
+                    </select>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="exportScale">Resolution Scale <span class="val" id="exportScaleVal">1× (Native)</span></label>
+                    <input id="exportScale" type="range" min="1" max="4" step="1" value="1" data-aria-label="Export resolution scale" />
+                </div>
+                <div class="cpop-group" id="exportQualityGroup" style="display:none">
+                    <label class="cpop-label row" for="exportQuality">Compression Quality <span class="val" id="exportQualityVal">92%</span></label>
+                    <input id="exportQuality" type="range" min="0.1" max="1" step="0.05" value="0.92" data-aria-label="Export quality" />
+                </div>
+                <div class="cpop-group" style="display:flex; gap:8px; margin-top:12px;">
+                    <button type="button" class="btn-primary" id="downloadPictureBtn" style="flex:1">Download Image</button>
+                    <button type="button" class="btn-ghost" id="copyPictureBtn" style="flex:1">Copy to Clipboard</button>
+                </div>
+                <p class="sequence-status" id="exportStatus" role="status" aria-live="polite">Ready to export ASCII artwork.</p>
+            </div>
+            <div class="stats" id="stats" data-extended="false" aria-label="Animation performance statistics"></div>
+        <div class="ctrl-bar" role="toolbar" aria-label="Animation controls">
+
+            <!-- Preset -->
+            <button class="ctrl-pill" id="presetTriggerBtn" type="button" aria-label="Preset, heroWave" title="Choose or save an animation preset"
+                    popovertarget="pop-preset" aria-expanded="false" aria-controls="pop-preset">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4H14"/><path d="M10 4H3"/><path d="M14 2V6"/><path d="M21 12H12"/><path d="M8 12H3"/><path d="M12 10V14"/><path d="M21 20H18"/><path d="M14 20H3"/><path d="M18 18V22"/></svg>
+                <span>Preset</span>
+                <span class="ctrl-pill__status" id="presetDirtyIndicator" role="status" aria-live="polite">heroWave</span>
+            </button>
+            <div class="ctrl-popover" id="pop-preset" popover>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="preset">Preset</label>
+                    <select id="preset">
+                        <option value="">— custom —</option>
+                        <option value="heroWave" selected>heroWave</option>
+                        <option value="subtleCurrent">subtleCurrent</option>
+                        <option value="matrixRain">matrixRain</option>
+                        <option value="softRipple">softRipple</option>
+                        <option value="vortexFlow">vortexFlow</option>
+                        <option value="plasmaField">plasmaField</option>
+                        <option value="introReveal">introReveal</option>
+                        <option value="outroFade">outroFade</option>
+                        <option value="scanline">scanline</option>
+                        <option value="snowfall">snowfall</option>
+                        <option value="sparkleField">sparkleField</option>
+                        <option value="pulseGlow">pulseGlow</option>
+                        <option value="cursorGlow">cursorGlow</option>
+                        <option value="hoverField">hoverField</option>
+                        <option value="clickPulse">clickPulse</option>
+                        <option value="auroraCurrent">auroraCurrent</option>
+                        <option value="terminalMatrix">terminalMatrix</option>
+                        <option value="blueprintWave">blueprintWave</option>
+                        <option value="deepRipple">deepRipple</option>
+                        <option value="snowDrift">snowDrift</option>
+                        <option value="emberSparkle">emberSparkle</option>
+                        <option value="risingEmbers">risingEmbers</option>
+                        <option value="deepSpace">deepSpace</option>
+                        <option value="signalGlitch">signalGlitch</option>
+                        <option value="terminalType">terminalType</option>
+                        <option value="orbitalFlow">orbitalFlow</option>
+                        <option value="imageReveal">imageReveal</option>
+                    </select>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="savedPresetList">Saved presets</label>
+                    <select id="savedPresetList">
+                        <option value="">No saved presets</option>
+                    </select>
+                    <div class="btn-row">
+                        <input id="savedPresetName" type="text" maxlength="40" placeholder="Preset name" aria-label="Saved preset name" />
+                        <button class="mode-btn" id="savePresetBtn" type="button">Save</button>
+                        <button class="mode-btn" id="deletePresetBtn" type="button" disabled>Delete</button>
+                    </div>
+                    <small id="savedPresetStatus" role="status" aria-live="polite">Presets are stored in this browser.</small>
+                </div>
+            </div>
+
+            <!-- Quality -->
+            <button class="ctrl-pill" id="qualityTriggerBtn" type="button" title="Choose render quality"
+                    popovertarget="pop-quality" aria-expanded="false" aria-controls="pop-quality">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 4.5L19 8.2l-3.5 3.4.8 4.8L12 14.1 7.7 16.4l.8-4.8L5 8.2l4.8-.7L12 3z"/></svg>
+                <span>Quality</span>
+                <span class="ctrl-pill__status" id="qualityToolbarStatus">ultra</span>
+            </button>
+            <div class="ctrl-popover" id="pop-quality" popover>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="quality">Render quality</label>
+                    <select id="quality">
+                        <option value="high">High fidelity</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="performance">Performance</option>
+                        <option value="ultra" selected>Ultra performance</option>
+                    </select>
+                </div>
+                <div class="cpop-group cpop-group--compact-range">
+                    <label class="cpop-label row" for="targetFPS">Frame-rate cap <span class="val" id="targetFPSVal">60 fps</span></label>
+                    <input id="targetFPS" type="range" min="0" max="540" step="1" value="60"
+                           data-aria-label="Frame-rate cap" />
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="resolutionScale">Grid resolution <span class="val" id="resolutionScaleVal">100%</span></label>
+                    <input id="resolutionScale" type="range" min="0.5" max="2" step="0.05" value="1"
+                           data-aria-label="Grid resolution" />
+                    <p class="sequence-status" id="resolutionGridStatus" role="status" aria-live="polite">100% uses the automatic grid size.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="autoQualityToggle">
+                        <input class="ui-switch__control" type="checkbox" id="autoQualityToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Auto-adjust for 60fps</span>
+                    </label>
+                    <p class="sequence-status">Eases grid resolution, then render quality, down under sustained frame-time pressure and back up when there's headroom — never past the Render quality / Grid resolution set above.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="renderer">Rendering backend</label>
+                    <select id="renderer">
+                        <option value="auto" selected>Auto — WebGPU preferred</option>
+                        <option value="webgl2">GPU — WebGL2</option>
+                        <option value="webgpu">Experimental GPU — WebGPU</option>
+                        <option value="canvas2d">CPU — Canvas 2D</option>
+                    </select>
+                    <p class="sequence-status" id="rendererStatus" role="status" aria-live="polite">WebGPU preferred, then WebGL2 and Canvas 2D fallback.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="extendedStatsToggle">
+                        <input class="ui-switch__control" type="checkbox" id="extendedStatsToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Extended diagnostics</span>
+                    </label>
+                    <p class="sequence-status">Adds estimated display cadence, CPU frame work, batch fill history, renderer details, and active 3D geometry counts. Sampling runs only while FPS and extended diagnostics are enabled.</p>
+                </div>
+            </div>
+
+            <!-- Sequence -->
+            <button class="ctrl-pill" id="sequenceTriggerBtn" type="button" title="Build and play an animation sequence"
+                    popovertarget="pop-sequence" aria-expanded="false" aria-controls="pop-sequence">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14"/><path d="M5 12h14"/><path d="M5 18h14"/><path d="M2 6h.01"/><path d="M2 12h.01"/><path d="M2 18h.01"/></svg>
+                <span>Sequence</span>
+                <span class="ctrl-pill__status" id="sequenceToolbarStatus">off</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-sequence" popover>
+                <section class="cpop-group" aria-labelledby="sequenceEditorLabel">
+                    <div class="sequence-toolbar">
+                        <span class="cpop-label" id="sequenceEditorLabel">Animation sequence</span>
+                        <div class="sequence-step__actions">
+                            <button class="mode-btn" id="addSequenceStepBtn" type="button">Add animation</button>
+                            <button class="mode-btn" id="playSequenceBtn" type="button" disabled>Play</button>
+                            <button class="mode-btn" id="stopSequenceBtn" type="button" disabled>Stop</button>
+                        </div>
+                    </div>
+                    <label class="ui-switch" for="sequenceLoopToggle">
+                        <input class="ui-switch__control" type="checkbox" id="sequenceLoopToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Repeat sequence</span>
+                    </label>
+                    <p class="sequence-status" id="sequenceStatus" role="status" aria-live="polite">Add an animation to begin.</p>
+                    <ol class="sequence-list" id="sequenceList" aria-label="Animation sequence nodes in playback order"></ol>
+                </section>
+                <section class="cpop-group">
+                    <span class="cpop-label">Callbacks</span>
+                    <p class="sequence-status">Step callbacks and sequence lifecycle events are emitted at runtime and included in the generated code example.</p>
+                </section>
+            </div>
+
+            <!-- Layers -->
+            <button class="ctrl-pill" id="layersTriggerBtn" type="button" title="Composite multiple modes in one canvas"
+                    popovertarget="pop-layers" aria-expanded="false" aria-controls="pop-layers">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+                <span>Layers</span>
+                <span class="ctrl-pill__status" id="layersToolbarStatus">off</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-layers" popover>
+                <section class="cpop-group" aria-labelledby="layerEditorLabel">
+                    <div class="sequence-toolbar">
+                        <span class="cpop-label" id="layerEditorLabel">Layer stack</span>
+                        <div class="sequence-step__actions">
+                            <button class="mode-btn" id="addLayerBtn" type="button">Add layer</button>
+                        </div>
+                    </div>
+                    <p class="sequence-status" id="layerStatus" role="status" aria-live="polite">Add a layer to composite it over the active mode.</p>
+                    <ol class="sequence-list" id="layerList" aria-label="Composited layers in paint order, bottom to top"></ol>
+                </section>
+                <section class="cpop-group">
+                    <span class="cpop-label">About layers</span>
+                    <p class="sequence-status">Each layer runs its own mode and paints in order (first = bottom) using the toolbar's global settings, blended by opacity and blend mode. A layer's option overrides (JSON) apply only during that layer's own draw pass, then revert &mdash; use them to give one layer its own charSet, speed, color, density, and similar fields without changing the others.</p>
+                </section>
+            </div>
+
+            <!-- Mode -->
+            <button class="ctrl-pill" id="modeTriggerBtn" type="button" title="Choose animation mode"
+                    popovertarget="pop-mode" aria-expanded="false" aria-controls="pop-mode">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <span>Mode</span>
+                <span class="ctrl-pill__status" id="modeToolbarStatus">wave</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--grid" id="pop-mode" popover>
+                <div class="cpop-group">
+                    <span class="cpop-label" id="modeLabel">Animation mode</span>
+                    <div class="btn-row btn-row-grid" id="modeButtons" role="group" aria-labelledby="modeLabel"></div>
+                </div>
+            </div>
+
+            <!-- Character set -->
+            <button class="ctrl-pill" id="charsetTriggerBtn" type="button" title="Choose the glyph palette"
+                    popovertarget="pop-chars" aria-expanded="false" aria-controls="pop-chars">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                <span>Charset</span>
+                <span class="ctrl-pill__status" id="charsetToolbarStatus">extended</span>
+            </button>
+            <div class="ctrl-popover" id="pop-chars" popover>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="charSet">Character set</label>
+                    <select id="charSet">
+                        <option value="density">Density ramp</option>
+                        <option value="ascii">ASCII printable (95)</option>
+                        <option value="asciiExtended" selected>ASCII + extended Latin-1 (190)</option>
+                        <option value="extended">Extended photographic</option>
+                        <option value="alphanumeric">Alphanumeric</option>
+                        <option value="uppercase">Uppercase</option>
+                        <option value="lowercase">Lowercase</option>
+                        <option value="symbols">ASCII symbols</option>
+                        <option value="boxDrawing">Box drawing</option>
+                        <option value="arrows">Arrows</option>
+                        <option value="math">Mathematical symbols</option>
+                        <option value="blocks">Blocks</option>
+                        <option value="minimal">Minimal density</option>
+                        <option value="technical">Technical density</option>
+                        <option value="geometric">Geometric forms</option>
+                        <option value="circuit">Circuit notation</option>
+                        <option value="waves">Wave marks</option>
+                        <option value="terminal">Terminal operators</option>
+                        <option value="binary">Binary</option>
+                        <option value="braille">Braille</option>
+                        <option value="punctuation">Punctuation</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="custom">Custom character set</option>
+                    </select>
+                </div>
+                <div class="cpop-group" id="customCharSetGroup" hidden>
+                    <label class="cpop-label" for="customCharSet">Custom characters</label>
+                    <textarea class="custom-charset-input" id="customCharSet" maxlength="512" spellcheck="false" placeholder="Enter characters from darkest to brightest"></textarea>
+                    <small id="customCharSetStatus">At least two distinct characters are required.</small>
+                </div>
+            </div>
+
+            <!-- Motion -->
+            <button class="ctrl-pill" id="motionTriggerBtn" type="button" title="Adjust motion and reveal behavior"
+                    popovertarget="pop-motion" aria-expanded="false" aria-controls="pop-motion">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3"/><path d="M18.5 5.5l-2.12 2.12"/><path d="M21 12h-3"/><path d="M18.5 18.5l-2.12-2.12"/><path d="M12 21v-3"/><path d="M5.5 18.5l2.12-2.12"/><path d="M3 12h3"/><path d="M5.5 5.5l2.12 2.12"/></svg>
+                <span>Motion</span>
+                <span class="ctrl-pill__status" id="motionToolbarStatus">1.0×</span>
+            </button>
+            <div class="ctrl-popover" id="pop-motion" popover>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="speed">Speed <span class="val" id="speedVal">1.0</span></label>
+                    <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1" />
+                </div>
+                <div class="cpop-group" id="revealDirectionGroup" hidden>
+                    <label class="cpop-label" for="revealDirection">Reveal direction</label>
+                    <select id="revealDirection">
+                        <option value="left-to-right">Left to right</option>
+                        <option value="right-to-left">Right to left</option>
+                        <option value="top-to-bottom">Top to bottom</option>
+                        <option value="bottom-to-top">Bottom to top</option>
+                        <option value="diagonal">Diagonal</option>
+                        <option value="center">Center out</option>
+                        <option value="edges">Edges inward</option>
+                    </select>
+                    <label class="cpop-label row" for="sweepDuration" style="margin-top:var(--space-xs)">Sweep duration <span class="val" id="sweepDurationVal">1.5s</span></label>
+                    <input type="range" id="sweepDuration" min="0.2" max="5.0" step="0.1" value="1.5" />
+                    <label class="cpop-label" for="delayCurve" style="margin-top:var(--space-xs)">Delay curve</label>
+                    <select id="delayCurve">
+                        <option value="linear">Linear</option>
+                        <option value="easeIn">Ease In</option>
+                        <option value="easeOut">Ease Out</option>
+                        <option value="easeInOut">Ease In Out</option>
+                        <option value="stagger">Stagger</option>
+                    </select>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="edgeFade">Edge fade <span class="val" id="edgeFadeVal">0%</span></label>
+                    <input type="range" id="edgeFade" min="0" max="1" step="0.01" value="0" />
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="trail">Trail persistence <span class="val" id="trailVal">0.00</span></label>
+                    <input type="range" id="trail" min="0" max="0.95" step="0.01" value="0" />
+                    <label class="cpop-label" for="trailColor" style="margin-top:var(--space-xs)">Trail decay color</label>
+                    <input type="color" id="trailColor" value="#070809" style="width:100%;height:32px;border:1px solid var(--clr-border);border-radius:4px;background:var(--clr-surface);cursor:pointer;" />
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="pulse">Pulse <span class="val" id="pulseVal">0.00</span></label>
+                    <input type="range" id="pulse" min="0" max="0.8" step="0.05" value="0" />
+                </div>
+                <div class="cpop-group" id="interactionControlsGroup" hidden>
+                    <label class="cpop-label row" for="interactionRadius">Interaction radius <span class="val" id="interactionRadiusVal">180px</span></label>
+                    <input type="range" id="interactionRadius" min="40" max="480" step="10" value="180" data-aria-label="Interaction radius" />
+                    <label class="cpop-label row" for="interactionDuration">Click duration <span class="val" id="interactionDurationVal">1.10s</span></label>
+                    <input type="range" id="interactionDuration" min="0.1" max="4" step="0.05" value="1.1" data-aria-label="Click duration" />
+                </div>
+            </div>
+
+            <!-- Spatial alignment -->
+            <button class="ctrl-pill" id="alignTriggerBtn" type="button" title="Choose the spatial origin"
+                    popovertarget="pop-align" aria-expanded="false" aria-controls="pop-align">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/><circle cx="12" cy="12" r="2"/></svg>
+                <span>Align</span>
+                <span class="ctrl-pill__status" id="alignToolbarStatus">center</span>
+            </button>
+            <div class="ctrl-popover" id="pop-align" popover>
+                <div class="cpop-group">
+                    <span class="cpop-label" id="alignLabel">Spatial origin</span>
+                    <div class="spatial-origin-grid" id="toolbarAlignGrid" role="group" aria-labelledby="alignLabel">
+                        <button type="button" class="spatial-btn" data-align="top-left" aria-pressed="false">Top Left</button>
+                        <button type="button" class="spatial-btn" data-align="top" aria-pressed="false">Top</button>
+                        <button type="button" class="spatial-btn" data-align="top-right" aria-pressed="false">Top Right</button>
+                        <button type="button" class="spatial-btn" data-align="left" aria-pressed="false">Left</button>
+                        <button type="button" class="spatial-btn" data-align="center" aria-pressed="true">Center</button>
+                        <button type="button" class="spatial-btn" data-align="right" aria-pressed="false">Right</button>
+                        <button type="button" class="spatial-btn" data-align="bottom-left" aria-pressed="false">Bottom Left</button>
+                        <button type="button" class="spatial-btn" data-align="bottom" aria-pressed="false">Bottom</button>
+                        <button type="button" class="spatial-btn" data-align="bottom-right" aria-pressed="false">Bottom Right</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Color -->
+            <button class="ctrl-pill" id="colorTriggerBtn" type="button" title="Adjust color treatment"
+                    popovertarget="pop-color" aria-expanded="false" aria-controls="pop-color">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.46-1.16-.27-.32-.44-.72-.44-1.16 0-.92.75-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg>
+                <span>Color</span>
+                <span class="ctrl-pill__status" id="colorToolbarStatus">solid</span>
+            </button>
+            <div class="ctrl-popover" id="pop-color" popover>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="colorMode">Color mode</label>
+                    <select id="colorMode">
+                        <option value="solid">Solid</option>
+                        <option value="gradient">Gradient</option>
+                        <option value="hueRotate">Animated hue</option>
+                        <option value="breathe">Animated blend</option>
+                    </select>
+                </div>
+                <div class="cpop-group" id="colorSolidRow">
+                    <label class="cpop-label">Colour</label>
+                    <input type="color" id="color" value="#4fa8ff" aria-label="Solid colour" />
+                </div>
+                <div class="cpop-group" id="colorGradRow" style="display:none">
+                    <label class="cpop-label">Gradient stop colors</label>
+                    <div class="grad-stops-grid" id="gradStopsContainer">
+                        <input type="color" class="grad-stop-input" id="gradStop_0" value="#4fa8ff" aria-label="Gradient stop 1" />
+                        <input type="color" class="grad-stop-input" id="gradStop_1" value="#c04fff" aria-label="Gradient stop 2" />
+                    </div>
+                </div>
+                <div class="cpop-group" id="gradOptionsRow" style="display:none">
+                    <div class="two-col">
+                        <select id="gradType" aria-label="gradient type">
+                            <option value="linear">Linear</option>
+                            <option value="radial">Radial</option>
+                            <option value="cubic">Cubic blend</option>
+                        </select>
+                        <select id="gradSteps" aria-label="gradient steps">
+                            <option value="1">1 step</option>
+                            <option value="2" selected>2 steps</option>
+                            <option value="3">3 steps</option>
+                            <option value="4">4 steps</option>
+                            <option value="5">5 steps</option>
+                            <option value="6">6 steps</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chk" id="gradAnimateRow" style="display:none">
+                    <input type="checkbox" id="gradAnimate" /><label for="gradAnimate" style="margin:0">Animate angle</label>
+                    <button class="mode-btn" id="flipGradientBtn" type="button" title="Reverse the gradient stop order">Flip direction</button>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="cursorToggle">
+                        <input class="ui-switch__control" type="checkbox" id="cursorToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Cursor glow</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Backdrop -->
+            <button class="ctrl-pill" id="backdropTriggerBtn" type="button" title="Configure the background layer"
+                    popovertarget="pop-backdrop" aria-expanded="false" aria-controls="pop-backdrop">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>
+                <span>Backdrop</span>
+                <span class="ctrl-pill__status" id="backdropToolbarStatus">off</span>
+            </button>
+            <div class="ctrl-popover" id="pop-backdrop" popover>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="backdropEnable">
+                        <input class="ui-switch__control" type="checkbox" id="backdropEnable" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Backdrop layer</span>
+                    </label>
+                </div>
+                <div id="backdropControlsGroup" style="display:none">
+                    <div class="cpop-group">
+                        <label class="cpop-label" for="backdropPlacement">Layer placement</label>
+                        <select id="backdropPlacement">
+                            <option value="behind" selected>Behind glyphs</option>
+                            <option value="over">Over glyphs</option>
+                        </select>
+                        <small>Over glyphs at opacity 1 fully covers the animation.</small>
+                    </div>
+                    <div class="cpop-group">
+                        <label class="cpop-label row" for="backdropOpacity">Backdrop opacity <span class="val" id="backdropOpacityVal">0.50</span></label>
+                        <div class="opacity-control">
+                            <input type="range" id="backdropOpacity" min="0" max="1" step="0.01" value="0.5" data-aria-label="Backdrop opacity" />
+                            <input type="number" id="backdropOpacityNumber" min="0" max="1" step="0.01" value="0.50" inputmode="decimal" aria-label="Exact backdrop opacity from zero to one" />
+                        </div>
+                    </div>
+                    <div class="cpop-group">
+                        <div class="two-col" style="align-items:center">
+                            <div>
+                                <label class="cpop-label" for="backdropColor">Color</label>
+                                <input type="color" id="backdropColor" value="#0a0c10" aria-label="Backdrop color" />
+                            </div>
+                            <div>
+                                <label class="cpop-label" for="backdropGradType">Gradient</label>
+                                <select id="backdropGradType">
+                                    <option value="none">Solid</option>
+                                    <option value="linear">Linear</option>
+                                    <option value="radial">Radial</option>
+                                    <option value="cubic">Cubic blend</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cpop-group" id="backdropGradColorsRow" style="display:none">
+                        <label class="cpop-label">Backdrop gradient stops</label>
+                        <div class="two-col">
+                            <select id="backdropGradSteps" aria-label="Backdrop gradient stops">
+                                <option value="1">1 stop</option>
+                                <option value="2" selected>2 stops</option>
+                                <option value="3">3 stops</option>
+                                <option value="4">4 stops</option>
+                                <option value="5">5 stops</option>
+                                <option value="6">6 stops</option>
+                            </select>
+                            <label class="cpop-label row" for="backdropAngle">Angle <span class="val" id="backdropAngleVal">45°</span></label>
+                        </div>
+                        <input type="range" id="backdropAngle" min="0" max="360" step="5" value="45" />
+                        <div class="grad-stops-grid" id="backdropStopsContainer">
+                            <input type="color" class="backdrop-stop-input" id="backdropStop_0" value="#0a0c10" aria-label="Backdrop stop 1" />
+                            <input type="color" class="backdrop-stop-input" id="backdropStop_1" value="#1a233a" aria-label="Backdrop stop 2" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <span class="ctrl-bar__separator" aria-hidden="true"></span>
+
+            <!-- Advanced / secondary controls -->
+            <button class="ctrl-pill" id="moreTriggerBtn" type="button" title="Open advanced and workspace controls"
+                    popovertarget="pop-more" aria-expanded="false" aria-controls="pop-more">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>
+                <span>Advanced</span>
+            </button>
+            <div class="ctrl-popover" id="pop-more" popover>
+                <section class="cpop-group" aria-labelledby="moreWorkspaceLabel">
+                    <span class="cpop-label" id="moreWorkspaceLabel">Workspace</span>
+                    <div class="ctrl-more__actions" id="moreWorkspaceActions"></div>
+                </section>
+                <div class="ctrl-more__popovers" id="moreNestedPopovers"></div>
+            </div>
+
+            <!-- Theme -->
+            <button class="ctrl-pill ctrl-pill--utility" id="themeToggleBtn" type="button" aria-label="Toggle dark or light theme" title="Toggle dark or light theme">
+                <svg id="themeIconSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg id="themeIconMoon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <span id="themeText">Theme</span>
+            </button>
+
+            <!-- Reset -->
+            <button class="ctrl-pill ctrl-pill--utility" id="resetSettingsBtn" type="button" title="Restore demo defaults">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg>
+                <span>Reset</span>
+            </button>
+
+            <!-- History -->
+            <button class="ctrl-pill ctrl-pill--utility" id="undoSettingsBtn" type="button" aria-label="Undo last settings change" title="Undo last settings change" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M20 17a7 7 0 0 0-7-7H4"/></svg>
+                <span>Undo</span>
+            </button>
+            <button class="ctrl-pill ctrl-pill--utility" id="redoSettingsBtn" type="button" aria-label="Redo settings change" title="Redo settings change" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5"/><path d="M4 17a7 7 0 0 1 7-7h9"/></svg>
+                <span>Redo</span>
+            </button>
+
+            <!-- About / Welcome Splash Modal -->
+            <div class="ctrl-popover ctrl-popover--fullscreen" id="pop-about" popover="auto">
+                <div class="about-sticky-bar">
+                    <div class="about-brand">
+                        <img class="brand-icon" src="./assets/branding/asciiam-logo.svg" width="512" height="512" alt="" aria-hidden="true" />
+                        <span class="about-badge">staticcanvas /// asciiam</span>
+                        <span class="npm-ver-badge" style="margin-left:8px" data-package-version>v0.10.0</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <button class="about-cta-btn" popovertarget="pop-about" popovertargetaction="hide">
+                            Explore Canvas
+                        </button>
+                        <button class="about-close-btn" popovertarget="pop-about" popovertargetaction="hide" aria-label="Close about overlay">
+                            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="about-container">
+                    <div class="about-hero">
+                        <h1 class="about-hero-title">ASCII media renderer</h1>
+                        <p class="about-hero-subtitle">
+                            Dependency-free renderer for procedural ASCII animation, sampled images, and 3D meshes. The default renderer requests WebGL2 and falls back to Canvas 2D. Running instances share one frame scheduler and pause when off-screen where browser observers are available.
+                        </p>
+
+                        <div class="npm-install-bar" style="margin-block-start:var(--space-sm);max-inline-size:540px">
+                            <div class="npm-install-cmd">
+                                <span class="npm-prompt">$</span>
+                                <code>npm install @staticcanvas/asciiam</code>
+                                <span class="npm-ver-badge">npm</span>
+                            </div>
+                            <button class="npm-copy-btn" id="copySourceCommandAbout" type="button" aria-label="Copy npm install command">
+                                <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>copy</span>
+                            </button>
+                            <a href="https://gitlab.com/staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View source repository">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0H0zm19.2 19.2H12v-9.6H9.6v9.6H4.8V4.8h14.4v14.4z"/></svg>
+                            </a>
+                        </div>
+                        <nav class="about-resource-nav" aria-label="asciiam documentation resources">
+                            <a href="../">Documentation</a>
+                            <a href="../gallery/">Preset gallery</a>
+                            <a href="../api/">API reference</a>
+                            <a href="../changelog/">Changelog</a>
+                        </nav>
+                    </div>
+
+                    <section class="about-overview" aria-labelledby="aboutOverviewTitle">
+                        <h2 class="about-section-heading" id="aboutOverviewTitle">Product overview</h2>
+                        <div class="about-reference-grid">
+                            <article class="about-reference-card">
+                                <h3>GPU-first renderer</h3>
+                                <p>WebGL2 batches glyph instances when available. Canvas 2D remains the explicit CPU renderer and automatic fallback.</p>
+                            </article>
+                            <article class="about-reference-card">
+                                <h3>ASCII media & compositions</h3>
+                                <p>Procedural fields, sampled images, and 3D meshes render as glyph grids for backgrounds, bounded hero cards, and splash compositions. Images and 3D meshes can be combined into textured 3D ASCII compositions.</p>
+                            </article>
+                            <article class="about-reference-card">
+                                <h3>Lifecycle</h3>
+                                <p>Instances share frame scheduling, pause when hidden or off-screen, and expose cleanup through <code>destroy()</code>.</p>
+                            </article>
+                        </div>
+                    </section>
+
+                    <section class="about-docs-callout" aria-labelledby="aboutDocsTitle">
+                        <p class="about-docs-kicker">Documentation</p>
+                        <h2 id="aboutDocsTitle">Configuration and runtime reference</h2>
+                        <p>
+                            Use the web utility to create and preview a configuration. Use the documentation for installation,
+                            renderer behavior, image sampling, animation sequences, persistence, and the API reference.
+                        </p>
+                        <div class="about-docs-actions">
+                            <a class="about-cta-btn" href="../">Open documentation</a>
+                            <a href="../guides/web-utility/">Web utility guide</a>
+                            <a href="../gallery/">Preset gallery</a>
+                            <a href="../api/">API reference</a>
+                        </div>
+                    </section>
+
+                    <footer class="about-footer">
+                        <button class="about-cta-btn" popovertarget="pop-about" popovertargetaction="hide">
+                            Continue to canvas
+                        </button>
+                        <span class="about-version">asciiam <span data-package-version>v0.26.0</span> · MIT License · staticcanvas</span>
+                    </footer>
+                </div>
+            </div>
+
+            <span class="ctrl-bar__separator" aria-hidden="true"></span>
+
+            <!-- Image -->
+            <button class="ctrl-pill ctrl-pill--media" id="imageTriggerBtn" type="button" title="Upload or choose an included image"
+                    popovertarget="pop-image" aria-expanded="false" aria-controls="pop-image">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span>Image</span>
+                <span class="ctrl-pill__status" id="imageToolbarStatus">none</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-image" popover>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="imageEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="imageEnabledToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable image layer</strong></span>
+                    </label>
+                    <label class="cpop-label" for="imageInput" style="margin-block-start:var(--space-xs)">Upload image</label>
+                    <input type="file" id="imageInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/avif" />
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="imageScale">Image scale <span class="val" id="imageScaleVal">1.00×</span></label>
+                    <input type="range" id="imageScale" min="0.5" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="imageScaleX" style="margin-top:var(--space-xs)">Horizontal scale <span class="val" id="imageScaleXVal">1.00×</span></label>
+                    <input type="range" id="imageScaleX" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="imageScaleY" style="margin-top:var(--space-xs)">Vertical scale <span class="val" id="imageScaleYVal">1.00×</span></label>
+                    <input type="range" id="imageScaleY" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="imageFov" style="margin-top:var(--space-xs)">Image FOV <span class="val" id="imageFovVal">100%</span></label>
+                    <input type="range" id="imageFov" min="0.25" max="1" step="0.05" value="1" />
+                    <label class="cpop-label" for="imageLuminance" style="margin-top:var(--space-xs)">Luminance mapping</label>
+                    <select id="imageLuminance">
+                        <option value="auto" selected>Auto (silhouette aware)</option>
+                        <option value="normal">Normal</option>
+                        <option value="invert">Invert</option>
+                    </select>
+                    <label class="cpop-label row" for="imageRotation" style="margin-top:var(--space-xs)">Rotation <span class="val" id="imageRotationVal">0°</span></label>
+                    <input type="range" id="imageRotation" min="-180" max="180" step="1" value="0" />
+                    <div class="btn-row">
+                        <button class="mode-btn" id="imageRotateLeftBtn" type="button">Rotate −90°</button>
+                        <button class="mode-btn" id="imageRotateRightBtn" type="button">Rotate +90°</button>
+                    </div>
+                    <label class="ui-switch" for="imageFlipXToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="imageFlipXToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Flip horizontally</span>
+                    </label>
+                    <label class="ui-switch" for="imageFlipYToggle">
+                        <input class="ui-switch__control" type="checkbox" id="imageFlipYToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Flip vertically</span>
+                    </label>
+                </div>
+                <div class="cpop-group">
+                    <p class="image-library-help">The global Mode control animates the sampled image. Images and 3D meshes can be used together in compositions; when "Color from image" is checked, active 3D mesh geometry samples colors from the loaded image.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="animateImageFramesToggle">
+                        <input class="ui-switch__control" type="checkbox" id="animateImageFramesToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Play animated image frames</span>
+                    </label>
+                    <label class="cpop-label row" for="imageFrameRate" style="margin-top:var(--space-xs)">GIF fallback rate <span class="val" id="imageFrameRateVal">12 fps</span></label>
+                    <input type="range" id="imageFrameRate" min="1" max="30" step="1" value="12" />
+                    <p class="image-library-help" style="margin-block-start:var(--space-xs);text-align:start">Fallback browser-timed GIF sampling uses this rate. Exact decoded GIFs keep their own frame delays; renderer FPS is independent.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="colorFromImageToggle">
+                        <input class="ui-switch__control" type="checkbox" id="colorFromImageToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Color from image</span>
+                    </label>
+                    <label class="cpop-label row" for="imageBrightness" style="margin-top:var(--space-xs)">Image brightness <span class="val" id="imageBrightnessVal">1.00×</span></label>
+                    <input type="range" id="imageBrightness" min="0" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="imageContrast" style="margin-top:var(--space-xs)">Image contrast <span class="val" id="imageContrastVal">1.00×</span></label>
+                    <input type="range" id="imageContrast" min="0" max="3" step="0.05" value="1" />
+                    <label class="ui-switch" for="animateImageMaskToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="animateImageMaskToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Animate image mask sweep (legacy mode: image)</span>
+                    </label>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="imageColorRangeToggle">
+                        <input class="ui-switch__control" type="checkbox" id="imageColorRangeToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Animate selected color range only</span>
+                    </label>
+                    <div id="imageColorRangeControls" hidden>
+                        <div class="grad-stops-grid" style="margin-block-start:var(--space-sm)">
+                            <label class="cpop-label" for="imageColorRangeMin">Range minimum
+                                <input type="color" id="imageColorRangeMin" value="#000000" />
+                            </label>
+                            <label class="cpop-label" for="imageColorRangeMax">Range maximum
+                                <input type="color" id="imageColorRangeMax" value="#ffffff" />
+                            </label>
+                        </div>
+                        <p class="image-library-help" style="margin-block-start:var(--space-xs);text-align:start">Each sampled red, green, and blue channel must fall between these bounds. Other ASCII cells remain static.</p>
+                    </div>
+                </div>
+                <div class="cpop-group cpop-browser">
+                    <div class="image-browser-head">
+                        <span class="cpop-label">Included defaults</span>
+                        <span class="image-library-help">Select an included image to load it into the canvas and generated code.</span>
+                    </div>
+                    <p class="image-status" id="imageStatus" role="status" aria-live="polite">Loading included images…</p>
+                    <section class="image-section" id="localImageSection" hidden>
+                        <h2 class="image-section-title">Available images</h2>
+                        <div class="image-grid" id="localImages"></div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- 3D -->
+            <button class="ctrl-pill ctrl-pill--media" id="meshTriggerBtn" type="button" title="Choose a 3D primitive or load a model"
+                    popovertarget="pop-mesh" aria-expanded="false" aria-controls="pop-mesh">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 7 9 5 9-5"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+                <span>3D</span>
+                <span class="ctrl-pill__status" id="meshToolbarStatus">none</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-mesh" popover>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="meshEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="meshEnabledToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable 3D mesh layer</strong></span>
+                    </label>
+                    <span class="cpop-label" style="margin-block-start:var(--space-xs)">3D mesh source</span>
+                    <label class="cpop-label" for="meshPrimitive">Procedural primitive</label>
+                    <select id="meshPrimitive">
+                        <option value="">None</option>
+                        <option value="cube">Cube</option>
+                        <option value="plane">Plane</option>
+                        <option value="icosphere">Icosphere</option>
+                        <option value="torus">Torus</option>
+                    </select>
+                    <label class="cpop-label" for="modelInput" style="margin-block-start:var(--space-xs)">Upload self-contained GLB v2</label>
+                    <input type="file" id="modelInput" accept=".glb,model/gltf-binary" />
+                    <label class="cpop-label" for="modelUrl" style="margin-block-start:var(--space-xs)">Remote glTF or GLB URL</label>
+                    <input type="url" id="modelUrl" inputmode="url" autocomplete="url" placeholder="https://example.com/model.gltf" />
+                    <button class="mode-btn" id="loadModelUrlBtn" type="button" style="margin-block-start:var(--space-xs)">Load remote model</button>
+                    <label class="cpop-label" for="meshStyle" style="margin-block-start:var(--space-xs)">Raster style</label>
+                    <select id="meshStyle">
+                        <option value="points">Points</option>
+                        <option value="wireframe" selected>Wireframe</option>
+                        <option value="solid">Solid</option>
+                    </select>
+                    <p class="image-status" id="modelStatus" role="status" aria-live="polite">No model loaded.</p>
+                    <p class="image-library-help">Local upload accepts GLB because it contains its buffers. A remote .gltf URL may reference sibling .bin files; the server must permit cross-origin requests. <strong>Combining media:</strong> 3D meshes and background images can be used together; when "Color from image" is enabled, active 3D mesh geometry samples colors directly from the loaded image.</p>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label row" for="meshScale">Uniform scale <span class="val" id="meshScaleVal">1.00×</span></label>
+                    <input type="range" id="meshScale" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="meshScaleX" style="margin-block-start:var(--space-xs)">Width (X) <span class="val" id="meshScaleXVal">1.00×</span></label>
+                    <input type="range" id="meshScaleX" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="meshScaleY" style="margin-block-start:var(--space-xs)">Height (Y) <span class="val" id="meshScaleYVal">1.00×</span></label>
+                    <input type="range" id="meshScaleY" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="meshScaleZ" style="margin-block-start:var(--space-xs)">Depth (Z) <span class="val" id="meshScaleZVal">1.00×</span></label>
+                    <input type="range" id="meshScaleZ" min="0.25" max="3" step="0.05" value="1" />
+                    <label class="cpop-label row" for="meshFov" style="margin-block-start:var(--space-xs)">Camera FOV <span class="val" id="meshFovVal">60°</span></label>
+                    <input type="range" id="meshFov" min="20" max="120" step="1" value="60" />
+                </div>
+                <div class="cpop-group">
+                    <span class="cpop-label">Mesh manual orientation</span>
+                    <label class="cpop-label row" for="meshRotationX">Pitch (X) <span class="val" id="meshRotationXVal">0°</span></label>
+                    <input type="range" id="meshRotationX" min="-180" max="180" step="1" value="0" />
+                    <label class="cpop-label row" for="meshRotationY" style="margin-block-start:var(--space-xs)">Yaw (Y) <span class="val" id="meshRotationYVal">0°</span></label>
+                    <input type="range" id="meshRotationY" min="-180" max="180" step="1" value="0" />
+                    <label class="cpop-label row" for="meshRotationZ" style="margin-block-start:var(--space-xs)">Roll (Z) <span class="val" id="meshRotationZVal">0°</span></label>
+                    <input type="range" id="meshRotationZ" min="-180" max="180" step="1" value="0" />
+                    <div class="btn-row">
+                        <button class="mode-btn" id="meshRotateLeftBtn" type="button">Y −90°</button>
+                        <button class="mode-btn" id="meshRotateRightBtn" type="button">Y +90°</button>
+                        <button class="mode-btn" id="meshRotateUpBtn" type="button">X −90°</button>
+                        <button class="mode-btn" id="meshRotateDownBtn" type="button">X +90°</button>
+                        <button class="mode-btn" id="meshRotateResetBtn" type="button">Reset</button>
+                    </div>
+                    <span class="cpop-label" style="margin-block-start:var(--space-sm)">Mirror axes</span>
+                    <div class="btn-row">
+                        <button class="mode-btn" id="meshFlipXBtn" type="button" aria-pressed="false">Flip X</button>
+                        <button class="mode-btn" id="meshFlipYBtn" type="button" aria-pressed="false">Flip Y</button>
+                        <button class="mode-btn" id="meshFlipZBtn" type="button" aria-pressed="false">Flip Z</button>
+                    </div>
+                </div>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="meshAutoRotateToggle">
+                        <input class="ui-switch__control" type="checkbox" id="meshAutoRotateToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Auto rotate</span>
+                    </label>
+                    <label class="cpop-label row" for="meshRotationSpeedY" style="margin-block-start:var(--space-xs)">Horizontal speed (Y) <span class="val" id="meshRotationSpeedYVal">0.45 rad/s</span></label>
+                    <input type="range" id="meshRotationSpeedY" min="-2" max="2" step="0.05" value="0.45" />
+                    <label class="cpop-label row" for="meshRotationSpeedX" style="margin-block-start:var(--space-xs)">Vertical speed (X) <span class="val" id="meshRotationSpeedXVal">0.20 rad/s</span></label>
+                    <input type="range" id="meshRotationSpeedX" min="-2" max="2" step="0.05" value="0.20" />
+                    <label class="cpop-label row" for="meshRotationSpeedZ" style="margin-block-start:var(--space-xs)">Roll speed (Z) <span class="val" id="meshRotationSpeedZVal">0.10 rad/s</span></label>
+                    <input type="range" id="meshRotationSpeedZ" min="-2" max="2" step="0.05" value="0.10" />
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <button class="ctrl-pill ctrl-pill--media" id="chartTriggerBtn" type="button" title="Data chart configuration and series input"
+                    popovertarget="pop-chart" aria-expanded="false" aria-controls="pop-chart">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Chart</span>
+                <span class="ctrl-pill__status" id="chartToolbarStatus">none</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-chart" popover>
+                <div class="cpop-group">
+                    <label class="ui-switch" for="chartEnabledToggle">
+                        <input class="ui-switch__control" type="checkbox" id="chartEnabledToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label"><strong>Enable chart layer</strong></span>
+                    </label>
+                    <span class="cpop-label" style="margin-block-start:var(--space-xs)">Chart configuration</span>
+                    <label class="cpop-label" for="chartType">Chart type</label>
+                    <select id="chartType">
+                        <option value="bar" selected>Bar (Vertical)</option>
+                        <option value="horizontalBar">Horizontal Bar</option>
+                        <option value="line">Line Graph</option>
+                        <option value="sparkline">Sparkline</option>
+                        <option value="heatmap">Heatmap Matrix</option>
+                        <option value="donut">Donut Ring</option>
+                    </select>
+                    <label class="cpop-label" for="chartTitle" style="margin-block-start:var(--space-xs)">Chart header title</label>
+                    <input class="code-export__textarea" type="text" id="chartTitle" value="System Metrics" style="height:34px;" />
+                    <label class="cpop-label" for="chartData" style="margin-block-start:var(--space-xs)">Series data (comma separated)</label>
+                    <textarea class="custom-charset-input" id="chartData" spellcheck="false" rows="3" placeholder="e.g. 15, 32, 48, 72, 95, 60, 84">15, 32, 48, 72, 95, 60, 84</textarea>
+                    <label class="cpop-label" for="chartLabels" style="margin-block-start:var(--space-xs)">Series labels (comma separated, optional)</label>
+                    <input class="code-export__textarea" type="text" id="chartLabels" placeholder="e.g. Jan, Feb, Mar, Apr" style="height:34px;" />
+                </div>
+                <div class="cpop-group">
+                    <span class="cpop-label">Scale &amp; display</span>
+                    <div class="btn-row" style="gap:10px;align-items:center;">
+                        <div style="flex:1">
+                            <label class="cpop-label" for="chartScaleMin" style="margin-block-start:0">Y-axis min</label>
+                            <input class="code-export__textarea" type="number" id="chartScaleMin" placeholder="auto (0)" style="height:32px;width:100%;" />
+                        </div>
+                        <div style="flex:1">
+                            <label class="cpop-label" for="chartScaleMax" style="margin-block-start:0">Y-axis max</label>
+                            <input class="code-export__textarea" type="number" id="chartScaleMax" placeholder="auto (max)" style="height:32px;width:100%;" />
+                        </div>
+                    </div>
+                    <label class="ui-switch" for="chartShowValuesToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartShowValuesToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Show data value labels</span>
+                    </label>
+                    <label class="ui-switch" for="chartShowAxesToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartShowAxesToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Show chart axes &amp; scale labels</span>
+                    </label>
+                    <label class="ui-switch" for="chartShowLegendToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartShowLegendToggle" role="switch" aria-checked="true" checked />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Show series legend labels</span>
+                    </label>
+                    <label class="ui-switch" for="chartAnimateItemsToggle" style="margin-block-start:var(--space-xs)">
+                        <input class="ui-switch__control" type="checkbox" id="chartAnimateItemsToggle" role="switch" aria-checked="false" />
+                        <span class="ui-switch__track"><span class="ui-switch__thumb"></span></span>
+                        <span class="ui-switch__label">Stagger-reveal per item on entry</span>
+                    </label>
+                </div>
+                <div class="cpop-group">
+                    <label class="cpop-label" for="chartColors">Per-series color palette (space separated hex/named, optional)</label>
+                    <input class="code-export__textarea" type="text" id="chartColors" placeholder="e.g. #00ff99 #ff6633 #33aaff" style="height:34px;" />
+                </div>
+                <div class="cpop-group">
+                    <span class="cpop-label">Quick sample data presets</span>
+                    <div class="btn-row" style="flex-wrap:wrap;gap:6px;">
+                        <button class="mode-btn" id="chartPresetGrowthBtn" type="button">Revenue Growth</button>
+                        <button class="mode-btn" id="chartPresetLoadBtn" type="button">Server Workload</button>
+                        <button class="mode-btn" id="chartPresetTempBtn" type="button">Temperature</button>
+                        <button class="mode-btn" id="chartPresetFinancialBtn" type="button">Stock Trend</button>
+                    </div>
+                </div>
+                <div class="cpop-group">
+                    <p class="image-library-help">Charts render dynamically using ASCII sub-cell block characters with full-column backfill, scale labels, optional legend, and per-item stagger animation. Use <strong>{label, value}</strong> objects in the API for automatic legend support.</p>
+                </div>
+            </div>
+
+            <!-- None -->
+            <button class="ctrl-pill ctrl-pill--media" id="clearMediaBtn" type="button" title="Clear image, 3D model, and chart data sources">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                <span>None</span>
+            </button>
+
+            <!-- Code -->
+            <button class="ctrl-pill ctrl-pill--code ctrl-pill--primary" type="button" title="Copy the current configuration as code"
+                    popovertarget="pop-code" aria-expanded="false" aria-controls="pop-code">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span>Code</span>
+            </button>
+            <div class="ctrl-popover ctrl-popover--wide" id="pop-code" popover>
+                <div class="cpop-group">
+                    <div class="npm-install-bar">
+                        <div class="npm-install-cmd">
+                            <span class="npm-prompt">$</span>
+                            <code>npm install @staticcanvas/asciiam</code>
+                            <span class="npm-ver-badge">npm</span>
+                        </div>
+                        <button class="npm-copy-btn" id="copySourceCommandCode" type="button" aria-label="Copy npm install command">
+                            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>copy</span>
+                        </button>
+                        <a href="https://gitlab.com/staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" class="npm-link-btn" title="View GitLab source repository">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 0 1-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 0 1 5.5 2a.43.43 0 0 1 .39.27L8.1 8.87h7.8l2.21-6.6A.43.43 0 0 1 18.5 2a.42.42 0 0 1 .39.21l2.44 7.51 1.22 3.78a.84.84 0 0 1-.3.94z"/></svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="cpop-group">
+                    <div class="code-window" style="margin:0">
+                        <div class="code-head">
+                            <span class="code-dots"><i></i><i></i><i></i></span>
+                            <div class="code-tab-switch" role="tablist" aria-label="Code format">
+                                <button type="button" class="code-tab-btn active" data-code-tab="js" role="tab" aria-selected="true">app.js</button>
+                                <button type="button" class="code-tab-btn" data-code-tab="json" role="tab" aria-selected="false">options.json</button>
+                            </div>
+                            <button class="copy-btn" id="copyUsagePopover">copy</button>
+                        </div>
+                        <pre><code id="usageCodePopover"></code></pre>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /.ctrl-bar -->
+
+        </main>
+
+        <footer class="site-footer">
+            <div>
+                <p class="footer-brand"><img class="brand-icon" src="./assets/branding/asciiam-logo.svg" width="512" height="512" alt="" aria-hidden="true" />staticcanvas <span>/// asciiam</span></p>
+                <p class="footer-copy">ASCII Background Animator. Released under the <a href="https://opensource.org/license/mit" target="_blank" rel="license noopener noreferrer">MIT License</a>.</p>
+                <p class="performance-policy">Zero runtime dependencies · WebGL2 + Canvas 2D fallback · offscreen auto-pause · reduced-motion aware</p>
+            </div>
+            <div>
+                <p class="footer-copy">Browser-native JavaScript with WebGL2 rendering and Canvas 2D fallback. Images remain local to the utility session.</p>
+                <nav class="footer-resources" aria-label="Technology and resource links">
+                    <a href="https://developer.mozilla.org/docs/Web/API/Canvas_API" target="_blank" rel="noopener noreferrer">Canvas 2D</a>
+                    <a href="https://developer.mozilla.org/docs/Web/API/WebGL_API" target="_blank" rel="noopener noreferrer">WebGL2</a>
+                    <a href="https://developer.mozilla.org/docs/Web/JavaScript" target="_blank" rel="noopener noreferrer">JavaScript</a>
+                    <a href="https://developers.cloudflare.com/pages/" target="_blank" rel="noopener noreferrer">Cloudflare Pages</a>
+                </nav>
+            </div>
+            <nav class="footer-socials" aria-label="Source repositories">
+                <a class="social-link" href="https://gitlab.com/staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" aria-label="asciiam on GitLab">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.6 9.59 20.26.96a.84.84 0 0 0-1.6.05l-2.26 6.93H7.6L5.34 1.01A.84.84 0 0 0 3.74.96L.4 9.59a1.68 1.68 0 0 0 .61 1.88L12 19.45l10.99-7.98a1.68 1.68 0 0 0 .61-1.88Z"/></svg>
+                    <span>GitLab</span>
+                </a>
+                <a class="social-link" href="https://github.com/staticcanvas/asciiam" target="_blank" rel="noopener noreferrer" aria-label="asciiam on GitHub">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.52-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0c2.2-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.71 5.38-5.29 5.67.42.36.79 1.06.79 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+                    <span>GitHub</span>
+                </a>
+            </nav>
+        </footer>
+
+        <script src="./libs/asciiam.js?v=__ASSET_REVISION__"></script>
+        <script type="module" src="./js/webutil.js?v=__ASSET_REVISION__"></script>
+    </body>
+</html>

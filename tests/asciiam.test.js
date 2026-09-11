@@ -1192,6 +1192,50 @@ describe("asciiam lifecycle", () => {
         animation.destroy();
     });
 
+    it("renders the image flat and full-opacity in plain mode, ignoring animateImageMask and stale sweep state", () => {
+        const host = document.querySelector("#host");
+        Object.defineProperties(host, {
+            clientWidth: { configurable: true, value: 320 },
+            clientHeight: { configurable: true, value: 180 },
+        });
+        const pixels = new Uint8ClampedArray([200, 20, 20, 255]);
+        HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+            ...makeContext(),
+            getImageData: jest.fn(() => ({ data: pixels })),
+        }));
+
+        // animateImageMask defaults to true and imageMaskMode defaults to the
+        // "waveSweep" reveal, which reads _wavePosition/_waveBand — state that
+        // _prepareModeFrame() only maintains while mode === "wave". Starting
+        // directly in "plain" (never having run a wave frame) reproduces the
+        // reported "plain shows nothing" case if that sweep isn't bypassed.
+        const animation = new asciiam(host, {
+            mode: "plain",
+            imageEnabled: true,
+            respectReducedMotion: false,
+        });
+        animation.cols = 1;
+        animation.rows = 1;
+        animation._sourceImage = { width: 1, height: 1 };
+        animation._resampleImage();
+
+        const freshCell = animation._computeCell(0, 0, 0, 0);
+        expect(freshCell).not.toBeNull();
+        expect(freshCell.opacity).toBe(animation.opts.maxOpacity);
+
+        // Switching from an already-running "wave" mode into "plain" reproduced
+        // the reported freeze: the sweep kept reading the wave position/band from
+        // the moment of the switch instead of rendering a flat static image.
+        animation.setMode("wave");
+        animation._time = 5;
+        animation._prepareModeFrame();
+        animation.setMode("plain");
+        const switchedCell = animation._computeCell(0, 0, 0, 0);
+        expect(switchedCell).not.toBeNull();
+        expect(switchedCell.opacity).toBe(animation.opts.maxOpacity);
+        animation.destroy();
+    });
+
     it("scales image sampling independently on the horizontal and vertical axes", () => {
         const host = document.querySelector("#host");
         Object.defineProperties(host, {

@@ -45,6 +45,7 @@
   --plasma: #00cad1;
   --plasma-dim: rgb(0 202 209 / 0.12);
   --accent: #f47500;
+  --accent-dim: rgb(244 117 0 / 0.12);
   --white: #dce2ec;
   --muted: #8491a7;
   --dim: #5d687b;
@@ -75,6 +76,7 @@
   --plasma: #006871;
   --plasma-dim: rgb(0 104 113 / 0.12);
   --accent: #ac3500;
+  --accent-dim: rgb(172 53 0 / 0.12);
   --white: #0f172a;
   --muted: #475569;
   --dim: #64748b;
@@ -97,6 +99,7 @@
     --plasma: oklch(0.75 0.155 198);
     --plasma-dim: oklch(0.75 0.155 198/0.12);
     --accent: oklch(0.70 0.185 52);
+    --accent-dim: oklch(0.70 0.185 52 / 0.12);
     --white: oklch(0.88 0.02 250);
     --muted: oklch(0.58 0.05 250);
     --dim: oklch(0.42 0.04 250);
@@ -118,6 +121,7 @@
     --plasma: oklch(0.45 0.13 200);
     --plasma-dim: oklch(0.45 0.13 200 / 0.12);
     --accent: oklch(0.50 0.17 45);
+    --accent-dim: oklch(0.50 0.17 45 / 0.12);
     --white: oklch(0.12 0.03 250);
     --muted: oklch(0.38 0.04 250);
     --dim: oklch(0.52 0.04 250);
@@ -162,16 +166,16 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent-dim);
   border-radius: 6px;
-  background: var(--glass);
-  color: var(--muted);
+  background: var(--accent-dim);
+  color: var(--accent);
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 .topbar-theme-toggle:hover {
   color: var(--white);
-  border-color: var(--plasma);
+  border-color: var(--accent);
   background: var(--surface);
 }
 .topbar-theme-toggle svg {
@@ -517,17 +521,17 @@ textarea {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent-dim);
   border-radius: 4px;
-  background: var(--glass);
-  color: var(--muted);
+  background: var(--accent-dim);
+  color: var(--accent);
   text-decoration: none;
   transition: all 0.15s ease;
 }
 .topbar-icon-link:hover {
-  border-color: var(--plasma);
+  border-color: var(--accent);
   color: var(--white);
-  background: var(--plasma-dim);
+  background: var(--accent-dim);
 }
 .search-shell {
   position: relative;
@@ -1175,6 +1179,14 @@ header.hero-compact,
 .prose a {
   color: var(--plasma);
   text-underline-offset: 3px;
+}
+.prose a.btn-primary,
+.prose a.btn-ghost {
+  color: var(--ink);
+  text-decoration: none;
+}
+.prose a.btn-ghost {
+  color: var(--plasma);
 }
 .prose hr {
   margin: 52px 0;

@@ -6649,7 +6649,7 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 case "none":
                 case "static":
                 case "plain":
-                    if (this._imageGrid) return this._imageCell(col, row, x, y);
+                    if (this._imageGrid) return this._imageCell(col, row, x, y, true);
                     return this._setCell(this.opts.charSet[0] || " ", this.opts.maxOpacity, 0.5, false);
                 case "wave":
                     return this._waveCell(col, row, x, y);
@@ -7283,15 +7283,24 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
          * When `opts.animateImageMask` is set, reveals/pulses the image through one
          * of several mask sweep patterns (`waveSweep` default, `scanlinePass`,
          * `radialRipple`, `thermalNoise`, `halftonePulse`, or `fullStatic`) instead of
-         * showing it at flat full opacity.
+         * showing it at flat full opacity. `forceStatic` (used by the `none`/`static`/
+         * `plain` dispatch in {@link asciiam#_computeCell}) always shows the flat,
+         * fully-opaque image regardless of `animateImageMask`/`imageMaskMode` — those
+         * options describe `mode: 'image'`'s own reveal animation and must not apply
+         * to a mode whose entire purpose is a non-animated render, since the sweep
+         * modes read per-frame trigonometry (e.g. `_wavePosition`) that
+         * `_prepareModeFrame()` only maintains while `mode` is the matching animated
+         * mode — left stale (or never initialized) once `mode` has moved to
+         * `plain`/`static`/`none`, which is what produced a frozen or blank image.
          *
          * @param {number} col - zero-based grid column
          * @param {number} row - zero-based grid row
          * @param {number} x - pixel x-coordinate of the cell
          * @param {number} y - pixel y-coordinate of the cell
+         * @param {boolean} [forceStatic=false] - ignore `animateImageMask`/`imageMaskMode` and always render this cell flat/full-opacity
          * @returns {({char: string, opacity: number, level: number, bold: boolean, color: (string|null)}|null)} the resolved cell, or `null` if there's nothing to show at this cell
          */
-        _imageCell(col, row, x, y) {
+        _imageCell(col, row, x, y, forceStatic) {
             if (!this._imageGrid) return null;
             if (this.opts.imageEnabled === false) return null;
             const g = this._imageGrid;
@@ -7303,8 +7312,8 @@ import { loadGltf, registerGltfDecoder, getGltfDecoders } from "./gltf.js";
                 bold = false,
                 intensity = 0.5;
 
-            const animateCell = !g.animationMask || g.animationMask[i] === 1;
-            if (this.opts.animateImageMask && animateCell) {
+            const animateCell = !forceStatic && (!g.animationMask || g.animationMask[i] === 1);
+            if (!forceStatic && this.opts.animateImageMask && animateCell) {
                 const maskMode = this.opts.imageMaskMode || "waveSweep";
                 const t = this._time;
 

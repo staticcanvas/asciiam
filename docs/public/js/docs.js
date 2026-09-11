@@ -1,0 +1,416 @@
+/**
+ * @file docs.js
+ * @description Main documentation site client script providing table accessibility, Mermaid diagram rendering, TOC tracking, and live documentation search.
+ * @module docs
+ */
+
+import { Lume } from "../libs/lume/lume.mjs?v=__ASSET_REVISION__";
+
+// Auto-discovers every current and future [data-lume]/[data-lume-content] element on the page.
+new Lume({ tier: "minimal" });
+
+// Format tables into responsive scroll regions for screen readers
+document.querySelectorAll(".prose table").forEach((table) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "table-scroll";
+    wrapper.tabIndex = 0;
+    wrapper.setAttribute("role", "region");
+    wrapper.setAttribute("aria-label", table.querySelector("caption")?.textContent || "Reference table");
+    table.before(wrapper);
+    wrapper.append(table);
+});
+
+// Render client-side Mermaid architecture and sequence diagrams
+const mermaidDiagrams = [...document.querySelectorAll(".mermaid-diagram")];
+if (mermaidDiagrams.length) {
+    import("https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.esm.min.mjs")
+        .then(({ default: mermaid }) => {
+            mermaid.initialize({
+                startOnLoad: false,
+                securityLevel: "strict",
+                theme: "base",
+                themeVariables: {
+                    darkMode: true,
+                    background: "#10141d",
+                    primaryColor: "#141a27",
+                    primaryTextColor: "#dce2ec",
+                    primaryBorderColor: "#4a576f",
+                    secondaryColor: "#1b2333",
+                    secondaryTextColor: "#dce2ec",
+                    secondaryBorderColor: "#62718d",
+                    tertiaryColor: "#090d14",
+                    tertiaryTextColor: "#8491a7",
+                    tertiaryBorderColor: "#4a576f",
+                    lineColor: "#428ef4",
+                    textColor: "#dce2ec",
+                    mainBkg: "#141a27",
+                    nodeBorder: "#4a576f",
+                    clusterBkg: "#10141d",
+                    clusterBorder: "#4a576f",
+                    edgeLabelBackground: "#090d14",
+                    fontFamily: "'JetBrains Mono', 'Cascadia Code', monospace",
+                },
+                themeCSS: ".label, .edgeLabel, .stateLabel { letter-spacing: .01em; }",
+            });
+            return mermaid.run({ nodes: mermaidDiagrams });
+        })
+        .then(() => {
+            mermaidDiagrams.forEach((diagram) => { diagram.dataset.mermaidState = "rendered"; });
+        })
+        .catch(() => {
+            mermaidDiagrams.forEach((diagram) => {
+                diagram.dataset.mermaidState = "error";
+                diagram.setAttribute("role", "img");
+                diagram.setAttribute("aria-label", "Diagram source; Mermaid could not be loaded");
+            });
+        });
+}
+
+// Track active table of contents heading using IntersectionObserver
+const tocLinks = [...document.querySelectorAll(".toc-panel nav a[href^='#']")];
+if (tocLinks.length && "IntersectionObserver" in window) {
+    const linksById = new Map(tocLinks.map((link) => [decodeURIComponent(link.hash.slice(1)), link]));
+    const headingObserver = new IntersectionObserver((entries) => {
+        const visibleHeading = entries.find((entry) => entry.isIntersecting);
+        if (!visibleHeading) return;
+        tocLinks.forEach((link) => link.removeAttribute("aria-current"));
+        linksById.get(visibleHeading.target.id)?.setAttribute("aria-current", "location");
+    }, { rootMargin: "-18% 0px -70%", threshold: 0 });
+    linksById.forEach((_, id) => {
+        const heading = document.getElementById(id);
+        if (heading) headingObserver.observe(heading);
+    });
+}
+
+// Live documentation client-side search engine
+const pageSearch = document.querySelector("#docs-search");
+if (pageSearch) {
+    const SEARCH_ALIASES = [
+        ["api", "reference", "methods", "options"],
+        ["charset", "character", "characters", "glyph", "glyphs"],
+        ["config", "configuration", "configure", "settings"],
+        ["docs", "documentation", "guide", "guides"],
+        ["esm", "module", "mjs", "import"],
+        ["examples", "playground", "editor", "workbench"],
+        ["image", "images", "photo", "gif", "svg", "media"],
+        ["install", "installation", "setup", "quickstart", "start"],
+        ["morph", "blend", "transition", "crossfade", "cross-fade"],
+        ["preset", "presets", "gallery"],
+        ["render", "renderer", "rendering", "webgl", "webgl2", "canvas", "gpu"],
+        ["sequence", "sequences", "timeline", "steps", "playlist"],
+    ];
+
+    /**
+     * Normalizes input text by removing diacritics and converting to lowercase.
+     * @param {string} value Raw input string.
+     * @returns {string} Normalized string for index matching.
+     */
+    const normalizeSearchText = (value) => String(value || "")
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("en");
+
+    /**
+     * Resolves expanded query aliases for a given search token.
+     * @param {string} term Query token.
+     * @returns {string[]} List of matching alias terms.
+     */
+    const aliasesFor = (term) => {
+        const group = SEARCH_ALIASES.find((entries) => entries.includes(term));
+        return group || [term];
+    };
+
+    /**
+     * Checks if a candidate string matches any term in a candidate list.
+     * @param {string} value Normalized target string.
+     * @param {string[]} candidates Alias candidate list.
+     * @returns {boolean}
+     */
+    const includesCandidate = (value, candidates) => candidates.some((candidate) => value.includes(candidate));
+
+    /**
+     * Appends search query match highlights safely without raw innerHTML evaluation.
+     * @param {HTMLElement} element Target text container element.
+     * @param {string} value Original text string.
+     * @param {string[]} terms Query match terms.
+     * @returns {void}
+     */
+    const appendHighlightedText = (element, value, terms) => {
+        const text = String(value || "");
+        const escaped = terms.filter(Boolean).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+        if (!escaped.length) {
+            element.textContent = text;
+            return;
+        }
+        const matcher = new RegExp(`(${escaped.join("|")})`, "giu");
+        let offset = 0;
+        for (const match of text.matchAll(matcher)) {
+            if (match.index > offset) element.append(document.createTextNode(text.slice(offset, match.index)));
+            const highlight = document.createElement("mark");
+            highlight.textContent = match[0];
+            element.appendChild(highlight);
+            offset = match.index + match[0].length;
+        }
+        if (offset < text.length) element.append(document.createTextNode(text.slice(offset)));
+    };
+
+    const shell = pageSearch.closest("[data-search-index]");
+    const resultList = shell.querySelector("#docs-search-results");
+    const indexURL = shell.dataset.searchIndex;
+    let documents = null;
+    let indexPromise = null;
+    let activeIndex = -1;
+    let searchTimer = null;
+    let queryVersion = 0;
+
+    /**
+     * Asynchronously loads the JSON documentation search index.
+     * @async
+     * @returns {Promise<Object[]>}
+     */
+    const loadIndex = async () => {
+        if (documents) return documents;
+        if (!indexPromise) {
+            indexPromise = fetch(indexURL, { cache: "no-store" })
+                .then((response) => {
+                    if (!response.ok) throw new Error("Search index unavailable");
+                    return response.json();
+                })
+                .then((index) => {
+                    if (!Array.isArray(index)) throw new TypeError("Search index must be an array");
+                    documents = index;
+                    return documents;
+                })
+                .catch((error) => {
+                    indexPromise = null;
+                    throw error;
+                });
+        }
+        return indexPromise;
+    };
+
+    /**
+     * Closes the active search dropdown menu and resets focus indices.
+     * @returns {void}
+     */
+    const closeResults = () => {
+        resultList.hidden = true;
+        resultList.replaceChildren();
+        pageSearch.setAttribute("aria-expanded", "false");
+        pageSearch.removeAttribute("aria-activedescendant");
+        activeIndex = -1;
+    };
+
+    /**
+     * Highlights and focuses a specific search result item by index.
+     * @param {number} index Target index in the dropdown result list.
+     * @returns {void}
+     */
+    const selectResult = (index) => {
+        const options = [...resultList.querySelectorAll("[role='option']")];
+        if (!options.length) return;
+        activeIndex = (index + options.length) % options.length;
+        options.forEach((option, optionIndex) => option.setAttribute("aria-selected", String(optionIndex === activeIndex)));
+        pageSearch.setAttribute("aria-activedescendant", options[activeIndex].id);
+        options[activeIndex].scrollIntoView({ block: "nearest" });
+    };
+
+    /**
+     * Scores a documentation document against search query tokens.
+     * @param {Object} document Documentation index item.
+     * @param {string[]} terms Normalized query terms.
+     * @returns {number} Score rank value.
+     */
+    const scoreDocument = (document, terms) => {
+        const title = normalizeSearchText(document.title);
+        const tags = normalizeSearchText([...(document.tags || []), ...(document.keywords || [])].join(" "));
+        const description = normalizeSearchText(document.description);
+        const text = normalizeSearchText(document.text);
+        let score = 0;
+        for (const term of terms) {
+            const candidates = aliasesFor(term);
+            const inTitle = includesCandidate(title, candidates);
+            const inTags = includesCandidate(tags, candidates);
+            const inDescription = includesCandidate(description, candidates);
+            const inText = includesCandidate(text, candidates);
+            if (!inTitle && !inTags && !inDescription && !inText) return 0;
+            if (candidates.includes(title)) score += 30;
+            else if (inTitle) score += 16;
+            if (inTags) score += 9;
+            if (inDescription) score += 5;
+            if (inText) score += 1;
+        }
+        return score;
+    };
+
+    /**
+     * Renders matching documentation search results in the dropdown.
+     * @async
+     * @returns {Promise<void>}
+     */
+    const renderResults = async () => {
+        const rawQuery = pageSearch.value.trim();
+        const query = normalizeSearchText(rawQuery);
+        const requestedVersion = ++queryVersion;
+        if (query.length < 2) {
+            closeResults();
+            return;
+        }
+        try {
+            const index = await loadIndex();
+            const terms = query.split(/\s+/).filter(Boolean);
+            const results = index
+                .map((document) => ({ document, score: scoreDocument(document, terms) }))
+                .filter((result) => result.score > 0)
+                .sort((a, b) => b.score - a.score || String(a.document.title || "").localeCompare(String(b.document.title || "")))
+                .slice(0, 8);
+            if (requestedVersion !== queryVersion) return;
+            resultList.replaceChildren();
+            if (!results.length) {
+                const empty = document.createElement("p");
+                empty.className = "search-empty";
+                empty.textContent = `No documentation matched “${pageSearch.value.trim()}”.`;
+                resultList.appendChild(empty);
+            } else {
+                results.forEach(({ document: result }, resultIndex) => {
+                    const link = document.createElement("a");
+                    link.id = `docs-search-result-${resultIndex}`;
+                    link.href = new URL(String(result.url || ""), new URL(indexURL, location.href)).href;
+                    link.setAttribute("role", "option");
+                    link.setAttribute("aria-selected", "false");
+                    const heading = document.createElement("strong");
+                    appendHighlightedText(heading, result.title, terms);
+                    const summary = document.createElement("span");
+                    appendHighlightedText(summary, result.description, terms);
+                    const tags = document.createElement("small");
+                    tags.className = "search-tags";
+                    (result.tags || []).slice(0, 4).forEach((tag) => {
+                        const tagElement = document.createElement("span");
+                        tagElement.className = "search-tag";
+                        tagElement.textContent = tag;
+                        const normalizedTag = normalizeSearchText(tag);
+                        const matches = terms.some((term) => includesCandidate(normalizedTag, aliasesFor(term)));
+                        tagElement.dataset.match = String(matches);
+                        tags.appendChild(tagElement);
+                    });
+                    link.append(heading, summary, tags);
+                    resultList.appendChild(link);
+                });
+            }
+            resultList.hidden = false;
+            pageSearch.setAttribute("aria-expanded", "true");
+            activeIndex = -1;
+        } catch {
+            if (requestedVersion !== queryVersion) return;
+            resultList.replaceChildren();
+            const empty = document.createElement("p");
+            empty.className = "search-empty";
+            empty.textContent = "The documentation search index is unavailable.";
+            resultList.appendChild(empty);
+            resultList.hidden = false;
+            pageSearch.setAttribute("aria-expanded", "true");
+        }
+    };
+
+    pageSearch.addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(renderResults, 120);
+    });
+    pageSearch.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            selectResult(activeIndex + (event.key === "ArrowDown" ? 1 : -1));
+        }
+        if (event.key === "Enter") {
+            const selected = resultList.querySelector("[aria-selected='true']") || resultList.querySelector("[role='option']");
+            if (selected) {
+                event.preventDefault();
+                selected.click();
+            }
+        }
+        if (event.key === "Escape") {
+            pageSearch.value = "";
+            closeResults();
+            pageSearch.blur();
+        }
+    });
+    pageSearch.addEventListener("search", () => {
+        if (!pageSearch.value) closeResults();
+        else renderResults();
+    });
+    document.addEventListener("pointerdown", (event) => {
+        if (!shell.contains(event.target)) closeResults();
+    });
+    document.addEventListener("keydown", (event) => {
+        const target = event.target;
+        const isEditing = /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName) || target?.isContentEditable;
+        const commandSearch = (event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase("en") === "k";
+        const slashSearch = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !isEditing;
+        if (commandSearch || slashSearch) {
+            event.preventDefault();
+            pageSearch.focus();
+            pageSearch.select();
+        }
+    });
+}
+
+// Theme Toggle Controller for Documentation Site
+function applyTheme(theme) {
+    if (document.documentElement) document.documentElement.dataset.theme = theme;
+    try {
+        if (typeof localStorage !== "undefined") localStorage.setItem("asciiam:theme", theme);
+    } catch {
+        // Ignore storage access errors in restricted contexts
+    }
+    document.querySelectorAll(".docs-theme-toggle, #themeToggleBtn").forEach((btn) => {
+        const isLight = theme === "light";
+        btn.setAttribute("aria-label", isLight ? "Switch to dark theme" : "Switch to light theme");
+        btn.setAttribute("title", isLight ? "Switch to dark theme" : "Switch to light theme");
+        const sunIcons = btn.querySelectorAll("#docsThemeIconSun, #themeIconSun");
+        const moonIcons = btn.querySelectorAll("#docsThemeIconMoon, #themeIconMoon");
+        sunIcons.forEach((icon) => { icon.style.display = isLight ? "inline-block" : "none"; });
+        moonIcons.forEach((icon) => { icon.style.display = isLight ? "none" : "inline-block"; });
+    });
+}
+
+function initThemeToggle() {
+    let savedTheme = "dark";
+    try {
+        if (typeof localStorage !== "undefined" && localStorage.getItem("asciiam:theme")) {
+            savedTheme = localStorage.getItem("asciiam:theme");
+        } else if (typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: light)").matches) {
+            savedTheme = "light";
+        }
+    } catch {
+        // Fallback to default theme if query throws
+    }
+    applyTheme(savedTheme);
+
+    document.querySelectorAll(".docs-theme-toggle, #themeToggleBtn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const current = (document.documentElement && document.documentElement.dataset.theme) || "dark";
+            applyTheme(current === "light" ? "dark" : "light");
+        });
+    });
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initThemeToggle);
+} else {
+    initThemeToggle();
+}
+
+import { initAllHeroCompactElements } from "./asciiam-animations.js?v=__ASSET_REVISION__";
+
+// Mount ASCII background animations on all .hero.hero-compact page header elements
+const mountCompactHeroes = () => {
+    if (document.querySelector(".hero.hero-compact")) {
+        initAllHeroCompactElements();
+    }
+};
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountCompactHeroes);
+} else {
+    mountCompactHeroes();
+}

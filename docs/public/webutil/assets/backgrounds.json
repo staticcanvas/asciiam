@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Forest Road",
+    "src": "./assets/images/44833-road-166543.jpg",
+    "thumbnail": "./assets/thumbnails/44833-road-166543.jpg.webp"
+  },
+  {
+    "name": "Bird Silhouette",
+    "src": "./assets/images/bird-silhouette.svg",
+    "thumbnail": "./assets/thumbnails/bird-silhouette.svg.webp"
+  },
+  {
+    "name": "Animated Cauldron",
+    "src": "./assets/images/catlinedigital-cauldron-28104_512.gif",
+    "thumbnail": "./assets/thumbnails/catlinedigital-cauldron-28104_512.gif.webp"
+  },
+  {
+    "name": "Domitian Tunnel",
+    "src": "./assets/images/domitian-tunnel-5122424_1920.jpg",
+    "thumbnail": "./assets/thumbnails/domitian-tunnel-5122424_1920.jpg.webp"
+  },
+  {
+    "name": "Rotating Earth",
+    "src": "./assets/images/earth-landmask-256-slow.gif",
+    "thumbnail": "./assets/thumbnails/earth-landmask-256-slow.gif.webp"
+  },
+  {
+    "name": "Paving Stones",
+    "src": "./assets/images/kranich17-paving-stones-7655820_1920.jpg",
+    "thumbnail": "./assets/thumbnails/kranich17-paving-stones-7655820_1920.jpg.webp"
+  },
+  {
+    "name": "Animated Glasses",
+    "src": "./assets/images/mxj_files-glasses-27527_512.gif",
+    "thumbnail": "./assets/thumbnails/mxj_files-glasses-27527_512.gif.webp"
+  },
+  {
+    "name": "Asphalt Texture",
+    "src": "./assets/images/pexels-asphalt-1867667_1920.jpg",
+    "thumbnail": "./assets/thumbnails/pexels-asphalt-1867667_1920.jpg.webp"
+  },
+  {
+    "name": "Night Heron",
+    "src": "./assets/images/pexels-bertellifotografia-38760198.jpg",
+    "thumbnail": "./assets/thumbnails/pexels-bertellifotografia-38760198.jpg.webp"
+  },
+  {
+    "name": "Volcano at Night",
+    "src": "./assets/images/pexels-clive-kim-2523249-6307488.jpg",
+    "thumbnail": "./assets/thumbnails/pexels-clive-kim-2523249-6307488.jpg.webp"
+  },
+  {
+    "name": "Iridescent Texture",
+    "src": "./assets/images/pexels-merlin-10874572.jpg",
+    "thumbnail": "./assets/thumbnails/pexels-merlin-10874572.jpg.webp"
+  },
+  {
+    "name": "Prismatic Scales",
+    "src": "./assets/images/pexels-merlin-10874575.jpg",
+    "thumbnail": "./assets/thumbnails/pexels-merlin-10874575.jpg.webp"
+  },
+  {
+    "name": "Dragonfly",
+    "src": "./assets/images/pexels-ritam-karmakar-616573342-31064522.jpg",
+    "thumbnail": "./assets/thumbnails/pexels-ritam-karmakar-616573342-31064522.jpg.webp"
+  },
+  {
+    "name": "Violet Reflections",
+    "src": "./assets/images/pexels-steve-30018097.jpg",
+    "thumbnail": "./assets/thumbnails/pexels-steve-30018097.jpg.webp"
+  },
+  {
+    "name": "Blue Droplets",
+    "src": "./assets/images/pexels-thales13-38600221.jpg",
+    "thumbnail": "./assets/thumbnails/pexels-thales13-38600221.jpg.webp"
+  },
+  {
+    "name": "Autumn Forest Road",
+    "src": "./assets/images/valiphotos-road-1072821_1920.jpg",
+    "thumbnail": "./assets/thumbnails/valiphotos-road-1072821_1920.jpg.webp"
+  },
+  {
+    "name": "ASCII Portrait",
+    "src": "./assets/images/vilkasss-ai-generated-9599760.jpg",
+    "thumbnail": "./assets/thumbnails/vilkasss-ai-generated-9599760.jpg.webp"
+  },
+  {
+    "name": "Riverside Bridge",
+    "src": "./assets/images/wal_172619-bridge-6755233_1920.jpg",
+    "thumbnail": "./assets/thumbnails/wal_172619-bridge-6755233_1920.jpg.webp"
+  }
+]
